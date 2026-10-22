@@ -1,0 +1,31 @@
+{
+  "name": "CommanderCZ Network",
+  "architecture": "windows-x64",
+  "components": {
+    "libcurl": "8.22.0",
+    "libressl": "4.3.3",
+    "libssh2": "1.11.1"
+  },
+  "dll": {
+    "file": "CommanderNetwork.dll",
+    "sha256": "0a0a03bb2a023e1f06e82f106b5460266505d15b5036a18bb7de8391271f0113"
+  },
+  "package": {
+    "local": "source/downloads/network/curl-8.22.0_3-win64-mingw.zip",
+    "sha256": "f38b0ac2e3a280fd414b607c874a21e6dd4d1ed0e2ae622afbf0020917446561",
+    "url": "https://curl.se/windows/dl-8.22.0_3/curl-8.22.0_3-win64-mingw.zip"
+  },
+  "compiler": {
+    "url": "https://github.com/mstorsjo/llvm-mingw/releases/download/20261006/llvm-mingw-20261006-ucrt-x86_64.zip",
+    "sha256": "317492c456aa27ee607a5919f1d2d38dcdc1112516a24d0bf4b00d078f52d17a"
+  },
+  "build": "source/native/build.ps1",
+  "licenses": "licenses",
+  "protocols": {
+    "SFTP": "libssh2",
+    "SCP": "libssh2",
+    "FTPS": "libcurl",
+    "FTP": "libcurl"
+  },
+  "builtAt": "2026-10-13"
+}

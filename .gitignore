@@ -1,0 +1,33 @@
+# Zálohy, výsledky ověření a sestavení nepatří do verzování
+backup/
+verification/
+reports/
+/PRENOS-DOMU.md
+bin/
+obj/
+.vs/
+
+# Toolchain a závislosti se stahují skriptem, ne z repozitáře
+tools/native/
+tools/python-packages/
+tools/**/__pycache__/
+__pycache__/
+*.pyc
+
+# Stažené instalátory a generované soubory
+source/downloads/
+source/src/PluginHashes.cs
+
+# Tajemství a lokální stav
+*.pfx
+*.p12
+*.snk
+integrity.key
+source/plugins/cloud/google-oauth.json
+
+# Místní konfigurace a uživatelské přihlašovací profily
+config/
+*.user
+*.suo
+.env
+.env.*

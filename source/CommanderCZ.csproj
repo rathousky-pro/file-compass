@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <EnableDefaultPageItems>false</EnableDefaultPageItems>
+    <PlatformTarget>x64</PlatformTarget>
+    <AssemblyName>File Compass</AssemblyName>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <ApplicationManifest>FileVoyager.manifest</ApplicationManifest>
+    <AppConfig>FileVoyager.exe.config</AppConfig>
+    <ApplicationIcon>assets\file-voyager\FileVoyager-FloppyOrbit.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="src\*.cs" />
+    <Reference Include="Microsoft.Web.WebView2.Core"><HintPath>ui\Microsoft.Web.WebView2.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Microsoft.Web.WebView2.Wpf"><HintPath>ui\Microsoft.Web.WebView2.Wpf.dll</HintPath><Private>false</Private></Reference>
+    <Content Include="preview\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="config\preview\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Reference Include="Microsoft.Bcl.HashCode"><HintPath>ui\Microsoft.Bcl.HashCode.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UglyToad.PdfPig.Core"><HintPath>ui\UglyToad.PdfPig.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UglyToad.PdfPig"><HintPath>ui\UglyToad.PdfPig.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UglyToad.PdfPig.DocumentLayoutAnalysis"><HintPath>ui\UglyToad.PdfPig.DocumentLayoutAnalysis.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UglyToad.PdfPig.Fonts"><HintPath>ui\UglyToad.PdfPig.Fonts.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UglyToad.PdfPig.Package"><HintPath>ui\UglyToad.PdfPig.Package.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UglyToad.PdfPig.Tokenization"><HintPath>ui\UglyToad.PdfPig.Tokenization.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UglyToad.PdfPig.Tokens"><HintPath>ui\UglyToad.PdfPig.Tokens.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="Microsoft.VisualBasic" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.Web.Extensions" />
+    <Reference Include="SharpSevenZip"><HintPath>ui\SharpSevenZip.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Wpf.Ui"><HintPath>ui\Wpf.Ui.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Wpf.Ui.Abstractions"><HintPath>ui\Wpf.Ui.Abstractions.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System.Memory"><HintPath>ui\System.Memory.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System.Buffers"><HintPath>ui\System.Buffers.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System.Numerics.Vectors"><HintPath>ui\System.Numerics.Vectors.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe"><HintPath>ui\System.Runtime.CompilerServices.Unsafe.dll</HintPath><Private>false</Private></Reference>
+    <None Update="ui\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="config\%(Identity)" />
+    <None Update="languages\*.lng" CopyToOutputDirectory="PreserveNewest" TargetPath="config\%(Identity)" />
+    <None Update="languages\README.md" CopyToOutputDirectory="PreserveNewest" TargetPath="config\%(Identity)" />
+    <None Update="THIRD-PARTY-NOTICES.md" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="plugins\cloud\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="config\%(Identity)" />
+    <None Update="plugins\7zip\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="config\%(Identity)" />
+    <None Update="plugins\network\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="config\%(Identity)" />
+    <Content Include="..\bin\config\icons\*.dll" Link="config\icons\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="GeneratePluginHashes" BeforeTargets="BeforeCompile;CoreCompile">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\gen-plugin-hashes.ps1&quot;" />
+  </Target>
+</Project>
+
+
+

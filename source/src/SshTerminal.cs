@@ -1,0 +1,92 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Text;
+
+namespace CommanderCZ
+{
+    public static class SshTerminal
+    {
+        public static ProcessStartInfo CreateLaunch(NetworkProfile profile)
+        {
+            profile.Validate();
+            if (!profile.CanOpenSsh)
+                throw new ArgumentException(L.Text("ssh.supportedTerminalProtocols"));
+            string system = Environment.GetFolderPath(Environment.SpecialFolder.System);
+            string ssh = FindExecutable(Path.Combine(system, "OpenSSH", "ssh.exe"), "ssh.exe");
+            if (ssh == null) throw new IOException(L.Text("ssh.openSshClientMissing"));
+            string shell = profile.UsePowerShell7 ?
+                FindExecutable(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "PowerShell", "7", "pwsh.exe"), "pwsh.exe") :
+                Path.Combine(system, "WindowsPowerShell", "v1.0", "powershell.exe");
+            if (shell == null || !File.Exists(shell)) throw new IOException(L.Text("ssh.selectedPowerShellMissing"));
+            string encoded = EncodeCommand(BuildCommand(profile, ssh));
+            string shellArguments = "-NoLogo -NoProfile -NoExit -EncodedCommand " + encoded;
+            string terminal = profile.UseWindowsTerminal ? FindExecutable(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Microsoft", "WindowsApps", "wt.exe"), "wt.exe") : null;
+            // Terminal switches and title contain only fixed text. All user values are inside the encoded PowerShell command.
+            return new ProcessStartInfo(terminal ?? shell, terminal == null ? shellArguments :
+                "-w new new-tab --title SSH " + QuoteWindowsArgument(shell) + " " + shellArguments)
+            {
+                UseShellExecute = true,
+                WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                WindowStyle = ProcessWindowStyle.Normal
+            };
+        }
+        public static void Open(NetworkProfile profile)
+        {
+            if(!String.IsNullOrEmpty(profile.CloudAccountId))throw new IOException(L.Text("cloud.noTerminal")); var launch = CreateLaunch(profile);
+            try { using (var process = Process.Start(launch)) { } }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                if (!launch.FileName.EndsWith("wt.exe", StringComparison.OrdinalIgnoreCase)) throw;
+                var fallback = profile.Clone(); fallback.UseWindowsTerminal = false;
+                using (var process = Process.Start(CreateLaunch(fallback))) { }
+            }
+        }
+        internal static string FindExecutable(string preferred, string name)
+        {
+            if (File.Exists(preferred)) return preferred;
+            foreach (string directory in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator))
+            {
+                try
+                {
+                    if (String.IsNullOrWhiteSpace(directory)) continue;
+                    string path = Path.Combine(directory.Trim().Trim('"'), name);
+                    if (File.Exists(path)) return Path.GetFullPath(path);
+                }
+                catch (ArgumentException) { }
+            }
+            return null;
+        }
+        internal static string BuildCommand(NetworkProfile profile, string executable)
+        {
+            var arguments = new List<string> { "-p", profile.Port.ToString(System.Globalization.CultureInfo.InvariantCulture) };
+            if (!String.IsNullOrWhiteSpace(profile.UserName)) { arguments.Add("-l"); arguments.Add(profile.UserName); }
+            if (!String.IsNullOrWhiteSpace(profile.PrivateKeyPath)) { arguments.Add("-i"); arguments.Add(profile.PrivateKeyPath); }
+            arguments.Add("-o"); arguments.Add("ConnectTimeout=" + profile.TimeoutSeconds);
+            if (profile.SshCompression) arguments.Add("-C");
+            if (profile.SshKeepAliveSeconds > 0) { arguments.Add("-o"); arguments.Add("ServerAliveInterval=" + profile.SshKeepAliveSeconds); }
+            if (!profile.SshAgent) { arguments.Add("-o"); arguments.Add("IdentityAgent=none"); }
+            arguments.Add("--"); arguments.Add(profile.Host);
+            return "$Host.UI.RawUI.WindowTitle = " + QuotePowerShell(L.Text("ssh.windowTitlePrefix") + profile.Name) + "\r\n" +
+                "& " + QuotePowerShell(executable) + " " + String.Join(" ", arguments.Select(QuotePowerShell)) + "\r\n" +
+                L.Code("internal.sshExitStatusScript");
+        }
+        internal static string EncodeCommand(string command) { return Convert.ToBase64String(Encoding.Unicode.GetBytes(command)); }
+        static string QuotePowerShell(string value) { return "'" + (value ?? "").Replace("'", "''") + "'"; }
+        // Executable paths cannot contain quotes and do not end in a directory separator.
+        internal static string QuoteWindowsArgument(string value)
+        {
+            var result = new StringBuilder("\""); int slashes = 0;
+            foreach (char c in value)
+            {
+                if (c == '\\') { slashes++; continue; }
+                if (c == '"') result.Append('\\', slashes * 2 + 1); else result.Append('\\', slashes);
+                result.Append(c); slashes = 0;
+            }
+            result.Append('\\', slashes * 2); return result.Append('"').ToString();
+        }
+    }
+}
+

@@ -1,0 +1,22 @@
+name: build
+on:
+  push:
+  pull_request:
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        shell: powershell
+        working-directory: source
+        run: ./build.ps1 -OutputDirectory "$env:RUNNER_TEMP\out"
+      - name: Self tests
+        shell: powershell
+        run: |
+          $exe = Join-Path $env:RUNNER_TEMP 'out\File Compass.exe'
+          foreach ($test in 'self-test', 'copy-test', 'archive-test', 'next-stage-test', 'integrity-test') {
+            $work = Join-Path $env:RUNNER_TEMP "w-$test"; New-Item -ItemType Directory $work -Force | Out-Null
+            $process = Start-Process $exe -ArgumentList "--$test", "`"$work`"" -Wait -PassThru
+            if ($process.ExitCode -ne 0) { throw "$test selhal ($($process.ExitCode))" }
+          }

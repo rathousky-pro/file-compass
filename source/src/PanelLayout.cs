@@ -39,7 +39,6 @@ namespace CommanderCZ
             lastDualLayout = settings.LastDualLayout == "Stacked" ? "Stacked" : "SideBySide";
             left.Visibility = right.Visibility = Visibility.Visible;
             SetActive(settings.SinglePanelRight ? right : left);
-            // Restoring a view must retain the saved tree and collapsed-detail choices.
             layoutInitialized = false;
             SetPanelLayout(settings.PanelLayout, false, false);
         }

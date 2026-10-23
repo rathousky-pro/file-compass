@@ -60,7 +60,6 @@ namespace CommanderCZ
                 var position = e.GetPosition(List); if (Math.Abs(position.X - dragStart.X) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(position.Y - dragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
                 leftDragReady = false; var files = Selected().Select(x => x.FullPath).ToArray(); if (files.Length == 0) return;
                 var data = new DataObject(); if (!IsRemote && !IsArchive) data.SetData(DataFormats.FileDrop, files); data.SetData(L.Code("clipboard.panelDataFormat"), this); data.SetData("CommanderCZ.Entries", Selected().ToArray());
-                // An Explorer drop is always a copy. Source deletion stays in the verified Commander engine.
                 DragDrop.DoDragDrop(List, data, DragDropEffects.Copy);
             };
             List.DragOver += delegate(object s, DragEventArgs e) {
@@ -90,6 +89,10 @@ namespace CommanderCZ
             AddTabAction(context, L.Text("clipboard.copyFullPaths"), delegate { var main = Window.GetWindow(this) as MainWindow; if (main != null) main.CopyNames(true); });
             AddTabAction(context, L.Text("tags.edit"), delegate { var main = Window.GetWindow(this) as MainWindow; if (main != null) main.EditTags(); });
             context.Items.Add(new Separator());
+            var analyze = new MenuItem { Header = L.Text("analyzer.title"), ToolTip = L.Text("analyzer.help") };
+            analyze.Click += delegate { var main = Window.GetWindow(this) as MainWindow; if (main != null) main.AnalyzeFolder(this); };
+            context.Items.Add(analyze);
+            context.Opened += delegate { analyze.IsEnabled = !LocalLoading && !IsLoading && !IsArchive && !IsRemote && !IsVirtualBrowser && !String.IsNullOrEmpty(CurrentPath); };
             AddTabAction(context, L.Text("action.compareFiles"), delegate { var main = Window.GetWindow(this) as MainWindow; if (main != null) main.CompareFilesByContent(); });
             AddTabAction(context, L.Text("action.createChecksums"), delegate { var main = Window.GetWindow(this) as MainWindow; if (main != null) main.CreateChecksumsDialog(); });
             AddTabAction(context, L.Text("action.verifyChecksums"), delegate { var main = Window.GetWindow(this) as MainWindow; if (main != null) main.VerifyChecksumsDialog(); });

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Globalization;
@@ -236,6 +236,9 @@ namespace CommanderCZ
         readonly ListView archiveContents = new ListView { Visibility = Visibility.Collapsed };
         CancellationTokenSource cancellation;
         string current;
+        string localPreviewPath;
+        long localPreviewLength, localPreviewWrite;
+        internal int LoadVersion { get { return version; } }
         int version;
         internal Task LoadingTask { get; private set; }
         RemoteConnection remoteTemplate;
@@ -421,7 +424,7 @@ namespace CommanderCZ
                 navigationBar.Visibility=Visibility.Collapsed;status.Text=L.Text("preview.loadingStatus");return;
             }
             if(documentPreview!=null)documentPreview.Visibility=ShowingDocument?Visibility.Visible:Visibility.Hidden;
-            bool showRich = !ShowingDocument && currentMode == PreviewMode.Auto && richAvailable && (formatted.IsChecked == true || HtmlCodeSelected) && !IsHexOrBinaryActive;
+            bool showRich = !ShowingDocument && (currentMode == PreviewMode.Auto || currentMode == PreviewMode.Text) && richAvailable && (formatted.IsChecked == true || HtmlCodeSelected) && !IsHexOrBinaryActive;
             rich.Visibility = showRich ? Visibility.Visible : Visibility.Collapsed;
             bool showImage = currentMode == PreviewMode.Auto && picture.Source != null;
             picture.Visibility = showImage ? Visibility.Visible : Visibility.Collapsed;
@@ -440,7 +443,7 @@ namespace CommanderCZ
             bool useBin = currentMode == PreviewMode.Binary;
             text.Text = useHex ? (lastData.HexText ?? "") : useBin ? (lastData.BinaryText ?? "") : (lastData.Text ?? "");
             if(WantsDocument&&!DocumentPreview.IsHtml(current))text.Text=L.Text("details.noTextPreview");
-            richAvailable = currentMode == PreviewMode.Auto && !useHex && lastData.Text != null && currentOffset == 0 && current != null && RichFilePreview.Supports(current);
+            richAvailable = (currentMode == PreviewMode.Auto || currentMode == PreviewMode.Text) && !useHex && lastData.Text != null && currentOffset == 0 && current != null && RichFilePreview.Supports(current);
             if (richAvailable) rich.Show(current, lastData.Text, lastData.Markdown);
             formatted.IsEnabled = richAvailable || documentReady;
             bool showNav = remoteTemplate == null && lastData.Image == null && (lastData.TotalLength > lastData.ReadBytes || useHex || useBin || currentOffset > 0);
@@ -457,11 +460,19 @@ namespace CommanderCZ
             UpdateFormat(); status.Text = message;
         }
 
-        internal void ShowFile(string path)
+        internal void ShowFile(string path, bool preserveUnchanged = false)
         {
+            if (preserveUnchanged && IsCurrentLocalFile(path)) return;
             if (remoteTemplate != null) remoteTemplate.Dispose(); remoteTemplate = null;
             currentOffset = 0;
             LoadingTask = Load(path, 0);
+
+        }
+
+        internal bool IsCurrentLocalFile(string path) {
+            if (remoteTemplate != null || !String.Equals(current,path,StringComparison.OrdinalIgnoreCase) || !String.Equals(localPreviewPath,path,StringComparison.OrdinalIgnoreCase) || LoadingTask == null || (LoadingTask.IsCompleted && lastData == null)) return false;
+            try { var info = new FileInfo(path); return info.Exists && info.Length == localPreviewLength && info.LastWriteTimeUtc.Ticks == localPreviewWrite; }
+            catch (IOException) { return false; } catch (UnauthorizedAccessException) { return false; }
         }
 
         internal void ShowRemoteFile(string path, RemoteConnection remote)
@@ -475,6 +486,10 @@ namespace CommanderCZ
         async Task Load(string path, long offset)
         {
             Stop(); current = path; currentOffset = offset; lastData=null;
+            if (remoteTemplate == null) {
+            try { var info = new FileInfo(path); localPreviewLength = info.Length; localPreviewWrite = info.LastWriteTimeUtc.Ticks; localPreviewPath = path; }
+            catch (IOException) { localPreviewPath = null; } catch (UnauthorizedAccessException) { localPreviewPath = null; }
+            }
             documentLoading=WantsDocument;documentDetailsLoading=WantsDocument;
             var token = cancellation.Token; int request = version;
             if (remoteTemplate == null) MetadataLoadingTask = LoadDetails(path, token, request);
@@ -505,7 +520,7 @@ namespace CommanderCZ
             catch (Exception ex) { if (request == version) status.Text = L.Text("preview.loadFailedPrefix") + ex.Message; }
         }
 
-        internal void Stop() { ClearDocumentPreview(); ClearDetails(); version++; if (cancellation != null) { cancellation.Cancel(); cancellation.Dispose(); } cancellation = new CancellationTokenSource(); ClearPreparedPreview(); }
+        internal void Stop() { localPreviewPath = null; ClearDocumentPreview(); ClearDetails(); version++; if (cancellation != null) { cancellation.Cancel(); cancellation.Dispose(); } cancellation = new CancellationTokenSource(); ClearPreparedPreview(); }
         internal void DisposePreview() { Stop(); cancellation.Dispose(); cancellation = null; if (remoteTemplate != null) remoteTemplate.Dispose(); remoteTemplate = null; }
     }
 
@@ -523,7 +538,7 @@ namespace CommanderCZ
         {
             ToggleQuickPreview();
         }
-        QuickPreviewPane quickPreview; FilePanel previewSource, previewTarget;
+        QuickPreviewPane quickPreview; FilePanel previewSource, previewTarget; string previewTargetPath;
         bool FilePreviewOpen { get { return panelLayout == "Single" ? active != null && active.DetailExpanded : quickPreview != null; } }
         void InitializeQuickPreview()
         {
@@ -532,8 +547,10 @@ namespace CommanderCZ
             second.DetailExpandedChanged += UpdateViewToolbarControls;
             first.List.SelectionChanged += delegate { if (previewSource == first) UpdateQuickPreview(); };
             second.List.SelectionChanged += delegate { if (previewSource == second) UpdateQuickPreview(); };
-            first.PathChanged += delegate { if (previewTarget == first) CloseQuickPreview(); else if (previewSource == first) UpdateQuickPreview(); };
-            second.PathChanged += delegate { if (previewTarget == second) CloseQuickPreview(); else if (previewSource == second) UpdateQuickPreview(); };
+            first.LocalNavigationCompleted += delegate { if (previewSource == first) UpdateQuickPreview(); };
+            second.LocalNavigationCompleted += delegate { if (previewSource == second) UpdateQuickPreview(); };
+            first.PathChanged += delegate { if (previewTarget == first && !String.Equals(first.CurrentPath,previewTargetPath,StringComparison.OrdinalIgnoreCase)) CloseQuickPreview(); else if (previewSource == first) UpdateQuickPreview(); };
+            second.PathChanged += delegate { if (previewTarget == second && !String.Equals(second.CurrentPath,previewTargetPath,StringComparison.OrdinalIgnoreCase)) CloseQuickPreview(); else if (previewSource == second) UpdateQuickPreview(); };
             Closed += delegate { CloseQuickPreview(); };
         }
         internal void ToggleQuickPreview()
@@ -544,7 +561,7 @@ namespace CommanderCZ
         }
         void OpenQuickPreview()
         {
-            previewSource = active; previewTarget = active == left ? right : left;
+            previewSource = active; previewTarget = active == left ? right : left; previewTargetPath = previewTarget.CurrentPath;
             quickPreview = new QuickPreviewPane(CloseQuickPreview);
             Grid.SetRow(quickPreview, Grid.GetRow(previewTarget)); Grid.SetColumn(quickPreview, Grid.GetColumn(previewTarget));
             panelSplit.Children.Add(quickPreview);
@@ -553,13 +570,13 @@ namespace CommanderCZ
         }
         void UpdateQuickPreview()
         {
-            if (quickPreview == null) return;
+            if (quickPreview == null || previewSource.LocalLoading) return;
             var entry = previewSource.List.SelectedItem as Entry;
             if (entry == null || entry.IsDirectory) quickPreview.ShowMessage(L.Text("preview.selectOtherPanelFile"));
             else if (previewSource.IsRemote && (previewSource.Remote.Profile.Protocol == NetworkProtocol.FTP || previewSource.Remote.Profile.Protocol == NetworkProtocol.SFTP)) quickPreview.ShowRemoteFile(entry.FullPath, previewSource.Remote);
             else if (previewSource.IsArchive) quickPreview.ShowArchiveFile(previewSource.Archive,entry.FullPath);
             else if (previewSource.IsRemote) quickPreview.ShowMessage(L.Text("preview.scpArchiveUseF3"));
-            else quickPreview.ShowFile(entry.FullPath);
+            else quickPreview.ShowFile(entry.FullPath, true);
         }
         internal void CloseQuickPreview()
         {

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -66,11 +66,11 @@ namespace CommanderCZ
             synchronizingSelection = true;
             try {
                 ShowPath(); List.ItemsSource = rows; Sort(); List.SelectedIndex = rows.Count > 0 ? 0 : -1;
-                if (cursor != null) List.SelectedItem = rows.FirstOrDefault(x => x.FullPath == cursor) ?? List.SelectedItem;
+                if (cursor != null) { List.SelectedItem = rows.FirstOrDefault(x => x.FullPath == cursor) ?? List.SelectedItem; if (List.SelectedItem != null) List.ScrollIntoView(List.SelectedItem); }
             } finally { synchronizingSelection = false; }
             SyncWindowsSelection();
             selectingDrive = true; driveSelector.SelectedIndex = -1; selectingDrive = false;
-            foreach (var button in driveButtons.Values) button.Background = System.Windows.Media.Brushes.White;
+            foreach (var button in driveButtons.Values) button.Background = CompactTheme.WhiteSurface;
             capacity.Text = String.IsNullOrEmpty(Remote.Profile.CloudAccountId)?Remote.Profile.Name+" · "+Remote.Profile.DisplayLabel:Remote.Profile.DisplayLabel;
             capacity.ToolTip = capacity.Text; UpdateStatus();
             RememberRemote(); UpdateConnectionButtons();
@@ -84,6 +84,7 @@ namespace CommanderCZ
             {
                 path = RemoteConnection.Normalize(path);
                 string cursor = null; var marks = new HashSet<string>(StringComparer.Ordinal);
+                if (CurrentPath != null && path != CurrentPath && RemoteConnection.Parent(CurrentPath) == path) cursor = CurrentPath;
                 if (path == CurrentPath)
                 {
                     var selected = List.SelectedItem as Entry; cursor = selected == null ? null : selected.FullPath;
@@ -108,7 +109,7 @@ namespace CommanderCZ
                 var info = await Task.Run(delegate { return Remote.Session.ListDirectory(path); });
                 var rows = RemoteRows(info, path);
                 stack.Pop(); (forward ? history : forwardHistory).Push(previous);
-                CurrentPath = path; ApplyRemoteRows(rows, null);
+                CurrentPath = path; ApplyRemoteRows(rows, RemoteConnection.Parent(previous) == path ? previous : null);
             }
             catch (Exception ex) { MessageBox.Show(Window.GetWindow(this), ex.Message, L.Text("network.connectionHistoryTitle")); }
             finally { Loading(false); }
@@ -167,7 +168,7 @@ namespace CommanderCZ
                 var captured = connection;
                 var button = ConnectionButton(connection.Profile, delegate { SwitchConnection(captured); });
                 button.Tag = connection;
-                if (Remote == connection) button.Background = CompactTheme.ColorBrush("#CDE8FF");
+                if (Remote == connection) button.Background = CompactTheme.ThemeBrush("#CDE8FF");
                 var menu = new System.Windows.Controls.ContextMenu();
                 var disconnect = new System.Windows.Controls.MenuItem { Header = L.Text("action.disconnect") };
                 disconnect.Click += delegate
@@ -181,7 +182,7 @@ namespace CommanderCZ
             if (localNetworkProfile != null)
             {
                 var button = ConnectionButton(localNetworkProfile, delegate { Navigate(localNetworkPath, true); activate(this); });
-                if (IsAtLocalNetwork) button.Background = CompactTheme.ColorBrush("#CDE8FF");
+                if (IsAtLocalNetwork) button.Background = CompactTheme.ThemeBrush("#CDE8FF");
                 var menu = new System.Windows.Controls.ContextMenu(); var disconnect = new System.Windows.Controls.MenuItem { Header = L.Text("action.disconnect") };
                 disconnect.Click += delegate { if (!IsLoading && DisconnectLocalNetwork != null) DisconnectLocalNetwork(this); };
                 menu.Items.Add(disconnect); button.ContextMenu = menu; connectionButtons.Children.Add(button);
@@ -211,7 +212,7 @@ namespace CommanderCZ
             Loading(true);
             try
             {
-                string folder = Path.Combine(Path.GetTempPath(), "CommanderCZ", Guid.NewGuid().ToString("N"));
+                string folder = Path.Combine(Path.GetTempPath(), "FileCompass", Guid.NewGuid().ToString("N"));
                 Directory.CreateDirectory(folder);
                 string name = RemoteConnection.Name(entry.FullPath);
                 FileOperations.ValidateName(name);

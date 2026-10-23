@@ -10,6 +10,7 @@ namespace CommanderCZ
     {
         Button toolbarLayoutButton, toolbarAllFilesButton, toolbarPreviewButton, toolbarThumbnailsButton;
         bool toolbarAllFiles = true;
+        Action updateDirectionTools;
 
         void AddViewToolbarControls(Panel tools)
         {
@@ -31,6 +32,7 @@ namespace CommanderCZ
 
         void UpdateViewToolbarControls()
         {
+            if (updateDirectionTools != null) updateDirectionTools();
             SetToolbarLabel(toolbarLayoutButton, L.Text(panelLayout == "Single" ? "toolbar.panelsSingle" : panelLayout == "Stacked" ? "toolbar.panelsStacked" : "toolbar.panelsSideBySide"));
             SetToolbarLabel(toolbarAllFilesButton, L.Text(toolbarAllFiles ? "toolbar.allFilesYes" : "toolbar.allFilesNo"));
 
@@ -47,7 +49,7 @@ namespace CommanderCZ
                 foreach (var mark in row.Children.OfType<Border>().Where(x => (string)x.Tag == "toggle-state").ToArray()) row.Children.Remove(mark);
             }
             System.Windows.Automation.AutomationProperties.SetItemStatus(button, L.Text(enabled ? "toolbar.enabled" : "toolbar.disabled"));
-            button.Background = enabled ? CompactTheme.ColorBrush("#E4F0FF") : System.Windows.Media.Brushes.White;
+            button.Background = enabled ? CompactTheme.ThemeBrush("#E4F0FF") : CompactTheme.WhiteSurface;
             button.BorderBrush = enabled ? FluentTheme.Accent : CompactTheme.Line;
             button.Foreground = enabled ? FluentTheme.Accent : FluentTheme.Text;
         }

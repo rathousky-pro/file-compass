@@ -18,6 +18,7 @@ namespace CommanderCZ
         internal TransferWindowState(Window target,Action toBackground,Action toForeground)
         {
             window = target; background = toBackground; foreground = toForeground;
+            window.ShowInTaskbar = false;
             window.SourceInitialized += delegate { var source = HwndSource.FromHwnd(new WindowInteropHelper(window).Handle); if (source != null) source.AddHook(Message); };
             window.Loaded += delegate { Capture(); };
             window.LocationChanged += delegate { Capture(); };
@@ -27,7 +28,7 @@ namespace CommanderCZ
         }
         IntPtr Message(IntPtr hwnd,int message,IntPtr wParam,IntPtr lParam,ref bool handled)
         {
-            if (message == 0x0112 && (wParam.ToInt64() & 0xfff0) == 0xf020) { handled = true; DeferBackground(); }
+            if (message == 0x0112 && (wParam.ToInt64() & 0xfff0) == 0xf020) { handled = true; Background(); }
             return IntPtr.Zero;
         }
         void Capture()
@@ -40,16 +41,29 @@ namespace CommanderCZ
         internal void Background()
         {
             if (finished || !window.IsLoaded || queued) return; Capture(); changing = true;
+            var owner = window.Owner;
+            var ownerState = owner == null ? WindowState.Normal : owner.WindowState;
             try {
                 // WPF can report Normal after Hide while the HWND remains iconic.
                 // Normalize the native window before hiding it from the desktop.
                 window.WindowState = WindowState.Normal;
                 var handle = new WindowInteropHelper(window).Handle;
                 if (handle != IntPtr.Zero && IsIconic(handle)) ShowWindow(handle,9);
-                window.Hide(); queued = true;
+                // Detach the native owner while hiding. This is a transfer to
+                // the in-app activity area, never a minimize of a window group.
+                window.Owner = null;
+                try { window.Hide(); queued = true; }
+                finally { window.Owner = owner; }
             }
             finally { changing = false; }
             if (background != null) background();
+            Action preserveOwner = delegate {
+                if (owner != null && owner.IsVisible && ownerState != WindowState.Minimized && owner.WindowState == WindowState.Minimized)
+                    owner.WindowState = ownerState;
+                if (owner != null && owner.IsVisible && owner.WindowState != WindowState.Minimized) owner.Activate();
+            };
+            preserveOwner();
+            window.Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, preserveOwner);
         }
         internal void Restore()
         {

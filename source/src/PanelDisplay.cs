@@ -28,7 +28,7 @@ namespace CommanderCZ
         int thumbnailSize = 1;
         double TileWidth { get { return new[] { 118.0, 150.0, 218.0 }[thumbnailSize]; } }
         double TileHeight { get { return new[] { 114.0, 146.0, 196.0 }[thumbnailSize] + Math.Max(0, List.FontSize - 12) * 2.4; } }
-        Grid displayGrid; readonly TreeView folderTree = new TreeView { Background = Brushes.White,BorderBrush = CompactTheme.Line,BorderThickness = new Thickness(1) };
+        Grid displayGrid; readonly TreeView folderTree = new TreeView { Background = CompactTheme.WhiteSurface,BorderBrush = CompactTheme.Line,BorderThickness = new Thickness(1) };
         Thumb treeGrip;
         readonly Dictionary<string,ImageSource> thumbnailCache = new Dictionary<string,ImageSource>();
         readonly Dictionary<string,string> thumbnailDetails = new Dictionary<string,string>();

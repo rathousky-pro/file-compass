@@ -32,8 +32,8 @@ namespace CommanderCZ
             protocolFilter.SelectedItem = filter.HasValue ? (object)filter.Value : L.Text("network.allProtocols");
             var body = new Grid(); body.ColumnDefinitions.Add(new ColumnDefinition()); body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(170) }); Grid.SetRow(body, 1); panel.Children.Add(body);
             list.BorderThickness = new Thickness(0);
-            body.Children.Add(new Border { Child = list, Background = System.Windows.Media.Brushes.White,
-                BorderBrush = CompactTheme.ColorBrush("#AEB8C4"), BorderThickness = new Thickness(1),
+            body.Children.Add(new Border { Child = list, Background = CompactTheme.WhiteSurface,
+                BorderBrush = CompactTheme.ThemeBrush("#AEB8C4"), BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(4), Padding = new Thickness(2), Margin = new Thickness(0, 0, 12, 0) });
             var row = new FrameworkElementFactory(typeof(StackPanel)); row.SetValue(StackPanel.OrientationProperty, Orientation.Horizontal);
             var icon = new FrameworkElementFactory(typeof(Image)); icon.SetValue(Image.SourceProperty, DesktopIcons.Drawing("network")); icon.SetValue(Image.WidthProperty, 14.0); icon.SetValue(Image.HeightProperty, 14.0); icon.SetValue(Image.MarginProperty, new Thickness(0, 0, 3, 0)); row.AppendChild(icon);

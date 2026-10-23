@@ -112,7 +112,6 @@ namespace CommanderCZ
                 loadedTreeNodes.Add(node);
             } catch (Exception ex) {
                 if (generation == treeGeneration) {
-                    // A retry is possible after collapsing and expanding the branch again.
                     var connected = node.Items.OfType<TreeViewItem>().Where(x => x.Tag is string).ToArray();
                     bool previous = revealingTree; revealingTree = true;
                     try {
@@ -197,7 +196,6 @@ namespace CommanderCZ
                 ExpandTreeWithoutLoad(node); current = current.TrimEnd('/', '\\') + (IsRemote ? "/" : "\\") + part;
                 var child = node.Items.OfType<TreeViewItem>().FirstOrDefault(x => x.Tag is string && String.Equals(((string)x.Tag).TrimEnd('\\'), current.TrimEnd('\\'), IsRemote ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase));
                 if (child == null) {
-                    // A folder may have been created since this branch was expanded.
                     loadedTreeNodes.Remove(node); await LoadTreeNode(node);
                     if (request != treeRevealVersion || !treeVisible) return;
                     child = node.Items.OfType<TreeViewItem>().FirstOrDefault(x => x.Tag is string && (IsRemote ? String.Equals((string)x.Tag, current, StringComparison.Ordinal) : WindowsShell.SamePath((string)x.Tag, current)));

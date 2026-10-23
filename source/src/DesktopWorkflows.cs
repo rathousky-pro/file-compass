@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -68,13 +68,14 @@ namespace CommanderCZ
             if (profile == null) { MessageBox.Show(this, L.Text("tabs.savedConnectionMissing"), L.Text("tabs.title")); return; }
             var copy = profile.Clone(); copy.Path = saved.Locked ? saved.Home : saved.Path; SetActive(panel); await ConnectNetworkTask(copy);
         }
-        internal async void OpenSameFolder()
+        internal void OpenSameFolder() { OpenFolderInOtherPanel(active); }
+        internal async void OpenFolderInOtherPanel(FilePanel source)
         {
-            var other = active == left ? right : left;
-            if (other.IsLoading || other.LocalLoading || active.CurrentPath == null) return;
-            if (active.IsRemote) { var saved = active.SaveTabs()[active.CurrentTabIndex]; ReopenTab(other, saved); }
-            else if (active.IsArchive) { var document = active.Archive; string prefix = active.ArchivePrefix; await other.OpenArchive(document.FilePath); if (other.IsArchive) other.Navigate("/" + prefix, false); }
-            else other.Navigate(active.CurrentPath, true);
+            var other = source == left ? right : left;
+            if (other.IsLoading || other.LocalLoading || source.CurrentPath == null) return;
+            if (source.IsRemote) { var saved = source.SaveTabs()[source.CurrentTabIndex]; ReopenTab(other, saved); }
+            else if (source.IsArchive) { var document = source.Archive; string prefix = source.ArchivePrefix; await other.OpenArchive(document.FilePath); if (other.IsArchive) other.Navigate("/" + prefix, false); }
+            else other.Navigate(source.CurrentPath, true);
         }
         SavedTab CurrentLocation(FilePanel panel) { var saved = panel.SaveTabs()[panel.CurrentTabIndex]; return new SavedTab { Path = saved.Path, Home = saved.Home, Label = saved.Label, Caption = saved.Caption, ProfileId = saved.ProfileId, ArchiveFile = saved.ArchiveFile, ArchivePrefix = saved.ArchivePrefix, Locked = saved.Locked }; }
         async Task OpenFavoriteLocation(FilePanel panel, SavedTab location, string fallback)
@@ -113,7 +114,7 @@ namespace CommanderCZ
         {
             var window = new Window { Owner = this, Title = L.Text("favorites.title"), Width = 620, Height = 420, WindowStartupLocation = WindowStartupLocation.CenterOwner }; FluentTheme.Dialog(window);
             var body = new DockPanel { Margin = new Thickness(12) }; window.Content = body;
-            var list = new ListBox { Background = Brushes.White, BorderBrush = CompactTheme.Line, BorderThickness = new Thickness(1), DisplayMemberPath = "" };
+            var list = new ListBox { Background = CompactTheme.WhiteSurface, BorderBrush = CompactTheme.Line, BorderThickness = new Thickness(1), DisplayMemberPath = "" };
             var actions = FluentTheme.Actions(); DockPanel.SetDock(actions, Dock.Bottom); body.Children.Add(actions); body.Children.Add(list);
             Action reload = delegate { list.ItemsSource = null; list.ItemsSource = favorites; };
             actions.Children.Add(CopyUi.Button(L.Text("action.editDialog"), delegate { var item = list.SelectedItem as FavoriteLocation; if (item == null) return; string name = Ask(L.Text("favorites.shortTitle"), L.Text("common.nameLabel"), item.Name); if (String.IsNullOrWhiteSpace(name)) return; string group = Ask(L.Text("favorites.shortTitle"), "Skupina:", item.Group); if (group == null) return; item.Name = name; item.Group = group; SaveFavorites(); reload(); }));

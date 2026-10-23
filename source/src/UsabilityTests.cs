@@ -71,7 +71,6 @@ namespace CommanderCZ {
             var tools = (Panel)toolbarAllFilesButton.Parent;
             check(tools.Children.IndexOf(toolbarThumbnailsButton) == tools.Children.IndexOf(toolbarAllFilesButton) + 1 && tools.Children.IndexOf(toolbarPreviewButton) == tools.Children.IndexOf(toolbarThumbnailsButton) + 1, "Toolbar order is hidden files, thumbnails, preview");
             CloseQuickPreview(); check(System.Windows.Automation.AutomationProperties.GetItemStatus(toolbarPreviewButton) == L.Text("toolbar.disabled"), "Closing preview resets its toolbar state");
-            // Menu actions keep their original handlers and shortcuts when moved under groups.
             var menu = AdvancedToolsTests.Visual<Menu>(this).First(x => x.Items.OfType<MenuItem>().Any(y => Convert.ToString(y.Header) == L.Text("menu.commands")));
             var root = menu.Items.OfType<MenuItem>().Single(x => Convert.ToString(x.Header) == L.Text("menu.commands"));
             check(root.Items.OfType<MenuItem>().Count() <= 10 && root.Items.OfType<MenuItem>().Any(x => x.Items.Count >= 3), "Commands menu is divided into short logical submenus");

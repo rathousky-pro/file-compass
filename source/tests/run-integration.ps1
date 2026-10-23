@@ -1,4 +1,4 @@
-param(
+﻿param(
     [ValidateSet('ftp','sftp','scp')][string]$Protocol = 'ftp',
     [string]$OutputDirectory,
     [string]$Python = 'python',
@@ -10,7 +10,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $project = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-if ([string]::IsNullOrWhiteSpace($ExecutablePath)) { $ExecutablePath = Join-Path (Split-Path -Parent $project) 'bin\FileVoyager.exe' }
+if ([string]::IsNullOrWhiteSpace($ExecutablePath)) { $ExecutablePath = Join-Path (Split-Path -Parent $project) 'bin\File Compass.exe' }
 $output = [IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 $run = Join-Path $output ($Protocol + '-' + [Guid]::NewGuid().ToString('N'))

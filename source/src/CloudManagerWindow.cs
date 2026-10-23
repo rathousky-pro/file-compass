@@ -32,7 +32,7 @@ namespace CommanderCZ {
             DockPanel.SetDock(applicationStatus,Dock.Top);body.Children.Add(applicationStatus);
             DockPanel.SetDock(status,Dock.Bottom);body.Children.Add(status);
             var row=new Grid();row.ColumnDefinitions.Add(new ColumnDefinition());row.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(170)});body.Children.Add(row);
-            row.Children.Add(new Border{Child=list,Background=System.Windows.Media.Brushes.White,BorderBrush=CompactTheme.ChromeLine,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(6),Margin=new Thickness(0,0,12,0)});
+            row.Children.Add(new Border{Child=list,Background=CompactTheme.WhiteSurface,BorderBrush=CompactTheme.ChromeLine,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(6),Margin=new Thickness(0,0,12,0)});
             Grid.SetColumn(buttons,1);row.Children.Add(buttons);
             var connect=CopyUi.Button(L.Text("cloud.connect"),async delegate {
                 var a=list.SelectedItem as CloudAccount;if(a==null)return;

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
@@ -37,7 +37,6 @@ namespace CommanderCZ
             grid.Children.Remove(List); Grid.SetRow(detailGrid, 3); Grid.SetColumn(detailGrid, 1); grid.Children.Add(detailGrid);
             Grid.SetRow(List, 0); Grid.SetColumn(List, 0); detailGrid.Children.Add(List);
             detailSplitter = new Thumb { Height = 6, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch, Background = CompactTheme.Chrome, Cursor = Cursors.SizeNS, Visibility = Visibility.Collapsed };
-            // The header belongs to the detail area; the splitter resizes the list against it.
             Grid.SetRow(detailSplitter, 1); detailGrid.Children.Add(detailSplitter);
             detailSplitter.DragCompleted += delegate { RememberDetailRatio(); };
             detailSplitter.DragDelta += delegate(object sender, DragDeltaEventArgs e) {
@@ -56,6 +55,7 @@ namespace CommanderCZ
             detailBody = new Border { Visibility = Visibility.Collapsed }; Grid.SetRow(detailBody, 3); detailGrid.Children.Add(detailBody);
             List.SelectionChanged += delegate { ScheduleFileDetail(); };
             PathChanged += delegate { ScheduleFileDetail(); };
+            LocalNavigationCompleted += ScheduleFileDetail;
             IsVisibleChanged += delegate { if (detailDisposed) return; if (IsVisible) ScheduleFileDetail(); else { detailRequest++; if (fileDetail != null) fileDetail.ShowMessage(""); } };
             UpdateDetailHeader();
         }
@@ -106,7 +106,9 @@ namespace CommanderCZ
 
         void ScheduleFileDetail()
         {
-            if (detailDisposed || !detailExpanded || !detailLayoutVisible || fileDetail == null) return;
+            if (detailDisposed || !detailExpanded || !detailLayoutVisible || fileDetail == null || LocalLoading) return;
+            var entry = List.SelectedItem as Entry;
+            if (!IsRemote && !IsArchive && entry != null && !entry.IsDirectory && fileDetail.IsCurrentLocalFile(entry.FullPath)) return;
             DetailLoadingTask = LoadFileDetail(++detailRequest);
         }
 
@@ -115,7 +117,7 @@ namespace CommanderCZ
             // Cancel immediately, then debounce cursor movement before reading another file.
             fileDetail.ShowMessage(L.Text("preview.loadingStatus"));
             await Task.Delay(150);
-            if (request != detailRequest || !detailExpanded || !detailLayoutVisible || detailDisposed || !IsVisible) return;
+            if (request != detailRequest || !detailExpanded || !detailLayoutVisible || detailDisposed || !IsVisible || LocalLoading) return;
             var entry = List.SelectedItem as Entry;
             if (entry == null || entry.IsParent) { detailMetadata.Text = ""; fileDetail.ShowMessage(L.Text("layout.selectFile")); return; }
             detailMetadata.Text = entry.FullName + "  ·  " + (entry.IsDirectory ? L.Text("layout.folder") : entry.Size + L.Text("layout.bytesSuffix")) + "  ·  " + entry.Modified + (entry.TagNames.Length == 0 ? "" : "  ·  " + entry.TagsLabel);
@@ -123,7 +125,7 @@ namespace CommanderCZ
             if (entry.IsDirectory) { fileDetail.ShowMessage(L.Text("layout.folderDetails")); return; }
             if (IsRemote && Remote.Profile.Protocol != NetworkProtocol.FTP && Remote.Profile.Protocol != NetworkProtocol.SFTP) { fileDetail.ShowMessage(L.Text("preview.scpArchiveUseF3")); return; }
             if(IsArchive)fileDetail.ShowArchiveFile(Archive,entry.FullPath);
-            else if (IsRemote) fileDetail.ShowRemoteFile(entry.FullPath, Remote); else fileDetail.ShowFile(entry.FullPath);
+            else if (IsRemote) fileDetail.ShowRemoteFile(entry.FullPath, Remote); else fileDetail.ShowFile(entry.FullPath, true);
             if (fileDetail.LoadingTask != null) await fileDetail.LoadingTask;
         }
 

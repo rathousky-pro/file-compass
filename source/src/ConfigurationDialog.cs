@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -23,6 +23,9 @@ namespace CommanderCZ
         readonly ToolbarTheme originalTheme;
         readonly ApplicationIcon originalApplicationIcon;
         bool appearanceSaved;
+        internal readonly ComboBox ColorThemeChoice = new ComboBox { MinWidth = 180 };
+        internal readonly ComboBox LanguageChoice = new ComboBox { MinWidth = 180 };
+        string originalColorTheme, originalBackdrop; internal readonly ComboBox BackdropChoice = new ComboBox { MinWidth = 140 };
         readonly MainWindow main;
         internal readonly ConnectionsView Connections;
         readonly FontChoiceControl interfaceFont, fileListFont;
@@ -37,6 +40,7 @@ namespace CommanderCZ
             CopyUi.Style(this, owner, L.Text("menu.configuration"), 1080); InitializeSettingsSize();
             main = owner as MainWindow ?? (owner == null ? null : owner.Owner as MainWindow);
             settings = ProgramSettings.Load(); archives = ArchiveSettings.Load(); selectedTheme = ToolbarThemeSettings.Current;
+            originalColorTheme = AppearanceTheme.Mode; originalBackdrop = AppearanceTheme.Backdrop; AppearanceTheme.RegisterShell(this);
             originalTheme = selectedTheme; originalApplicationIcon = ApplicationBrand.Current;
             var body = new DockPanel { Margin = new Thickness(12) }; Content = body;
             var actions = FluentTheme.Actions(); DockPanel.SetDock(actions, Dock.Bottom); body.Children.Add(actions);
@@ -88,12 +92,12 @@ namespace CommanderCZ
                 radio.Checked += delegate { selectedTheme = captured; PreviewToolbar(captured); }; card.Children.Add(radio);
                 var previews = new WrapPanel(); card.Children.Add(previews);
                 foreach (string name in ToolbarThemeDialog.PreviewNames)
-                    previews.Children.Add(new Border { Width = 30, Height = 30, Background = Brushes.White, BorderBrush = CompactTheme.Line, BorderThickness = new Thickness(1), Margin = new Thickness(1), CornerRadius = new CornerRadius(3), Child = new Image { Source = DesktopIcons.ToolbarDrawing(name, theme), Width = 24, Height = 24 } });
+                    previews.Children.Add(new Border { Width = 30, Height = 30, Background = CompactTheme.WhiteSurface, BorderBrush = CompactTheme.Line, BorderThickness = new Thickness(1), Margin = new Thickness(1), CornerRadius = new CornerRadius(3), Child = new Image { Source = DesktopIcons.ToolbarDrawing(name, theme), Width = 24, Height = 24 } });
                 icons.Children.Add(new GroupBox { Header = titles[(int)theme], Content = card, Margin = new Thickness(0, 0, 0, 10) });
             }
             var archivePage = Page(L.Text("settings.archivesSection"), L.Text("settings.archiveBrowsingDescription"));
             if (!String.IsNullOrEmpty(archiveError))
-                archivePage.Children.Add(new Border { Background = new SolidColorBrush(Color.FromRgb(255, 242, 226)), BorderBrush = Brushes.DarkOrange, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(5), Padding = new Thickness(10), Margin = new Thickness(0, 0, 0, 12), Child = new TextBlock { Text = archiveError, Foreground = Brushes.DarkRed, TextWrapping = TextWrapping.Wrap } });
+                archivePage.Children.Add(new Border { Background = CompactTheme.ThemeBrush("#FFF6D6"), BorderBrush = Brushes.DarkOrange, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(5), Padding = new Thickness(10), Margin = new Thickness(0, 0, 0, 12), Child = new TextBlock { Text = archiveError, Foreground = CompactTheme.ThemeBrush("#B92331"), TextWrapping = TextWrapping.Wrap } });
             archivePage.Children.Add(new TextBlock { Text = L.Text("settings.portableArchiveLibraryPrefix") + ArchiveEngine.SevenZipLibraryPath, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 16) });
             var rarSection = FluentTheme.Section(archivePage, L.Text("settings.externalRarArchiver"));
             rarPath = ProgramPath(rarSection, "WinRAR / Rar.exe", archives.WinRarPath);
@@ -132,15 +136,16 @@ namespace CommanderCZ
                 network.Children.Add(Connections);
                 Connections.BusyChanged += delegate(bool busy) { Sections.IsEnabled = !busy; ok.IsEnabled = !busy; QueueSettingsFit(); };
                 Connections.Tabs.SelectionChanged += delegate { QueueSettingsFit(); };
-            } catch (Exception ex) { network.Children.Add(new TextBlock { Text = ex.Message, TextWrapping = TextWrapping.Wrap, Foreground = Brushes.DarkRed }); }
+            } catch (Exception ex) { network.Children.Add(new TextBlock { Text = ex.Message, TextWrapping = TextWrapping.Wrap, Foreground = CompactTheme.ThemeBrush("#B92331") }); }
             network.Children.Add(new TextBlock { Text = L.Text("connections.immediateSave"), TextWrapping = TextWrapping.Wrap, Foreground = FluentTheme.Muted, Margin = new Thickness(0, 10, 0, 0) });
             Closing += delegate(object sender, System.ComponentModel.CancelEventArgs e) { if (Connections != null && !Connections.AllowHostClose()) e.Cancel = true; };
-            Closed += delegate { if (!appearanceSaved) { ApplicationBrand.Apply(originalApplicationIcon); PreviewToolbar(originalTheme); } if (Connections != null) Connections.DisposeManagers(); };
+            Closed += delegate { if (!appearanceSaved) { AppearanceTheme.Backdrop = originalBackdrop; AppearanceTheme.Apply(originalColorTheme); ApplicationBrand.Apply(originalApplicationIcon); PreviewToolbar(originalTheme); } if (Connections != null) Connections.DisposeManagers(); };
             var behavior = Page(L.Text("settings.fileOperations"), L.Text("settings.fileOperationsDescription"));
             fileBehavior = new FileBehaviorEditor(settings); behavior.Children.Add(fileBehavior);
             var names = new[] { L.Text("settings.appearanceSection"), L.Text("settings.iconsSection"), L.Text("settings.archivesSection"), L.Text("settings.viewersTitle"), L.Text("settings.startupViewTitle"), L.Text("network.connectionsTitle"), L.Text("settings.fileOperations") };
             var pages = new[] { appearance, icons, archivePage, viewers, view, network, behavior };
             ArrangeSettingsPages(pages);
+            AddAppearanceChoices(appearance);
             foreach (string name in names) Sections.Items.Add(name);
             Sections.SelectionChanged += delegate { if (Sections.SelectedIndex >= 0) { page.Content = new ScrollViewer { Content = pages[Sections.SelectedIndex], VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled }; QueueSettingsFit(); } };
             Sections.SelectedIndex = Math.Max(0, Array.IndexOf(names, section));
@@ -178,11 +183,34 @@ namespace CommanderCZ
                 settings.InternalCodePreview = internalCodePreview.IsChecked == true; settings.AutomaticFolderViews = automaticFolderViews.IsChecked == true;
                 settings.ShowHiddenFiles = showHidden.IsChecked == true; settings.ShowSystemFiles = showSystem.IsChecked == true;
                 fileBehavior.Apply(); startupPreferences.Apply();
+                settings.WindowBackdrop = new[] { "None", "Mica", "MicaAlt" }[BackdropChoice.SelectedIndex]; settings.ColorTheme = new[] { "Light", "Dark", "System" }[ColorThemeChoice.SelectedIndex];
+                string language = LanguageChoice.SelectedIndex == 1 ? "en" : "cs-CZ";
+                L.SaveSelection(language);
                 interfaceFont.Read(out settings.InterfaceFontFamily, out settings.InterfaceFontSize); fileListFont.Read(out settings.FileListFontFamily, out settings.FileListFontSize);
                 archiveLimits.Apply(archives); archives.WinRarPath = rarPath.Text.Trim().Trim('"'); archives.ArjPath = arjPath.Text.Trim().Trim('"'); archives.LhaPath = lhaPath.Text.Trim().Trim('"'); settings.Save(); archives.Save(); new ToolbarThemeSettings { Theme = selectedTheme, ApplicationIcon = selectedApplicationIcon }.Save();
                 ApplicationBrand.Apply(selectedApplicationIcon); ToolbarThemeSettings.Current = selectedTheme; if (main != null) { main.ApplyRefreshSettings(settings.AutoRefresh, settings.WatchNetworkFolders); main.ApplyDisplaySettings(settings); main.ApplyToolbarTheme(selectedTheme); } appearanceSaved = true; DialogResult = true;
             }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, L.Text("menu.configuration"), MessageBoxButton.OK, MessageBoxImage.Warning); }
+        }
+        void AddAppearanceChoices(StackPanel appearance) {
+            foreach (var font in new[] { interfaceFont, fileListFont }) ((FrameworkElement)font.Children[font.Children.Count-1]).Margin = new Thickness(0,4,0,2);
+            foreach (string key in new[] { "settings.themeLight", "settings.themeDark", "settings.themeSystem" }) ColorThemeChoice.Items.Add(L.Text(key));
+            ColorThemeChoice.SelectedIndex = Array.IndexOf(new[] { "Light", "Dark", "System" }, AppearanceTheme.Normalize(settings.ColorTheme));
+            ColorThemeChoice.SelectionChanged += delegate { if (ColorThemeChoice.SelectedIndex >= 0) AppearanceTheme.Apply(new[] { "Light", "Dark", "System" }[ColorThemeChoice.SelectedIndex]); };
+            LanguageChoice.Items.Add("Čeština"); LanguageChoice.Items.Add("English"); LanguageChoice.SelectedIndex = L.PreferredLanguage == "en" ? 1 : 0;
+            var theme = new StackPanel(); theme.Children.Add(new TextBlock { Text = L.Text("settings.colorTheme"), Margin = new Thickness(0,0,0,5) }); theme.Children.Add(ColorThemeChoice);
+            var language = new StackPanel(); language.Children.Add(new TextBlock { Text = L.Text("settings.language"), Margin = new Thickness(0,0,0,5) }); language.Children.Add(LanguageChoice);
+            LanguageChoice.ToolTip = L.Text("settings.languageRestart");
+            var description = (TextBlock)appearance.Children[1]; description.Text = L.Text("settings.panelColorsDescription"); description.Margin = new Thickness(0,0,0,8);
+            var redundant = appearance.Children[appearance.Children.Count-1] as TextBlock; if (redundant != null) redundant.Visibility = Visibility.Collapsed;
+            foreach (string key in new[] { "settings.backdropNone", "settings.backdropMica", "settings.backdropMicaAlt" }) BackdropChoice.Items.Add(L.Text(key));
+            BackdropChoice.SelectedIndex = Array.IndexOf(new[] { "None", "Mica", "MicaAlt" }, AppearanceTheme.NormalizeBackdrop(settings.WindowBackdrop));
+            BackdropChoice.SelectionChanged += delegate { if (BackdropChoice.SelectedIndex >= 0) AppearanceTheme.SetBackdrop(new[] { "None", "Mica", "MicaAlt" }[BackdropChoice.SelectedIndex]); };
+            BackdropChoice.ToolTip = L.Text("settings.backdropHelp");
+            var backdrop = new StackPanel(); backdrop.Children.Add(new TextBlock { Text = L.Text("settings.backdrop"), Margin = new Thickness(0,0,0,5) }); backdrop.Children.Add(BackdropChoice);
+            var themeAndBackdrop = new Grid(); themeAndBackdrop.ColumnDefinitions.Add(new ColumnDefinition()); themeAndBackdrop.ColumnDefinitions.Add(new ColumnDefinition());
+            theme.Margin = new Thickness(0,0,8,0); themeAndBackdrop.Children.Add(theme); Grid.SetColumn(backdrop, 1); themeAndBackdrop.Children.Add(backdrop);
+            var choices = Row(themeAndBackdrop, language); choices.Margin = new Thickness(0,0,0,4); appearance.Children.Insert(2, choices);
         }
     }
 }

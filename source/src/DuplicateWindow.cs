@@ -10,7 +10,7 @@ using System.Windows.Data;
 namespace CommanderCZ {
  internal sealed class DuplicateWindow:Window {
   readonly TextBox roots=new TextBox();
-  internal readonly DataGrid Results=new DataGrid{AutoGenerateColumns=false,CanUserAddRows=false,SelectionMode=DataGridSelectionMode.Extended,Background=System.Windows.Media.Brushes.White,RowBackground=System.Windows.Media.Brushes.White,AlternatingRowBackground=CompactTheme.ColorBrush("#F4F7FB"),BorderThickness=new Thickness(0)};
+  internal readonly DataGrid Results=new DataGrid{AutoGenerateColumns=false,CanUserAddRows=false,SelectionMode=DataGridSelectionMode.Extended,Background=CompactTheme.WhiteSurface,RowBackground=CompactTheme.WhiteSurface,AlternatingRowBackground=CompactTheme.ThemeBrush("#F4F7FB"),BorderThickness=new Thickness(0)};
   readonly TextBlock status=new TextBlock{TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,8,0,5)};
   readonly QuickPreviewPane preview;
   List<DuplicateFile> files=new List<DuplicateFile>();
@@ -43,7 +43,7 @@ namespace CommanderCZ {
    DockPanel.SetDock(status,Dock.Bottom);body.Children.Add(status);
    Results.Columns.Add(new DataGridCheckBoxColumn{Header=L.Text("duplicates.mark"),Binding=new Binding("Selected"){Mode=BindingMode.TwoWay,UpdateSourceTrigger=UpdateSourceTrigger.PropertyChanged},Width=65});
    foreach(var column in new[]{new[]{"duplicates.group","Group","65"},new[]{"column.name","Name","150"},new[]{"column.path","DisplayPath","280"},new[]{"column.size","Size","100"}})Results.Columns.Add(new DataGridTextColumn{Header=L.Text(column[0]),Binding=new Binding(column[1]),IsReadOnly=true,Width=Double.Parse(column[2])});
-   var grid=new Grid();grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(3,GridUnitType.Star)});grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(2,GridUnitType.Star)});body.Children.Add(grid);grid.Children.Add(new Border{Child=Results,Background=System.Windows.Media.Brushes.White,BorderBrush=CompactTheme.ChromeLine,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(7),Padding=new Thickness(6)});
+   var grid=new Grid();grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(3,GridUnitType.Star)});grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(2,GridUnitType.Star)});body.Children.Add(grid);grid.Children.Add(new Border{Child=Results,Background=CompactTheme.WhiteSurface,BorderBrush=CompactTheme.ChromeLine,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(7),Padding=new Thickness(6)});
    var rowStyle=new Style(typeof(DataGridRow));rowStyle.Setters.Add(new Setter(ToolTipProperty,new Binding("Path")));Results.RowStyle=rowStyle;
    preview=new QuickPreviewPane(delegate{},true){Margin=new Thickness(10,0,0,0)};Grid.SetColumn(preview,1);grid.Children.Add(preview);
    Results.SelectionChanged+=delegate{var file=Results.SelectedItem as DuplicateFile;if(file!=null)preview.ShowFile(file.Path);else preview.ShowMessage("");};

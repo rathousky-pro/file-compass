@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -127,14 +127,14 @@ namespace CommanderCZ
             window.Height = 570; window.ResizeMode = ResizeMode.CanResize; window.SizeToContent = SizeToContent.Manual;
             var dock = new DockPanel { Margin = new Thickness(10) }; window.Content = dock;
             var buttons = new StackPanel { Orientation = Orientation.Horizontal }; DockPanel.SetDock(buttons, Dock.Bottom); dock.Children.Add(buttons);
-            var list = new ListBox { Height = 190, ItemsSource = operationJournal.Records, Background = System.Windows.Media.Brushes.White };
+            var list = new ListBox { Height = 190, ItemsSource = operationJournal.Records, Background = CompactTheme.WhiteSurface };
             ScrollViewer.SetHorizontalScrollBarVisibility(list, ScrollBarVisibility.Disabled);
             var row = new FrameworkElementFactory(typeof(TextBlock)); row.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis); row.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding()); row.SetBinding(TextBlock.ToolTipProperty, new System.Windows.Data.Binding()); list.ItemTemplate = new DataTemplate { VisualTree = row };
-            var listBorder = new Border { Child = list, BorderBrush = CompactTheme.Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Background = System.Windows.Media.Brushes.White }; DockPanel.SetDock(listBorder, Dock.Top); dock.Children.Add(listBorder);
+            var listBorder = new Border { Child = list, BorderBrush = CompactTheme.Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(4), Background = CompactTheme.WhiteSurface }; DockPanel.SetDock(listBorder, Dock.Top); dock.Children.Add(listBorder);
             var details = new TextBox { IsReadOnly = true, TextWrapping = TextWrapping.Wrap, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Margin = new Thickness(0, 8, 0, 8) }; dock.Children.Add(details);
             var stop = CopyUi.Button(L.Text("history.cancelSelectedOperation"), delegate { var record = list.SelectedItem as OperationRecord; if (record != null && record.Ended == default(DateTime) && record.Cancel != null) record.Cancel(); }); buttons.Children.Add(stop);
             var retry = CopyUi.Button(L.Text("history.retryOrResume"), delegate { var record = list.SelectedItem as OperationRecord; if (record != null && record.Retry != null && record.Items.Any(x => x.State == L.Code("state.error") || (record.RetryInterrupted && (x.State == L.Code("state.interrupted") || x.State == L.Code("state.cancelled"))))) record.Retry(); }); buttons.Children.Add(retry);
-            buttons.Children.Add(CopyUi.Button(L.Text("history.saveLog"), delegate { var save = new SaveFileDialog { Filter = L.Text("history.textLogFileFilter"), FileName = "FileVoyager-operace.txt" }; if (save.ShowDialog(window) == true) try { File.WriteAllText(save.FileName, OperationJournal.Log(operationJournal.Records), new UTF8Encoding(true)); } catch (Exception ex) { MessageBox.Show(window, ex.Message, L.Text("history.saveLogFailed")); } }));
+            buttons.Children.Add(CopyUi.Button(L.Text("history.saveLog"), delegate { var save = new SaveFileDialog { Filter = L.Text("history.textLogFileFilter"), FileName = "FileCompass-operace.txt" }; if (save.ShowDialog(window) == true) try { File.WriteAllText(save.FileName, OperationJournal.Log(operationJournal.Records), new UTF8Encoding(true)); } catch (Exception ex) { MessageBox.Show(window, ex.Message, L.Text("history.saveLogFailed")); } }));
             buttons.Children.Add(CopyUi.Button(L.Text("action.close"), window.Close));
             Action refresh = delegate { var record = list.SelectedItem as OperationRecord; details.Text = record == null ? L.Text("history.selectOperationPrompt") : OperationJournal.Log(new[] { record }); stop.IsEnabled = record != null && record.Ended == default(DateTime) && record.Cancel != null && !record.CancelRequested; retry.IsEnabled = record != null && record.Ended != default(DateTime) && record.Retry != null && record.Items.Any(x => x.State == L.Code("state.error") || (record.RetryInterrupted && (x.State == L.Code("state.interrupted") || x.State == L.Code("state.cancelled")))); };
             list.SelectionChanged += delegate { refresh(); };

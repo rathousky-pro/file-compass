@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,12 +13,13 @@ namespace CommanderCZ
         {
             public string[] Sources; public CopyOptions Options; public OperationRecord Record;
             internal DurableTransfer Durable; internal Dictionary<string,string> RecoveryTargets;
-            public override string ToString() { return Sources.Length + L.Text("transfer.itemRouteSeparator") + Options.Target; }
+            public override string ToString() { return String.Join("; ", Sources) + "\n→ " + Options.Target; }
         }
         readonly Queue<CopyJob> copyJobs = new Queue<CopyJob>();
         readonly List<string> copyTargets = new List<string>();
         bool copyRunning;
         CopyProgressDialog copyProgress;
+        CopyJob runningCopyJob;
         CopyControl copyControl;
 
         void StartCopy(bool move = false)
@@ -45,7 +46,7 @@ namespace CommanderCZ
             {
                 while (copyJobs.Count > 0)
                 {
-                    var job = copyJobs.Dequeue();
+                    var job = copyJobs.Dequeue(); runningCopyJob = job;
                     using (var control = new CopyControl())
                     {
                         copyControl = control;
@@ -114,7 +115,7 @@ namespace CommanderCZ
                 }
             }
             catch (Exception ex) { operation.Text = L.Text("copy.failedPrefix") + ex.Message; MessageBox.Show(this, ex.Message, L.Code("copy.title"), MessageBoxButton.OK, MessageBoxImage.Error); }
-            finally { copyRunning = false; copyProgress = null; copyControl = null; }
+            finally { copyRunning = false; copyProgress = null; copyControl = null; runningCopyJob = null; }
         }
 
         void ShowCopyProgress()
@@ -124,14 +125,42 @@ namespace CommanderCZ
         void ShowCopyQueue()
         {
             var window = new Window(); CopyUi.Style(window, this, L.Text("queue.copyTitle"), 650);
-            var panel = new StackPanel { Margin = new Thickness(10) }; window.Content = panel;
-            panel.Children.Add(CopyUi.Label(copyRunning ? L.Text("queue.processingSequentiallyHelp") : L.Text("queue.noRunningJob")));
-            var list = new ListBox { Height = 160, ItemsSource = copyJobs.ToArray() }; panel.Children.Add(list);
-            var buttons = new System.Windows.Controls.Primitives.UniformGrid { Columns = 3 };
-            buttons.Children.Add(CopyUi.Button(L.Text("action.showProgress"), delegate { window.Close(); ShowCopyProgress(); }));
-            buttons.Children.Add(CopyUi.Button(L.Text("queue.cancelWaiting"), delegate { CancelWaitingCopies(); list.ItemsSource = copyJobs.ToArray(); }));
-            buttons.Children.Add(CopyUi.Button(L.Text("queue.cancelAll"), delegate { CancelWaitingCopies(); if (copyControl != null) copyControl.Cancel(); window.Close(); }));
-            panel.Children.Add(buttons); window.ShowDialog();
+            var panel = new StackPanel(); CopyUi.SectionedSurface(window, panel);
+            var empty = QueuePresentation.Empty(L.Text("queue.designEmpty"), L.Text("queue.designLocalHelp")); panel.Children.Add(empty);
+            var runningSection = FluentTheme.Section(panel, L.Text("queue.designRunning"));
+            var running = new TextBlock { TextWrapping=TextWrapping.Wrap, LineHeight=21 }; runningSection.Children.Add(running);
+            var state = CopyUi.Label(""); state.Foreground=FluentTheme.Muted;runningSection.Children.Add(state);
+            var runningProgress = new ProgressBar { Height=4, Minimum=0, Maximum=1, Margin=new Thickness(0,6,0,4) }; runningSection.Children.Add(runningProgress);
+            var waitingSection = FluentTheme.Section(panel, L.Text("queue.designWaiting"));
+            var noWaiting = CopyUi.Label(L.Text("queue.designNoWaiting"));waitingSection.Children.Add(noWaiting);
+            var list = new ListBox { BorderThickness = new Thickness(0), Margin = new Thickness(0,8,0,8) }; waitingSection.Children.Add(list);
+            var rowText = new FrameworkElementFactory(typeof(TextBlock)); rowText.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding());
+            rowText.SetValue(TextBlock.TextWrappingProperty, TextWrapping.Wrap); rowText.SetValue(TextBlock.MarginProperty,new Thickness(4,5,4,5));
+            list.ItemTemplate = new DataTemplate { VisualTree = rowText };
+            list.HorizontalContentAlignment = HorizontalAlignment.Stretch; ScrollViewer.SetHorizontalScrollBarVisibility(list, ScrollBarVisibility.Disabled);
+            var actions = QueuePresentation.Actions(); panel.Children.Add(actions);
+            var show = CopyUi.Button(L.Text("action.showProgress"), delegate { window.Close(); ShowCopyProgress(); }); FluentTheme.Primary(show); actions.Children.Add(show);
+            var waiting = CopyUi.Button(L.Text("queue.cancelWaiting"), CancelWaitingCopies); actions.Children.Add(waiting);
+            var cancel = CopyUi.Button(L.Text("queue.cancelAll"), delegate { CancelWaitingCopies(); if (copyControl != null) copyControl.Cancel(); }); actions.Children.Add(cancel);
+            var footer = QueuePresentation.Actions(); panel.Children.Add(footer);
+            footer.Children.Add(CopyUi.Button(L.Text("history.openDialog"), ShowOperationHistory));
+            footer.Children.Add(CopyUi.Button(L.Text("action.close"), window.Close));
+            Action update = delegate {
+                var pending = copyJobs.ToArray(); bool any = copyRunning || pending.Length > 0;
+                if (!list.Items.Cast<CopyJob>().SequenceEqual(pending)) list.ItemsSource = pending;
+                empty.Visibility = any ? Visibility.Collapsed : Visibility.Visible;
+                ((FrameworkElement)runningSection.Parent).Visibility = ((FrameworkElement)waitingSection.Parent).Visibility = actions.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
+                running.Text = runningCopyJob == null ? L.Text("queue.noRunningJob") : String.Join("\n", runningCopyJob.Sources) + "\n→ " + runningCopyJob.Options.Target;
+                noWaiting.Visibility = pending.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+                state.Text = copyProgress == null ? "" : copyProgress.QueueStatus;
+                runningProgress.Value = copyProgress == null ? 0 : Math.Max(0, Math.Min(1, copyProgress.QueueFraction));
+                list.Visibility = pending.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+                list.Height = Math.Min(240, Math.Max(64, pending.Length * 64));
+                show.IsEnabled = copyRunning; waiting.IsEnabled = pending.Length > 0;
+            };
+            var refresh = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+            refresh.Tick += delegate { update(); }; update();
+            window.Loaded += delegate { refresh.Start(); }; window.Closed += delegate { refresh.Stop(); }; window.ShowDialog();
         }
         void ShowCopyErrors(CopyResult result)
         {

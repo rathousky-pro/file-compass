@@ -1,13 +1,12 @@
-param(
+﻿param(
     [string]$Executable = '',
     [string]$CertificateFile = $env:COMMANDER_SIGN_PFX,
     [string]$CertificatePassword = $env:COMMANDER_SIGN_PASSWORD,
     [string]$TimestampServer = 'http://timestamp.digicert.com'
 )
-# Podepíše FileVoyager.exe Authenticode podpisem. Certifikát se nikdy nevkládá do repozitáře:
-# předává se cestou k PFX (nebo proměnnou COMMANDER_SIGN_PFX) a heslem (COMMANDER_SIGN_PASSWORD).
+# Supply the signing certificate separately; never commit it.
 $ErrorActionPreference = 'Stop'
-if ([string]::IsNullOrWhiteSpace($Executable)) { $Executable = Join-Path (Split-Path -Parent $PSScriptRoot) 'bin\FileVoyager.exe' }
+if ([string]::IsNullOrWhiteSpace($Executable)) { $Executable = Join-Path (Split-Path -Parent $PSScriptRoot) 'bin\File Compass.exe' }
 if (-not (Test-Path -LiteralPath $Executable)) { throw "Soubor k podpisu neexistuje: $Executable" }
 if ([string]::IsNullOrWhiteSpace($CertificateFile) -or -not (Test-Path -LiteralPath $CertificateFile)) { throw 'Zadejte -CertificateFile (nebo COMMANDER_SIGN_PFX) s platným PFX certifikátem pro podpis kódu.' }
 $signtool = Get-ChildItem -Path "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" -ErrorAction SilentlyContinue | Sort-Object FullName -Descending | Select-Object -First 1

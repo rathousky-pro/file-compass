@@ -13,6 +13,15 @@ namespace CommanderCZ {
     internal sealed class DocumentPreview : Grid, IDisposable {
         internal const string InstallUrl = "https://developer.microsoft.com/microsoft-edge/webview2/#download-section";
         internal static bool ForceUnavailable; static bool loaderConfigured;
+        internal static string UserDataFolder {
+            get {
+                string installation=Path.GetFullPath(AppPaths.ProgramDirectory).TrimEnd(Path.DirectorySeparatorChar).ToUpperInvariant();
+                using(var hash=System.Security.Cryptography.SHA256.Create()) {
+                    string id=BitConverter.ToString(hash.ComputeHash(System.Text.Encoding.UTF8.GetBytes(installation))).Replace("-","").Substring(0,16);
+                    return Path.Combine(Path.GetTempPath(),"FileCompass","WebView2",id);
+                }
+            }
+        }
         internal static bool IsHtml(string path) {return new[]{".html",".htm",".xhtml",".shtml"}.Contains(Path.GetExtension(path).ToLowerInvariant());}
         internal static bool Supports(string path) { return IsHtml(path)||new[]{".pdf",".docx",".xlsx",".xls",".xlsm",".xlsb",".ods"}.Contains(Path.GetExtension(path).ToLowerInvariant()); }
         internal static string Assets { get { return AppPaths.Resource("preview"); } }
@@ -39,7 +48,7 @@ namespace CommanderCZ {
                 },token);
                 token.ThrowIfCancellationRequested(); if(disposed)return false;
                 view=new WebView2();Children.Add(view);
-                var environment=await CoreWebView2Environment.CreateAsync(null,Path.Combine(AppPaths.ConfigDirectory,"cache","webview2"),new CoreWebView2EnvironmentOptions("--disable-background-networking"));
+                var environment=await CoreWebView2Environment.CreateAsync(null,UserDataFolder,new CoreWebView2EnvironmentOptions("--disable-background-networking"));
                 if(disposed||token.IsCancellationRequested)return false;
                 await view.EnsureCoreWebView2Async(environment);
                 if(disposed||token.IsCancellationRequested)return false;

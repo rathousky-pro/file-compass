@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 
 namespace CommanderCZ.NetworkTransport
@@ -22,7 +22,7 @@ namespace CommanderCZ.NetworkTransport
         { if (!SameRelayFile(expected, FileExists(target) ? GetFileInfo(target) : null)) throw new IOException(L.Text("transfer.changedTargetOverwriteRejected")); }
         internal void UploadRelay(Stream input, long length, DateTime modified, string target, RemoteFileInfo expected, Action<long> progress, Action validateSource, Action<Exception> stopSource, RelayLease lease = null, Func<bool> discard = null)
         {
-            string folder = RemoteConnection.Parent(target), temporary = RemoteConnection.Combine(folder, ".CommanderCZ-upload-" + Guid.NewGuid().ToString("N")), backup = RemoteConnection.Combine(folder, ".CommanderCZ-old-" + Guid.NewGuid().ToString("N"));
+            string folder = RemoteConnection.Parent(target), temporary = RemoteConnection.Combine(folder, ".FileCompass-upload-" + Guid.NewGuid().ToString("N")), backup = RemoteConnection.Combine(folder, ".FileCompass-old-" + Guid.NewGuid().ToString("N"));
             bool staged = false, oldMoved = false, committed = false;
             long offset = lease == null ? 0 : lease.Offset;
             if (lease != null) { temporary = lease.Stage; input = new RelayOffsetReader(input,length,offset); }

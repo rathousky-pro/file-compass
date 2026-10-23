@@ -1,4 +1,4 @@
-param([string]$OutputDirectory = '')
+﻿param([string]$OutputDirectory = '')
 $ErrorActionPreference = 'Stop'
 & (Join-Path $PSScriptRoot 'gen-plugin-hashes.ps1')
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
@@ -6,7 +6,7 @@ $compiler = Join-Path $framework 'csc.exe'
 if (-not (Test-Path -LiteralPath $compiler)) { throw 'Není dostupný kompilátor .NET Framework 4.x.' }
 $bin = if ([string]::IsNullOrWhiteSpace($OutputDirectory)) { Join-Path (Split-Path -Parent $PSScriptRoot) 'bin' } else { [IO.Path]::GetFullPath($OutputDirectory) }
 New-Item -ItemType Directory -Path $bin -Force | Out-Null
-$references = @('System.dll', 'System.Core.dll', 'System.Security.dll', 'System.Xml.dll', 'System.Xaml.dll', 'System.Windows.Forms.dll', 'Microsoft.VisualBasic.dll', 'System.IO.Compression.dll', 'System.Web.Extensions.dll', 'WPF\WindowsBase.dll', 'WPF\PresentationCore.dll', 'WPF\PresentationFramework.dll')
+$references = @('System.dll', 'System.Management.dll', 'System.Core.dll', 'System.Security.dll', 'System.Xml.dll', 'System.Xaml.dll', 'System.Windows.Forms.dll', 'Microsoft.VisualBasic.dll', 'System.IO.Compression.dll', 'System.Web.Extensions.dll', 'WPF\WindowsBase.dll', 'WPF\PresentationCore.dll', 'WPF\PresentationFramework.dll')
 $compilerArgs = @('/nologo', '/target:winexe', '/platform:x64', '/optimize+', '/codepage:65001', ('/out:' + (Join-Path $bin 'File Compass.exe')))
 $appIcon = Join-Path $PSScriptRoot 'assets\file-voyager\FileVoyager-FloppyOrbit.ico'
 $compilerArgs += '/win32icon:' + $appIcon
@@ -35,18 +35,12 @@ if ($iconProcess.ExitCode -ne 0) { throw 'Vytvoření knihoven ikon selhalo.' }
 & $compiler '/nologo' '/target:library' '/platform:x64' ('/out:' + (Join-Path $bin 'icons\FileCompass.Icons.dll')) ('/win32res:' + (Join-Path $bin 'icons\ApplicationIcons.res')) (Join-Path $PSScriptRoot 'ApplicationIconLibrary.cs')
 if ($LASTEXITCODE -ne 0) { throw 'Sestavení knihovny ikon aplikace selhalo.' }
 Remove-Item -LiteralPath $exporter, ($exporter + '.config'), (Join-Path $bin 'icons\ApplicationIcons.res') -Force
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'assets\file-voyager\README.md') -Destination (Join-Path $bin 'icons') -Force
 # Remove only the former asset directory inside this verified output directory.
 $oldIcons = [IO.Path]::GetFullPath((Join-Path $bin 'ui\icons'))
 if (!$oldIcons.StartsWith($bin.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Neplatná cesta ikon.' }
 if (Test-Path -LiteralPath $oldIcons) { Remove-Item -LiteralPath $oldIcons -Recurse -Force }
 foreach ($name in 'Compass','Panels','Route','Night') { $oldIcon = Join-Path $bin ('icons\FileVoyager-' + $name + '.ico'); if (Test-Path -LiteralPath $oldIcon) { Remove-Item -LiteralPath $oldIcon -Force } }
 $oldPreview = Join-Path $bin 'icons\FileVoyager-Preview.png'; if (Test-Path -LiteralPath $oldPreview) { Remove-Item -LiteralPath $oldPreview -Force }
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'THIRD-PARTY-NOTICES.md') -Destination $bin
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'NETWORK-PLUGINS.md'), (Join-Path $PSScriptRoot 'NETWORK-VALIDATION.md') -Destination $bin
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'UI-VALIDATION.md') -Destination $bin
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'WORKFLOW-FEATURES.md') -Destination $bin
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'ARCHIVE-PLUGINS.md') -Destination $bin
 New-Item -ItemType Directory -Path (Join-Path $bin 'plugins') -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'plugins\7zip') -Destination (Join-Path $bin 'plugins') -Recurse -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'plugins\network') -Destination (Join-Path $bin 'plugins') -Recurse -Force
@@ -55,9 +49,7 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'plugins\sshfs') -Destination (J
 Write-Output ('Hotovo: ' + (Join-Path $bin 'File Compass.exe'))
 New-Item -ItemType Directory -Path (Join-Path $bin 'languages') -Force | Out-Null
 Copy-Item -Path (Join-Path $PSScriptRoot 'languages\*.lng') -Destination (Join-Path $bin 'languages') -Force
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'languages\README.md') -Destination (Join-Path $bin 'languages') -Force
 
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'ADVANCED-TOOLS.md') -Destination $bin -Force
 
 
 # Portable distribution: one application executable and a config directory.
@@ -75,7 +67,6 @@ foreach ($folder in 'icons','languages','plugins','ui') {
     }
 }
 # Documentation belongs with the supporting files.
-Get-ChildItem -LiteralPath $bin -Filter '*.md' | ForEach-Object { Move-Item -LiteralPath $_.FullName -Destination (Join-Path $configRoot $_.Name) -Force }
 
 foreach ($obsolete in Get-ChildItem -LiteralPath $bin -File | Where-Object { $_.Name -match '^(FileVoyager(?:\.previous-[^\\]+)?|CommanderCZ)\.exe(?:\.config)?$' }) {
     $targetPath = [IO.Path]::GetFullPath($obsolete.FullName)
@@ -83,25 +74,31 @@ foreach ($obsolete in Get-ChildItem -LiteralPath $bin -File | Where-Object { $_.
     Remove-Item -LiteralPath $targetPath -Force
 }
 
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'FILE-COMPASS.md') -Destination (Join-Path $configRoot 'README.md') -Force
 
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'FILE-DETAILS.md') -Destination (Join-Path $configRoot 'FILE-DETAILS.md') -Force
 
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'FOLDER-VIEWS.md') -Destination (Join-Path $configRoot 'FOLDER-VIEWS.md') -Force
 
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'METADATA-SEARCH.md') -Destination (Join-Path $configRoot 'METADATA-SEARCH.md') -Force
 
 New-Item -ItemType Directory -Path (Join-Path $configRoot "plugins/cloud") -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "plugins/cloud/rclone.exe"),(Join-Path $PSScriptRoot "plugins/cloud/README.txt"),(Join-Path $PSScriptRoot "plugins/cloud/LICENSE.txt") -Destination (Join-Path $configRoot "plugins/cloud") -Force
 $googleOAuth = Join-Path $PSScriptRoot 'plugins/cloud/google-oauth.json'
 if (Test-Path -LiteralPath $googleOAuth) { Copy-Item -LiteralPath $googleOAuth -Destination (Join-Path $configRoot 'plugins/cloud/google-oauth.json') -Force }
 
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'CLOUD-STORAGE.md') -Destination (Join-Path $configRoot 'CLOUD-STORAGE.md') -Force
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'GOOGLE-OAUTH-PUBLISHER.md') -Destination (Join-Path $configRoot 'GOOGLE-OAUTH-PUBLISHER.md') -Force
 
 New-Item -ItemType Directory -Path (Join-Path $configRoot 'preview') -Force | Out-Null
 Copy-Item -Path (Join-Path $PSScriptRoot 'preview\*') -Destination (Join-Path $configRoot 'preview') -Force
 
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'DOCUMENT-PREVIEW.md') -Destination (Join-Path $configRoot 'DOCUMENT-PREVIEW.md') -Force
 
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'DUPLICATES-COMPARE.md') -Destination (Join-Path $configRoot 'DUPLICATES-COMPARE.md') -Force
+
+New-Item -ItemType Directory -Path (Join-Path $configRoot 'plugins/smart') -Force | Out-Null
+Copy-Item -Path (Join-Path $PSScriptRoot 'plugins/smart/*') -Destination (Join-Path $configRoot 'plugins/smart') -Force
+
+# Only curated user help is distributed. AI/development material stays at repository root.
+$documentationRoot = Join-Path (Split-Path -Parent $PSScriptRoot) 'docs'
+$helpRoot = Join-Path $configRoot 'help'
+New-Item -ItemType Directory -Path $helpRoot -Force | Out-Null
+Copy-Item -Path (Join-Path $documentationRoot '*.md') -Destination $helpRoot -Force
+$oldDocumentation = @('README.md','FILE-COMPASS.md','ARCHIVES.md','ADVANCED-TOOLS.md','ARCHIVE-PLUGINS.md','CLOUD-STORAGE.md','DOCUMENT-PREVIEW.md','DUPLICATES-COMPARE.md','FILE-DETAILS.md','FILE-TOOLS.md','FOLDER-VIEWS.md','GOOGLE-OAUTH-PUBLISHER.md','LIBCURL-AUDIT.md','METADATA-SEARCH.md','NETWORK-PLUGINS.md','NETWORK-VALIDATION.md','THIRD-PARTY-NOTICES.md','UI-VALIDATION.md','WORKFLOW-FEATURES.md')
+foreach ($folder in @($bin,$configRoot)) {
+    foreach ($name in $oldDocumentation) { $old = Join-Path $folder $name; if (Test-Path -LiteralPath $old) { Remove-Item -LiteralPath $old -Force } }
+}
+foreach ($relative in @('icons/README.md','languages/README.md')) { $old = Join-Path $configRoot $relative; if (Test-Path -LiteralPath $old) { Remove-Item -LiteralPath $old -Force } }

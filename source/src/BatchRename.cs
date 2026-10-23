@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -95,7 +95,7 @@ namespace CommanderCZ
             Validate(rows, token); var staged = new Dictionary<RenameRow, string>(); var committed = new HashSet<RenameRow>();
             try
             {
-                foreach (var row in rows) { token.ThrowIfCancellationRequested(); if (row.OldName == row.NewName) continue; string temp = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(row.Path), ".CommanderCZ-rename-" + Guid.NewGuid().ToString("N")); Move(row.Path, temp); staged.Add(row, temp); }
+                foreach (var row in rows) { token.ThrowIfCancellationRequested(); if (row.OldName == row.NewName) continue; string temp = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(row.Path), ".FileCompass-rename-" + Guid.NewGuid().ToString("N")); Move(row.Path, temp); staged.Add(row, temp); }
                 foreach (var pair in staged) { token.ThrowIfCancellationRequested(); Move(pair.Value, pair.Key.NewPath); committed.Add(pair.Key); }
                 FileAssociations.Moved(committed.Select(x => new KeyValuePair<string,string>(x.Path, x.NewPath)));
             }

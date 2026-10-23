@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -54,7 +54,7 @@ namespace CommanderCZ
         }
         internal static void Transform(string source, string target, ImageToolOptions options, CancellationToken token)
         {
-            string stage = Path.Combine(Path.GetDirectoryName(target),".CommanderCZ-image-" + Guid.NewGuid().ToString("N"));
+            string stage = Path.Combine(Path.GetDirectoryName(target),".FileCompass-image-" + Guid.NewGuid().ToString("N"));
             try {
                 using (var input = new FileStream(source,FileMode.Open,FileAccess.Read,FileShare.Read)) {
                     var decoder = BitmapDecoder.Create(input,BitmapCreateOptions.PreservePixelFormat,BitmapCacheOption.OnLoad);

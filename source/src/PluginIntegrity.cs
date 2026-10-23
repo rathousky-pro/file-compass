@@ -4,13 +4,13 @@ using System.IO;
 using System.Security.Cryptography;
 namespace CommanderCZ
 {
-    /// <summary>Ověření integrity nativních pluginů proti hashům vkompilovaným do programu (viz gen-plugin-hashes.ps1).</summary>
+    /// <summary>Verify native plugins against compiled-in hashes (see gen-plugin-hashes.ps1).</summary>
     internal static class PluginIntegrity
     {
         internal static string PluginRoot { get { return Path.Combine(AppPaths.Resource("plugins")); } }
 
-        /// <summary>Otevře soubor jen pro čtení bez možnosti zápisu, ověří hash a vrátí otevřený proud.
-        /// Proud držený během načtení brání záměně souboru mezi kontrolou a použitím.</summary>
+        /// <summary>Open read-only without write sharing, verify the hash and return the open stream.
+        /// Keep the stream open during loading to prevent replacement between verification and use.</summary>
         internal static FileStream OpenVerified(string relative)
         {
             string expected;
@@ -32,7 +32,7 @@ namespace CommanderCZ
             catch { stream.Dispose(); throw; }
         }
 
-        /// <summary>Drží všechny ověřené soubory zamčené až do Dispose; metadata nejsou důkazem integrity.</summary>
+        /// <summary>Keep verified files locked until Dispose; metadata alone is not proof of integrity.</summary>
         internal static IDisposable Acquire(params string[] relatives)
         {
             var lease = new PluginLease();

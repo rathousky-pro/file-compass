@@ -16,7 +16,7 @@ namespace CommanderCZ
         static SshfsSetupWindow current;
         readonly TaskCompletionSource<bool> completion = new TaskCompletionSource<bool>();
         readonly TextBlock components = CopyUi.Label(""), status = CopyUi.Label(""), percent = CopyUi.Label("");
-        readonly ProgressBar progress = new ProgressBar { Minimum = 0, Maximum = 100, Height = 22, Foreground = FluentTheme.Accent, Background = CompactTheme.ColorBrush("#E4EAF2"), Margin = new Thickness(2, 8, 2, 2) };
+        readonly ProgressBar progress = new ProgressBar { Minimum = 0, Maximum = 100, Height = 22, Foreground = FluentTheme.Accent, Background = CompactTheme.ThemeBrush("#E4EAF2"), Margin = new Thickness(2, 8, 2, 2) };
         readonly TextBox log = new TextBox { IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Height = 125, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         readonly Button install, close;
         readonly StringBuilder messages = new StringBuilder();
@@ -36,7 +36,7 @@ namespace CommanderCZ
             var panel = new StackPanel { Margin = new Thickness(16) }; Content = panel;
             var heading = CopyUi.Label(L.Text("sshfsSetup.remoteFolderAsDriveTitle")); heading.FontSize = 17; heading.FontWeight = FontWeights.SemiBold; panel.Children.Add(heading);
             panel.Children.Add(CopyUi.Label(L.Text("sshfsSetup.driveAvailabilityHelp")));
-            var card = new Border { Background = Brushes.White, BorderBrush = CompactTheme.Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(5), Padding = new Thickness(10), Margin = new Thickness(2, 6, 2, 8), Child = components }; panel.Children.Add(card);
+            var card = new Border { Background = CompactTheme.WhiteSurface, BorderBrush = CompactTheme.Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(5), Padding = new Thickness(10), Margin = new Thickness(2, 6, 2, 8), Child = components }; panel.Children.Add(card);
             panel.Children.Add(CopyUi.Label(L.Text("sshfsSetup.downloadAndVerificationHelp")));
             panel.Children.Add(status); panel.Children.Add(progress); percent.HorizontalAlignment = HorizontalAlignment.Right; panel.Children.Add(percent);
             var links = new StackPanel { Orientation = Orientation.Horizontal };

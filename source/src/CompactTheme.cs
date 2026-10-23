@@ -7,17 +7,19 @@ namespace CommanderCZ
 {
     public static class CompactTheme
     {
-        public static readonly Brush Chrome = ColorBrush("#D5D9DF");
-        public static readonly Brush ToolbarSurface = ColorBrush("#E4E7EB");
-        public static readonly Brush PanelSurface = ColorBrush("#F0F2F5");
-        public static readonly Brush FieldLine = ColorBrush("#98A5B5");
-        public static readonly Brush ChromeLine = ColorBrush("#BCC3CD");
-        public static readonly Brush Surface = ColorBrush("#F3F4F7");
-        public static readonly Brush Line = ColorBrush("#DDDFE5");
-        public static readonly Brush ActivePath = ColorBrush("#C4D9EE");
-        public static readonly Brush SortedHeader = ColorBrush("#E3EEF9");
+        public static readonly Brush WhiteSurface = ThemeBrush("#FFFFFF");
+        public static readonly Brush Chrome = ThemeBrush("#D5D9DF");
+        public static readonly Brush ToolbarSurface = ThemeBrush("#E4E7EB");
+        public static readonly Brush PanelSurface = ThemeBrush("#F0F2F5");
+        public static readonly Brush FieldLine = ThemeBrush("#98A5B5");
+        public static readonly Brush ChromeLine = ThemeBrush("#BCC3CD");
+        public static readonly Brush Surface = ThemeBrush("#F3F4F7");
+        public static readonly Brush Line = ThemeBrush("#DDDFE5");
+        public static readonly Brush ActivePath = ThemeBrush("#C4D9EE");
+        public static readonly Brush SortedHeader = ThemeBrush("#E3EEF9");
         public static readonly Brush InactivePath = PanelSurface;
         public static Brush ColorBrush(string color) { return new SolidColorBrush((Color)ColorConverter.ConvertFromString(color)); }
+        public static Brush ThemeBrush(string color) { return AppearanceTheme.Brush(color); }
 
         public static Button Button(object content, string tooltip, RoutedEventHandler click)
         {
@@ -33,7 +35,7 @@ namespace CommanderCZ
         {
             button.Height = 34; button.MinWidth = 30; button.MinHeight = 0;
             button.Margin = new Thickness(1, 1, 1, 1); button.Padding = new Thickness(8, 4, 8, 4);
-            button.Background = Brushes.White; button.BorderBrush = Line;
+            button.Background = CompactTheme.WhiteSurface; button.BorderBrush = Line;
             button.UseLayoutRounding = true; button.SnapsToDevicePixels = true;
         }
         public static Image DriveIcon(bool network, bool connected = true)

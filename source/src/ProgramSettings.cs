@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Xml;
 using System.Xml.Serialization;
@@ -17,6 +17,7 @@ namespace CommanderCZ
     }
     public sealed class ProgramSettings
     {
+        public string ColorTheme = "System"; public string WindowBackdrop = "None";
         public string LeftFolder = "", RightFolder = "";
         public double WindowLeft = Double.NaN, WindowTop = Double.NaN, WindowWidth = 1440, WindowHeight = 800, SplitRatio = .5;
         public bool Maximized;

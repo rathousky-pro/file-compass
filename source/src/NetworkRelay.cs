@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -102,7 +102,7 @@ namespace CommanderCZ
                 job.Changed = delegate { ((IProgress<NetworkCopyUpdate>)updates).Report(captured.Update()); };
                 job.Completion = RunNetworkJob(job,source.TransferConnection(),target.TransferConnection());
             }
-            AttachDurable(job,durable); NetworkWindowBackground(networkQueue == null || !networkQueue.IsVisible);
+            AttachDurable(job,durable); ShowNetworkQueue(job);
             await job.QueuePlanning(delegate {
                 Exception error = null;
                 try { using (planner) { var prepared = recovery != null && recovery.Files.Count > 0 ? RecoveredBatches(recovery) : NetworkRetry.Plan(planner,delegate(RemoteConnection worker) { return NetworkRelay.Prepare(worker,target.Profile,entries,destination,rule,job.Cancellation.Token); },job); if (recovery == null || recovery.Files.Count == 0) PersistPrepared(durable,prepared); job.AddPrepared(prepared); } }

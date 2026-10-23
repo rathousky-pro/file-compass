@@ -33,7 +33,6 @@ namespace CommanderCZ {
                 spinner.Change(-1); check(input.Text == "1", "Numeric lower boundary is enforced"); input.Text = "12"; spinner.Change(1); check(input.Text == "12", "Numeric upper boundary is enforced");
                 input.Text = "invalid"; spinner.Change(1); check(input.Text == "1", "Arrow recovers an invalid manual value");
                 var font = new FontChoiceControl("Test", "Segoe UI", 12, 24); var fontSpinner = AdvancedToolsTests.Visual<NumberSpinner>(font).FirstOrDefault();
-                // The control is not attached yet; inspect its logical row.
                 fontSpinner = ((DockPanel)font.Children[1]).Children.OfType<NumberSpinner>().Single(); fontSpinner.Change(1);
                 double points; check(Double.TryParse(font.Points.Text, out points) && points == 9.5, "Font arrows support half-point changes");
                 foreach (var changing in new[] { false, true }) {

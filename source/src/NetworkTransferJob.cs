@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -37,6 +37,10 @@ namespace CommanderCZ
     public sealed partial class NetworkTransferJob
     {
         internal long RelayDownloaded, RelayUploaded;
+        readonly Stopwatch transferClock = new Stopwatch();
+        readonly TransferRateEstimate remainingEstimate = new TransferRateEstimate();
+        long measuredTraffic;
+        internal void MeasureTraffic(int bytes) { if(bytes>0)System.Threading.Interlocked.Add(ref measuredTraffic,bytes); }
         internal readonly List<DurableTransfer> DurableRequests = new List<DurableTransfer>();
         internal Action<NetworkQueueItem> PersistDone;
         internal int RelayBufferPeak;
@@ -216,7 +220,7 @@ namespace CommanderCZ
                 bool transferring = !Paused && !finished && !Cancellation.IsCancellationRequested && (phase == L.Code("copy.title") || (RelayTarget != null && (phase.StartsWith(L.Text("transfer.downloading")) || phase.StartsWith(L.Text("transfer.uploading")))));
                 long rate = transferring ? Math.Max(0, speed) : 0;
                 return new NetworkTransferMetrics { BytesPerSecond = rate,
-                    RemainingSeconds = transferring && planning == 0 && totalBytes > 0 && rate > 0 ? (double?)((double)remaining / rate) : null };
+                    RemainingSeconds = !Paused && !finished && !Cancellation.IsCancellationRequested && planning == 0 && totalBytes > 0 ? remainingEstimate.Remaining(System.Threading.Interlocked.Read(ref measuredTraffic), transferClock.Elapsed.TotalSeconds, remaining) : null };
             }
         }
         public NetworkCopyUpdate Update()

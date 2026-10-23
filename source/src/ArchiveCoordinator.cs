@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -47,7 +47,7 @@ namespace CommanderCZ
                         fraction = compression.Percent / 100; known = true;
                         activity.TransferRoute = compression.Summary();
                         activity.Update(title + " · " + compression.Summary(), fraction, fraction, false);
-                        dialog.Update(L.Text("archive.compressingStatus"), fraction, true); dialog.UpdateCompression(compression.Summary()); dialog.UpdateCurrentFile(compression.CurrentFile); return;
+                        dialog.Update(L.Text("archive.compressingStatus"), fraction, true); dialog.UpdateCompression(compression); dialog.UpdateCurrentFile(compression.CurrentFile); return;
                     }
                     var percent = System.Text.RegularExpressions.Regex.Match(text, @"(\d+)\s*%");
                     if (percent.Success) { fraction = Math.Min(.99, Double.Parse(percent.Groups[1].Value) / 100); known = true; }

@@ -1,4 +1,4 @@
-# Zálohy, výsledky ověření a sestavení nepatří do verzování
+﻿# Backups, validation outputs and builds
 backup/
 verification/
 reports/
@@ -7,27 +7,30 @@ bin/
 obj/
 .vs/
 
-# Toolchain a závislosti se stahují skriptem, ne z repozitáře
+# Downloaded toolchains and dependency caches
 tools/native/
 tools/python-packages/
 tools/**/__pycache__/
 __pycache__/
 *.pyc
 
-# Stažené instalátory a generované soubory
+# Downloaded installers and generated files
 source/downloads/
 source/src/PluginHashes.cs
 
-# Tajemství a lokální stav
+# Secrets and local state
 *.pfx
 *.p12
 *.snk
 integrity.key
 source/plugins/cloud/google-oauth.json
 
-# Místní konfigurace a uživatelské přihlašovací profily
+# Local settings and user credentials
 config/
 *.user
 *.suo
 .env
 .env.*
+
+# Local AI notes, reports and development artifacts
+/ai-docs/

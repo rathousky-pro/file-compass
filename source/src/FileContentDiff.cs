@@ -460,7 +460,7 @@ namespace CommanderCZ
                 leftDetail.Text = row == null ? "" : row.LeftText ?? "";
                 rightDetail.Text = row == null ? "" : row.RightText ?? "";
             };
-            var displayHost=new Grid();displayHost.Children.Add(list);displayHost.Children.Add(imageComparison);body.Children.Add(new Border{Child=displayHost,Background=Brushes.White,BorderBrush=CompactTheme.ChromeLine,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(7),Padding=new Thickness(8)});
+            var displayHost=new Grid();displayHost.Children.Add(list);displayHost.Children.Add(imageComparison);body.Children.Add(new Border{Child=displayHost,Background=CompactTheme.WhiteSurface,BorderBrush=CompactTheme.ChromeLine,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(7),Padding=new Thickness(8)});
 
             onlyDiffs.Checked += delegate { ApplyFilter(); }; onlyDiffs.Unchecked += delegate { ApplyFilter(); };
             mode.SelectionChanged += delegate { if (LastResult != null || imageComparison.Visibility==Visibility.Visible || cancellation!=null) ComparisonTask = RunCompare(); };
@@ -497,11 +497,11 @@ namespace CommanderCZ
             var style = new Style(typeof(ListViewItem));
             style.Setters.Add(new Setter(Control.ForegroundProperty, FluentTheme.Text));
             var modified = new DataTrigger { Binding = new Binding("Kind"), Value = DiffLineKind.Modified };
-            modified.Setters.Add(new Setter(Control.BackgroundProperty, CompactTheme.ColorBrush("#FFF6D6")));
+            modified.Setters.Add(new Setter(Control.BackgroundProperty, CompactTheme.ThemeBrush("#FFF6D6")));
             var added = new DataTrigger { Binding = new Binding("Kind"), Value = DiffLineKind.Added };
-            added.Setters.Add(new Setter(Control.BackgroundProperty, CompactTheme.ColorBrush("#E6F9E6")));
+            added.Setters.Add(new Setter(Control.BackgroundProperty, CompactTheme.ThemeBrush("#E6F9E6")));
             var removed = new DataTrigger { Binding = new Binding("Kind"), Value = DiffLineKind.Removed };
-            removed.Setters.Add(new Setter(Control.BackgroundProperty, CompactTheme.ColorBrush("#FFE8E8")));
+            removed.Setters.Add(new Setter(Control.BackgroundProperty, CompactTheme.ThemeBrush("#FFE8E8")));
             style.Triggers.Add(modified); style.Triggers.Add(added); style.Triggers.Add(removed);
             return style;
         }

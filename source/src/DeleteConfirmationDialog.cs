@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -16,7 +16,7 @@ namespace CommanderCZ
         internal DeleteConfirmationDialog(Window owner, List<Entry> selected, bool canRecycle, bool permanent, string location, string unavailableReason = null)
         {
             entries = selected; Permanent = permanent || !canRecycle; CopyUi.Style(this, owner, L.Text("delete.chooseActionTitle"), 560);
-            var body = new StackPanel { Margin = new Thickness(14) }; Content = body;
+            var body = new StackPanel { Margin = new Thickness(14) }; CopyUi.Surface(this, body);
             var row = new DockPanel(); var icon = new TextBlock { Text = "?", Foreground = Brushes.White, FontSize = 23, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
             var circle = new Border { Child = icon, Background = FluentTheme.Accent, Width = 32, Height = 32, CornerRadius = new CornerRadius(16), Margin = new Thickness(0, 0, 14, 0) }; DockPanel.SetDock(circle, Dock.Left); row.Children.Add(circle); row.Children.Add(question); body.Children.Add(row);
             body.Children.Add(new TextBlock { Text = L.Text("delete.permanentButtonHelp"), TextWrapping = TextWrapping.Wrap, Foreground = FluentTheme.Muted, Margin = new Thickness(46, 10, 0, 8) });
@@ -27,7 +27,9 @@ namespace CommanderCZ
             var no = CopyUi.Button(L.Text("action.no"), delegate { DialogResult = false; }); no.IsCancel = true; buttons.Children.Add(no);
             Recycle = CopyUi.Button(L.Text("delete.moveToRecycleBin"), delegate { if (!canRecycle) return; Permanent = false; DialogResult = true; }); Recycle.IsEnabled = canRecycle; Recycle.IsDefault = canRecycle && !permanent; buttons.Children.Add(Recycle);
             UpdateQuestion();
-            Loaded += delegate { no.Focus(); };
+            var primary = Recycle.IsDefault ? Recycle : remove;
+            CopyUi.EnterDefault(this, primary);
+            Loaded += delegate { primary.Focus(); };
         }
         void UpdateQuestion()
         {

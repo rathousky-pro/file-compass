@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -30,6 +30,18 @@ namespace CommanderCZ {
     check(browser.Visibility==Visibility.Hidden,"Source switch hides the page");
     check(AdvancedToolsTests.Visual<CheckBox>(pane).Single(x=>Convert.ToString(x.Content)==L.Text("preview.formatted")).IsChecked==true,"HTML source switch leaves other document formatting preferences unchanged");
     var editor=AdvancedToolsTests.Visual<TextEditor>(pane).Single(x=>x.IsVisible);check(editor.Text.Contains("<h1>Compass")&&editor.SyntaxHighlighting!=null,"Source switch shows highlighted original HTML");
+    pane.SetViewMode(PreviewMode.Text);NavigationTests.Wait(pane.LoadingTask);
+    var format=AdvancedToolsTests.Visual<CheckBox>(pane).Single(x=>Convert.ToString(x.Content)==L.Text("preview.formatted"));
+    check(format.IsEnabled&&AdvancedToolsTests.Visual<TextEditor>(pane).Any(x=>x.IsVisible&&x.SyntaxHighlighting!=null&&x.Text.Contains("<h1>Compass")),"Text mode retains HTML syntax highlighting and enabled formatting");
+    pane.SetViewMode(PreviewMode.Hex);NavigationTests.Wait(pane.LoadingTask);
+    check(!AdvancedToolsTests.Visual<TextEditor>(pane).Any(x=>x.IsVisible),"Hex mode remains a raw byte view");
+    pane.SetViewMode(PreviewMode.Text);NavigationTests.Wait(pane.LoadingTask);
+    string cs=Path.Combine(root,"sample.cs");File.WriteAllText(cs,"public class Compass { // comment\n string name = \"File Compass\"; }");pane.ShowFile(cs);NavigationTests.Wait(pane.LoadingTask);NavigationTests.Wait(pane.MetadataLoadingTask);
+    check(AdvancedToolsTests.Visual<TextEditor>(pane).Any(x=>x.IsVisible&&x.SyntaxHighlighting!=null),"Text mode highlights C sharp source");
+    format.IsChecked=false;check(!AdvancedToolsTests.Visual<TextEditor>(pane).Any(x=>x.IsVisible),"Formatting can be disabled for plain text");
+    format.IsChecked=true;check(AdvancedToolsTests.Visual<TextEditor>(pane).Any(x=>x.IsVisible),"Formatting can be enabled again");
+    pane.ShowFile(page);NavigationTests.Wait(pane.LoadingTask);NavigationTests.Wait(pane.MetadataLoadingTask);pane.SetViewMode(PreviewMode.Auto);NavigationTests.Wait(pane.LoadingTask);NavigationTests.Wait(pane.DocumentLoadingTask);
+    browser=AdvancedToolsTests.Visual<DocumentPreview>(pane).Single();
     var web=AdvancedToolsTests.Visual<RadioButton>(pane).Single(x=>Convert.ToString(x.Content)==L.Text("preview.htmlPage"));web.IsChecked=true;check(browser.Visibility==Visibility.Visible,"Page switch restores the already loaded page");
     string origin="https://compass-preview.invalid/test/";string mime;
     using(var asset=HtmlPreviewAssets.Open(page,origin,origin+"style.css",out mime))check(asset!=null&&mime=="text/css","Local asset resolver allows only supported resources");

@@ -7,13 +7,25 @@ namespace CommanderCZ
 {
     public static partial class DesktopIcons
     {
-        public static ImageSource ToolbarDrawing(string name, ToolbarTheme theme) { return IconLibrary.Action(name, theme); }
+        public static ImageSource ToolbarDrawing(string name, ToolbarTheme theme) {
+            if (name == "invert") {
+                var drawing = new DrawingGroup();
+                using (var c = drawing.Open()) {
+                    c.DrawRectangle(Brushes.Transparent, null, new Rect(0, 0, 32, 32));
+                    var pen = new Pen(Brush("#267ED0"), 2);
+                    c.DrawRectangle(Brush("#267ED0"), pen, new Rect(4, 5, 9, 9));
+                    c.DrawRectangle(null, pen, new Rect(19, 18, 9, 9));
+                    Shape(c, "M19,6 L27,6 L27,13 M23,9 L27,13 L31,9 M13,26 L5,26 L5,19 M1,23 L5,19 L9,23", null, pen);
+                }
+                drawing.Freeze(); return new DrawingImage(drawing);
+            }
+            return IconLibrary.Action(name, theme);
+        }
         public static ImageSource BuildToolbarDrawing(string name, ToolbarTheme theme)
         {
             if (theme == ToolbarTheme.Classic && name == "network") return FluentIcons.Network();
             if (theme == ToolbarTheme.Classic && (name == "pack" || name == "unpack")) return FluentIcons.Archive(name == "unpack");
             if (theme == ToolbarTheme.Classic) return FluentIcons.Load(name) ?? BuildLegacyDrawing(name);
-            // These actions were added with Compact; keep their familiar symbol in every set.
             if (name == "copy" || name == "move" || name == "delete" || name == "settings") return FluentIcons.Load(name) ?? BuildLegacyDrawing(name);
             bool outline = theme == ToolbarTheme.Outline;
             var group = new DrawingGroup();

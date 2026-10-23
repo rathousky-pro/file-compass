@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -20,6 +20,7 @@ namespace CommanderCZ
         CancellationTokenSource navigationCancellation;
         int navigationVersion;
         public bool LocalLoading { get; private set; }
+        internal event Action LocalNavigationCompleted;
         public Task NavigationTask { get; private set; }
         internal void CancelNavigation() { navigationVersion++; var previous = navigationCancellation; navigationCancellation = null; if (previous != null) previous.Cancel(); LocalLoading = false; List.IsEnabled = true; }
         internal void SavePanelView(PanelView saved) { saved.MetadataColumns = MetadataColumnKeys; saved.Sort = sortProperty; saved.Descending = descending; saved.Widths = view.Columns.Select(x => x.Width).ToArray(); saved.Display = displayMode; saved.Tree = treeRequested; saved.ThumbnailSize = thumbnailSize; SaveDetailView(saved); }
@@ -135,7 +136,7 @@ namespace CommanderCZ
             AddColumn(L.Text("column.size"), "Size", 90); AddColumn(L.Text("column.date"), "Modified", 130); AddColumn(L.Text("attributes.title"), "Attributes", 70);
             List.View = view; List.SelectionMode = SelectionMode.Single;
             List.Margin = new Thickness(1, 0, 1, 0); List.BorderThickness = new Thickness(0, 1, 0, 1); List.BorderBrush = CompactTheme.Line;
-            List.Background = Brushes.White; List.Foreground = FluentTheme.Text;
+            List.Background = CompactTheme.WhiteSurface; List.Foreground = FluentTheme.Text;
             List.FontFamily = new FontFamily("Segoe UI"); List.FontSize = 12;
             ScrollViewer.SetHorizontalScrollBarVisibility(List, ScrollBarVisibility.Auto);
             List.ItemContainerStyle = RowStyle();
@@ -222,11 +223,11 @@ namespace CommanderCZ
             cursor.Conditions.Add(new Condition(new Binding("IsSelected") { RelativeSource = RelativeSource.Self }, true));
             cursor.Conditions.Add(new Condition(new Binding("IsActivePanel") { RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(FilePanel), 1) }, true));
             var hover = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
-            hover.Setters.Add(new Setter(Control.BackgroundProperty, CompactTheme.ColorBrush("#F0F3F8"))); style.Triggers.Add(hover);
-            cursor.Setters.Add(new Setter(Control.BackgroundProperty, CompactTheme.ColorBrush("#E4F0FF")));
+            hover.Setters.Add(new Setter(Control.BackgroundProperty, CompactTheme.ThemeBrush("#F0F3F8"))); style.Triggers.Add(hover);
+            cursor.Setters.Add(new Setter(Control.BackgroundProperty, CompactTheme.ThemeBrush("#E4F0FF")));
             cursor.Setters.Add(new Setter(Control.BorderBrushProperty, FluentTheme.Accent)); style.Triggers.Add(cursor);
             var marked = new DataTrigger { Binding = new Binding("IsMarked"), Value = true };
-            marked.Setters.Add(new Setter(Control.ForegroundProperty, CompactTheme.ColorBrush("#B92331")));
+            marked.Setters.Add(new Setter(Control.ForegroundProperty, CompactTheme.ThemeBrush("#B92331")));
             marked.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.SemiBold)); style.Triggers.Add(marked);
             return style;
         }
@@ -268,7 +269,7 @@ namespace CommanderCZ
         void AddColumn(string caption, string property, double width)
         {
             var header = new GridViewColumnHeader { Content = caption, Tag = property, HorizontalContentAlignment = HorizontalAlignment.Left,
-                Padding = new Thickness(8, 0, 0, 0), Height = 29, Background = Brushes.White, Foreground = FluentTheme.Muted,
+                Padding = new Thickness(8, 0, 0, 0), Height = 29, Background = CompactTheme.WhiteSurface, Foreground = FluentTheme.Muted,
                 FontSize = 11, FontWeight = FontWeights.Normal,
                 BorderBrush = CompactTheme.ChromeLine, BorderThickness = new Thickness(0, 0, 1, 1) };
             var border = new FrameworkElementFactory(typeof(Border));
@@ -307,7 +308,7 @@ namespace CommanderCZ
                 var tags = new FrameworkElementFactory(typeof(TextBlock)); tags.SetBinding(TextBlock.TextProperty, new Binding("TagsLabel")); tags.SetValue(DockPanel.DockProperty, Dock.Right); tags.SetValue(TextBlock.ForegroundProperty, FluentTheme.Accent); tags.SetValue(TextBlock.FontSizeProperty, 11.0); tags.SetValue(FrameworkElement.MaxWidthProperty, 130.0); tags.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis); tags.SetValue(FrameworkElement.MarginProperty, new Thickness(6, 0, 6, 0)); tags.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center); dock.AppendChild(tags);
                 var percent = new FrameworkElementFactory(typeof(TextBlock)); percent.SetBinding(TextBlock.TextProperty, new Binding("DiskPercentText")); percent.SetBinding(UIElement.VisibilityProperty, new Binding("DiskUsageVisibility")); percent.SetValue(DockPanel.DockProperty, Dock.Right); percent.SetValue(FrameworkElement.MarginProperty, new Thickness(5,0,6,0)); percent.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center); percent.SetBinding(FrameworkElement.ToolTipProperty, new Binding("DiskUsageNote")); dock.AppendChild(percent);
                 dock.AppendChild(text);
-                var usage = new FrameworkElementFactory(typeof(ProgressBar)); usage.SetValue(System.Windows.Controls.Primitives.RangeBase.MaximumProperty, 100.0); usage.SetBinding(System.Windows.Controls.Primitives.RangeBase.ValueProperty, new Binding("DiskPercent") { Mode = BindingMode.OneWay }); usage.SetBinding(UIElement.VisibilityProperty, new Binding("DiskUsageVisibility")); usage.SetValue(FrameworkElement.HeightProperty, 21.0); usage.SetValue(Control.ForegroundProperty, CompactTheme.ColorBrush("#DCEBFF")); usage.SetValue(Control.BackgroundProperty, Brushes.Transparent); usage.SetValue(Control.BorderThicknessProperty, new Thickness(0)); usage.SetValue(UIElement.IsHitTestVisibleProperty, false);
+                var usage = new FrameworkElementFactory(typeof(ProgressBar)); usage.SetValue(System.Windows.Controls.Primitives.RangeBase.MaximumProperty, 100.0); usage.SetBinding(System.Windows.Controls.Primitives.RangeBase.ValueProperty, new Binding("DiskPercent") { Mode = BindingMode.OneWay }); usage.SetBinding(UIElement.VisibilityProperty, new Binding("DiskUsageVisibility")); usage.SetValue(FrameworkElement.HeightProperty, 21.0); usage.SetValue(Control.ForegroundProperty, CompactTheme.ThemeBrush("#DCEBFF")); usage.SetValue(Control.BackgroundProperty, Brushes.Transparent); usage.SetValue(Control.BorderThicknessProperty, new Thickness(0)); usage.SetValue(UIElement.IsHitTestVisibleProperty, false);
                 var nameGrid = new FrameworkElementFactory(typeof(Grid)); nameGrid.AppendChild(usage); nameGrid.AppendChild(dock);
                 column.CellTemplate = new DataTemplate { VisualTree = nameGrid };
             }
@@ -341,11 +342,11 @@ namespace CommanderCZ
                 var header = (GridViewColumnHeader)column.Header;
                 string label = MetadataColumn.IsSort((string)header.Tag) ? MetadataColumn.Caption(((string)header.Tag).Substring(5)) : (string)header.Tag == "Name" ? L.Text("column.name") : (string)header.Tag == "Extension" ? L.Text("column.extension") : (string)header.Tag == "Size" ? L.Text("column.size") : (string)header.Tag == "Modified" ? L.Text("column.date") : L.Text("attributes.title");
                 header.Content = ((string)header.Tag == sortProperty ? (descending ? "▼ " : "▲ ") : "") + label;
-                header.Background = IsActivePanel && (string)header.Tag == sortProperty ? CompactTheme.SortedHeader : Brushes.White;
+                header.Background = IsActivePanel && (string)header.Tag == sortProperty ? CompactTheme.SortedHeader : CompactTheme.WhiteSurface;
             }
         }
 
-        public void Highlight(bool active) { IsActivePanel = active; BorderBrush = active ? FluentTheme.Accent : CompactTheme.ChromeLine; address.Background = active ? CompactTheme.ActivePath : CompactTheme.InactivePath; crumbs.Background = address.Background; if (panelPathRow != null) panelPathRow.Background = address.Background; foreach (GridViewColumn column in view.Columns) { var header = column.Header as GridViewColumnHeader; if (header != null) header.Background = active && (string)header.Tag == sortProperty ? CompactTheme.SortedHeader : Brushes.White; } address.Foreground = active ? FluentTheme.Accent : FluentTheme.Text; crumbs.SetValue(TextBlock.ForegroundProperty, active ? FluentTheme.Accent : FluentTheme.Text); }
+        public void Highlight(bool active) { IsActivePanel = active; BorderBrush = active ? FluentTheme.Accent : CompactTheme.ChromeLine; address.Background = active ? CompactTheme.ActivePath : CompactTheme.InactivePath; crumbs.Background = address.Background; if (panelPathRow != null) panelPathRow.Background = address.Background; foreach (GridViewColumn column in view.Columns) { var header = column.Header as GridViewColumnHeader; if (header != null) header.Background = active && (string)header.Tag == sortProperty ? CompactTheme.SortedHeader : CompactTheme.WhiteSurface; } address.Foreground = active ? FluentTheme.Accent : FluentTheme.Text; crumbs.SetValue(TextBlock.ForegroundProperty, active ? FluentTheme.Accent : FluentTheme.Text); }
         void ShowPath() { address.Text = CurrentPath == null ? "" : IsRemote || IsArchive ? DisplayPath : CurrentPath.TrimEnd('\\') + "\\*.*"; }
         public void Navigate(string path, bool remember)
         {
@@ -367,7 +368,8 @@ namespace CommanderCZ
             CancelNavigation(); var cancellation = new CancellationTokenSource(); navigationCancellation = cancellation;
             int version = navigationVersion; var token = cancellation.Token;
             bool restoreListFocus = List.IsKeyboardFocusWithin;
-            LocalLoading = true; List.IsEnabled = false; status.Text = L.Text("panel.loadingFolder");
+            LocalLoading = true; bool backgroundRefresh = !IsRemote && !IsArchive && String.Equals(path, CurrentPath, StringComparison.OrdinalIgnoreCase);
+            if (!backgroundRefresh) { List.IsEnabled = false; status.Text = L.Text("panel.loadingFolder"); }
             var focusAfterDisable = Keyboard.FocusedElement;
             Exception loadError = null; Task pendingLoad = null;
             try
@@ -375,6 +377,10 @@ namespace CommanderCZ
                 if (path.EndsWith("\\*.*")) path = path.Substring(0, path.Length - 3);
                 path = Path.GetFullPath(Environment.ExpandEnvironmentVariables(path));
                 var keepMarks = new HashSet<string>(StringComparer.OrdinalIgnoreCase); string keepCursor = null; double keepScroll = CaptureScroll(); bool refreshingSameFolder = String.Equals(path, CurrentPath, StringComparison.OrdinalIgnoreCase);
+                if (!refreshingSameFolder && CurrentPath != null && !IsRemote && !IsArchive && !IsVirtualBrowser) {
+                    var parent = new DirectoryInfo(CurrentPath).Parent;
+                    if (parent != null && String.Equals(parent.FullName.TrimEnd('\\'), path.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase)) keepCursor = CurrentPath.TrimEnd('\\');
+                }
                 if (String.Equals(path, CurrentPath, StringComparison.OrdinalIgnoreCase))
                 {
                     foreach (Entry old in List.Items) if (old.IsMarked) keepMarks.Add(old.FullPath);
@@ -410,9 +416,12 @@ namespace CommanderCZ
                 if (IsArchive) { CloseArchiveContext(); history.Clear(); forwardHistory.Clear(); }
                 if (IsRemote) { RememberRemote(); Remote = null; history.Clear(); forwardHistory.Clear(); }
                 if (remember && CurrentPath != null && !String.Equals(CurrentPath, path, StringComparison.OrdinalIgnoreCase) && !CurrentPath.StartsWith("/")) { history.Push(CurrentPath); forwardHistory.Clear(); }
-                CurrentPath = path; ShowPath(); List.ItemsSource = loadedRows; Sort();
-                if (loadedRows.Count > 0) List.SelectedIndex = 0;
-                if (keepCursor != null) { var cursor = loadedRows.FirstOrDefault(x => String.Equals(x.FullPath, keepCursor, StringComparison.OrdinalIgnoreCase)); if (cursor != null) List.SelectedItem = cursor; }
+                CurrentPath = path; ShowPath();
+                var stableRows = refreshingSameFolder ? List.ItemsSource as System.Collections.ObjectModel.ObservableCollection<Entry> : null;
+                if (stableRows != null) { int oldIndex = List.SelectedIndex; MergeLocalRows(stableRows, loadedRows); if (List.SelectedItem == null && List.Items.Count > 0) List.SelectedIndex = Math.Max(0, Math.Min(oldIndex, List.Items.Count - 1)); }
+                else { List.ItemsSource = new System.Collections.ObjectModel.ObservableCollection<Entry>(loadedRows); Sort(); }
+                if (stableRows == null && loadedRows.Count > 0) List.SelectedIndex = 0;
+                if (keepCursor != null) { var cursor = List.Items.Cast<Entry>().FirstOrDefault(x => String.Equals(x.FullPath.TrimEnd('\\'), keepCursor.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase)); if (cursor != null && !Object.ReferenceEquals(List.SelectedItem, cursor)) { List.SelectedItem = cursor; List.ScrollIntoView(cursor); } }
                 UpdateDiskInfo(); UpdateStatus(); if (refreshingSameFolder) RestoreScroll(keepScroll, version);
                 UpdateConnectionButtons();
                 if (PathChanged != null) PathChanged(this, EventArgs.Empty);
@@ -425,13 +434,28 @@ namespace CommanderCZ
                 if (version != navigationVersion) return;
                 if (loadError != null) { address.Text = CurrentPath ?? ""; status.Text = L.Text("panel.openFolderFailedPrefix") + loadError.Message; status.ToolTip = status.Text; }
                 LocalLoading = false; List.IsEnabled = true; navigationCancellation = null;
+                if (loadError == null && LocalNavigationCompleted != null) LocalNavigationCompleted();
                 var owner = Window.GetWindow(this);
-                if (restoreListFocus && IsActivePanel && (owner == null || owner.IsActive) && Keyboard.FocusedElement == focusAfterDisable) FocusFiles();
+                if (restoreListFocus && IsActivePanel && (owner == null || owner.IsActive) && (Keyboard.FocusedElement == focusAfterDisable || List.IsKeyboardFocusWithin)) FocusFiles();
             });
             if (pendingLoad == null || pendingLoad.IsCompleted) cancellation.Dispose();
             else { var observe = pendingLoad.ContinueWith(delegate(Task completed) { var observed = completed.Exception; cancellation.Dispose(); }, TaskScheduler.Default); }
         }
 
+        static bool SameLocalRow(Entry a, Entry b)
+        {
+            return a.Name == b.Name && a.Extension == b.Extension && a.IsDirectory == b.IsDirectory && a.IsParent == b.IsParent && a.IsLink == b.IsLink && a.IsHidden == b.IsHidden && a.IsSystem == b.IsSystem && (a.IsDirectory || a.Bytes == b.Bytes) && a.ModifiedTime == b.ModifiedTime && a.Attributes == b.Attributes && a.TagNames.SequenceEqual(b.TagNames);
+        }
+        void MergeLocalRows(System.Collections.ObjectModel.ObservableCollection<Entry> rows, List<Entry> loaded)
+        {
+            var incoming = loaded.ToDictionary(x => x.FullPath, StringComparer.OrdinalIgnoreCase);
+            for (int i = rows.Count - 1; i >= 0; i--) {
+                Entry next;
+                if (!incoming.TryGetValue(rows[i].FullPath, out next)) rows.RemoveAt(i);
+                else { incoming.Remove(rows[i].FullPath); if (!SameLocalRow(rows[i], next)) { next.IsMarked = rows[i].IsMarked; next.ApplyNameSettings(folderBrackets, fullNameTooltips); rows[i] = next; } }
+            }
+            foreach (var entry in loaded) if (incoming.ContainsKey(entry.FullPath)) { entry.ApplyNameSettings(folderBrackets, fullNameTooltips); rows.Add(entry); }
+        }
         internal void FocusFiles()
         {
             List.Focus();
@@ -447,8 +471,8 @@ namespace CommanderCZ
             foreach (var pair in driveButtons)
             {
                 bool selected = String.Equals(pair.Key, root, StringComparison.OrdinalIgnoreCase);
-                pair.Value.Background = selected ? CompactTheme.ColorBrush("#D0E7FA") : Brushes.White;
-                pair.Value.BorderBrush = selected ? CompactTheme.ColorBrush("#89BFE5") : CompactTheme.Line;
+                pair.Value.Background = selected ? CompactTheme.ThemeBrush("#D0E7FA") : CompactTheme.WhiteSurface;
+                pair.Value.BorderBrush = selected ? CompactTheme.ThemeBrush("#89BFE5") : CompactTheme.Line;
             }
         }
         void UpdateDiskInfo()

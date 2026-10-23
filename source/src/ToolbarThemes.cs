@@ -58,7 +58,7 @@ namespace CommanderCZ
                 radio.Checked += delegate { SelectedTheme = selected; }; card.Children.Add(radio); card.Children.Add(CopyUi.Label(descriptions[(int)theme]));
                 var row = new StackPanel { Orientation = Orientation.Horizontal };
                 foreach (string name in PreviewNames)
-                    row.Children.Add(new Border { Width = 34, Height = 36, Margin = new Thickness(1, 0, 1, 0), BorderThickness = new Thickness(1), BorderBrush = CompactTheme.Line, Background = Brushes.White,
+                    row.Children.Add(new Border { Width = 34, Height = 36, Margin = new Thickness(1, 0, 1, 0), BorderThickness = new Thickness(1), BorderBrush = CompactTheme.Line, Background = CompactTheme.WhiteSurface,
                         Child = new Image { Source = DesktopIcons.ToolbarDrawing(name, theme), Width = 28, Height = 28 }, ToolTip = PreviewLabels[Array.IndexOf(PreviewNames, name)] });
                 card.Children.Add(row); body.Children.Add(new Border { Child = card, BorderThickness = new Thickness(1), BorderBrush = CompactTheme.Line, Margin = new Thickness(0, 3, 0, 5) });
             }

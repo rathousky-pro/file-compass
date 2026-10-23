@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -30,10 +30,10 @@ namespace CommanderCZ
     public sealed class ArchiveTemp : IDisposable
     {
         public readonly string Path;
-        public ArchiveTemp(string parent = null) { Path = System.IO.Path.Combine(parent ?? System.IO.Path.Combine(System.IO.Path.GetTempPath(), "CommanderCZ-archives"), Guid.NewGuid().ToString("N")); Directory.CreateDirectory(Path); }
+        public ArchiveTemp(string parent = null) { Path = System.IO.Path.Combine(parent ?? System.IO.Path.Combine(System.IO.Path.GetTempPath(), "FileCompass-archives"), Guid.NewGuid().ToString("N")); Directory.CreateDirectory(Path); }
         public void Dispose()
         {
-            string root = System.IO.Path.GetFullPath(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "CommanderCZ-archives")).TrimEnd('\\') + "\\";
+            string root = System.IO.Path.GetFullPath(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "FileCompass-archives")).TrimEnd('\\') + "\\";
             if (!System.IO.Path.GetFullPath(Path).StartsWith(root, StringComparison.OrdinalIgnoreCase)) throw new IOException(L.Text("archive.invalidTempPath"));
             if (Directory.Exists(Path)) Directory.Delete(Path, true);
         }
@@ -335,7 +335,7 @@ namespace CommanderCZ
                 var preparation = new ArchivePreparationReporter(progress);
                 var inputLocks = new List<FileStream>(); string workingInput = direct ? directRoot : input.Path;
                 string previous = File.Exists(target) ? Hash(target) : null;
-                string stage = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(target), ".CommanderCZ-" + Guid.NewGuid().ToString("N") + extension);
+                string stage = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(target), ".FileCompass-" + Guid.NewGuid().ToString("N") + extension);
                 if (extension == ".rar" && !String.IsNullOrEmpty(pack.Password)) throw new IOException(L.Text("archive.passwordRequiresZipOr7z"));
                 var budget = new ArchiveBudget(ArchiveSettings.Load());
                 try
@@ -467,7 +467,7 @@ namespace CommanderCZ
         }
         static void Commit(ArchiveDocument doc, string input, List<string> files, bool delete, ArchiveSettings settings, CancellationToken token, Action<string> progress, string originalHash, List<string> beforeDelete = null)
         {
-            string stage = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(doc.FilePath), ".CommanderCZ-" + Guid.NewGuid().ToString("N") + System.IO.Path.GetExtension(doc.FilePath));
+            string stage = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(doc.FilePath), ".FileCompass-" + Guid.NewGuid().ToString("N") + System.IO.Path.GetExtension(doc.FilePath));
             try
             {
                 token.ThrowIfCancellationRequested(); File.Copy(doc.FilePath, stage);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
@@ -37,7 +37,7 @@ namespace CommanderCZ {
                 using(var cancel=new CancellationTokenSource()){
                     var dialog=new ArchiveProgressDialog(owner,"Vytváření archivu · Obrázky.zip",cancel){Left=-18000,Top=-18000,WindowStartupLocation=WindowStartupLocation.Manual};dialog.Show();
                     dialog.UpdatePreparation(new ArchivePreparationProgress{Path=@"D:\Fotografie\Dovolená\IMG_2026.jpg",Items=1248,Bytes=780*1048576L});dialog.UpdateLayout();NextStageTests.Draw(dialog,Path.Combine(root,"priprava.png"));
-                    dialog.Update(L.Text("archive.compressingStatus"),.42,true);dialog.UpdateCurrentFile(@"Fotografie\Dovolená\IMG_2026.jpg");dialog.UpdateCompression(new ArchiveCompressionProgress{Original=100*1048576L,Processed=42*1048576L,Packed=32*1048576L}.Summary());dialog.UpdateLayout();NextStageTests.Draw(dialog,Path.Combine(root,"komprimace.png"));dialog.Finish();
+                    dialog.Update(L.Text("archive.compressingStatus"),.42,true);dialog.UpdateCurrentFile(@"Fotografie\Dovolená\IMG_2026.jpg");dialog.UpdateCompression(new ArchiveCompressionProgress{Original=100*1048576L,Processed=42*1048576L,Packed=32*1048576L});dialog.UpdateLayout();NextStageTests.Draw(dialog,Path.Combine(root,"komprimace.png"));dialog.Finish();
                 }
                 File.WriteAllLines(Path.Combine(root,"zip-progress-result.txt"),checks.Concat(new[]{"PASS: "+checks.Count+" checks"}));return 0;
             }catch(Exception ex){File.WriteAllText(Path.Combine(root,"zip-progress-result.txt"),String.Join("\n",checks)+"\nFAIL: "+ex);return 1;}

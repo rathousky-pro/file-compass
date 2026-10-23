@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -74,6 +74,7 @@ namespace CommanderCZ
             AddMenu(commands, L.Text("tags.results"), ShowTaggedFiles);
             AddMenu(commands, L.Text("projection.addToBasket"), AddToBasket); AddMenu(commands, L.Text("projection.basket"), ShowBasket); AddMenu(commands, L.Text("projection.removeFromBasket"), RemoveFromBasket);
             AddMenu(commands, L.Text("everything.title"), SearchEverything);
+            AddMenu(commands, L.Text("analyzer.title"), AnalyzeFolder); AddMenu(commands, L.Text("smart.title"), ShowDiskSmart);
             AddMenu(commands, L.Text("diskUsage.title"), delegate { active.ToggleDiskUsage(); }, "Alt+Shift+Enter");
             AddMenu(commands, L.Text("tabs.new"), delegate { active.NewTab(); }, "Ctrl+T"); AddMenu(commands, L.Text("tabs.close"), delegate { active.CloseTab(active.CurrentTabIndex); }, "Ctrl+W");
             AddMenu(commands, L.Text("tabs.toggleLock"), delegate { active.LockTab(active.CurrentTabIndex); });
@@ -118,9 +119,22 @@ namespace CommanderCZ
             Tool(tools, "refresh", L.Text("toolbar.refreshShortcut"), delegate { left.Refresh(); right.Refresh(); });
             ToolSeparator(tools);
             AddViewToolbarControls(tools);
-            toolbarThumbnailsButton = Tool(tools, "picture", L.Text("media.tilesHelp"), delegate { active.SetDisplay(active.DisplayMode == "Thumbnails" ? "Details" : "Thumbnails"); }, L.Text("action.preview"));
+            Tool(tools, "invert", L.Text("selection.invertMarks") + " (Num *)", delegate { active.InvertMarks(); });
+            var directions = new StackPanel { Orientation = Orientation.Horizontal };
+            Tool(directions, "forward", L.Text("toolbar.folderLeftToRight"), delegate { OpenFolderInOtherPanel(left); });
+            Tool(directions, "back", L.Text("toolbar.folderRightToLeft"), delegate { OpenFolderInOtherPanel(right); });
+            tools.Children.Add(directions);
+            updateDirectionTools = delegate {
+                double needed = 0;
+                foreach (UIElement item in directions.Children) { item.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity)); needed += item.DesiredSize.Width; }
+                foreach (UIElement item in tools.Children) if (item != directions) { item.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity)); needed += item.DesiredSize.Width; }
+                directions.Visibility = panelLayout != "Single" && tools.ActualWidth >= needed ? Visibility.Visible : Visibility.Collapsed;
+            };
+            tools.SizeChanged += delegate { updateDirectionTools(); };
+            ToolSeparator(tools);
             toolbarPreviewButton = Tool(tools, "view", L.Text("toolbar.filePreviewHelp"), ToggleQuickPreview, L.Text("toolbar.filePreview"));
             Tool(tools, "edit", L.Text("toolbar.editHelp"), EditSelected, L.Text("toolbar.edit"));
+            toolbarThumbnailsButton = Tool(tools, "picture", L.Text("media.tilesHelp"), delegate { active.SetDisplay(active.DisplayMode == "Thumbnails" ? "Details" : "Thumbnails"); }, L.Text("action.preview"));
             ToolSeparator(tools);
             Tool(tools, "pack", L.Text("toolbar.compressShortcut"), CreateArchive, L.Text("action.compressArchive"));
             Tool(tools, "unpack", L.Text("toolbar.extractShortcut"), ExtractArchives, L.Text("action.extractArchive"));

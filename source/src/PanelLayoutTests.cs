@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -134,7 +134,7 @@ namespace CommanderCZ
             var tools = (Panel)toolbarLayoutButton.Parent;
             var buttons = tools.Children.OfType<Button>().ToArray();
             int hiddenIndex = Array.IndexOf(buttons, toolbarAllFilesButton);
-            check(name(buttons[hiddenIndex + 1]) == "Miniatury" && name(buttons[hiddenIndex + 2]) == "Náhled" && name(buttons[hiddenIndex + 3]) == "Editovat", "toolbar order is hidden files, thumbnails, preview, edit");
+            check(name(buttons[hiddenIndex + 1]) == L.Text("selection.invertMarks") + " (Num *)" && name(buttons[hiddenIndex + 2]) == "Náhled" && name(buttons[hiddenIndex + 3]) == "Editovat" && buttons[hiddenIndex + 4] == toolbarThumbnailsButton, "toolbar order is hidden files, invert, preview, edit, thumbnails");
             check(toolbarLayoutButton.ContextMenu == null && !name(toolbarLayoutButton).Contains("▾"), "layout button has no dropdown");
             var samePreview = quickPreview;
             click(toolbarThumbnailsButton); check(left.DisplayMode == "Thumbnails" && quickPreview == samePreview, "thumbnails change the file list without toggling file preview");

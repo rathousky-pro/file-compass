@@ -19,7 +19,6 @@ namespace CommanderCZ {
             Closed+=delegate{view.DisposeManagers();};
         }
     }
-    // Both entry points use the same managers, profiles, editors and authorization flow.
     internal sealed class ConnectionsView : Border {
         internal readonly TabControl Tabs=new TabControl();
         internal readonly NetworkManagerDialog Network;

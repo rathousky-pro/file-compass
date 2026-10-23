@@ -70,7 +70,7 @@ namespace CommanderCZ
             finally { synchronizingSelection = false; }
             SyncWindowsSelection();
             capacity.Text = Path.GetFileName(Archive.FilePath) + " · " + Archive.Type + " · " + (ArchiveEngine.Writable(Archive) ? L.Text("archive.shortTitle") : L.Text("archive.readOnlyStatus")); capacity.ToolTip = Archive.Display;
-            foreach (var button in driveButtons.Values) button.Background = System.Windows.Media.Brushes.White;
+            foreach (var button in driveButtons.Values) button.Background = CompactTheme.WhiteSurface;
             UpdateStatus(); UpdateConnectionButtons(); if (PathChanged != null) PathChanged(this, EventArgs.Empty);
         }
         internal void NavigateArchive(string path, bool remember)
@@ -79,7 +79,12 @@ namespace CommanderCZ
             string member = path.Trim('/');
             if (member.Length > 0 && !Archive.Items.Any(x => x.Directory && x.Path.Equals(member, StringComparison.OrdinalIgnoreCase))) throw new IOException(L.Text("archive.folderNotFound"));
             if (remember && CurrentPath != path) { history.Push(CurrentPath); forwardHistory.Clear(); }
+            string previous = ArchivePrefix;
             ArchivePrefix = member; ApplyArchiveRows();
+            if (!String.IsNullOrEmpty(previous) && (previous.Contains("/") ? previous.Substring(0, previous.LastIndexOf('/')) : "") == member) {
+                var returned = List.Items.Cast<Entry>().FirstOrDefault(x => !x.IsParent && x.FullPath == "/" + previous);
+                if (returned != null) { List.SelectedItem = returned; List.ScrollIntoView(returned); }
+            }
         }
         void ExitArchive()
         {

@@ -20,7 +20,7 @@ namespace CommanderCZ
         { durableQueue.Plan(transfer,batches.SelectMany(x => x.Items).Select(x => new DurableFile { Source = x.Source,Target = x.Destination,Directory = x.Directory,Bytes = x.Bytes / (x.Relay ? 2 : 1),Modified = x.Modified.ToUniversalTime() })); }
         List<NetworkCopyBatch> RecoveredBatches(DurableTransfer transfer)
         {
-            var batch = new NetworkCopyBatch { Entry = new Entry { FullPath = transfer.Sources.FirstOrDefault() ?? "",IsDirectory = true },Destination = transfer.Destination,Rule = transfer.Rule };
+            var batch = new NetworkCopyBatch { Entry = new Entry { FullPath = transfer.Sources.FirstOrDefault() ?? "",IsDirectory = true },Destination = transfer.Destination,Rule = NetworkCopyRule.Resume };
             foreach (var file in transfer.Files.Where(x => !x.Done).OrderByDescending(x => x.Directory).ThenBy(x => x.Source.Length)) {
                 long bytes = checked(file.Bytes * (transfer.Kind == "Relay" ? 2 : 1)); batch.Bytes = checked(batch.Bytes + bytes);
                 batch.Items.Add(new NetworkQueueItem { Source = file.Source,Destination = file.Target,Directory = file.Directory,Bytes = bytes,Modified = file.Modified.ToLocalTime(),Relay = transfer.Kind == "Relay",State = L.Code("state.queued"),Policy = L.Text("action.refresh"),ResumeIfAvailable = true });
@@ -30,7 +30,7 @@ namespace CommanderCZ
         {
             DurableTransfer[] values; lock (job.DurableRequests) values = job.DurableRequests.ToArray();
             bool success = job.SnapshotItems().All(x => x.State == L.Code("state.completed") || x.State == L.Code("state.skipped"));
-            foreach (var value in values) durableQueue.Finish(value,success || (job.Cancellation.IsCancellationRequested && !preserveQueueOnExit && !job.KeepPartialOnCancel));
+            foreach (var value in values) durableQueue.Finish(value,success || (job.RelayTarget != null && job.Cancellation.IsCancellationRequested && !preserveQueueOnExit && !job.KeepPartialOnCancel));
         }
         internal void ShowDurableQueue()
         {
@@ -41,7 +41,7 @@ namespace CommanderCZ
             var status = CopyUi.Label(durableQueue.LastError ?? L.Text("queue.restoreCredentialsHelp")); DockPanel.SetDock(status,Dock.Bottom); body.Children.Add(status);
             var buttons = FluentTheme.Actions(); DockPanel.SetDock(buttons,Dock.Bottom); body.Children.Add(buttons);
             var details = new TextBox { Height = 140,IsReadOnly = true,AcceptsReturn = true,TextWrapping = TextWrapping.Wrap,VerticalScrollBarVisibility = ScrollBarVisibility.Auto,Margin = new Thickness(0,8,0,8) }; DockPanel.SetDock(details,Dock.Bottom); body.Children.Add(details);
-            var list = new ListBox { Background = System.Windows.Media.Brushes.White }; body.Children.Add(new Border { Background = System.Windows.Media.Brushes.White,BorderBrush = CompactTheme.Line,BorderThickness = new Thickness(1),Child = list });
+            var list = new ListBox { Background = CompactTheme.WhiteSurface }; body.Children.Add(new Border { Background = CompactTheme.WhiteSurface,BorderBrush = CompactTheme.Line,BorderThickness = new Thickness(1),Child = list });
             Action refresh = delegate { list.ItemsSource = durableQueue.Pending(); if (list.Items.Count > 0) list.SelectedIndex = 0; };
             list.SelectionChanged += delegate { var item = list.SelectedItem as DurableTransfer; details.Text = item == null ? L.Text("queue.noSavedJobs") : L.Text("queue.jobTypePrefix") + item.Kind + L.Text("queue.targetPrefix") + item.Destination + L.Text("queue.conflictRulePrefix") + (item.Copy == null ? item.Rule.ToString() : L.Text("conflict.ask")) + "\nZdroje:\n" + String.Join("\n",item.Sources ?? new string[0]) + L.Text("queue.completedFilesPrefix") + item.Files.Count(x => !x.Directory && x.Done) + " / " + item.Files.Count(x => !x.Directory); };
             buttons.Children.Add(CopyUi.Button(L.Text("queue.resumeSelected"),async delegate { var selected = list.SelectedItem as DurableTransfer; if (selected == null) return; buttons.IsEnabled = false; try { await RestoreTransfer(selected); status.Text = L.Text("queue.jobSubmitted"); } catch (Exception ex) { selected.Running = false; status.Text = ex.Message; status.ToolTip = ex.ToString(); } finally { buttons.IsEnabled = true; refresh(); } }));

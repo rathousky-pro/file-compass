@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -60,7 +60,7 @@ namespace CommanderCZ
     public partial class MainWindow : Window
     {
         FilePanel left, right, active;
-        readonly TextBlock operation = new TextBlock { Text = L.Text("state.ready"), Margin = new Thickness(4, 2, 4, 2), Foreground = Brushes.DimGray, Visibility = Visibility.Collapsed };
+        readonly TextBlock operation = new TextBlock { Text = L.Text("state.ready"), Margin = new Thickness(4, 2, 4, 2), Foreground = FluentTheme.Muted, Visibility = Visibility.Collapsed };
         readonly ProgressBar progress = new ProgressBar { Height = 5, Visibility = Visibility.Collapsed };
         readonly List<Button> actions = new List<Button>();
         bool busy;
@@ -73,7 +73,8 @@ namespace CommanderCZ
             FluentTheme.Ensure(); InitializeOperations(initialDirectory);
             StateChanged += delegate { if (WindowState != WindowState.Minimized) lastVisibleWindowState = WindowState; };
             Title = ApplicationBrand.Name; Width = 1440; Height = 800; MinWidth = 850; MinHeight = 450;
-            FontFamily = new FontFamily("Segoe UI"); FontSize = 12; Background = CompactTheme.Chrome;
+            FontFamily = new FontFamily("Segoe UI"); FontSize = 12; Background = CompactTheme.Chrome; Foreground = FluentTheme.Text;
+            SourceInitialized += delegate { AppearanceTheme.TitleBar(this); }; AppearanceTheme.RegisterShell(this);
             Icon = DesktopIcons.Drawing("app"); UseLayoutRounding = true;
             TextOptions.SetTextFormattingMode(this, TextFormattingMode.Display);
             var root = new DockPanel { Background = CompactTheme.Chrome, LastChildFill = true }; Content = root;
@@ -133,7 +134,7 @@ namespace CommanderCZ
         {
             var button = CompactTheme.Button(label, label, delegate { if (!busy && !PanelsLoading) action(); });
             button.Height = 30; button.Padding = new Thickness(6, 2, 6, 2);
-            button.Background = Brushes.White; button.BorderBrush = CompactTheme.Line;
+            button.Background = CompactTheme.WhiteSurface; button.BorderBrush = CompactTheme.Line;
             panel.Children.Add(button); actions.Add(button);
         }
         void HandleKeys(object sender, KeyEventArgs e)
@@ -234,6 +235,7 @@ namespace CommanderCZ
                 else MessageBox.Show(error, ApplicationBrand.Name, MessageBoxButton.OK, MessageBoxImage.Error);
                 return 2;
             }
+            if (args.Length == 1 && args[0] == "--smart-window") { var smartApp = new Application(); FluentTheme.Ensure(); return smartApp.Run(new DiskSmartWindow(null)); }
             if (args.Length > 0 && args[0] == "--sshfs-install-helper") return SshfsSetup.Helper(args);
             if (args.Length == 1 && args[0] == "--everything-worker") return EverythingSearch.Worker();
             if (args.Length > 1 && args.Any(x => x.EndsWith("-test", StringComparison.Ordinal)))
@@ -254,6 +256,8 @@ namespace CommanderCZ
             if (args.Length > 1 && args.Any(x => x.EndsWith("-test", StringComparison.Ordinal))) DurableQueue.TestDirectory = Path.GetFullPath(args[1]);
             if (args.Length > 1 && args.Any(x => x.EndsWith("-test", StringComparison.Ordinal))) FileIntegrity.TestDirectory = Path.GetFullPath(args[1]);
             if (args.Length > 1 && args.Any(x => x.EndsWith("-test", StringComparison.Ordinal))) ArchiveSettings.TestPath = Path.Combine(Path.GetFullPath(args[1]), "archive-limits.xml");
+            if (args.Contains("--ftp-name-test")) return NetworkResumeTests.NameOnly(args[1], Int32.Parse(args[2]));
+            if (args.Contains("--ftp-queue-resume-test")) return NetworkResumeTests.QueueOnly(args[1], Int32.Parse(args[2]));
             if (args.Contains("--ftp-resume-test")) return NetworkResumeTests.Run(args[1], Int32.Parse(args[2]), false);
             if (args.Contains("--sftp-resume-test")) return NetworkResumeTests.Run(args[1], Int32.Parse(args[2]), true);
             if (args.Contains("--resume-once-test")) return NetworkResumeTests.Once(args);
@@ -281,8 +285,16 @@ namespace CommanderCZ
             if (args.Contains("--visual-feedback-test")) return VisualFeedbackTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--advanced-tools-test")) return AdvancedToolsTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--explorer-tree-test")) return ExplorerTreeTests.Run(Path.GetFullPath(args[1]));
+            if (args.Contains("--dialog-enter-test")) return DialogEnterTests.Run(Path.GetFullPath(args[1]));
+            if (args.Contains("--file-icons-test")) return FileIconTests.Run(Path.GetFullPath(args[1]));
+            if (args.Contains("--toolbar-dialog-test")) return ToolbarDialogTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--panel-layout-test")) return PanelLayoutTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--language-test")) return LanguageTests.Run(Path.GetFullPath(args[1]));
+            if (args.Contains("--disk-smart-test")) return DiskSmartTests.Run(Path.GetFullPath(args[1]),args.Contains("--live"));
+            if (args.Contains("--preview-refresh-test")) return PreviewRefreshTests.Run(Path.GetFullPath(args[1]));
+            if (args.Contains("--disk-analyzer-upgrade-test")) return DiskAnalyzerUpgradeTests.Run(Path.GetFullPath(args[1]));
+            if (args.Contains("--disk-analyzer-test")) return DiskAnalyzerTests.Run(Path.GetFullPath(args[1]));
+            if (args.Contains("--appearance-language-test")) return AppearanceLanguageTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--media-workflow-test")) return MediaWorkflowTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--priority-workflow-test")) return PriorityWorkflowTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--instance-state-test")) return InstanceStateTests.Run(Path.GetFullPath(args[1]));
@@ -308,6 +320,7 @@ namespace CommanderCZ
             if (args.Contains("--local-copy-ui-test")) return LocalCopyPresentationTests.Run(args[1]);
             if (args.Contains("--next-stage-test")) return NextStageTests.Run(args[1]);
             if (args.Contains("--next-remote-test")) return NextRemoteTests.Execute(args[1],Int32.Parse(args[2]),Int32.Parse(args[3]),Int32.Parse(args[4]));
+            if (args.Contains("--durable-reopen-test")) return QueuePersistenceTests.Run(args[1]);
             if (args.Contains("--durable-seed-test")) return NextStageTests.Seed(args[1]);
             if (args.Contains("--copy-test")) return CopyTests.Execute(args.Length > 1 ? args[1] : Path.GetTempPath());
             if (args.Contains("--archive-test")) return ArchiveTests.Run(args.Length > 1 ? args[1] : Path.GetTempPath());

@@ -7,8 +7,8 @@ using System.Xml.Serialization;
 namespace CommanderCZ
 {
     /// <summary>
-    /// Integrita stavových souborů (fronta přenosů, checkpointy): HMAC-SHA256 s klíčem chráněným DPAPI pro aktuálního uživatele.
-    /// Ověřuje stejné bajty, které se deserializují. DPAPI neizoluje procesy stejného účtu.
+    /// State files use HMAC-SHA256 with a key protected by DPAPI for the current user.
+    /// Verify the exact bytes deserialized. DPAPI does not isolate processes running as the same user.
     /// </summary>
     internal static class FileIntegrity
     {
@@ -133,7 +133,7 @@ namespace CommanderCZ
             finally { if (File.Exists(temp)) File.Delete(temp); }
         }
 
-        /// <summary>Diagnostická kontrola. Produkční čtení používá ReadXml, nikdy Verify a další otevření cesty.</summary>
+        /// <summary>Diagnostic check only. Production reads use ReadXml, never Verify followed by reopening the path.</summary>
         internal static bool Verify(string path)
         {
             try { using (ReadVerified(path)) { } return true; }

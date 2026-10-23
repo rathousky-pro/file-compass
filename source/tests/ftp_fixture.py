@@ -1,4 +1,4 @@
-"""Loopback-only FTP fixture. Requires pyftpdlib in the given dependency folder."""
+﻿"""Loopback-only FTP fixture. Requires pyftpdlib in the given dependency folder."""
 import pathlib
 import sys
 
@@ -97,6 +97,10 @@ elif mode == "no-resume":
     pathlib.Path(sys.argv[3]).parent.joinpath("no-resume.txt").write_text("test fixture", encoding="ascii")
 elif mode.startswith("ansi"):
     handler.encoding = "cp1250"
+if mode == "utf8-no-feat":
+    def no_utf8_feat(self, line):
+        self.respond("211 No advertised extensions")
+    handler.ftp_FEAT = no_utf8_feat
 handler.authorizer = authorizer
 class SlowTransfer(ThrottledDTPHandler):
     write_limit = 1048576

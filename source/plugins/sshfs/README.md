@@ -1,22 +1,12 @@
-# SSHFS
+# SSHFS support
 
-CommanderCZ spravuje profily SSHFS a používá SSHFS-Win s ovladačem WinFsp.
-V této složce nejsou instalátory ani další kopie systémového ovladače.
-Při chybějící podpoře Commander nabídne jejich stažení a instalaci tlačítkem
-Stáhnout a nainstalovat v okně Podpora SSHFS. Instalace se při startu
-programu sama nespouští. Používá oficiální WinFsp 2.1.25156 a SSHFS-Win
-3.5.20357 x64, připnuté SHA-256 a ověření podpisu Authenticode.
-Vyžádá si případné potvrzení správce, ukazuje průběh, podporuje zrušení
-s rollbackem a neprovádí automatický restart. Již instalované komponenty
-nepřeinstaluje. Disk potom připojí pod běžným účtem Windows pro použití
-v Commanderu, Antigravity a dalších aplikacích.
-Program nejprve hledá kompletní runtime v plugins/sshfs/bin/sshfs.exe,
-potom nainstalované SSHFS-Win v Program Files (také x86).
-Samotné kopírování DLL do pluginu nenahradí instalaci ovladače WinFsp.
+File Compass manages SSHFS profiles using SSHFS-Win and WinFsp. This directory does not contain installers or another copy of the system driver.
 
-https://github.com/winfsp/sshfs-win
-https://github.com/winfsp/winfsp
+If dependencies are missing, SSHFS support offers Download and install; installation never starts automatically at application startup. The pinned official versions are WinFsp 2.1.25156 and SSHFS-Win 3.5.20357 x64, verified with SHA-256 and Authenticode. Installation requests elevation where necessary, displays progress, supports cancellation/rollback and never restarts Windows automatically. Already installed dependencies are not reinstalled.
 
-Přihlašovací údaje se předají přímo vstupní rourou. Ve známých klíčích je
-pouze veřejný klíč serveru; při připojení se vyžaduje StrictHostKeyChecking.
-Místní profily nezasahují do uživatelova .ssh/config ani known_hosts.
+The drive is mounted under the normal Windows account for use in File Compass and other applications. Runtime lookup checks a complete `plugins/sshfs/bin/sshfs.exe` runtime, then SSHFS-Win installations under Program Files (including x86). Copying DLLs alone cannot replace installing the WinFsp driver.
+
+- https://github.com/winfsp/sshfs-win
+- https://github.com/winfsp/winfsp
+
+Credentials are passed over stdin. Known-host records contain public server keys only and connections require StrictHostKeyChecking. Local profiles do not modify the user's `.ssh/config` or `known_hosts`.

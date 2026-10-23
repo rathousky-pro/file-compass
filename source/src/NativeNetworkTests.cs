@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -66,7 +66,7 @@ namespace CommanderCZ
                         worker.Session.MoveFile("/directory upload", "/renamed");
                         DeleteOperations.Remote(worker.Session, "/renamed");
                         check(!worker.Session.FileExists("/renamed"), "SCP rename and recursive deletion");
-                        check(!worker.Session.ListDirectory("/").Files.Any(x => x.Name.StartsWith(".CommanderCZ-")), "successful SCP operations clean remote staging files");
+                        check(!worker.Session.ListDirectory("/").Files.Any(x => x.Name.StartsWith(".FileCompass-")), "successful SCP operations clean remote staging files");
                     }
                     string original = Path.Combine(workspace, "original.bin"); File.WriteAllText(original, "preserve me");
                     bool cancelled = false;
@@ -77,7 +77,7 @@ namespace CommanderCZ
                         try { worker.Session.GetFiles("/slow.bin", original); } catch (OperationCanceledException) { cancelled = true; }
                     }
                     check(cancelled && File.ReadAllText(original) == "preserve me", "SCP cancellation keeps original local destination");
-                    check(!Directory.GetFiles(workspace, ".CommanderCZ-download-*").Any() && browsing.Session.FileExists("/slow.bin"), "SCP cancellation cleans staging and preserves browsing session");
+                    check(!Directory.GetFiles(workspace, ".FileCompass-download-*").Any() && browsing.Session.FileExists("/slow.bin"), "SCP cancellation cleans staging and preserves browsing session");
                     string cancelUpload = Path.Combine(workspace, "slow.bin"); File.WriteAllBytes(cancelUpload, new byte[1048576]);
                     cancelled = false;
                     using (var worker = browsing.TransferConnection())
@@ -87,7 +87,7 @@ namespace CommanderCZ
                         try { worker.Session.PutFiles(cancelUpload, "/slow.bin"); } catch (OperationCanceledException) { cancelled = true; }
                     }
                     check(cancelled && browsing.Session.GetFileInfo("/slow.bin").Length == 8388608, "cancelled SCP overwrite preserves original remote file");
-                    check(!browsing.Session.ListDirectory("/").Files.Any(x => x.Name.StartsWith(".CommanderCZ-")), "cancelled SCP upload cleans remote staging");
+                    check(!browsing.Session.ListDirectory("/").Files.Any(x => x.Name.StartsWith(".FileCompass-")), "cancelled SCP upload cleans remote staging");
                     check(!browsing.Session.FileExists("/SFTP-WAS-REQUESTED"), "all SCP file operations completed without any SFTP fallback");
                 }
                 File.WriteAllLines(Path.Combine(workspace, "scp-test-result.txt"), passed.Concat(new[] { "PASS: " + passed.Count + " checks" })); return 0;

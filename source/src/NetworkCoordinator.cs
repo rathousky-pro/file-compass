@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -88,7 +88,6 @@ namespace CommanderCZ
                 {
                     string path = await Task.Run(delegate { return profile.Protocol == NetworkProtocol.SMB ? WindowsNetwork.ConnectSmb(profile, password) : WindowsNetwork.ConnectNfs(profile); });
                     if (profile.Protocol == NetworkProtocol.NFS) nfsDrive = profile.DriveLetter;
-                    // Check accessibility before replacing the current panel.
                     await Task.Run(delegate { new DirectoryInfo(path).GetFileSystemInfos(); });
                     panel.Navigate(path, true); await panel.NavigationTask;
                     if (!String.Equals(panel.CurrentPath, path, StringComparison.OrdinalIgnoreCase)) throw new IOException(L.Text("network.folderOpenFailed"));
@@ -202,7 +201,9 @@ namespace CommanderCZ
             entries = entries.Select(x => new Entry { FullPath = x.FullPath, Name = x.Name, IsDirectory = x.IsDirectory, Bytes = x.Bytes }).ToArray();
             var durable = recovery ?? durableQueue.Begin(download ? "Download" : "Upload",entries.Select(x => x.FullPath).ToArray(),destination,null,rule,move,download ? browsing.Profile : null,download ? null : browsing.Profile);
             var planner = browsing.TransferConnection();
-            var job = recovery == null ? networkJobs.AsEnumerable().Reverse().FirstOrDefault(x => x.Move == move && x.Matches(browsing, download) && x.Reserve()) : null;
+            // An explicit resume must not disappear into a previous job's root
+            // de-duplication set after an individual item was interrupted.
+            var job = recovery == null && rule != NetworkCopyRule.Resume ? networkJobs.AsEnumerable().Reverse().FirstOrDefault(x => x.Move == move && x.Matches(browsing, download) && x.Reserve()) : null;
             if (job == null)
             {
                 job = new NetworkTransferJob(browsing.Profile, download) { Move = move }; job.Reserve(); networkJobs.Add(job);
@@ -229,7 +230,7 @@ namespace CommanderCZ
                 job.Changed = delegate { ((IProgress<NetworkCopyUpdate>)updates).Report(captured.Update()); };
                 job.Completion = RunNetworkJob(job, browsing.TransferConnection());
             }
-            AttachDurable(job,durable); NetworkWindowBackground(networkQueue == null || !networkQueue.IsVisible);
+            AttachDurable(job,durable); ShowNetworkQueue(job);
             await job.QueuePlanning(delegate
             {
                 Exception planningError = null;
@@ -259,7 +260,7 @@ namespace CommanderCZ
                 job.Activity.Finish((errors ? L.Text("state.completedWithErrors") : L.Code("state.completed")) + " · " + job.Caption + (job.Move ? L.Text("copy.movedCountPrefix") : L.Text("copy.copiedCountPrefix")) + result.Copied + L.Text("copy.skippedCountSeparator") + result.Skipped + " · " + CopyUi.Bytes(job.TotalBytes) + L.Text("queue.clickToOpenSuffix"), !errors);
             }
             catch (OperationCanceledException) {
-                job.Cancel(); bool kept = job.RelayTarget != null && job.KeepPartialOnCancel; job.Finish(kept ? L.Code("state.interrupted") : L.Code("state.cancelled"));
+                job.Cancel(); bool kept = job.RelayTarget == null || job.KeepPartialOnCancel; job.Finish(kept ? L.Code("state.interrupted") : L.Code("state.cancelled"));
                 job.Activity.Finish((kept ? L.Text("transfer.interruptedPartialPreserved") : L.Text("transfer.cancelledStatus") + (job.PartialCleanupError == null ? "" : L.Text("transfer.partialCleanupFailedSuffix") + job.PartialCleanupError)) + " · " + job.Caption,false);
                 if (kept) job.Activity.Record.State = L.Code("state.interrupted");
             }

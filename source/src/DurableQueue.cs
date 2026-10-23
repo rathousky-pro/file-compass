@@ -51,7 +51,7 @@ namespace CommanderCZ
         string Receipt(string id) { return Path.Combine(directory,id + ".done"); }
         FileStream Claim(string id) { return new FileStream(Path.Combine(directory,id + ".lock"),FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None); }
         static string Key(string source,string target) { using (var hash = SHA256.Create()) return Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(source + "\0" + target))); }
-        // Potvrzení o dokončení souboru je vázané na úlohu a podepsané klíčem uživatele, takže ho nelze podvrhnout zápisem do .done.
+        // Completion receipts are job-bound and signed with the user key; a forged .done file is not proof of completion.
         static string Mark(string id,string source,string target) { return FileIntegrity.Mac(id + "\0" + source + "\0" + target); }
         internal static string Identity(NetworkProfile profile)
         { if (profile == null) return null; return Key(profile.Id + "|" + profile.Protocol + "|" + profile.Host.ToLowerInvariant() + "|" + profile.Port + "|" + profile.UserName + "|" + profile.FtpTls + "|" + profile.FtpImplicitTls,profile.HostKeyFingerprint); }

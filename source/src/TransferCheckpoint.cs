@@ -15,6 +15,7 @@ namespace CommanderCZ.NetworkTransport
     public sealed class TransferCheckpointData
     {
         public string Identity, Stage, SourceHash;
+        public string OriginalName, SourcePath, TargetPath;
         public long Length, Modified, Offset;
         public bool TargetExists; public long TargetLength, TargetModified;
         public List<TransferBlock> Blocks = new List<TransferBlock>();
@@ -26,8 +27,10 @@ namespace CommanderCZ.NetworkTransport
         internal static string TestRoot;
         internal TransferCheckpointData Data;
         readonly string path; readonly FileStream lease;
+        readonly string sourcePath, targetPath;
         internal TransferCheckpoint(SessionOptions options, bool upload, string source, string target)
         {
+            sourcePath = source; targetPath = target;
             string identity = options.Protocol + "\n" + options.FtpSecure + "\n" + options.HostName.ToLowerInvariant() + "\n" + options.PortNumber + "\n" + options.UserName + "\n" + options.SshHostKeyFingerprint + "\n" + upload + "\n" + source + "\n" + target;
             string id = Digest(Encoding.UTF8.GetBytes(identity));
             string root = options.Raw("ResumeDirectory", TestRoot ?? System.IO.Path.Combine(AppPaths.ConfigDirectory, "transfers"));
@@ -53,6 +56,7 @@ namespace CommanderCZ.NetworkTransport
         internal void Initialize(string stage, long length, DateTime modified, string hash, bool exists, long targetLength, DateTime targetModified)
         {
             Data = new TransferCheckpointData { Identity = Data.Identity, Stage = stage, Length = length, Modified = modified.ToUniversalTime().Ticks, SourceHash = hash,
+                SourcePath = sourcePath, TargetPath = targetPath, OriginalName = Path.GetFileName(sourcePath),
                 TargetExists = exists, TargetLength = targetLength, TargetModified = targetModified.ToUniversalTime().Ticks };
             Save();
         }

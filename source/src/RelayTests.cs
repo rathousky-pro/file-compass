@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -98,13 +98,13 @@ namespace CommanderCZ
                     bool cancelled = false; try { Run(cancelJob,source,target); } catch (OperationCanceledException) { cancelled = true; } target.Session.GetFiles("/relay/slow.bin",output).Check();
                     check(cancelled && File.ReadAllText(output) == "original target" && source.Session.GetFileInfo("/slow.bin").Length == 8388608,"cancelling relay " + (duringUpload ? "upload" : "download") + " preserves source and previous target");
                     check(source.Session.ListDirectory("/").Files.Count > 0 && target.Session.ListDirectory("/").Files.Count > 0,"cancellation leaves both browsing sessions usable");
-                    check(!target.Session.ListDirectory("/relay").Files.Any(x => x.Name.StartsWith(".CommanderCZ-relay-")),"reachable target cleans relay staging after discard cancellation");
+                    check(!target.Session.ListDirectory("/relay").Files.Any(x => x.Name.StartsWith(".FileCompass-relay-")),"reachable target cleans relay staging after discard cancellation");
                 }
                 using (var worker = target.TransferConnection()) {
                     worker.OpenTransfer(); var expected = worker.Session.GetFileInfo("/relay/slow.bin"); invalid = false;
                     using (var memory = new MemoryStream(new byte[65536])) try { worker.Session.UploadRelay(memory,memory.Length,DateTime.Now,"/relay/slow.bin",expected,delegate(long count) { },delegate { throw new IOException("source changed after final byte"); },delegate(Exception error) { }); } catch (IOException) { invalid = true; }
                     target.Session.GetFiles("/relay/slow.bin",output).Check(); check(invalid && File.ReadAllText(output) == "original target","source validation failure after upload prevents final target commit");
-                    check(!target.Session.ListDirectory("/relay").Files.Any(x => x.Name.StartsWith(".CommanderCZ-upload-")),"source validation failure cleans the uploaded staging file");
+                    check(!target.Session.ListDirectory("/relay").Files.Any(x => x.Name.StartsWith(".FileCompass-upload-")),"source validation failure cleans the uploaded staging file");
                 }
                 target.Session.CreateDirectory("/failure-retry"); File.WriteAllText(input,"fault armed"); target.Session.PutFiles(input,"/__fail_relay_upload_once__").Check();
                 var retry = Planned(source,target,new[] { new Entry { FullPath = "/slow.bin" } },"/failure-retry",NetworkCopyRule.Overwrite); int failures = 0;
@@ -157,7 +157,7 @@ namespace CommanderCZ
             var stopDeadline = DateTime.UtcNow.AddSeconds(20); var stopped = networkJobs.Last();
             while (Interlocked.Read(ref stopped.RelayUploaded) <= 524288) { if (interruptedCopy.IsCompleted || DateTime.UtcNow > stopDeadline) throw new Exception("UI interruption did not reach upload"); await Task.Delay(20); }
             ChooseRelayStop(stopped,"Přerušit a ponechat pro navázání"); await interruptedCopy;
-            check(stopped.KeepPartialOnCancel && stopped.Activity.Record.State == "Přerušeno" && target.Session.ListDirectory("/ui-interrupted").Files.Any(x => x.Name.StartsWith(".CommanderCZ-relay-")),"UI keep choice persists partial and records interrupted history state");
+            check(stopped.KeepPartialOnCancel && stopped.Activity.Record.State == "Přerušeno" && target.Session.ListDirectory("/ui-interrupted").Files.Any(x => x.Name.StartsWith(".FileCompass-relay-")),"UI keep choice persists partial and records interrupted history state");
             ShowOperationHistory(); var records = FluentUiTests.Children<System.Windows.Controls.ListBox>(historyWindow).Single(); records.SelectedItem = stopped.Activity.Record;
             check(FluentUiTests.Children<System.Windows.Controls.Button>(historyWindow).Single(x => (string)x.Content == "Opakovat / navázat").IsEnabled,"history enables resume for the interrupted relay"); historyWindow.Close();
             await StartNetworkRelay(new[] { new Entry { FullPath = "/slow.bin" } },source,target,"/ui-interrupted",null,NetworkCopyRule.Resume);

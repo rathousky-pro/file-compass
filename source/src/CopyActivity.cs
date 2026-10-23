@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -70,7 +70,7 @@ namespace CommanderCZ
             double width = Math.Max(0, ActualWidth), height = Math.Max(0, ActualHeight);
             if (width == 0 || height == 0) return;
             double line = Math.Min(3, height / 3);
-            var track = CompactTheme.ColorBrush("#E7ECF3");
+            var track = CompactTheme.ThemeBrush("#E7ECF3");
             drawing.DrawRoundedRectangle(track, null, new Rect(0, 0, width, line), 1.5, 1.5);
             drawing.DrawRoundedRectangle(track, null, new Rect(0, height - line, width, line), 1.5, 1.5);
             drawing.DrawRoundedRectangle(FileColor, null, new Rect(0, 0, width * (preparing ? .25 : FileFraction), line), 1.5, 1.5);
@@ -80,9 +80,9 @@ namespace CommanderCZ
     public partial class MainWindow
     {
         readonly StackPanel copyActivities = new StackPanel();
-        readonly Border copySummary = new Border { Margin = new Thickness(8, 0, 8, 6), Padding = new Thickness(8), CornerRadius = new CornerRadius(6), Background = Brushes.White, BorderBrush = CompactTheme.Line, BorderThickness = new Thickness(1), Visibility = Visibility.Collapsed, Cursor = System.Windows.Input.Cursors.Hand };
+        readonly Border copySummary = new Border { Margin = new Thickness(8, 0, 8, 6), Padding = new Thickness(8), CornerRadius = new CornerRadius(6), Background = CompactTheme.WhiteSurface, BorderBrush = CompactTheme.Line, BorderThickness = new Thickness(1), Visibility = Visibility.Collapsed, Cursor = System.Windows.Input.Cursors.Hand };
         readonly DualCopyProgress summaryProgress = new DualCopyProgress();
-        readonly ProgressBar summaryTrack = new ProgressBar { Height = 3, Minimum = 0, Maximum = 1, BorderThickness = new Thickness(0), Foreground = FluentTheme.Accent, Background = CompactTheme.ColorBrush("#E7ECF3"), Margin = new Thickness(0, 6, 0, 0) };
+        readonly ProgressBar summaryTrack = new ProgressBar { Height = 3, Minimum = 0, Maximum = 1, BorderThickness = new Thickness(0), Foreground = FluentTheme.Accent, Background = CompactTheme.ThemeBrush("#E7ECF3"), Margin = new Thickness(0, 6, 0, 0) };
         readonly TextBlock summaryLabel = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Foreground = FluentTheme.Text, TextTrimming = TextTrimming.CharacterEllipsis };
         readonly TextBlock summaryPercent = new TextBlock { Foreground = FluentTheme.Accent, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 8, 0) };
         readonly TextBlock summaryRoute = new TextBlock { FontSize = 11, Margin = new Thickness(0, 2, 4, 0), Foreground = FluentTheme.Muted, TextTrimming = TextTrimming.CharacterEllipsis };
@@ -174,11 +174,11 @@ namespace CommanderCZ
         {
             if (activityDetails != null) { activityDetails.WindowState = WindowState.Normal; activityDetails.Activate(); return; }
             activityDetails = new Window(); CopyUi.Style(activityDetails, this, L.Text("queue.progressAndQueue"), 850);
-            activityDetails.Height = 430; activityDetails.SizeToContent = SizeToContent.Manual; activityDetails.ResizeMode = ResizeMode.CanResize;
+            activityDetails.SizeToContent = SizeToContent.Height; activityDetails.ResizeMode = ResizeMode.CanResize;
             var body = new DockPanel { Margin = new Thickness(8) };
             var history = CopyUi.Button(L.Text("history.openMenu"), ShowOperationHistory); DockPanel.SetDock(history, Dock.Bottom); body.Children.Add(history);
             var network = CopyUi.Button(L.Text("queue.networkDetails"), delegate { ShowNetworkQueue(null); }); DockPanel.SetDock(network, Dock.Bottom); body.Children.Add(network);
-            var scroll = new ScrollViewer { Content = copyActivities, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }; body.Children.Add(scroll); activityDetails.Content = body;
+            var scroll = new ScrollViewer { Content = copyActivities, MaxHeight = 420, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }; body.Children.Add(scroll); CopyUi.Surface(activityDetails, body); scroll.MaxHeight = Math.Max(90, Math.Min(420, activityDetails.MaxHeight - 160));
             activityDetails.Closed += delegate { scroll.Content = null; activityDetails = null; }; activityDetails.Show();
         }
         int networkCopies;

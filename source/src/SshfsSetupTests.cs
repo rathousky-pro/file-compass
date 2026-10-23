@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -24,7 +24,7 @@ namespace CommanderCZ
                 rejects(delegate { SshfsSetup.Select(4).ToArray(); }, "reject unknown component selection");
                 check(SshfsSetup.Select(3).Select(x => x.Flag).SequenceEqual(new[] { 1, 2 }), "install WinFsp before SSHFS-Win");
                 check(SshfsSetup.Helper(new[] { "--sshfs-install-helper", "unknown-pipe", folder, "3" }) == 87, "elevated worker rejects arbitrary pipe names before accessing files");
-                check(SshfsSetup.Helper(new[] { "--sshfs-install-helper", "CommanderCZ-sshfs-" + Guid.NewGuid().ToString("N"), folder, "4" }) == 87, "elevated worker rejects arbitrary installer selection");
+                check(SshfsSetup.Helper(new[] { "--sshfs-install-helper", "FileCompass-sshfs-" + Guid.NewGuid().ToString("N"), folder, "4" }) == 87, "elevated worker rejects arbitrary installer selection");
                 var wire = new SshfsSetupProgress("error", -1, "Česká chyba\nDruhý řádek\tPodrobnosti"); var restored = SshfsSetup.Decode(SshfsSetup.Encode(wire));
                 check(restored.Stage == wire.Stage && restored.Text == wire.Text && restored.Percent == wire.Percent, "IPC preserves Czech text, tabs and multiline errors");
                 rejects(delegate { SshfsSetup.Decode("wrong protocol"); }, "reject malformed IPC message");

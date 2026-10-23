@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -27,21 +28,29 @@ namespace CommanderCZ
         public static ImageSource FileIcon(string path, bool folder)
         {
             if (folder) return FluentIcons.Load("folder");
-            lock (files)
-            {
-            string key = folder ? "<folder>" : Path.GetExtension(path);
-            ImageSource result; if (files.TryGetValue(key, out result)) return result;
-            ShellInfo info;
-            SHGetFileInfo(folder ? "folder" : "file" + key, folder ? 16u : 128u, out info, (uint)Marshal.SizeOf(typeof(ShellInfo)), 0x100 | 0x1 | 0x10);
-            if (info.Icon != IntPtr.Zero)
-            {
-                // Preserve the physical size chosen by the Windows shell for the current DPI.
-                // Resizing to 16 pixels here loses detail before WPF renders the 16-DIP cell.
-                try { result = Imaging.CreateBitmapSourceFromHIcon(info.Icon, Int32Rect.Empty, System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions()); result.Freeze(); }
-                finally { DestroyIcon(info.Icon); }
-            }
-            else result = Drawing(folder ? "folder" : "document");
-            files[key] = result; return result;
+            lock (files) {
+                string extension = Path.GetExtension(path ?? "").ToLowerInvariant();
+                bool actual = !String.IsNullOrEmpty(path) && File.Exists(path);
+                bool individual = extension == ".exe" || extension == ".dll" || extension == ".lnk" || extension == ".ico" || extension == ".url";
+                string key = (actual ? "local:" : "type:") + (actual && individual ? Path.GetFullPath(path) : extension);
+                ImageSource result; if (files.TryGetValue(key, out result)) return result;
+                ShellInfo info; SHGetFileInfo(actual ? path : "file" + extension, actual ? 0u : 128u, out info, (uint)Marshal.SizeOf(typeof(ShellInfo)), 0x100 | 0x1 | (actual ? 0u : 0x10u));
+                if (info.Icon != IntPtr.Zero) {
+                    try { result = Imaging.CreateBitmapSourceFromHIcon(info.Icon, Int32Rect.Empty, System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions()); result.Freeze(); }
+                    finally { DestroyIcon(info.Icon); }
+                }
+                ShellInfo generic; SHGetFileInfo("file.filecompass_unknown_type",128,out generic,(uint)Marshal.SizeOf(typeof(ShellInfo)),0x100|0x1|0x10);
+                if(generic.Icon!=IntPtr.Zero)DestroyIcon(generic.Icon);
+                if(result==null || info.Index==generic.Index) {
+                    var registered=RegisteredFileIcon(extension,actual?path:null);
+                    if(registered!=null)result=registered;
+                    else if(new[]{".rar",".zip",".7z",".tar",".gz",".bz2",".xz",".arj",".lzh",".cab",".iso"}.Contains(extension))result=BuildLegacyDrawing("pack");
+                    else if(new[]{".md",".markdown",".txt",".log",".csv",".ini",".xml",".json",".yaml",".yml",".cs",".cpp",".h",".py",".js",".ts",".ps1",".bat",".cmd",".sql"}.Contains(extension))result=BuildLegacyDrawing("notepad");
+                    else if(new[]{".jpg",".jpeg",".png",".gif",".bmp",".tif",".tiff",".webp",".svg"}.Contains(extension))result=BuildLegacyDrawing("picture");
+                }
+                if(result==null)result=Drawing("document");
+                if(!result.IsFrozen && result.CanFreeze)result.Freeze();
+                if(files.Count>=1024)files.Clear();files[key]=result;return result;
             }
         }
 

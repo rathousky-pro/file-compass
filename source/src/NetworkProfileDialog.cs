@@ -169,8 +169,6 @@ namespace CommanderCZ
             }
             var more = CopyUi.Button(L.Text("network.openAdvancedTab"), delegate { Tabs.SelectedIndex = 1; }); more.HorizontalAlignment = HorizontalAlignment.Right; general.Children.Add(more);
             ProxyState();
-            // Advanced fields form one protocol-specific section; proxy retains
-            // its own expandable section. Detach() handles these wrappers on rebuild.
             var details = new StackPanel();
             foreach (UIElement child in System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Cast<UIElement>(advanced.Children))) { advanced.Children.Remove(child); details.Children.Add(child); }
             advanced.Children.Add(new GroupBox { Header = L.Text("network.protocolOptionsPrefix") + type, Content = details, Margin = new Thickness(0, 0, 0, 8) });
@@ -180,7 +178,6 @@ namespace CommanderCZ
         {
             var group = node as GroupBox;
             if (group != null) { Detach(group.Content as DependencyObject); group.Content = null; return; }
-            // Each field is wrapped by a row Grid or a browse DockPanel, including TLS.
             var expander = node as Expander;
             if (expander != null) { Detach(expander.Content as DependencyObject); expander.Content = null; return; }
             var panel = node as Panel;

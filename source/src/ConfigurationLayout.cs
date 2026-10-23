@@ -110,7 +110,6 @@ namespace CommanderCZ {
             ArrangeArchiveLimits(); archivesPage.Children.Add(Row(archiveLimits));
             ((FrameworkElement)c.Last()).Margin = new Thickness(0); archivesPage.Children.Add(c.Last());
 
-            // Full-width paths share one label, input and browse-button column.
             foreach (GroupBox group in pages[3].Children.OfType<GroupBox>()) group.Margin = new Thickness(0, 0, 0, 8);
             var startup = pages[4]; var d = Take(startup); startup.Children.Add(d[0]); startup.Children.Add(d[1]);
             startup.Children.Add(Row(Card(L.Text("settings.startupOptions"), d[2]), Card(L.Text("settings.saveView"), d[3], d[4], d[5])));

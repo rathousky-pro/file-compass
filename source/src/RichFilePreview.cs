@@ -14,8 +14,8 @@ namespace CommanderCZ
 {
     internal sealed class RichFilePreview : Grid
     {
-        readonly TextEditor code = new TextEditor { IsReadOnly = true, ShowLineNumbers = true, FontFamily = new FontFamily("Consolas"), FontSize = 13, Background = Brushes.White, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
-        readonly FlowDocumentScrollViewer markdown = new FlowDocumentScrollViewer { IsToolBarVisible = false, IsSelectionEnabled = true, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Background = Brushes.White };
+        readonly TextEditor code = new TextEditor { IsReadOnly = true, ShowLineNumbers = true, FontFamily = new FontFamily("Consolas"), FontSize = 13, Foreground = FluentTheme.Text, Background = CompactTheme.WhiteSurface, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+        readonly FlowDocumentScrollViewer markdown = new FlowDocumentScrollViewer { IsToolBarVisible = false, IsSelectionEnabled = true, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Background = CompactTheme.WhiteSurface };
         static readonly MarkdownPipeline pipeline = new MarkdownPipelineBuilder().DisableHtml().UsePipeTables().Build();
         internal static bool IsMarkdown(string path) { string ext = Path.GetExtension(path).ToLowerInvariant(); return ext == ".md" || ext == ".markdown" || ext == ".mdown"; }
         internal static bool Supports(string path) { return IsMarkdown(path) || DocumentPreview.IsHtml(path) || HighlightingManager.Instance.GetDefinitionByExtension(Path.GetExtension(path)) != null || Path.GetExtension(path).Equals(".lng", StringComparison.OrdinalIgnoreCase); }
@@ -30,7 +30,7 @@ namespace CommanderCZ
                 code.Text = source; code.ScrollToHome(); markdown.Document = null; return;
             }
             code.Text = "";
-            var document = new FlowDocument { FontFamily = new FontFamily("Segoe UI"), FontSize = 13, PagePadding = new Thickness(14), Background = Brushes.White, Foreground = FluentTheme.Text };
+            var document = new FlowDocument { FontFamily = new FontFamily("Segoe UI"), FontSize = 13, PagePadding = new Thickness(14), Background = CompactTheme.WhiteSurface, Foreground = FluentTheme.Text };
             int budget = 4000; Blocks(parsed ?? Parse(source), document.Blocks, 0, ref budget); markdown.Document = document;
         }
         internal void Clear() { code.Text = ""; markdown.Document = null; }

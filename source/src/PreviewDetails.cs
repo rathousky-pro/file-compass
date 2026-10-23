@@ -26,7 +26,7 @@ namespace CommanderCZ {
                 detailsExpander.Expanded+=delegate {copy.Visibility=Visibility.Visible;DockPanel.SetDock(detailsExpander,Dock.Right);detailsExpander.Width=330;detailsExpander.Margin=new Thickness(8,0,0,0);};
                 detailsExpander.Collapsed+=delegate {copy.Visibility=Visibility.Collapsed;DockPanel.SetDock(detailsExpander,Dock.Right);detailsExpander.Width=160;detailsExpander.Margin=new Thickness(8,0,0,0);};
             }
-            detailsExpander.Content=new Border {Child=rows,Background=Brushes.White,BorderBrush=CompactTheme.ChromeLine,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(5),Padding=new Thickness(8)};
+            detailsExpander.Content=new Border {Child=rows,Background=CompactTheme.WhiteSurface,BorderBrush=CompactTheme.ChromeLine,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(5),Padding=new Thickness(8)};
             DockPanel.SetDock(detailsExpander,compact?Dock.Right:Dock.Bottom);body.Children.Add(detailsExpander);
         }
         void ClearDetails(){detailsData=null;detailsRows.Children.Clear();detailsHeader.Text="";detailsExpander.Visibility=Visibility.Collapsed;}

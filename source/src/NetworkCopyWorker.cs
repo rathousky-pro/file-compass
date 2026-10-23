@@ -64,7 +64,6 @@ namespace CommanderCZ
             var result = new NetworkCopyResult();
             connection.Session.FileTransferred += delegate(object sender, TransferEventArgs e) { if (e.Error == null) completedBytes += e.Length; };
             int completed = 0;
-            // Register progress before the independent transfer session is opened.
             connection.Session.FileTransferProgress += delegate(object sender, FileTransferProgressEventArgs e)
             {
                 e.Cancel = token.IsCancellationRequested;

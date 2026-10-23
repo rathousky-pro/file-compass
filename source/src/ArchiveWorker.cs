@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -30,7 +30,7 @@ namespace CommanderCZ
         {
             var settings = ArchiveSettings.Load(); settings.ValidateLimits();
             if (arguments.Length > 0 && (arguments[0] == "a" || arguments[0] == "d")) ArchiveMemoryPlan.Choose(settings.MaximumMemoryMiB, ArchiveMemoryPlan.AvailableBytes(), 0, 1, false);
-            string name = "CommanderCZ-archive-" + Guid.NewGuid().ToString("N");
+            string name = "FileCompass-archive-" + Guid.NewGuid().ToString("N");
             var acl = new PipeSecurity(); acl.SetAccessRuleProtection(true, false);
             acl.AddAccessRule(new PipeAccessRule(new SecurityIdentifier(WellKnownSidType.NetworkSid, null), PipeAccessRights.FullControl, AccessControlType.Deny));
             acl.AddAccessRule(new PipeAccessRule(WindowsIdentity.GetCurrent().User, PipeAccessRights.FullControl, AccessControlType.Allow));
@@ -97,7 +97,7 @@ namespace CommanderCZ
         internal static int Serve(string pipeName)
         {
             Guid id;
-            if (!pipeName.StartsWith("CommanderCZ-archive-", StringComparison.Ordinal) || !Guid.TryParseExact(pipeName.Substring(20), "N", out id)) return 87;
+            if (!pipeName.StartsWith("FileCompass-archive-", StringComparison.Ordinal) || !Guid.TryParseExact(pipeName.Substring("FileCompass-archive-".Length), "N", out id)) return 87;
             using (var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.None, TokenImpersonationLevel.Identification))
             {
                 pipe.Connect(15000);

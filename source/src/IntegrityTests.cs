@@ -7,7 +7,7 @@ using System.Security.Cryptography;
 using CommanderCZ.NetworkTransport;
 namespace CommanderCZ
 {
-    /// <summary>Test integrity stavových souborů: fronta přenosů a podpisy HMAC.</summary>
+    /// <summary>State-file integrity tests for transfer queues and HMAC signatures.</summary>
     public static class IntegrityTests
     {
         static int checks;

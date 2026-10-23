@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -25,7 +25,7 @@ namespace CommanderCZ
                 if (!ArchiveEngine.Open(target).Items.Any(x => x.Bytes == 16L * 1048576)) throw new Exception("Bounded compression output invalid."); checks.Add("maximum compression completes under hard 256 MiB process limit and archive verifies");
                 byte[] previous = File.ReadAllBytes(target); settings.MaximumMemoryMiB = 64; settings.Save(); rejected = false;
                 try { ArchiveEngine.Create(target, new[] { source }, settings, CancellationToken.None, null, new ArchivePackOptions { Level = 9 }); } catch (ArchiveMemoryException) { rejected = true; }
-                if (!rejected || !previous.SequenceEqual(File.ReadAllBytes(target)) || new FileInfo(source).Length != 16L * 1048576 || Directory.GetFiles(root, ".CommanderCZ-*").Length != 0) throw new Exception("Rejected compression changed original data or retained partial output."); checks.Add("memory refusal preserves source and existing archive and cleans partial output");
+                if (!rejected || !previous.SequenceEqual(File.ReadAllBytes(target)) || new FileInfo(source).Length != 16L * 1048576 || Directory.GetFiles(root, ".FileCompass-*").Length != 0) throw new Exception("Rejected compression changed original data or retained partial output."); checks.Add("memory refusal preserves source and existing archive and cleans partial output");
                 File.WriteAllLines(Path.Combine(root, "memory-result.txt"), checks.Concat(new[] { "PASS: " + checks.Count })); return 0;
             } catch (Exception ex) { File.WriteAllLines(Path.Combine(root, "memory-result.txt"), checks.Concat(new[] { "FAIL: " + ex })); return 1; }
             finally { ArchiveSettings.TestPath = previousPath; }

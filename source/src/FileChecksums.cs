@@ -468,9 +468,9 @@ namespace CommanderCZ
             var style = new Style(typeof(ListViewItem));
             style.Setters.Add(new Setter(Control.ForegroundProperty, FluentTheme.Text));
             var okTrigger = new DataTrigger { Binding = new Binding("IsOk"), Value = true };
-            okTrigger.Setters.Add(new Setter(Control.BackgroundProperty, CompactTheme.ColorBrush("#EEFBF0")));
+            okTrigger.Setters.Add(new Setter(Control.BackgroundProperty, CompactTheme.ThemeBrush("#EEFBF0")));
             var failTrigger = new DataTrigger { Binding = new Binding("IsOk"), Value = false };
-            failTrigger.Setters.Add(new Setter(Control.BackgroundProperty, CompactTheme.ColorBrush("#FFE8E8")));
+            failTrigger.Setters.Add(new Setter(Control.BackgroundProperty, CompactTheme.ThemeBrush("#FFE8E8")));
             style.Triggers.Add(okTrigger); style.Triggers.Add(failTrigger);
             list.ItemContainerStyle = style;
             body.Children.Add(list);

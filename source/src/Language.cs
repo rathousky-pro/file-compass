@@ -14,6 +14,19 @@ namespace CommanderCZ
         static Dictionary<string, string> baseline, selected, reverse;
         public static string Language { get; private set; }
         public static void Initialize() { Ensure(); }
+        internal static string PreferredLanguage {
+            get { string path = Path.Combine(AppPaths.Resource("languages"), "language.txt"); if (File.Exists(path)) { string name = File.ReadAllText(path).Trim(); if (name == "en" || name == "cs-CZ") return name; } return Language; }
+        }
+        internal static void SaveSelection(string name, string folder = null) {
+            if (name != "cs-CZ" && name != "en") throw new ArgumentException("Unsupported language.");
+            folder = folder ?? AppPaths.Resource("languages");
+            Read(Path.Combine(folder, name + ".lng"));
+            string path = Path.Combine(folder, "language.txt"), temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try {
+                File.WriteAllText(temp, name, new UTF8Encoding(false));
+                if (File.Exists(path)) File.Replace(temp, path, null); else File.Move(temp, path);
+            } finally { if (File.Exists(temp)) File.Delete(temp); }
+        }
         static Dictionary<string, string> Read(string path)
         {
             var info = new FileInfo(path); if (info.Length > 4 * 1024 * 1024) throw new IOException("Language file exceeds 4 MiB: " + path);

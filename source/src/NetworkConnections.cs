@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -19,6 +19,10 @@ namespace CommanderCZ
             if (login == null) throw new InvalidOperationException(L.Text("network.transferCredentialsMissing"));
             var connection = new RemoteConnection(Profile);
             connection.login = connection.Options(login.Password);
+            if (Profile.FilenameEncoding == 2 && login.Protocol == Protocol.Ftp) {
+                connection.login.AddRawSettings("Utf", login.Raw("Utf", "1"));
+                connection.login.AddRawSettings("UtfAuto", login.Raw("UtfAuto", "1"));
+            }
             connection.login.SshHostKeyFingerprint = login.SshHostKeyFingerprint;
             return connection;
         }

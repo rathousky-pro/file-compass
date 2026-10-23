@@ -135,8 +135,8 @@ namespace CommanderCZ
             var previous = Settings.Connections.ToList(); Settings.Connections.RemoveAll(x => x.Id == profile.Id);
             try { Save(); } catch { Settings.Connections = previous; throw; }
         }
-        // Aplikační entropie: jiná aplikace téhož uživatele nerozšifruje hesla holým voláním DPAPI. Záznamy z dřívějších verzí
-        // (bez entropie) se stále načtou; s entropií se uloží až při dalším uložení hesla.
+        // Application entropy preserves compatibility with existing encrypted records. Legacy records
+        // without entropy remain readable and gain entropy when the password is saved again.
         static readonly byte[] Entropy = Encoding.UTF8.GetBytes("CommanderCZ.connections.v2");
         public static string Protect(string password)
         {

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -51,7 +51,7 @@ namespace CommanderCZ
                 reject(delegate { ArchiveEngine.Open(many); }, "listing budget bounds text sent to main process");
                 settings.MaximumListingMiB = 16; settings.Save();
                 settings.MaximumNesting = 1; settings.Save(); reject(delegate { ArchiveEngine.CheckNesting(new ArchiveDocument()); }, "nested archives obey configured depth"); settings.MaximumNesting = 8; settings.Save();
-                string tempRoot = Path.Combine(Path.GetTempPath(), "CommanderCZ-archives"); var previousTemps = new HashSet<string>(Directory.GetDirectories(tempRoot));
+                string tempRoot = Path.Combine(Path.GetTempPath(), "FileCompass-archives"); var previousTemps = new HashSet<string>(Directory.GetDirectories(tempRoot));
                 byte[] random = new byte[16 * 1048576]; using (var rng = System.Security.Cryptography.RandomNumberGenerator.Create()) rng.GetBytes(random); string expensive = Path.Combine(root, "random.bin"); File.WriteAllBytes(expensive, random); random = null;
                 settings.MaximumMemoryMiB = 64; settings.MaximumSeconds = 15; settings.Save();
                 string limited = Path.Combine(root, "limited.7z");

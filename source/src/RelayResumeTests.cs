@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -17,7 +17,7 @@ namespace CommanderCZ
             if (!cancelled) throw new Exception("Relay interruption was not triggered"); job.Finish(keep ? "Přerušeno" : "Zrušeno"); return job;
         }
         static RemoteFileInfo Partial(RemoteConnection target,string directory)
-        { return target.Session.ListDirectory(directory).Files.Single(x => x.Name.StartsWith(".CommanderCZ-relay-")); }
+        { return target.Session.ListDirectory(directory).Files.Single(x => x.Name.StartsWith(".FileCompass-relay-")); }
         static void ResumeChecks(RemoteConnection source,RemoteConnection target,RemoteConnection sftp,string directory,int first,int second,int fourth,Action<bool,string> check)
         {
             string local = Path.Combine(directory,"resume-original.txt"), output = Path.Combine(directory,"resume-output.bin"); File.WriteAllText(local,"original target");
@@ -39,7 +39,7 @@ namespace CommanderCZ
                 check(resume.SnapshotItems().Any(x => x.Source == "/tree/český [soubor].txt" && x.State == "Přeskočeno") && !restartedTarget.Session.HasRelayCheckpoint(restartedSource.Session,"/slow.bin","/resume-live/slow.bin"),"resume skips completed files and clears its manifest after commit");
             }
             target.Session.CreateDirectory("/discard-live"); target.Session.PutFiles(local,"/discard-live/slow.bin").Check(); Interrupted(source,target,"/discard-live",false);
-            check(!target.Session.ListDirectory("/discard-live").Files.Any(x => x.Name.StartsWith(".CommanderCZ-relay-")) && !target.Session.HasRelayCheckpoint(source.Session,"/slow.bin","/discard-live/slow.bin"),"discard interruption removes owned stage and manifest");
+            check(!target.Session.ListDirectory("/discard-live").Files.Any(x => x.Name.StartsWith(".FileCompass-relay-")) && !target.Session.HasRelayCheckpoint(source.Session,"/slow.bin","/discard-live/slow.bin"),"discard interruption removes owned stage and manifest");
             target.Session.CreateDirectory("/corrupt-live"); target.Session.PutFiles(local,"/corrupt-live/slow.bin").Check(); Interrupted(source,target,"/corrupt-live",true); partial = Partial(target,"/corrupt-live");
             byte[] corrupt = new byte[partial.Length]; for (int i = 0; i < corrupt.Length; i++) corrupt[i] = (byte)(i % 256); corrupt[0] ^= 1; string corruptLocal = Path.Combine(directory,"corrupt-stage.bin"); File.WriteAllBytes(corruptLocal,corrupt); target.Session.PutFiles(corruptLocal,partial.FullName).Check();
             bool refused = false; try { Run(Planned(source,target,new[] { new Entry { FullPath = "/slow.bin" } },"/corrupt-live",NetworkCopyRule.Resume),source,target); } catch (IOException) { refused = true; }

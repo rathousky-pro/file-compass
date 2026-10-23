@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -101,7 +101,7 @@ namespace CommanderCZ
         internal static async Task<int> Install(string folder, int mask, CancellationToken token, Action<SshfsSetupProgress> changed, bool checkOnly = false)
         {
             Select(mask).ToArray(); token.ThrowIfCancellationRequested();
-            string pipeName = "CommanderCZ-sshfs-" + Guid.NewGuid().ToString("N");
+            string pipeName = "FileCompass-sshfs-" + Guid.NewGuid().ToString("N");
             var security = new PipeSecurity(); security.SetAccessRuleProtection(true, false);
             security.AddAccessRule(new PipeAccessRule(WindowsIdentity.GetCurrent().User, PipeAccessRights.FullControl, AccessControlType.Allow));
             security.AddAccessRule(new PipeAccessRule(new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null), PipeAccessRights.FullControl, AccessControlType.Allow));
@@ -152,7 +152,7 @@ namespace CommanderCZ
         {
             if (args.Length < 4 || args.Length > 5) return 87;
             string pipeName = args[1]; Guid id;
-            if (!pipeName.StartsWith("CommanderCZ-sshfs-", StringComparison.Ordinal) || !Guid.TryParseExact(pipeName.Substring(18), "N", out id)) return 87;
+            if (!pipeName.StartsWith("FileCompass-sshfs-", StringComparison.Ordinal) || !Guid.TryParseExact(pipeName.Substring("FileCompass-sshfs-".Length), "N", out id)) return 87;
             int mask; if (!Int32.TryParse(args[3], out mask) || mask < 1 || mask > 3) return 87;
             bool check = args.Length == 5 && args[4] == "--check-only"; if (args.Length == 5 && !check) return 87;
             if (!check && !new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator)) return 740;
@@ -171,7 +171,7 @@ namespace CommanderCZ
                         try
                         {
                             // Privileged MSI installation uses a private, administrator-only staging directory.
-                            stage = check ? Path.Combine(args[2], "check-" + Guid.NewGuid().ToString("N")) : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Temp", "CommanderCZ-sshfs-" + Guid.NewGuid().ToString("N"));
+                            stage = check ? Path.Combine(args[2], "check-" + Guid.NewGuid().ToString("N")) : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Temp", "FileCompass-sshfs-" + Guid.NewGuid().ToString("N"));
                             if (check) Directory.CreateDirectory(stage);
                             else
                             {

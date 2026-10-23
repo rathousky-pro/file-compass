@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -34,7 +34,7 @@ namespace CommanderCZ
         }
         internal void Consume(int bytes)
         {
-            Check(); int current = job.FlowVersion; if (version != current) { version = current; charged = 0; timer.Restart(); }
+            Check(); job.MeasureTraffic(bytes); int current = job.FlowVersion; if (version != current) { version = current; charged = 0; timer.Restart(); }
             long rate = job.SpeedLimit; if (rate == 0) return; charged += bytes;
             while (1000.0 * charged / rate > timer.Elapsed.TotalMilliseconds) { Check(); if (version != job.FlowVersion) { version = job.FlowVersion; charged = 0; timer.Restart(); return; } job.ItemToken.WaitHandle.WaitOne(25); }
         }
@@ -48,9 +48,9 @@ namespace CommanderCZ
         internal long SpeedLimit { get { return Interlocked.Read(ref speedLimit); } }
         internal int FlowVersion { get { return Volatile.Read(ref flowVersion); } }
         internal CancellationToken ItemToken { get { lock (gate) return fileCancellation == null ? Cancellation.Token : fileCancellation.Token; } }
-        internal void Pause(bool value) { paused = value; Interlocked.Increment(ref flowVersion); Notify(); }
+        internal void Pause(bool value) { lock(gate) { paused = value; if(value)transferClock.Stop();else if(activeItem!=null||transferClock.ElapsedTicks>0)transferClock.Start(); } Interlocked.Increment(ref flowVersion); Notify(); }
         internal void Limit(long bytesPerSecond) { if (bytesPerSecond < 0) throw new ArgumentOutOfRangeException(); Interlocked.Exchange(ref speedLimit,bytesPerSecond); Interlocked.Increment(ref flowVersion); Notify(); }
-        internal void BeginItem(NetworkQueueItem item) { lock (gate) { activeItem = item; fileCancellation = CancellationTokenSource.CreateLinkedTokenSource(Cancellation.Token); } }
+        internal void BeginItem(NetworkQueueItem item) { lock (gate) { if(!Paused)transferClock.Start(); activeItem = item; fileCancellation = CancellationTokenSource.CreateLinkedTokenSource(Cancellation.Token); } }
         internal void EndItem() { lock (gate) { activeItem = null; if (fileCancellation != null) fileCancellation.Dispose(); fileCancellation = null; } }
         internal NetworkQueueItem NextItem(NetworkCopyBatch batch)
         { lock (gate) return batch.Items.Where(x => x.State == L.Code("state.queued") || x.State == L.Code("state.copying")).OrderByDescending(x => x.Directory).ThenBy(x => items.IndexOf(x)).FirstOrDefault(); }

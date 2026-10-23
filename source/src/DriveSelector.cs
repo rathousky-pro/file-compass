@@ -37,8 +37,8 @@ namespace CommanderCZ
                 <TextBlock Text='{Binding Letter}' VerticalAlignment='Center'/></StackPanel></DataTemplate>");
             combo.ItemContainerStyle = (Style)XamlReader.Parse(@"<Style xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' TargetType='ComboBoxItem'>
                 <Setter Property='MinHeight' Value='25'/><Setter Property='Padding' Value='5,3'/>
-                <Setter Property='HorizontalContentAlignment' Value='Stretch'/><Setter Property='Background' Value='White'/>
-                <Setter Property='Foreground' Value='#20242A'/><Setter Property='ToolTip' Value='{Binding Tooltip}'/>
+                <Setter Property='HorizontalContentAlignment' Value='Stretch'/><Setter Property='Background' Value='{StaticResource CompassSurface}'/>
+                <Setter Property='Foreground' Value='{StaticResource CompassText}'/><Setter Property='ToolTip' Value='{Binding Tooltip}'/>
                 <Setter Property='Template'><Setter.Value><ControlTemplate TargetType='ComboBoxItem'>
                 <Border Background='{TemplateBinding Background}' CornerRadius='2' Padding='{TemplateBinding Padding}'>
                 <Grid TextElement.Foreground='{TemplateBinding Foreground}'>
@@ -48,20 +48,20 @@ namespace CommanderCZ
                 <TextBlock Grid.Column='2' Text='{Binding Description}' VerticalAlignment='Center' TextTrimming='CharacterEllipsis'/>
                 </Grid></Border>
                 </ControlTemplate></Setter.Value></Setter>
-                <Style.Triggers><Trigger Property='IsMouseOver' Value='True'><Setter Property='Background' Value='#E3F0FD'/></Trigger>
-                <Trigger Property='IsHighlighted' Value='True'><Setter Property='Background' Value='#0067C0'/><Setter Property='Foreground' Value='White'/></Trigger>
-                <Trigger Property='IsSelected' Value='True'><Setter Property='Background' Value='#0067C0'/><Setter Property='Foreground' Value='White'/></Trigger>
+                <Style.Triggers><Trigger Property='IsMouseOver' Value='True'><Setter Property='Background' Value='{StaticResource CompassHover}'/></Trigger>
+                <Trigger Property='IsHighlighted' Value='True'><Setter Property='Background' Value='{StaticResource CompassAccent}'/><Setter Property='Foreground' Value='{StaticResource CompassSurface}'/></Trigger>
+                <Trigger Property='IsSelected' Value='True'><Setter Property='Background' Value='{StaticResource CompassAccent}'/><Setter Property='Foreground' Value='{StaticResource CompassSurface}'/></Trigger>
                 </Style.Triggers></Style>");
             combo.Template = (ControlTemplate)XamlReader.Parse(@"<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' TargetType='ComboBox'>
                 <Grid><ToggleButton Style='{x:Null}' Focusable='False' HorizontalAlignment='Stretch' VerticalAlignment='Stretch' MinWidth='0' MinHeight='0' Padding='0' IsChecked='{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}' ClickMode='Press'>
-                <ToggleButton.Template><ControlTemplate TargetType='ToggleButton'><Border x:Name='Frame' Background='White' BorderBrush='#8D9AA9' BorderThickness='1' CornerRadius='4'/>
-                <ControlTemplate.Triggers><Trigger Property='IsMouseOver' Value='True'><Setter TargetName='Frame' Property='Background' Value='#E3F0FD'/><Setter TargetName='Frame' Property='BorderBrush' Value='#0067C0'/></Trigger></ControlTemplate.Triggers>
+                <ToggleButton.Template><ControlTemplate TargetType='ToggleButton'><Border x:Name='Frame' Background='{StaticResource CompassSurface}' BorderBrush='{StaticResource CompassLine}' BorderThickness='1' CornerRadius='4'/>
+                <ControlTemplate.Triggers><Trigger Property='IsMouseOver' Value='True'><Setter TargetName='Frame' Property='Background' Value='{StaticResource CompassHover}'/><Setter TargetName='Frame' Property='BorderBrush' Value='{StaticResource CompassAccent}'/></Trigger></ControlTemplate.Triggers>
                 </ControlTemplate></ToggleButton.Template></ToggleButton>
                 <Grid IsHitTestVisible='False'><Grid.ColumnDefinitions><ColumnDefinition Width='*'/><ColumnDefinition Width='21'/></Grid.ColumnDefinitions>
                 <ContentPresenter Content='{TemplateBinding SelectedItem}' ContentTemplate='{TemplateBinding ItemTemplate}' Margin='5,0,0,0' VerticalAlignment='Center'/>
-                <Border Grid.Column='1' BorderBrush='#D5DBE3' BorderThickness='1,0,0,0' Margin='0,3'><Path Data='M 0 0 L 4 4 L 8 0' Stroke='#20242A' StrokeThickness='1.2' HorizontalAlignment='Center' VerticalAlignment='Center'/></Border></Grid>
+                <Border Grid.Column='1' BorderBrush='{StaticResource CompassLine}' BorderThickness='1,0,0,0' Margin='0,3'><Path Data='M 0 0 L 4 4 L 8 0' Stroke='{StaticResource CompassText}' StrokeThickness='1.2' HorizontalAlignment='Center' VerticalAlignment='Center'/></Border></Grid>
                 <Popup x:Name='PART_Popup' IsOpen='{TemplateBinding IsDropDownOpen}' Placement='Bottom' AllowsTransparency='True' Focusable='False'>
-                <Border Background='White' BorderBrush='#8D9AA9' BorderThickness='1' CornerRadius='4' Padding='2' Width='380' Margin='0,2,0,0'>
+                <Border Background='{StaticResource CompassSurface}' BorderBrush='{StaticResource CompassLine}' BorderThickness='1' CornerRadius='4' Padding='2' Width='380' Margin='0,2,0,0'>
                 <ScrollViewer MaxHeight='340' CanContentScroll='True' HorizontalScrollBarVisibility='Disabled' VerticalScrollBarVisibility='Auto'><ItemsPresenter KeyboardNavigation.DirectionalNavigation='Contained'/></ScrollViewer>
                 </Border></Popup></Grid></ControlTemplate>");
         }

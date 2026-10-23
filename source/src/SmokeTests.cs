@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -68,9 +68,9 @@ namespace CommanderCZ
                 content.UpdateLayout();
                 Dispatcher.CurrentDispatcher.Invoke(DispatcherPriority.DataBind, new Action(delegate { }));
                 var markedRow = (ListViewItem)previewPanel.List.ItemContainerGenerator.ContainerFromItem(previewItems[0]);
-                Check(((SolidColorBrush)markedRow.Foreground).Color == Colors.Red, "marked row renders red"); checks++;
+                Check(((SolidColorBrush)markedRow.Foreground).Color == ((SolidColorBrush)CompactTheme.ThemeBrush("#B92331")).Color, "marked row uses the themed mark color"); checks++;
                 var cursorRow = (ListViewItem)previewPanel.List.ItemContainerGenerator.ContainerFromItem(previewItems.Last());
-                Check(((SolidColorBrush)cursorRow.Background).Color == (Color)ColorConverter.ConvertFromString("#CDE8FF"), "current marked row retains blue cursor"); checks++;
+                Check(((SolidColorBrush)cursorRow.Background).Color == ((SolidColorBrush)CompactTheme.ThemeBrush("#E4F0FF")).Color, "current marked row retains blue cursor"); checks++;
                 var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(1600, 900, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
                 bitmap.Render(content);
                 var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();

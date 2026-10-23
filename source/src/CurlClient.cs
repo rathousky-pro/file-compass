@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -38,7 +38,7 @@ namespace CommanderCZ.NetworkTransport
             using (var client = new CurlClient(new SessionOptions { Protocol = Protocol.Ftp }, token.ThrowIfCancellationRequested))
             {
                 client.outputLimit = 128L * 1024 * 1024;
-                client.Text(10002, url); client.Text(10018, "FileVoyager/1.0 SSHFS-setup");
+                client.Text(10002, url); client.Text(10018, "FileCompass/1.0 SSHFS-setup");
                 client.Text(10318, "https"); client.Text(10319, "https"); // Restrict original URL and every redirect.
                 client.Number(52, 1); client.Number(68, 8); client.Number(45, 1);
                 client.Number(64, 1); client.Number(81, 2); client.Number(216, 16); // Windows trust store, no TLS verification bypass.
@@ -75,7 +75,13 @@ namespace CommanderCZ.NetworkTransport
         {
             check(); failure = null; Number(44,0); Number(46,0); Number(50,0); Result(NativeNetwork.cn_setopt_off(easy,30116,0)); Pointer(10007,IntPtr.Zero); Pointer(10036,IntPtr.Zero); Pointer(10028,IntPtr.Zero);
             errorBuffer=Marshal.AllocHGlobal(256); memory.Add(errorBuffer); Marshal.Copy(new byte[256],0,errorBuffer,256); Pointer(10010,errorBuffer);
-            Text(10002, Url(path, directory)); if(configured) return; Text(10173, options.UserName); Text(10174, options.Password);
+            Text(10002, Url(path, directory));
+            if (options.Raw("Utf", "2") == "1") {
+                quotes = NativeNetwork.curl_slist_append(quotes, Encoding.ASCII.GetBytes("*OPTS UTF8 ON\0"));
+                if (quotes == IntPtr.Zero) throw new OutOfMemoryException();
+                Pointer(10028, quotes);
+            }
+            if(configured) return; Text(10173, options.UserName); Text(10174, options.Password);
             Number(156, checked((int)options.Timeout.TotalMilliseconds)); Number(324, checked((int)options.Timeout.TotalMilliseconds));
             Number(19, 1); Number(20, Math.Max(1, (int)options.Timeout.TotalSeconds)); Number(99, 1); Number(213, 1);
             int proxy = Int32.Parse(options.Raw("ProxyMethod", "0"));

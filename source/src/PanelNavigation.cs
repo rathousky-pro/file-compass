@@ -36,7 +36,7 @@ namespace CommanderCZ
         readonly ComboBox quickMode = new ComboBox { Width = 110, MinHeight = 24 };
         readonly DockPanel quickBar = new DockPanel { LastChildFill = false, Margin = new Thickness(4, 2, 4, 2), Visibility = Visibility.Collapsed };
         readonly Popup completions = new Popup { StaysOpen = false, Placement = PlacementMode.Bottom };
-        readonly ListBox completionList = new ListBox { Background = Brushes.White, MaxHeight = 210, MinWidth = 300 };
+        readonly ListBox completionList = new ListBox { Background = CompactTheme.WhiteSurface, MaxHeight = 210, MinWidth = 300 };
         int tabIndex, completing;
         bool switchingTabs, completingAddress;
         bool addressLookupRunning;
@@ -75,7 +75,7 @@ namespace CommanderCZ
             address.GotKeyboardFocus += delegate { crumbScroll.Visibility = Visibility.Collapsed; };
             address.LostKeyboardFocus += delegate { crumbScroll.Visibility = Visibility.Visible; completions.IsOpen = false; };
             completions.PlacementTarget = address;
-            completions.Child = new Border { Background = Brushes.White, BorderBrush = CompactTheme.Line, BorderThickness = new Thickness(1), Child = completionList };
+            completions.Child = new Border { Background = CompactTheme.WhiteSurface, BorderBrush = CompactTheme.Line, BorderThickness = new Thickness(1), Child = completionList };
             completionList.PreviewMouseLeftButtonDown += delegate(object s, MouseButtonEventArgs e) { var element = e.OriginalSource as DependencyObject; while (element != null && !(element is ListBoxItem)) element = VisualTreeHelper.GetParent(element); if (element is ListBoxItem) { completionList.SelectedItem = ((ListBoxItem)element).Content; AcceptCompletion(); e.Handled = true; } };
             address.TextChanged += delegate { if (address.IsKeyboardFocusWithin && !completingAddress) CompleteAddress(); };
             address.PreviewKeyDown += delegate(object s, KeyEventArgs e) {

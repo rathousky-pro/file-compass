@@ -24,6 +24,7 @@ namespace CommanderCZ
             panel.Children.Add(new TextBlock { Text = cloudUpload?L.Text("cloud.restartHelp"):relay ? L.Text("transfer.serverRelayBufferHelp") + (scp ? L.Text("transfer.scpRestartHint") : L.Text("transfer.ftpSftpResumeHint")) : scp ? L.Text("transfer.scpSkipCompletedHint") : L.Text("transfer.quickResumeHint"), TextWrapping = TextWrapping.Wrap, Foreground = FluentTheme.Muted, Margin = new Thickness(4, 2, 4, 6) });
             var buttons = new Grid(); buttons.ColumnDefinitions.Add(new ColumnDefinition()); buttons.ColumnDefinitions.Add(new ColumnDefinition()); buttons.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             var skip = CopyUi.Button(L.Text("transfer.copyAndSkip"), delegate { Rule = NetworkCopyRule.Skip; DialogResult = true; }); skip.IsDefault = true; buttons.Children.Add(skip);
+            CopyUi.EnterDefault(this, skip);
             var overwrite = CopyUi.Button(L.Text("transfer.copyAndOverwrite"), delegate { Rule = NetworkCopyRule.Overwrite; DialogResult = true; }); Grid.SetColumn(overwrite, 1); buttons.Children.Add(overwrite);
             var cancel = CopyUi.Button(L.Text("action.cancel"), delegate { DialogResult = false; }); cancel.IsCancel = true; Grid.SetColumn(cancel, 2); buttons.Children.Add(cancel); panel.Children.Add(buttons);
         }
@@ -43,7 +44,7 @@ namespace CommanderCZ
             body.Children.Add(new TextBlock { Text = heading, FontWeight = FontWeights.Bold, TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = heading });
             body.Children.Add(new TextBlock { Text = details, Foreground = FluentTheme.Muted, TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = details, Margin = new Thickness(0, 2, 0, 0) });
             if (path != null) body.Children.Add(new TextBlock { Text = L.Text("transfer.folderPrefix") + path, TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = path, Margin = new Thickness(0, 2, 0, 0) });
-            panel.Children.Add(new Border { Child = body, Background = CompactTheme.ColorBrush("#E6E6E6"), CornerRadius = new CornerRadius(3), BorderBrush = CompactTheme.Line, BorderThickness = new Thickness(1), Margin = new Thickness(2, 2, 2, 6), Padding = new Thickness(4) });
+            panel.Children.Add(new Border { Child = body, Background = CompactTheme.ThemeBrush("#E6E6E6"), CornerRadius = new CornerRadius(3), BorderBrush = CompactTheme.Line, BorderThickness = new Thickness(1), Margin = new Thickness(2, 2, 2, 6), Padding = new Thickness(4) });
         }
     }
 }

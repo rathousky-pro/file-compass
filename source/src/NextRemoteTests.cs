@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -79,7 +79,7 @@ namespace CommanderCZ
             var batches = await Task.Run(delegate { using (var planner = source.TransferConnection()) return NetworkRelay.Prepare(planner,target.Profile,new[] { new Entry { FullPath = "/slow.bin" } },"/stage-recover-partial",NetworkCopyRule.Overwrite,CancellationToken.None); }); PersistPrepared(partial,batches); interrupted.AddPrepared(batches); interrupted.PlanningDone(null,"/slow.bin","/stage-recover-partial");
             interrupted.Changed = delegate { if (!interrupted.Cancellation.IsCancellationRequested && Interlocked.Read(ref interrupted.RelayUploaded) > 1048576) interrupted.Cancel(); };
             bool stopped = await Task.Run(delegate { using (var first = source.TransferConnection()) using (var second = target.TransferConnection()) try { NetworkRelay.Run(interrupted,first,second); return false; } catch (OperationCanceledException) { return true; } }); durableQueue.Finish(partial,false); interrupted.Cancellation.Dispose();
-            check(stopped && target.Session.ListDirectory("/stage-recover-partial").Files.Any(x => x.Name.StartsWith(".CommanderCZ-relay-")),"interruption leaves an owned partial and a durable request");
+            check(stopped && target.Session.ListDirectory("/stage-recover-partial").Files.Any(x => x.Name.StartsWith(".FileCompass-relay-")),"interruption leaves an owned partial and a durable request");
             durableQueue.Dispose(); durableQueue = new DurableQueue(root); var reopened = durableQueue.Pending().Single(); await RestoreTransfer(reopened); var resumed = networkJobs.Last();
             check(resumed.RelayResumeOffset > 0 && resumed.SnapshotItems().All(x => x.State == "Dokončeno") && target.Session.GetFileInfo("/stage-recover-partial/slow.bin").Length == 8388608,"reloaded durable queue resumes remote partial from saved stream offset");
             check(resumed.RelayProbeBytes <= 262144,"queue recovery verifies bounded edge blocks instead of rereading whole partial");

@@ -16,7 +16,7 @@ namespace CommanderCZ {
             Width = Math.Min(620, MaxWidth); ResizeMode = ResizeMode.CanResize;
             var body = new DockPanel { Margin = new Thickness(14) }; Content = body;
             var actions = FluentTheme.Actions(); DockPanel.SetDock(actions, Dock.Bottom); body.Children.Add(actions);
-            var error = new TextBlock { Foreground = System.Windows.Media.Brushes.DarkRed, TextWrapping = TextWrapping.Wrap };
+            var error = new TextBlock { Foreground = CompactTheme.ThemeBrush("#B92331"), TextWrapping = TextWrapping.Wrap };
             var ok = CopyUi.Button(L.Text("action.resume"), delegate { if (ReadAnswer() == null) { error.Text = L.Text("cloud.selectAnswer"); return; } DialogResult = true; }); ok.IsDefault = true; actions.Children.Add(ok);
             var cancel = CopyUi.Button(L.Text("action.cancel"), delegate { DialogResult = false; }); cancel.IsCancel = true; actions.Children.Add(cancel);
             var stack = new StackPanel(); body.Children.Add(new ScrollViewer { Content = stack, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
@@ -33,7 +33,7 @@ namespace CommanderCZ {
             else if (option.Name == "client_secret") { heading = L.Text("cloud.clientSecretQuestion"); explanation = L.Text("cloud.clientSecretHelp"); }
             stack.Children.Add(new TextBlock { Text = String.IsNullOrWhiteSpace(heading) ? L.Text("cloud.questionFallback") : heading.Trim(), TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 10) });
             if (explanation != null) stack.Children.Add(new TextBlock { Text = explanation, TextWrapping = TextWrapping.Wrap, Foreground = FluentTheme.Muted, Margin = new Thickness(0, 0, 0, 12) });
-            if (!String.IsNullOrWhiteSpace(question.Error)) stack.Children.Add(new TextBlock { Text = question.Error, TextWrapping = TextWrapping.Wrap, Foreground = System.Windows.Media.Brushes.DarkRed });
+            if (!String.IsNullOrWhiteSpace(question.Error)) stack.Children.Add(new TextBlock { Text = question.Error, TextWrapping = TextWrapping.Wrap, Foreground = CompactTheme.ThemeBrush("#B92331") });
             var choices = option.Examples ?? new CloudExample[0];
             if (choices.Length == 0 && option.Default is bool) choices = new[] { new CloudExample { Value = "true", Help = "Yes" }, new CloudExample { Value = "false", Help = "No" } };
             string initial = option.Default is bool ? ((bool)option.Default ? "true" : "false") : Convert.ToString(option.Default, CultureInfo.InvariantCulture);

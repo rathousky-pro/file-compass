@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -60,7 +60,7 @@ namespace CommanderCZ
             if (size < 1 || !Directory.Exists(Path.GetDirectoryName(outputBase))) throw new IOException(L.Text("parts.invalidSize"));
             if ((File.GetAttributes(source) & FileAttributes.ReparsePoint) != 0) throw new IOException(L.Text("parts.linkRejected"));
             var published = new List<string>(); var staged = new List<string>();
-            string stage = Path.Combine(Path.GetDirectoryName(outputBase), ".CommanderCZ-parts-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(stage);
+            string stage = Path.Combine(Path.GetDirectoryName(outputBase), ".FileCompass-parts-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(stage);
             try {
                 using (var input = new FileStream(source,FileMode.Open,FileAccess.Read,FileShare.Read))
                 using (var whole = SHA256.Create()) {
@@ -120,7 +120,7 @@ namespace CommanderCZ
                 long size = new FileInfo(parts[0]).Length;
                 if (parts.Take(parts.Length-1).Any(x => new FileInfo(x).Length != size) || new FileInfo(parts.Last()).Length > size) throw new IOException(L.Text("parts.missingPart"));
             }
-            string stage = Path.Combine(Path.GetDirectoryName(target),".CommanderCZ-combine-" + Guid.NewGuid().ToString("N"));
+            string stage = Path.Combine(Path.GetDirectoryName(target),".FileCompass-combine-" + Guid.NewGuid().ToString("N"));
             try {
                 long total = parts.Sum(x => new FileInfo(x).Length), done = 0;
                 using (var output = new FileStream(stage,FileMode.CreateNew,FileAccess.Write,FileShare.None))

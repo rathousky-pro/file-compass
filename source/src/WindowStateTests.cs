@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -22,18 +22,18 @@ namespace CommanderCZ
             Directory.CreateDirectory(directory); var checks = new List<string>(); Action<bool,string> check = delegate(bool valid,string label) { if (!valid) throw new Exception(label); checks.Add(label); };
             Window owner = null; CopyProgressDialog copy = null; NetworkQueueWindow queue = null;
             try {
-                owner = new Window { Title = "Window regression owner",Width = 1000,Height = 700,Left = -18000,Top = -18000,WindowStartupLocation = WindowStartupLocation.Manual,ShowActivated = false,ShowInTaskbar = false,Content = new TextBlock { Text = "Owner" } }; owner.Show(); Pump();
+                owner = new Window { Title = "Window regression owner",Width = 1000,Height = 700,Left = -18000,Top = -18000,WindowStartupLocation = WindowStartupLocation.Manual,ShowActivated = false,ShowInTaskbar = true,Content = new TextBlock { Text = "Owner" } }; owner.Show(); Pump();
                 foreach (var ownerState in new[] { WindowState.Normal,WindowState.Maximized }) {
                     owner.WindowState = ownerState; Pump();
-                    foreach (bool titleButton in new[] { false,true }) using (var control = new CopyControl()) {
+                    foreach (int minimizeAction in new[] { 0,1,2 }) using (var control = new CopyControl()) {
                         copy = new CopyProgressDialog(owner,control) { ShowActivated = false }; copy.Show(); Pump(); var before = Position(copy);
                         for (int cycle = 0; cycle < 3; cycle++) {
-                            if (titleButton) SendMessage(new WindowInteropHelper(copy).Handle,0x0112,(IntPtr)0xf020,IntPtr.Zero); else copy.WindowState = WindowState.Minimized;
-                            Pump(); check(!copy.IsVisible && copy.WindowState == WindowState.Normal && !IsIconic(new WindowInteropHelper(copy).Handle),"copy queues without native minimized icon (" + ownerState + ", title=" + titleButton + ", cycle=" + cycle + ", visible=" + copy.IsVisible + ", state=" + copy.WindowState + ", iconic=" + IsIconic(new WindowInteropHelper(copy).Handle) + ", loaded=" + copy.IsLoaded + ")");
+                            if (minimizeAction == 2) System.Linq.Enumerable.First(FluentUiTests.Children<Button>(copy), x => Convert.ToString(x.Content) == L.Text("copy.backgroundAction")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); else if (minimizeAction == 1) SendMessage(new WindowInteropHelper(copy).Handle,0x0112,(IntPtr)0xf020,IntPtr.Zero); else copy.WindowState = WindowState.Minimized;
+                            Pump(); check(owner.WindowState == ownerState && !IsIconic(new WindowInteropHelper(owner).Handle),"backgrounding copy preserves owner immediately"); check(!copy.IsVisible && copy.WindowState == WindowState.Normal && !IsIconic(new WindowInteropHelper(copy).Handle),"copy queues without native minimized icon (" + ownerState + ", title=" + minimizeAction + ", cycle=" + cycle + ", visible=" + copy.IsVisible + ", state=" + copy.WindowState + ", iconic=" + IsIconic(new WindowInteropHelper(copy).Handle) + ", loaded=" + copy.IsLoaded + ")");
                             copy.RestoreProgress(); Pump(); var after = Position(copy);
-                            check(copy.IsVisible && !IsIconic(new WindowInteropHelper(copy).Handle) && after.Bottom - after.Top > 120 && Math.Abs(after.Left - before.Left) <= 3 && Math.Abs(after.Top - before.Top) <= 3 && Math.Abs((after.Right - after.Left) - (before.Right - before.Left)) <= 3,"copy restores full native bounds and position (" + ownerState + ", title=" + titleButton + ", cycle=" + cycle + ")");
+                            check(copy.IsVisible && !IsIconic(new WindowInteropHelper(copy).Handle) && after.Bottom - after.Top > 120 && Math.Abs(after.Left - before.Left) <= 3 && Math.Abs(after.Top - before.Top) <= 3 && Math.Abs((after.Right - after.Left) - (before.Right - before.Left)) <= 3,"copy restores full native bounds and position (" + ownerState + ", title=" + minimizeAction + ", cycle=" + cycle + ")");
                         }
-                        control.Cancel(); copy.Finish(); copy = null; Pump(); check(owner.IsVisible && owner.WindowState == ownerState && !IsIconic(new WindowInteropHelper(owner).Handle),"stopping foreground copy preserves owner state (" + ownerState + ", title=" + titleButton + ")");
+                        control.Cancel(); copy.Finish(); copy = null; Pump(); check(owner.IsVisible && owner.WindowState == ownerState && !IsIconic(new WindowInteropHelper(owner).Handle),"stopping foreground copy preserves owner state (" + ownerState + ", title=" + minimizeAction + ")");
                     }
                     foreach (bool immediate in new[] { false,true }) using (var control = new CopyControl()) {
                         copy = new CopyProgressDialog(owner,control) { ShowActivated = false }; copy.Show(); Pump(); copy.WindowState = WindowState.Minimized;

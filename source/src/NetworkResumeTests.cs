@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -36,6 +36,37 @@ namespace CommanderCZ
         static void Check(bool value, string message) { if (!value) throw new Exception(message); }
         static bool Rejected(Action action, string text)
         { try { action(); return false; } catch (IOException ex) { return ex.Message.Contains(text); } }
+        internal static int NameOnly(string root,int port) {
+            Directory.CreateDirectory(root);var checks=new List<string>();
+            Action<bool,string> check=delegate(bool v,string m){if(!v)throw new Exception(m);checks.Add(m);};
+            try {
+                var profile=new NetworkProfile{Protocol=NetworkProtocol.FTP,Host="127.0.0.1",Port=port,UserName="tester"};
+                using(var connection=new RemoteConnection(profile)) {
+                    connection.Open(Options(root,port,false));
+                    check(connection.Session.ListDirectory("/").Files.Any(x=>x.Name=="český soubor.txt"),"automatic listing decodes Czech UTF-8 without advertised FEAT");
+                    string file=Path.Combine(root,"Pepíček Žluťoučký 50.txt");File.WriteAllText(file,"Příliš žluťoučký kůň");
+                    using(var worker=connection.TransferConnection()) {
+                        worker.OpenTransfer();NetworkTransfers.Copy(new Entry{FullPath=file},null,worker,"/",NetworkCopyRule.Resume);
+                    }
+                    check(connection.Session.ListDirectory("/").Files.Any(x=>x.Name==Path.GetFileName(file)),"worker upload and final rename preserve exact Czech filename");
+                    var result=new NetworkCopyResult();NetworkTransfers.Copy(new Entry{FullPath=file},null,connection,"/",NetworkCopyRule.Resume,result);
+                    check(result.Skipped==1&&result.Copied==0,"repeating resume recognizes completed Czech-named file");
+                    string copy=Path.Combine(root,"downloaded.txt");connection.Session.GetFiles("/"+Path.GetFileName(file),copy);
+                    check(File.ReadAllBytes(copy).SequenceEqual(File.ReadAllBytes(file)),"Czech-named file downloads byte-exactly");
+                }
+                File.WriteAllLines(Path.Combine(root,"ftp-name-test-result.txt"),checks.Concat(new[]{"PASS: "+checks.Count}));return 0;
+            }catch(Exception ex){File.WriteAllText(Path.Combine(root,"ftp-name-test-result.txt"),String.Join("\n",checks)+"\nFAIL: "+ex);return 1;}
+        }
+        internal static int QueueOnly(string root,int port) {
+            Directory.CreateDirectory(root);var checks=new List<string>(); MainWindow main=null;
+            try {
+                System.Threading.SynchronizationContext.SetSynchronizationContext(new System.Windows.Threading.DispatcherSynchronizationContext(System.Windows.Threading.Dispatcher.CurrentDispatcher));
+                main=new MainWindow(root,new ProgramSettings{AutoRefresh=false}){ShowActivated=false,ShowInTaskbar=false,Left=-18000,Top=-18000,WindowStartupLocation=System.Windows.WindowStartupLocation.Manual};main.Show();NavigationTests.WaitPanels(main);
+                var profile=new NetworkProfile { Protocol=NetworkProtocol.FTP,Host="127.0.0.1",Port=port,UserName="tester" };
+                using(var browsing=new RemoteConnection(profile)){browsing.Open(Options(root,port,false));NavigationTests.Wait(main.VerifyFtpResumeQueue(browsing,root,delegate(bool v,string m){if(!v)throw new Exception(m);checks.Add(m);}));}
+                File.WriteAllLines(Path.Combine(root,"ftp-queue-resume-test-result.txt"),checks.Concat(new[]{"PASS: "+checks.Count}));return 0;
+            }catch(Exception ex){File.WriteAllText(Path.Combine(root,"ftp-queue-resume-test-result.txt"),String.Join("\n",checks)+"\n"+ex);return 1;}finally{if(main!=null)main.Close();}
+        }
         static TransferCheckpointData Read(string path)
         { return FileIntegrity.ReadXml<TransferCheckpointData>(path); }
         static string Hash(string path) { using (var input = File.OpenRead(path)) return TransferCheckpoint.Hash(input, input.Length, delegate { }); }
@@ -108,7 +139,6 @@ namespace CommanderCZ
                 var damaged = Read(Directory.GetFiles(Path.Combine(workspace, "checkpoints"), "*.xml").Single());
                 using (var file = new FileStream(damaged.Stage, FileMode.Open, FileAccess.Write)) file.WriteByte(99);
                 using (var session = open()) assert(Rejected(delegate { session.GetFiles("/slow.bin", corruptTarget, false, new TransferOptions { Resume = true }); }, "poškozený"), "corrupted local partial is rejected without committing target");
-                // Explicit overwrite discards only the owned partial and starts a new transfer.
                 using (var session = open()) session.GetFiles("/slow.bin", corruptTarget);
                 assert(Hash(corruptTarget) == Hash(target), "explicit overwrite recovers from damaged checkpoint");
                 string sourceFile = Path.Combine(workspace, "upload.bin"); File.WriteAllBytes(sourceFile, expected.Take(2097152).ToArray());
@@ -118,6 +148,14 @@ namespace CommanderCZ
                     "upload starts sending before reading the whole source and saves hashes of the streamed prefix on cancellation");
                 long remoteOffset;
                 using (var session = open()) { remoteOffset = session.GetFileInfo(upload.Stage).Length; assert(remoteOffset > 0 && !session.FileExists("/resume-upload.bin"), "cancelled upload preserves remote staging and original target"); }
+                assert(upload.OriginalName == Path.GetFileName(sourceFile) && upload.SourcePath == sourceFile && upload.TargetPath == "/resume-upload.bin", "local resume record identifies original source and destination");
+                using (var session = open()) {
+                    string metadataFile=Path.Combine(workspace,"partial-info.xml");
+                    session.GetFiles(upload.Stage+".fcinfo.xml",metadataFile);
+                    PartialTransferInfo info;using(var input=File.OpenRead(metadataFile)) info=(PartialTransferInfo)new System.Xml.Serialization.XmlSerializer(typeof(PartialTransferInfo)).Deserialize(input);
+                    assert(info.OriginalName==Path.GetFileName(sourceFile) && info.TargetPath=="/resume-upload.bin" && info.SourceLength==new FileInfo(sourceFile).Length && info.CheckpointIdentity==upload.Identity,"remote sidecar identifies its exact source name, target, size and owned checkpoint");
+                    assert(!File.ReadAllText(metadataFile).Contains("test-password") && !File.ReadAllText(metadataFile).Contains(sourceFile),"remote metadata contains neither credentials nor the private local path");
+                }
                 initial = -1;
                 using (var session = open()) { session.FileTransferProgress += delegate(object sender, FileTransferProgressEventArgs e) { if (e.FileProgress > 0 && initial < 0) initial = e.FileProgress; }; session.PutFiles(sourceFile, "/resume-upload.bin", false, new TransferOptions { Resume = true }); assert(session.ResumeProbeBytes > 0 && session.ResumeProbeBytes <= 131072, "real upload resume reads at most 128 KiB remotely instead of the entire partial"); }
                 string uploaded = Path.Combine(workspace, "uploaded.bin"); using (var session = open()) session.GetFiles("/resume-upload.bin", uploaded);
@@ -148,13 +186,11 @@ namespace CommanderCZ
                 assert(File.ReadAllText(oldTarget) == "original target", "cancelled overwrite preserves original local target");
                 File.WriteAllText(oldTarget, "edited while cancelled");
                 using (var session = open()) assert(Rejected(delegate { session.GetFiles("/slow.bin", oldTarget, false, new TransferOptions { Resume = true }); }, "Cílový soubor"), "target edited during interruption is not silently overwritten");
-                // Different source metadata invalidates a download checkpoint.
                 using (var session = open())
                 using (var cp = new TransferCheckpoint(options, false, "/slow.bin", oldTarget))
                 { assert(Rejected(delegate { using (var competing = new TransferCheckpoint(options, false, "/slow.bin", oldTarget)) { } }, "jiná úloha"), "exclusive lease rejects competing writers"); }
                 using (var session = open()) session.PutFiles(wrong, "/slow.bin");
                 using (var session = open()) assert(Rejected(delegate { session.GetFiles("/slow.bin", oldTarget, false, new TransferOptions { Resume = true }); }, "Zdroj se"), "changed remote metadata rejects download resume");
-                // Whole folder: first file completed, second interrupted, last not yet copied.
                 string batch = Path.Combine(workspace, "batch"); Directory.CreateDirectory(batch); File.WriteAllText(Path.Combine(batch, "a.txt"), "first"); File.WriteAllBytes(Path.Combine(batch, "b.bin"), expected.Take(2097152).ToArray()); Directory.CreateDirectory(Path.Combine(batch, "sub")); File.WriteAllText(Path.Combine(batch, "sub", "z.txt"), "last");
                 using (var connection = new RemoteConnection(profile)) { connection.Open(options); NetworkTransfers.Copy(new Entry { FullPath = batch, IsDirectory = true }, null, connection, "/", NetworkCopyRule.Overwrite); }
                 string batchTarget = Path.Combine(workspace, "batch-target"); Directory.CreateDirectory(batchTarget);
@@ -185,6 +221,12 @@ namespace CommanderCZ
                     connection.Open(options); NetworkTransfers.Copy(new Entry { FullPath = batch, IsDirectory = true }, null, connection, "/upload-batch", NetworkCopyRule.Resume, uploadBatchResult);
                     string uploadedBatch = Path.Combine(workspace, "batch-uploaded.bin"); connection.Session.GetFiles("/upload-batch/batch/b.bin", uploadedBatch);
                     assert(uploadBatchResult.Skipped == 1 && uploadBatchResult.Copied == 2 && Hash(uploadedBatch) == Hash(Path.Combine(batch, "b.bin")) && connection.Session.FileExists("/upload-batch/batch/sub/z.txt"), "recursive upload resume skips completed file, resumes interrupted file, and sends missing nested file");
+                }
+                if (!sftp) {
+                    System.Threading.SynchronizationContext.SetSynchronizationContext(new System.Windows.Threading.DispatcherSynchronizationContext(System.Windows.Threading.Dispatcher.CurrentDispatcher));
+                    var main=new MainWindow(workspace,new ProgramSettings{AutoRefresh=false}){ShowActivated=false,ShowInTaskbar=false,Left=-18000,Top=-18000,WindowStartupLocation=System.Windows.WindowStartupLocation.Manual};main.Show();NavigationTests.WaitPanels(main);
+                    try {using(var browsing=new RemoteConnection(profile)){browsing.Open(options);NavigationTests.Wait(main.VerifyFtpResumeQueue(browsing,workspace,assert));}}
+                    finally {main.Close();}
                 }
                 File.WriteAllLines(resultFile, passed.Concat(new[] { "PASS: " + passed.Count + " checks" })); return 0;
             }

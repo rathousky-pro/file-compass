@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -54,7 +54,7 @@ namespace CommanderCZ
             panel.NewTab(); UpdateLayout(); check(tab.IsVisible, "real multiple tabs remain available");
             var network = new NetworkTransferJob(new NetworkProfile { Protocol = NetworkProtocol.FTP, Host = "localhost" }, true);
             network.Activity = AddCopyActivity("Síťový přenos", network.Cancel); networkJobs.Add(network);
-            try { NetworkWindowBackground(networkQueue == null || !networkQueue.IsVisible); check(network.Activity.Backgrounded && networkQueue == null && copySummary.Visibility == Visibility.Visible, "network transfer begins below without opening its queue window"); }
+            try { ShowNetworkQueue(network); check(!network.Activity.Backgrounded && networkQueue != null && networkQueue.IsVisible, "network transfer opens its detailed queue immediately"); }
             finally { network.Finish("Dokončeno"); network.Activity.Finish("Dokončeno",true); networkJobs.Remove(network); network.Cancellation.Dispose(); }
         }
     }

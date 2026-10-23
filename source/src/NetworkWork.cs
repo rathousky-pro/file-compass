@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -55,7 +55,7 @@ namespace CommanderCZ
                                         if (before.Length != item.Bytes / 2 || before.LastWriteTime != item.Modified) throw new IOException(L.Text("transfer.sourceChangedSinceQueueLoad"));
                                         if (previous != null && (previous.IsDirectory || previous.FileType == 'L')) throw new IOException(L.Text("transfer.targetNotRegularFile"));
                                         bool partial = rule == NetworkCopyRule.Resume && target.Session.HasRelayCheckpoint(source.Session,item.Source,item.Destination);
-                                        skipped = previous != null && (rule == NetworkCopyRule.Skip || (rule == NetworkCopyRule.Resume && !partial));
+                                        skipped = previous != null && (rule == NetworkCopyRule.Skip || (rule == NetworkCopyRule.Resume && !partial && previous.Length == before.Length));
                                         if (!skipped) {
                                             if (previous != null && rule == NetworkCopyRule.Reject) throw new IOException(L.Text("transfer.targetAlreadyExists"));
                                             bool sameServer = source.Profile.Protocol == target.Profile.Protocol && String.Equals(source.Profile.Host,target.Profile.Host,StringComparison.OrdinalIgnoreCase) && source.Profile.Port == target.Profile.Port && source.Profile.UserName == target.Profile.UserName && source.Profile.HostKeyFingerprint == target.Profile.HostKeyFingerprint;

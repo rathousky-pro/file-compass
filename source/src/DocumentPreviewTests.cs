@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -16,7 +16,7 @@ namespace CommanderCZ {
    Directory.CreateDirectory(root);var checks=new List<string>();Window window=null;QuickPreviewPane pane=null;
    Action<bool,string> check=(ok,label)=>{if(!ok)throw new Exception(label);checks.Add(label);};
    try {
-    SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));
+    SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher)); check(DocumentPreview.UserDataFolder.StartsWith(Path.GetFullPath(Path.GetTempPath()).TrimEnd(Path.DirectorySeparatorChar)+Path.DirectorySeparatorChar,StringComparison.OrdinalIgnoreCase),"WebView2 profile is always under system TEMP"); check(!DocumentPreview.UserDataFolder.StartsWith(Path.Combine(AppPaths.ProgramDirectory,"config"),StringComparison.OrdinalIgnoreCase),"WebView2 profile does not use portable configuration");
     string docx=Path.Combine(root,"Preview.docx"),xlsx=Path.Combine(root,"Preview.xlsx"),pdf=Path.Combine(root,"Preview.pdf");
     const string rel="http://schemas.openxmlformats.org/package/2006/relationships";
     Package(docx,"[Content_Types].xml","<Types xmlns='http://schemas.openxmlformats.org/package/2006/content-types'><Default Extension='rels' ContentType='application/vnd.openxmlformats-package.relationships+xml'/><Override PartName='/word/document.xml' ContentType='application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml'/></Types>","_rels/.rels","<Relationships xmlns='"+rel+"'><Relationship Id='rId1' Type='http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument' Target='word/document.xml'/></Relationships>","word/document.xml","<w:document xmlns:w='http://schemas.openxmlformats.org/wordprocessingml/2006/main'><w:body><w:p><w:r><w:rPr><w:b/><w:sz w:val='36'/></w:rPr><w:t>Compass formatted document</w:t></w:r></w:p><w:p><w:r><w:t>Local document preview.</w:t></w:r></w:p><w:sectPr><w:pgSz w:w='11906' w:h='16838'/></w:sectPr></w:body></w:document>");

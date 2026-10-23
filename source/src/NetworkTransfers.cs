@@ -42,7 +42,8 @@ namespace CommanderCZ
                 bool exists = File.Exists(destination) || Directory.Exists(destination);
                 if (exists && rule == NetworkCopyRule.Reject) throw new IOException(L.Text("fileOperation.existingDestinationPrefix") + destination);
                 bool resumePartial = rule == NetworkCopyRule.Resume && !entry.IsDirectory && source.Profile.Protocol != NetworkProtocol.SCP && source.Session.HasCheckpoint(false, entry.FullPath, destination);
-                if (exists && (rule == NetworkCopyRule.Skip || (rule == NetworkCopyRule.Resume && !resumePartial)) && (!entry.IsDirectory || !Directory.Exists(destination)))
+                bool completeTarget = exists && !entry.IsDirectory && File.Exists(destination) && new FileInfo(destination).Length == source.Session.GetFileInfo(entry.FullPath).Length;
+                if (exists && (rule == NetworkCopyRule.Skip || (rule == NetworkCopyRule.Resume && !resumePartial && completeTarget)) && (!entry.IsDirectory || !Directory.Exists(destination)))
                 { if (result != null) result.Skipped++; if (skipped != null && !entry.IsDirectory) skipped(source.Session.GetFileInfo(entry.FullPath).Length); if (fileComplete != null && !entry.IsDirectory) fileComplete(entry.FullPath, true); return; }
                 if (exists && (File.GetAttributes(destination) & FileAttributes.ReparsePoint) != 0) throw new IOException(L.Text("transfer.targetIsLinkPrefix") + destination);
                 if (exists && entry.IsDirectory != Directory.Exists(destination)) throw new IOException(L.Text("transfer.targetFileFolderCollisionPrefix") + destination);
@@ -65,7 +66,8 @@ namespace CommanderCZ
                 bool exists = target.Session.FileExists(destination);
                 if (exists && rule == NetworkCopyRule.Reject) throw new IOException(L.Text("fileOperation.existingDestinationPrefix") + destination);
                 bool resumePartial = rule == NetworkCopyRule.Resume && !entry.IsDirectory && target.Profile.Protocol != NetworkProtocol.SCP && String.IsNullOrEmpty(target.Profile.CloudAccountId) && target.Session.HasCheckpoint(true, entry.FullPath, destination);
-                if (exists && (rule == NetworkCopyRule.Skip || (rule == NetworkCopyRule.Resume && !resumePartial)) && (!entry.IsDirectory || !target.Session.GetFileInfo(destination).IsDirectory))
+                bool completeTarget = exists && !entry.IsDirectory && !target.Session.GetFileInfo(destination).IsDirectory && target.Session.GetFileInfo(destination).Length == new FileInfo(entry.FullPath).Length;
+                if (exists && (rule == NetworkCopyRule.Skip || (rule == NetworkCopyRule.Resume && !resumePartial && completeTarget)) && (!entry.IsDirectory || !target.Session.GetFileInfo(destination).IsDirectory))
                 { if (result != null) result.Skipped++; if (skipped != null && !entry.IsDirectory) skipped(new FileInfo(entry.FullPath).Length); if (fileComplete != null && !entry.IsDirectory) fileComplete(entry.FullPath, true); return; }
                 if (exists)
                 {

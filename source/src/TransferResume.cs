@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -8,9 +8,26 @@ namespace CommanderCZ.NetworkTransport
 {
     public sealed partial class Session
     {
+        internal static string OwnedStagePath(string expected, string saved) {
+            int marker = expected.LastIndexOf(".FileCompass-", StringComparison.Ordinal);
+            if (marker >= 0 && saved == expected.Substring(0, marker) + ".CommanderCZ-" + expected.Substring(marker + ".FileCompass-".Length)) return saved;
+            return expected;
+        }
         internal long ResumeProbeBytes { get; private set; }
         internal bool HasCheckpoint(bool upload, string source, string target)
-        { using (var checkpoint = new TransferCheckpoint(options, upload, upload ? Path.GetFullPath(source) : RemoteConnection.Normalize(source), upload ? RemoteConnection.Normalize(target) : Path.GetFullPath(target))) return checkpoint.Data.Stage != null; }
+        {
+            using (var checkpoint = new TransferCheckpoint(options, upload, upload ? Path.GetFullPath(source) : RemoteConnection.Normalize(source), upload ? RemoteConnection.Normalize(target) : Path.GetFullPath(target))) {
+                if (checkpoint.Data.Stage != null) return true;
+                if (upload) {
+                    string folder = RemoteConnection.Parent(target);
+                    foreach (string prefix in new[] { ".FileCompass-upload-", ".CommanderCZ-upload-" }) {
+                        string stage = RemoteConnection.Combine(folder, prefix + checkpoint.Data.Identity + ".part");
+                        if (FileExists(stage)) throw new IOException(L.Text("resume.unownedPartialPathPrefix") + stage);
+                    }
+                }
+                return false;
+            }
+        }
         void LocalTarget(TransferCheckpoint checkpoint, string path, bool validate, string stage = null, long length = 0, DateTime modified = default(DateTime))
         {
             TransferCheckpoint.RejectLink(path); bool exists = File.Exists(path); var old = exists ? new FileInfo(path) : null;
@@ -31,9 +48,9 @@ namespace CommanderCZ.NetworkTransport
             string target = Path.GetFullPath(local.EndsWith("\\") || Directory.Exists(local) ? Path.Combine(local, info.Name) : local);
             using (var checkpoint = new TransferCheckpoint(options, false, RemoteConnection.Normalize(remote), target))
             {
-                string stageFolder = Path.Combine(Path.GetDirectoryName(target), ".CommanderCZ-partials");
+                string stageFolder = Path.Combine(Path.GetDirectoryName(target), ".FileCompass-partials");
                 TransferCheckpoint.RejectLink(stageFolder); Directory.CreateDirectory(stageFolder); File.SetAttributes(stageFolder, File.GetAttributes(stageFolder) | FileAttributes.Hidden);
-                string stage = Path.Combine(stageFolder, checkpoint.Data.Identity + ".part"); TransferCheckpoint.RejectLink(stage);
+                string stage = OwnedStagePath(Path.Combine(stageFolder, checkpoint.Data.Identity + ".part"), checkpoint.Data.Stage); TransferCheckpoint.RejectLink(stage);
                 if (checkpoint.Data.Stage != null && !String.Equals(checkpoint.Data.Stage, stage, StringComparison.Ordinal)) throw new IOException(L.Text("resume.invalidPartialPath"));
                 bool resume = transfer != null && transfer.Resume && checkpoint.Data.Stage != null;
                 if (checkpoint.Data.Stage == null && File.Exists(stage)) throw new IOException(L.Text("resume.unownedPartialPathPrefix") + stage);
@@ -76,8 +93,9 @@ namespace CommanderCZ.NetworkTransport
                 string target = RemoteConnection.Normalize(remote.EndsWith("/") ? RemoteConnection.Combine(remote, Path.GetFileName(local)) : remote);
                 using (var checkpoint = new TransferCheckpoint(options, true, local, target))
                 {
-                    string folder = RemoteConnection.Parent(target), stage = RemoteConnection.Combine(folder, ".CommanderCZ-upload-" + checkpoint.Data.Identity + ".part");
-                    string backup = RemoteConnection.Combine(folder, ".CommanderCZ-old-" + Guid.NewGuid().ToString("N"));
+                    string folder = RemoteConnection.Parent(target), stage = RemoteConnection.Combine(folder, ".FileCompass-upload-" + checkpoint.Data.Identity + ".part");
+                    stage = OwnedStagePath(stage, checkpoint.Data.Stage);
+                    string backup = RemoteConnection.Combine(folder, ".FileCompass-old-" + Guid.NewGuid().ToString("N"));
                     if (checkpoint.Data.Stage != null && checkpoint.Data.Stage != stage) throw new IOException(L.Text("resume.invalidPartialPath"));
                     bool resume = transfer != null && transfer.Resume && checkpoint.Data.Stage != null; long offset = 0;
                     Progress(local, 0, length, Stopwatch.StartNew(), 0, resume ? L.Text("resume.preparingStatus") : L.Text("resume.preparingUpload"));
@@ -115,6 +133,7 @@ namespace CommanderCZ.NetworkTransport
                         if (FileExists(stage)) { var partial = GetFileInfo(stage); if (partial.IsDirectory || partial.FileType == 'L') throw new IOException(L.Text("resume.partialFolderOrLinkRejected")); RemoveFiles(stage); }
                         RemoteTarget(checkpoint, target, false, stage, length, modified, null);
                     }
+                    WriteUploadInfo(stage, local, target, checkpoint.Data);
                     input.Position = offset; bool oldMoved = false, committed = false; var timer = Stopwatch.StartNew(); Progress(local, offset, length, timer, offset);
                     try
                     {
@@ -136,6 +155,7 @@ namespace CommanderCZ.NetworkTransport
                         RemoteTarget(checkpoint, target, true); CheckAbort();
                         if (FileExists(target)) { MoveFile(target, backup); oldMoved = true; }
                         MoveFile(stage, target); committed = true; checkpoint.Clear();
+                        try { if (FileExists(stage + ".fcinfo.xml")) RemoveFiles(stage + ".fcinfo.xml"); } catch { /* Data is committed; leftover descriptive metadata is harmless. */ }
                         if (oldMoved) { RemoveFiles(backup); oldMoved = false; }
                         if (remove) File.Delete(local); Completed(length); return new TransferResult();
                     }

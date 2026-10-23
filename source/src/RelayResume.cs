@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 
@@ -26,7 +26,8 @@ namespace CommanderCZ.NetworkTransport
             try {
                 using (var checkpoint = RelayCheckpoint(source,path,target)) {
                     if (checkpoint.Data.Stage == null) return null;
-                    string stage = RemoteConnection.Combine(RemoteConnection.Parent(target),".CommanderCZ-relay-" + checkpoint.Data.Identity + ".part");
+                    string stage = RemoteConnection.Combine(RemoteConnection.Parent(target),".FileCompass-relay-" + checkpoint.Data.Identity + ".part");
+                    stage = OwnedStagePath(stage, checkpoint.Data.Stage);
                     if (checkpoint.Data.Stage != stage) throw new IOException(L.Text("resume.invalidPartialPath"));
                     using (var destinationLock = new TransferCheckpoint(options,true,"relay-target-lock-v1",RemoteConnection.Normalize(target)))
                     using (var cleanup = new Session()) {
@@ -46,7 +47,8 @@ namespace CommanderCZ.NetworkTransport
             try {
                 destinationLock = new TransferCheckpoint(options,true,"relay-target-lock-v1",RemoteConnection.Normalize(target));
                 ResumeProbeBytes = 0; source.ResumeProbeBytes = 0;
-                string stage = RemoteConnection.Combine(RemoteConnection.Parent(target),".CommanderCZ-relay-" + checkpoint.Data.Identity + ".part");
+                string stage = RemoteConnection.Combine(RemoteConnection.Parent(target),".FileCompass-relay-" + checkpoint.Data.Identity + ".part");
+                stage = OwnedStagePath(stage, checkpoint.Data.Stage);
                 var lease = new RelayLease(checkpoint,stage,destinationLock);
                 bool owned = checkpoint.Data.Stage != null;
                 if (owned && checkpoint.Data.Stage != stage) throw new IOException(L.Text("resume.invalidRelayPartialPath"));

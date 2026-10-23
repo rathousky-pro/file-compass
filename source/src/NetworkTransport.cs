@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -78,7 +78,8 @@ namespace CommanderCZ.NetworkTransport
                     if(settings.Raw("Utf","2")=="2")
                     {
                         string capabilities=""; try { capabilities=Curl.Reply("FEAT"); } catch(SessionRemoteException) { }
-                        settings.AddRawSettings("Utf",Regex.IsMatch(capabilities,@"(?im)^\s*UTF-?8\s*$") ? "1" : "0");
+                        settings.AddRawSettings("UtfAuto", "1");
+                        settings.AddRawSettings("Utf", "1");
                     }
                     if(settings.Raw("Utf","2")=="1") { try { Curl.Commands("OPTS UTF8 ON"); } catch(SessionRemoteException) { } }
                     var commands = settings.Raw("PostLoginCommands", "").Split('\n').Where(x => !String.IsNullOrWhiteSpace(x)).Select(x => x.Trim()).ToArray();
@@ -103,7 +104,11 @@ namespace CommanderCZ.NetworkTransport
             string mode = options.Raw("FtpUseMlsd", "auto"); bool machine = mode != "off"; byte[] data;
             try { data = Curl.Listing(path, machine ? "MLSD" : options.Raw("FtpListAll", "auto") == "on" ? "LIST -a" : "LIST"); }
             catch (SessionRemoteException) { if (!machine || mode == "on") throw; machine = false; data = Curl.Listing(path, options.Raw("FtpListAll", "auto") == "on" ? "LIST -a" : "LIST"); }
-            string listing = (options.Raw("Utf", "2") == "0" ? Encoding.Default : Encoding.UTF8).GetString(data);
+            string listing;
+            if (options.Raw("UtfAuto", "0") == "1") {
+                try { listing = new UTF8Encoding(false,true).GetString(data); if (data.Any(x=>x>=128)) options.AddRawSettings("Utf","1"); }
+                catch (DecoderFallbackException) { listing=Encoding.Default.GetString(data); options.AddRawSettings("Utf","0"); }
+            } else listing = (options.Raw("Utf", "2") == "0" ? Encoding.Default : Encoding.UTF8).GetString(data);
             foreach (string line in listing.Split('\n'))
             {
                 if (String.IsNullOrWhiteSpace(line) || line.StartsWith("total ")) continue;
@@ -238,7 +243,7 @@ namespace CommanderCZ.NetworkTransport
             if (options.Protocol != Protocol.Scp && options.Raw("TransientTransfer","0") != "1") return DownloadCheckpointed(remote, local, remove, transfer);
             var info = GetFileInfo(remote); if (info.FileType == 'L' || info.IsDirectory) throw new IOException(L.Text("transfer.regularSourceFileRequiredPrefix") + remote);
             string target = local.EndsWith("\\") || Directory.Exists(local) ? Path.Combine(local, info.Name) : local;
-            string temporary = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(target)), ".CommanderCZ-download-" + Guid.NewGuid().ToString("N"));
+            string temporary = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(target)), ".FileCompass-download-" + Guid.NewGuid().ToString("N"));
             var timer = Stopwatch.StartNew();
             try
             {
@@ -262,8 +267,8 @@ namespace CommanderCZ.NetworkTransport
             using (var input = new FileStream(local, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
                 long length = input.Length; string target = remote.EndsWith("/") ? RemoteConnection.Combine(remote, Path.GetFileName(local)) : remote;
-                string folder = RemoteConnection.Parent(target), temporary = RemoteConnection.Combine(folder, ".CommanderCZ-upload-" + Guid.NewGuid().ToString("N")),
-                    backup = RemoteConnection.Combine(folder, ".CommanderCZ-old-" + Guid.NewGuid().ToString("N"));
+                string folder = RemoteConnection.Parent(target), temporary = RemoteConnection.Combine(folder, ".FileCompass-upload-" + Guid.NewGuid().ToString("N")),
+                    backup = RemoteConnection.Combine(folder, ".FileCompass-old-" + Guid.NewGuid().ToString("N"));
                 bool staged = false, oldMoved = false, committed = false; var timer = Stopwatch.StartNew();
                 bool transient = options.Raw("TransientTransfer","0") == "1";
                 bool targetExisted = transient && FileExists(target); var targetBefore = targetExisted ? GetFileInfo(target) : null;

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
@@ -22,7 +22,7 @@ namespace CommanderCZ
         internal static readonly ArchivePluginPackage Lha = new ArchivePluginPackage("lha-1.14i", "LHa 1.14i (GnuWin32)", "lha-1.14i-1-bin.zip", "https://downloads.sourceforge.net/gnuwin32/lha-1.14i-1-bin.zip", "C460C5360A85919CBF1790EBB65061640AA412BA28B05F6612A41D57B53131FB", "bin/lha.exe", "53EB005881132CD84C2389AD9CBBB0B5373058CF8019997228AD6E7060C6FEB1", "https://gnuwin32.sourceforge.net/packages/lha.htm");
         internal static readonly ArchivePluginPackage[] Packages = { Rar, Arj, Lha };
         static readonly SemaphoreSlim Gate = new SemaphoreSlim(1, 1);
-        internal static string Root { get { return Path.Combine(AppPaths.ConfigDirectory, "plugins", "archivers"); } }
+        internal static string Root { get { return Path.Combine(AppPaths.Resource("plugins"), "archivers"); } }
 
         internal static FileStream VerifyHash(string path, string expected)
         {

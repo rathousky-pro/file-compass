@@ -14,6 +14,8 @@ namespace CommanderCZ
             string installed = Path.Combine(AppPaths.Resource("languages"));
             Action<bool,string> check = delegate(bool valid, string label) { if (!valid) throw new Exception(label); checks.Add(label); };
             try {
+                check(L.StartupLanguage(null,null)=="en" && L.StartupLanguage(" "," ")=="en", "English is the default without a saved choice");
+                check(L.StartupLanguage(null,"cs-CZ")=="cs-CZ" && L.StartupLanguage("en","cs-CZ")=="en", "Saved language and explicit environment override retain priority");
                 var json = new JavaScriptSerializer(); var source = json.Deserialize<Dictionary<string,string>>(File.ReadAllText(Path.Combine(installed, "cs-CZ.lng"), Encoding.UTF8));
                 File.Copy(Path.Combine(installed, "cs-CZ.lng"), Path.Combine(root, "cs-CZ.lng"), true);
                 string menu = source.First(x => x.Value == "Soubor").Key, error = source.First(x => x.Value == "Chyba").Key, fallback = source.First(x => x.Value == "Velikost").Key;

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -26,7 +26,7 @@ namespace CommanderCZ
             path = path ?? TestPath ?? ConfigPath;
             if (!File.Exists(path)) return new ArchiveSettings { WinRarPath = FindWinRar() ?? "" };
             using (var reader = XmlReader.Create(path, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null }))
-            { var settings = (ArchiveSettings)new XmlSerializer(typeof(ArchiveSettings)).Deserialize(reader); settings.ValidateLimits(); return settings; }
+            { var settings = (ArchiveSettings)new XmlSerializer(typeof(ArchiveSettings)).Deserialize(reader); settings.ValidateLimits(); settings.ArjPath=AppPaths.ResolveLegacyResourceFile(settings.ArjPath); settings.LhaPath=AppPaths.ResolveLegacyResourceFile(settings.LhaPath); settings.WinRarPath=AppPaths.ResolveLegacyResourceFile(settings.WinRarPath); return settings; }
         }
         public void Save(string path = null)
         {

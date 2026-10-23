@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Runtime;
 
@@ -10,7 +10,7 @@ namespace CommanderCZ
         {
             try
             {
-                directory = directory ?? System.IO.Path.Combine(AppPaths.ConfigDirectory, "jit");
+                directory = directory ?? System.IO.Path.Combine(AppPaths.DataDirectory, "jit");
                 Directory.CreateDirectory(directory); ProfileOptimization.SetProfileRoot(directory);
                 ProfileOptimization.StartProfile(typeof(StartupAcceleration).Assembly.ManifestModule.ModuleVersionId.ToString("N") + ".profile");
             }

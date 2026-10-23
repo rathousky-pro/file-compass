@@ -230,7 +230,7 @@ namespace CommanderCZ
             if(args.Length==2&&args[0]=="--cloud-config-key")return CloudStore.PrintKey(args[1]); if (args.Length == 0 || !args[0].StartsWith("--", StringComparison.Ordinal)) StartupAcceleration.Begin();
             try { L.Initialize(); }
             catch (Exception ex) {
-                string error = "Cannot load the language pack. Keep config/languages beside File Compass.exe.\n\n" + ex.Message;
+                string error = "Cannot load the language pack. Keep languages beside File Compass.exe.\n\n" + ex.Message;
                 if (args.Any(x => x.EndsWith("-test", StringComparison.Ordinal)) || args.Contains("--archive-worker") || args.Contains("--everything-worker")) Console.Error.WriteLine(error);
                 else MessageBox.Show(error, ApplicationBrand.Name, MessageBoxButton.OK, MessageBoxImage.Error);
                 return 2;

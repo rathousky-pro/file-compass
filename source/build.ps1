@@ -18,17 +18,17 @@ $compilerArgs += Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'src') -Fil
 if ($LASTEXITCODE -ne 0) { throw 'Sestavení selhalo.' }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'FileVoyager.exe.config') -Destination (Join-Path $bin 'File Compass.exe.config')
 New-Item -ItemType Directory -Path (Join-Path $bin 'icons') -Force | Out-Null
-New-Item -ItemType Directory -Path (Join-Path $bin 'ui') -Force | Out-Null
-Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'ui') | Where-Object { $_.Name -ne 'icons' } | ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $bin 'ui') -Recurse -Force }
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'ui\icons\LICENSE.txt') -Destination (Join-Path $bin 'ui\licenses\FLUENT-ICONS-LICENSE.txt') -Force
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'ui\icons\SOURCE.json') -Destination (Join-Path $bin 'ui\licenses\FLUENT-ICONS-SOURCE.json') -Force
+New-Item -ItemType Directory -Path (Join-Path $bin 'libraries') -Force | Out-Null
+Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'ui') | Where-Object { $_.Name -ne 'icons' } | ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $bin 'libraries') -Recurse -Force }
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'ui\icons\LICENSE.txt') -Destination (Join-Path $bin 'libraries\licenses\FLUENT-ICONS-LICENSE.txt') -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'ui\icons\SOURCE.json') -Destination (Join-Path $bin 'libraries\licenses\FLUENT-ICONS-SOURCE.json') -Force
 $exporter = Join-Path $bin 'BuildIconLibraries.exe'
 $exportArgs = @('/nologo', '/target:exe', '/platform:x64', '/optimize+', '/codepage:65001', ('/out:' + $exporter), ('/reference:' + (Join-Path $bin 'File Compass.exe')))
 foreach ($reference in $references) { $exportArgs += '/reference:' + (Join-Path $framework $reference) }
 $exportArgs += Join-Path $PSScriptRoot 'BuildIconLibraries.cs'
 & $compiler @exportArgs
 if ($LASTEXITCODE -ne 0) { throw 'Sestavení exportéru ikon selhalo.' }
-$exportConfig = (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'FileVoyager.exe.config') -Raw).Replace('privatePath="config\ui"', 'privatePath="ui"')
+$exportConfig = (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'FileVoyager.exe.config') -Raw)
 Set-Content -LiteralPath ($exporter + '.config') -Value $exportConfig -Encoding UTF8
 $iconProcess = Start-Process -FilePath $exporter -ArgumentList @(('"' + (Join-Path $PSScriptRoot 'ui\icons') + '"'), ('"' + (Join-Path $bin 'icons') + '"'), ('"' + (Join-Path $PSScriptRoot 'assets\file-voyager') + '"')) -WindowStyle Hidden -PassThru -Wait
 if ($iconProcess.ExitCode -ne 0) { throw 'Vytvoření knihoven ikon selhalo.' }
@@ -52,22 +52,8 @@ Copy-Item -Path (Join-Path $PSScriptRoot 'languages\*.lng') -Destination (Join-P
 
 
 
-# Portable distribution: one application executable and a config directory.
 $configRoot = Join-Path $bin 'config'
 New-Item -ItemType Directory -Path $configRoot -Force | Out-Null
-foreach ($folder in 'icons','languages','plugins','ui') {
-    $from = Join-Path $bin $folder
-    $to = Join-Path $configRoot $folder
-    if (Test-Path -LiteralPath $from) {
-        if (Test-Path -LiteralPath $to) {
-            Get-ChildItem -LiteralPath $from -Force | ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $to -Recurse -Force }
-            if (![IO.Path]::GetFullPath($from).StartsWith([IO.Path]::GetFullPath($bin).TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Invalid resource directory' }
-            Remove-Item -LiteralPath $from -Recurse -Force
-        } else { Move-Item -LiteralPath $from -Destination $to }
-    }
-}
-# Documentation belongs with the supporting files.
-
 foreach ($obsolete in Get-ChildItem -LiteralPath $bin -File | Where-Object { $_.Name -match '^(FileVoyager(?:\.previous-[^\\]+)?|CommanderCZ)\.exe(?:\.config)?$' }) {
     $targetPath = [IO.Path]::GetFullPath($obsolete.FullName)
     if (![String]::Equals([IO.Path]::GetDirectoryName($targetPath), [IO.Path]::GetFullPath($bin).TrimEnd('\'), [StringComparison]::OrdinalIgnoreCase)) { throw 'Invalid obsolete executable path' }
@@ -78,23 +64,23 @@ foreach ($obsolete in Get-ChildItem -LiteralPath $bin -File | Where-Object { $_.
 
 
 
-New-Item -ItemType Directory -Path (Join-Path $configRoot "plugins/cloud") -Force | Out-Null
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot "plugins/cloud/rclone.exe"),(Join-Path $PSScriptRoot "plugins/cloud/README.txt"),(Join-Path $PSScriptRoot "plugins/cloud/LICENSE.txt") -Destination (Join-Path $configRoot "plugins/cloud") -Force
+New-Item -ItemType Directory -Path (Join-Path $bin "plugins/cloud") -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot "plugins/cloud/rclone.exe"),(Join-Path $PSScriptRoot "plugins/cloud/README.txt"),(Join-Path $PSScriptRoot "plugins/cloud/LICENSE.txt") -Destination (Join-Path $bin "plugins/cloud") -Force
 $googleOAuth = Join-Path $PSScriptRoot 'plugins/cloud/google-oauth.json'
-if (Test-Path -LiteralPath $googleOAuth) { Copy-Item -LiteralPath $googleOAuth -Destination (Join-Path $configRoot 'plugins/cloud/google-oauth.json') -Force }
+if (Test-Path -LiteralPath $googleOAuth) { New-Item -ItemType Directory -Path (Join-Path $configRoot 'oauth') -Force | Out-Null; Copy-Item -LiteralPath $googleOAuth -Destination (Join-Path $configRoot 'oauth/google.json') -Force }
 
 
-New-Item -ItemType Directory -Path (Join-Path $configRoot 'preview') -Force | Out-Null
-Copy-Item -Path (Join-Path $PSScriptRoot 'preview\*') -Destination (Join-Path $configRoot 'preview') -Force
+New-Item -ItemType Directory -Path (Join-Path $bin 'preview') -Force | Out-Null
+Copy-Item -Path (Join-Path $PSScriptRoot 'preview\*') -Destination (Join-Path $bin 'preview') -Force
 
 
 
-New-Item -ItemType Directory -Path (Join-Path $configRoot 'plugins/smart') -Force | Out-Null
-Copy-Item -Path (Join-Path $PSScriptRoot 'plugins/smart/*') -Destination (Join-Path $configRoot 'plugins/smart') -Force
+New-Item -ItemType Directory -Path (Join-Path $bin 'plugins/smart') -Force | Out-Null
+Copy-Item -Path (Join-Path $PSScriptRoot 'plugins/smart/*') -Destination (Join-Path $bin 'plugins/smart') -Force
 
 # Only curated user help is distributed. AI/development material stays at repository root.
 $documentationRoot = Join-Path (Split-Path -Parent $PSScriptRoot) 'docs'
-$helpRoot = Join-Path $configRoot 'help'
+$helpRoot = Join-Path $bin 'help'
 New-Item -ItemType Directory -Path $helpRoot -Force | Out-Null
 Copy-Item -Path (Join-Path $documentationRoot '*.md') -Destination $helpRoot -Force
 $oldDocumentation = @('README.md','FILE-COMPASS.md','ARCHIVES.md','ADVANCED-TOOLS.md','ARCHIVE-PLUGINS.md','CLOUD-STORAGE.md','DOCUMENT-PREVIEW.md','DUPLICATES-COMPARE.md','FILE-DETAILS.md','FILE-TOOLS.md','FOLDER-VIEWS.md','GOOGLE-OAUTH-PUBLISHER.md','LIBCURL-AUDIT.md','METADATA-SEARCH.md','NETWORK-PLUGINS.md','NETWORK-VALIDATION.md','THIRD-PARTY-NOTICES.md','UI-VALIDATION.md','WORKFLOW-FEATURES.md')

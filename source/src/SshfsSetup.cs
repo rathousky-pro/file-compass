@@ -58,7 +58,7 @@ namespace CommanderCZ
         }
         internal static string NewJob()
         {
-            string path = Path.Combine(AppPaths.ConfigDirectory, "sshfs-setup", Guid.NewGuid().ToString("N"));
+            string path = Path.Combine(AppPaths.DataDirectory, "sshfs-setup", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(path); return path;
         }
         internal static void Verify(SshfsPackage package, string path)

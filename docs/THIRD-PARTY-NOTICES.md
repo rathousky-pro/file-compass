@@ -1,6 +1,6 @@
 ﻿# Third-party notices
 
-Paths below refer to the packaged `config` directory unless a source path is stated. Original upstream license/copyright texts are retained with each component; this English inventory does not replace them.
+Paths below refer to the installation root unless a source path is stated. Original upstream license/copyright texts are retained with each component; this English inventory does not replace them.
 
 ## libcurl 8.22.0 and libssh2 1.11.1
 
@@ -26,7 +26,7 @@ File Compass uses a separate command-line process and the bundled codec. WinRAR 
 
 WPF UI / WPF UI Abstractions (lepo.co), MIT. The .NET Framework 4.7.2 libraries run under File Compass's .NET Framework 4.8 target. Microsoft dependencies: System.Memory 4.6.3, System.Buffers 4.6.1, System.Numerics.Vectors 4.6.1 and System.Runtime.CompilerServices.Unsafe 6.1.2 (MIT).
 
-Libraries are in `ui`, original notices in `ui/licenses`. `ui/manifest.json` records versions, official NuGet URLs and SHA-256. `CompactMenu.xaml` adapts WPF UI MenuItem for compact menus and retains its copyright notice. Other controls use library templates.
+Libraries are in `libraries`, original notices in `libraries/licenses`. `libraries/manifest.json` records versions, official NuGet URLs and SHA-256. `CompactMenu.xaml` adapts WPF UI MenuItem for compact menus and retains its copyright notice. Other controls use library templates.
 Source: https://github.com/lepoco/wpfui/releases/tag/4.3.0.
 
 # SharpSevenZip
@@ -34,42 +34,42 @@ Source: https://github.com/lepoco/wpfui/releases/tag/4.3.0.
 Managed wrapper: SharpSevenZip 2.0.128, LGPL-3.0-or-later.
 Source: https://github.com/JeremyAnsel/SharpSevenZip/tree/f4c16a6a95ace333fa33f38c1d69e44d77812eee
 Package: https://www.nuget.org/packages/SharpSevenZip/2.0.128
-License and package metadata: ui/licenses/SharpSevenZip.
+License and package metadata: libraries/licenses/SharpSevenZip.
 The wrapper is distributed as a separate unmodified DLL; it uses the existing bundled native 7z.dll.
 The pinned package and assembly hashes are in tools/fetch-archive-library.ps1 in the source distribution.
 
 # Microsoft Fluent UI System Icons
 
-Copyright Microsoft Corporation. MIT license: ui/licenses/FLUENT-ICONS-LICENSE.txt.
+Copyright Microsoft Corporation. MIT license: libraries/licenses/FLUENT-ICONS-LICENSE.txt.
 Source: https://github.com/microsoft/fluentui-system-icons
-Pinned revision: a347af95478f989038cccbf085978865264c048a (ui/licenses/FLUENT-ICONS-SOURCE.json).
+Pinned revision: a347af95478f989038cccbf085978865264c048a (libraries/licenses/FLUENT-ICONS-SOURCE.json).
 Original SVG and PNG sources are in source/ui/icons. Runtime action icons are bundled in icons/Actions.*.fvicons.
 Color variants are preserved; regular command icons use blue, amber, green or red
 according to their action. Asset import: tools/fetch-fluent-icons.cjs.
 
 
 # TagLibSharp 2.3.0
-Media metadata reader, LGPL-2.1. Source: https://github.com/mono/taglib-sharp/tree/TaglibSharp-2.3.0.0 . License: ui/licenses/TAGLIBSHARP-LICENSE.txt. NuGet package SHA-256: 3C3F5B55988F69E0BC84DC760FEB8351FEF4D5C09A322D88462E683D334DFBFC. The unmodified library remains a separate DLL and can be replaced.
+Media metadata reader, LGPL-2.1. Source: https://github.com/mono/taglib-sharp/tree/TaglibSharp-2.3.0.0 . License: libraries/licenses/TAGLIBSHARP-LICENSE.txt. NuGet package SHA-256: 3C3F5B55988F69E0BC84DC760FEB8351FEF4D5C09A322D88462E683D334DFBFC. The unmodified library remains a separate DLL and can be replaced.
 
 
 # AvalonEdit 6.3.1.120
-MIT; source https://github.com/icsharpcode/AvalonEdit/tree/v6.3.1 . License ui/licenses/AVALONEDIT-LICENSE.txt. NuGet package SHA-256 8AC3E5AA2BB6178D92CBE72C7900A683FAB0AEE66A8EAFA481611C444DBEE3E3.
+MIT; source https://github.com/icsharpcode/AvalonEdit/tree/v6.3.1 . License libraries/licenses/AVALONEDIT-LICENSE.txt. NuGet package SHA-256 8AC3E5AA2BB6178D92CBE72C7900A683FAB0AEE66A8EAFA481611C444DBEE3E3.
 
 # Markdig 0.37.0
-BSD-2-Clause; source https://github.com/xoofx/markdig/tree/0.37.0 . License ui/licenses/MARKDIG-LICENSE.txt. NuGet package SHA-256 9CFA31D3A2EB694D3164F1A3FAB41A040C698A22E784CD4D76E50489D5698335.
+BSD-2-Clause; source https://github.com/xoofx/markdig/tree/0.37.0 . License libraries/licenses/MARKDIG-LICENSE.txt. NuGet package SHA-256 9CFA31D3A2EB694D3164F1A3FAB41A040C698A22E784CD4D76E50489D5698335.
 
 # Everything SDK
 Copyright 2022 David Carpenter, MIT. Source and SDK https://www.voidtools.com/support/everything/sdk/ . License plugins/everything/LICENSE.txt. Downloaded SDK archive SHA-256 F5716D9513CCE6B462B5170A0A2E7E081E191D9BCAC6774F5DECC061497DF443. The optional search feature requires a separately running Everything; this distribution contains only its SDK DLL. No indexing service is installed or started.
 
 
-PdfPig 0.1.16 (Apache-2.0), https://github.com/UglyToad/PdfPig; Microsoft.Bcl.HashCode 6.0.0 (MIT). License texts and package metadata are in config/ui/licenses/.
+PdfPig 0.1.16 (Apache-2.0), https://github.com/UglyToad/PdfPig; Microsoft.Bcl.HashCode 6.0.0 (MIT). License texts and package metadata are in libraries/licenses/.
 
 ## rclone 1.75.2 — cloud storage
 
 Google Drive, OneDrive and Dropbox use official rclone for Windows x64.
 Source/license: https://github.com/rclone/rclone/tree/v1.75.2
 Package: https://downloads.rclone.org/v1.75.2/rclone-v1.75.2-windows-amd64.zip
-MIT license: `config/plugins/cloud/LICENSE.txt`; original documentation: `README.txt`. The executable hash is compiled into PluginHashes.cs and checked before execution. The package was checked against official SHA256SUMS; build-time downloads are under `source/downloads/rclone`.
+MIT license: `plugins/cloud/LICENSE.txt`; original documentation: `README.txt`. The executable hash is compiled into PluginHashes.cs and checked before execution. The package was checked against official SHA256SUMS; build-time downloads are under `source/downloads/rclone`.
 
 ## Local document preview
 
@@ -78,9 +78,9 @@ MIT license: `config/plugins/cloud/LICENSE.txt`; original documentation: `README
 - SheetJS Community Edition 0.20.3: Apache-2.0, https://cdn.sheetjs.com/
 - Microsoft.Web.WebView2 SDK 1.0.4258.31: Microsoft license; the system runtime is not bundled.
 
-Licenses are in `config/preview`. Documents render locally.
+Licenses are in `preview`. Documents render locally.
 
 ## SMART
 
-smartmontools 7.5 / smartctl.exe: GPLv2. License and corresponding source archive are in `config/plugins/smart`. The tool runs as a separate process.
+smartmontools 7.5 / smartctl.exe: GPLv2. License and corresponding source archive are in `plugins/smart`. The tool runs as a separate process.
 Source: https://github.com/smartmontools/smartmontools/releases/tag/RELEASE_7_5

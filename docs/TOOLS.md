@@ -1,4 +1,4 @@
-# Search, metadata and workflow tools
+﻿# Search, metadata and workflow tools
 
 ## Search and batch rename
 

@@ -83,8 +83,8 @@ namespace CommanderCZ
 
         void InitializeOperations(string testDirectory)
         {
-            durableQueue = new DurableQueue(DurableQueue.TestDirectory ?? testDirectory ?? AppPaths.ConfigDirectory);
-            operationJournal = new OperationJournal(Path.Combine(testDirectory ?? AppPaths.ConfigDirectory, "operations.xml"));
+            durableQueue = new DurableQueue(DurableQueue.TestDirectory ?? testDirectory ?? AppPaths.DataDirectory);
+            operationJournal = new OperationJournal(Path.Combine(testDirectory ?? AppPaths.DataDirectory, "operations.xml"));
             foreach (var record in operationJournal.Records) if (record.Copy != null) ConfigureCopyRetry(record, record.Copy);
         }
         void EnqueueCopy(CopyJob job)

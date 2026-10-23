@@ -1,6 +1,6 @@
-# Cloud storage: Google Drive, OneDrive and Dropbox
+﻿# Cloud storage: Google Drive, OneDrive and Dropbox
 
-New Google sign-ins use File Compass's publisher desktop OAuth configuration, `config/plugins/cloud/google-oauth.json`. Each user signs in with their own account without entering Client ID/Secret. Without publisher configuration, new Google sign-in is unavailable with an explanation. Existing accounts retain their old authorization identity until explicitly signed in again.
+New Google sign-ins use File Compass's publisher desktop OAuth configuration, `config/oauth/google.json`. Each user signs in with their own account without entering Client ID/Secret. Without publisher configuration, new Google sign-in is unavailable with an explanation. Existing accounts retain their old authorization identity until explicitly signed in again.
 
 ## Google registration status
 
@@ -38,6 +38,6 @@ Disconnect through Connections → Active connections or the connection-button c
 
 ## Local storage and protection
 
-Accounts are in `config/cloud`; each has an encrypted `rclone.conf` and a key protected with Windows DPAPI for the current user. Copying the program does not transfer usable authorization to another user/computer. Cloud directories have restricted permissions. Tokens are not process arguments or user log output.
+Accounts are in `data/cloud`; each has an encrypted `rclone.conf` and a key protected with Windows DPAPI for the current user. Copying the program does not transfer usable authorization to another user/computer. Cloud directories have restricted permissions. Tokens are not process arguments or user log output.
 
 A hidden local helper provides SFTP on `127.0.0.1` only, with per-account passwords and pinned host keys. It is not accessible from the LAN and stops with File Compass.

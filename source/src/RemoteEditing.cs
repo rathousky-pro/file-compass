@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -20,7 +20,7 @@ namespace CommanderCZ
         internal RemoteEditDocument(RemoteConnection browsing,string remote,string root = null)
         {
             template = browsing.TransferConnection(); RemotePath = RemoteConnection.Normalize(remote);
-            root = root ?? System.IO.Path.Combine(AppPaths.ConfigDirectory, "edits");
+            root = root ?? System.IO.Path.Combine(AppPaths.DataDirectory, "edits");
             string folder = Path.Combine(root,Guid.NewGuid().ToString("N")); TransferCheckpoint.RejectLink(root); Directory.CreateDirectory(folder);
             string name = RemoteConnection.Name(remote); FileOperations.ValidateName(name); LocalPath = Path.Combine(folder,name);
         }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -26,7 +26,7 @@ namespace CommanderCZ {
     }
     internal static partial class CloudStore {
         internal static string TestRoot;
-        internal static string Root {get{return TestRoot??Path.Combine(AppPaths.ConfigDirectory,"cloud");}}
+        internal static string Root {get{return TestRoot??Path.Combine(AppPaths.DataDirectory,"cloud");}}
         internal static string KeyFile {get{return Path.Combine(Root,"key.dat");}}
         internal static string Rclone {get{return Path.Combine(AppPaths.Resource("plugins"),"cloud","rclone.exe");}}
         internal static string AccountPath(CloudAccount a){

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -11,7 +11,7 @@ namespace CommanderCZ {
     internal static class CloudApplicationOAuth {
         internal const string FileCompass = "FileCompass";
         internal static string TestPath;
-        internal static string ConfigPath { get { return TestPath ?? Path.Combine(AppPaths.Resource("plugins"), "cloud", "google-oauth.json"); } }
+        internal static string ConfigPath { get { return TestPath ?? Path.Combine(AppPaths.ConfigDirectory, "oauth", "google.json"); } }
         internal static GoogleDesktopOAuthClient LoadGoogle() {
             string file = ConfigPath;
             if (!File.Exists(file)) throw new IOException(L.Text("cloud.applicationNotConfigured"));

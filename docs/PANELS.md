@@ -1,4 +1,4 @@
-# Panels, icons and previews
+﻿# Panels, icons and previews
 
 ## Layout and navigation
 
@@ -31,7 +31,7 @@ The ready state is shown after rendering. ZIP/RAR/7z in Auto show a read-only ar
 
 WebView2 Runtime is neither bundled nor automatically installed. When unavailable, rendering fails or the document exceeds 64 MB, a text/source fallback remains with an official [Microsoft runtime link](https://developer.microsoft.com/microsoft-edge/webview2/#download-section). Install separately and reopen the preview.
 
-Workbook limits: 200 sheets, 2,000 rows and 100 columns per sheet. Compressed documents: 10,000 entries and 128 MB declared expanded size. Files are processed locally, read-only, without retaining a source lock after loading. The renderer permits only the selected file and bundled scripts, blocking unrelated network requests, new windows and downloads. Libraries are bundled, not fetched from a CDN. Licenses are in `config/preview`. WebView2 profile/cache uses `%TEMP%/FileCompass/WebView2/<installation-id>`.
+Workbook limits: 200 sheets, 2,000 rows and 100 columns per sheet. Compressed documents: 10,000 entries and 128 MB declared expanded size. Files are processed locally, read-only, without retaining a source lock after loading. The renderer permits only the selected file and bundled scripts, blocking unrelated network requests, new windows and downloads. Libraries are bundled, not fetched from a CDN. Licenses are in `preview`. WebView2 profile/cache uses `%TEMP%/FileCompass/WebView2/<installation-id>`.
 
 ## HTML source and page preview
 
@@ -69,4 +69,4 @@ Action sets are `Actions.Fluent.fvicons` (Windows 11 color), `Actions.Flat.fvico
 
 Create shortcut with selected icon writes a `.lnk` referencing the shared library. For the taskbar, unpin the old item and pin the new shortcut; Windows can cache old pinned icons. Keep the library/application at a stable path. Shortcut Properties → Change icon can browse `FileCompass.Icons.dll`; an EXE's fixed embedded icon cannot be changed this way.
 
-File icons use Windows associations, including effective user registrations and registered icon resources, with recognizable fallbacks when needed. FVICONS are named-PNG data ZIPs, not executable assemblies. Icon DLLs are mapped as resources without executing code. Original app artwork is separate from third-party Fluent action icons; see `ui/licenses/FLUENT-ICONS-LICENSE.txt`.
+File icons use Windows associations, including effective user registrations and registered icon resources, with recognizable fallbacks when needed. FVICONS are named-PNG data ZIPs, not executable assemblies. Icon DLLs are mapped as resources without executing code. Original app artwork is separate from third-party Fluent action icons; see `libraries/licenses/FLUENT-ICONS-LICENSE.txt`.

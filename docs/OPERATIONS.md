@@ -1,4 +1,4 @@
-# File operations and synchronization
+﻿# File operations and synchronization
 
 ## Copy, move and delete
 
@@ -14,7 +14,7 @@ Select the original source files/folders and the same destination, then choose R
 
 Ownership/checkpoints bind the server, account, source/destination paths, source size/time and sampled block hashes. Changed sources or invalid partial data are rejected. New uploads use `.FileCompass-upload-…part`; supported checkpoints from older versions remain readable.
 
-A `.part.fcinfo.xml` sidecar describes original name, destination, length, modification time and transfer identifier. It contains no password or full local source path. This is descriptive only: safe resume also requires File Compass's verified local record in `config/transfers`. A filename or edited sidecar never authorizes adoption of another file. Successful completion removes the sidecar.
+A `.part.fcinfo.xml` sidecar describes original name, destination, length, modification time and transfer identifier. It contains no password or full local source path. This is descriptive only: safe resume also requires File Compass's verified local record in `data/transfers`. A filename or edited sidecar never authorizes adoption of another file. Successful completion removes the sidecar.
 
 The network batch plan and completed-item receipts are saved during work. Interrupted normal network batches remain recoverable after restarting File Compass or Windows. Startup offers recovery; Commands → Operations → Restore saved tasks opens it manually. Sources/connections are revalidated, and only unfinished items continue. Successful plans are removed. Provider/protocol limits still apply: cloud uploads and non-seekable SCP work may restart the current file.
 

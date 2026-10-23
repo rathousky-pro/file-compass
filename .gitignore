@@ -34,3 +34,6 @@ config/
 
 # Local AI notes, reports and development artifacts
 /ai-docs/
+
+# Runtime data from local portable installations
+/data/

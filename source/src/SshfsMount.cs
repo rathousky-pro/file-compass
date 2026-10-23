@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -23,7 +23,7 @@ namespace CommanderCZ
         static readonly object gate = new object();
         static readonly HashSet<string> pending = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         static readonly HashSet<string> ownedHere = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        static string Root { get { return TestRoot ?? System.IO.Path.Combine(AppPaths.ConfigDirectory, "sshfs"); } }
+        static string Root { get { return TestRoot ?? System.IO.Path.Combine(AppPaths.DataDirectory, "sshfs"); } }
         internal static string Executable()
         {
             string plugin = Path.Combine(AppPaths.Resource("plugins"), "sshfs", "bin", "sshfs.exe"); if (File.Exists(plugin)) return plugin;

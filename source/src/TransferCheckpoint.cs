@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -33,7 +33,7 @@ namespace CommanderCZ.NetworkTransport
             sourcePath = source; targetPath = target;
             string identity = options.Protocol + "\n" + options.FtpSecure + "\n" + options.HostName.ToLowerInvariant() + "\n" + options.PortNumber + "\n" + options.UserName + "\n" + options.SshHostKeyFingerprint + "\n" + upload + "\n" + source + "\n" + target;
             string id = Digest(Encoding.UTF8.GetBytes(identity));
-            string root = options.Raw("ResumeDirectory", TestRoot ?? System.IO.Path.Combine(AppPaths.ConfigDirectory, "transfers"));
+            string root = options.Raw("ResumeDirectory", TestRoot ?? System.IO.Path.Combine(AppPaths.DataDirectory, "transfers"));
             Directory.CreateDirectory(root); RejectLink(root);
             path = Path.Combine(root, id + ".xml"); string lockPath = Path.Combine(root, id + ".lock"); RejectLink(lockPath); RejectLink(path);
             try { lease = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }

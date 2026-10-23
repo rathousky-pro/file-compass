@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
@@ -20,7 +20,7 @@ namespace CommanderCZ
         const int MaximumBytes = 64 * 1024 * 1024;
         static readonly byte[] Magic = Encoding.ASCII.GetBytes("CCZST001");
         internal static string KeyPath
-        { get { return Path.Combine(TestDirectory ?? AppPaths.ConfigDirectory, "integrity.key"); } }
+        { get { return Path.Combine(TestDirectory ?? AppPaths.DataDirectory, "integrity.key"); } }
 
         static byte[] Key()
         {

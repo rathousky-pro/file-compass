@@ -1,6 +1,6 @@
-# File Compass user guide
+﻿# File Compass user guide
 
-File Compass is a Windows file manager by Rathousky.pro. Start **File Compass.exe** with its supporting `config` directory. WebView2 working data is stored in system TEMP.
+File Compass is a Windows file manager by Rathousky.pro. Start **File Compass.exe** with all supporting installation directories. Settings are in `config`, working/account data in `data`, translations in `languages`, .NET libraries in `libraries`, native tools in `plugins`, artwork in `icons`, renderer assets in `preview`, and this guide in `help`. WebView2 working data is stored in system TEMP.
 
 ## Getting started
 
@@ -12,7 +12,7 @@ File Compass is a Windows file manager by Rathousky.pro. Start **File Compass.ex
 
 ## Appearance and language
 
-Settings → Appearance offers light/dark/system themes, Solid/Mica/Mica Alt backgrounds and font-size arrows. Appearance and icon choices are previewed live; Cancel restores saved settings and Save persists them. Czech/English language changes require a restart. Mica requires supported Windows 11; unavailable effects fall back to a solid background.
+Settings → Appearance offers light/dark/system themes, Solid/Mica/Mica Alt backgrounds and font-size arrows. Appearance and icon choices are previewed live; Cancel restores saved settings and Save persists them. English is the default for a fresh installation; Czech remains available. Language changes require saving and restarting. Mica requires supported Windows 11; unavailable effects fall back to a solid background.
 
 ## Detailed guides
 
@@ -27,7 +27,7 @@ Connections has Network connections and Cloud storage tabs. Settings reuse the s
 
 ## Disk analyzer
 
-Open Commands → Disk usage → Disk analyzer, or the panel context menu. It scans the active panel's **current folder and all subfolders**, not automatically the drive root.
+Open Commands → Disk tools → Disk analyzer, or the panel context menu. It scans the active panel's **current folder and all subfolders**, not automatically the drive root.
 
 The tree shows folder byte totals and file counts. Selecting a folder changes its folder chart. Donut/pie and bar charts group by folders, extensions, categories, modification age or size ranges, using bytes or file counts. Category/extension/age/size statistics apply to the original analysis root displayed above the chart.
 
@@ -43,8 +43,8 @@ Sizes are logical lengths, not allocated space. Hard links can count more than o
 
 ## Disk health / SMART
 
-Commands → Disk usage → Disk health / SMART lists physical disks. Available data includes identification, volumes, temperature, SMART status, power-on hours/cycles, NVMe wear and read/write totals. SATA provides normalized/raw attributes; NVMe provides its health log. Unknown vendor attributes keep their original names. Missing values are identified, not estimated.
+Commands → Disk tools → Disk health / SMART lists physical disks. Available data includes identification, volumes, temperature, SMART status, power-on hours/cycles, NVMe wear and read/write totals. SATA provides normalized/raw attributes; NVMe provides its health log. Unknown vendor attributes keep their original names. Missing values are identified, not estimated.
 
 Refresh manually or every one/five minutes, copy details, or export TXT/JSON. NVMe remaining percentage is 100 minus reported percentage used, not a failure prediction. Some SATA disks do not provide reliable lifetime or byte-count summaries.
 
-smartmontools 7.5 runs as a separate `smartctl.exe`; GPLv2 license and corresponding source archive are in `config/plugins/smart`. Only diagnostics are read: no drive configuration changes or surface tests. If needed, elevation opens a separate SMART-only process; the main manager keeps its original privileges. Support depends on drive/controller/USB bridge. SMART does not replace backups.
+smartmontools 7.5 runs as a separate `smartctl.exe`; GPLv2 license and corresponding source archive are in `plugins/smart`. Only diagnostics are read: no drive configuration changes or surface tests. If needed, elevation opens a separate SMART-only process; the main manager keeps its original privileges. Support depends on drive/controller/USB bridge. SMART does not replace backups.

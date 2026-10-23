@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net48</TargetFramework>
@@ -16,7 +16,7 @@
     <Compile Include="src\*.cs" />
     <Reference Include="Microsoft.Web.WebView2.Core"><HintPath>ui\Microsoft.Web.WebView2.Core.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Microsoft.Web.WebView2.Wpf"><HintPath>ui\Microsoft.Web.WebView2.Wpf.dll</HintPath><Private>false</Private></Reference>
-    <Content Include="preview\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="config\preview\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Content Include="preview\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="preview\%(RecursiveDir)%(Filename)%(Extension)" />
     <Reference Include="Microsoft.Bcl.HashCode"><HintPath>ui\Microsoft.Bcl.HashCode.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UglyToad.PdfPig.Core"><HintPath>ui\UglyToad.PdfPig.Core.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UglyToad.PdfPig"><HintPath>ui\UglyToad.PdfPig.dll</HintPath><Private>false</Private></Reference>
@@ -37,14 +37,21 @@
     <Reference Include="System.Buffers"><HintPath>ui\System.Buffers.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="System.Numerics.Vectors"><HintPath>ui\System.Numerics.Vectors.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="System.Runtime.CompilerServices.Unsafe"><HintPath>ui\System.Runtime.CompilerServices.Unsafe.dll</HintPath><Private>false</Private></Reference>
-    <None Update="ui\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="config\%(Identity)" />
-    <None Update="languages\*.lng" CopyToOutputDirectory="PreserveNewest" TargetPath="config\%(Identity)" />
-    <None Update="languages\README.md" CopyToOutputDirectory="PreserveNewest" TargetPath="config\%(Identity)" />
+    <Content Include="ui\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="libraries\%(RecursiveDir)%(Filename)%(Extension)" />
+    <None Update="languages\*.lng" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />
+    <None Update="languages\README.md" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />
     <None Update="THIRD-PARTY-NOTICES.md" CopyToOutputDirectory="PreserveNewest" />
-    <None Update="plugins\cloud\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="config\%(Identity)" />
-    <None Update="plugins\7zip\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="config\%(Identity)" />
-    <None Update="plugins\network\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="config\%(Identity)" />
-    <Content Include="..\bin\config\icons\*.dll" Link="config\icons\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="plugins\cloud\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />
+    <None Update="plugins\7zip\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />
+    <None Update="plugins\network\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />
+    <Content Include="..\bin\icons\*.dll" Link="icons\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="plugins\cloud\google-oauth.json" CopyToOutputDirectory="Never" />
+    <Content Include="plugins\cloud\google-oauth.json" Condition="Exists('plugins\cloud\google-oauth.json')" CopyToOutputDirectory="PreserveNewest" TargetPath="config\oauth\google.json" />
+    <Content Include="..\docs\*.md" Link="help\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="plugins\smart\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />
+    <None Update="plugins\sshfs\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />
   </ItemGroup>
   <Target Name="GeneratePluginHashes" BeforeTargets="BeforeCompile;CoreCompile">
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\gen-plugin-hashes.ps1&quot;" />

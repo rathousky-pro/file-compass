@@ -1,4 +1,4 @@
-# Archives and optional archivers
+﻿# Archives and optional archivers
 
 File Compass browses archives as folders and uses the bundled 7-Zip engine for supported formats. ZIP, 7z, TAR/GZ and supported external RAR/ARJ/LHA creation are available according to the selected format/tool. Existing ARJ/LHA/TAR archives have read-only limitations. Archive operations enforce path, entry-count, memory, elapsed-time, expanded-size, free-space and nesting limits configurable in Settings → Archives. Passwords remain outside worker command-line arguments.
 
@@ -8,7 +8,7 @@ Compression progress shows the current file, operation completion and compressio
 
 Settings → Archives can find an existing installation, select an EXE, or open Get add-on / Get WinRAR/RAR. Download begins only in the separate download window. Existing configured/common/PATH installations are used without downloading.
 
-ARJ32 and LHa are prepared under `config/plugins/archivers` beside the program, without modifying Windows or Program Files. The window is modeless and supports cancellation. Completion saves the path; manually configured paths remain supported.
+ARJ32 and LHa are prepared under `plugins/archivers` beside the program, without modifying Windows or Program Files. The window is modeless and supports cancellation. Completion saves the path; manually configured paths remain supported.
 
 WinRAR uses RARLAB's original installer. After downloading, choose Run installer and complete its normal installation steps. File Compass does not run it automatically, install silently or redistribute a standalone Rar.exe. It subsequently searches for the installation; use Find WinRAR if installation is still running.
 

@@ -49,7 +49,7 @@ namespace CommanderCZ
             {
                 path = path ?? ConfigPath; if (!File.Exists(path)) return new ProgramSettings();
                 using (var reader = XmlReader.Create(path, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null }))
-                    return (ProgramSettings)new XmlSerializer(typeof(ProgramSettings)).Deserialize(reader);
+                    { var saved=(ProgramSettings)new XmlSerializer(typeof(ProgramSettings)).Deserialize(reader); saved.ImageViewerPath=AppPaths.ResolveLegacyResourceFile(saved.ImageViewerPath); saved.MediaPlayerPath=AppPaths.ResolveLegacyResourceFile(saved.MediaPlayerPath); saved.TextEditorPath=AppPaths.ResolveLegacyResourceFile(saved.TextEditorPath); return saved; }
             }
             catch (Exception ex) { if (!(ex is IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException || ex is XmlException)) throw; return new ProgramSettings(); }
         }

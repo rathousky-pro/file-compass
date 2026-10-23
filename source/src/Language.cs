@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -13,15 +13,19 @@ namespace CommanderCZ
         static readonly object gate = new object();
         static Dictionary<string, string> baseline, selected, reverse;
         public static string Language { get; private set; }
+        internal const string DefaultLanguage = "en";
+        internal static string StartupLanguage(string environment, string saved) {
+            return !String.IsNullOrWhiteSpace(environment) ? environment : !String.IsNullOrWhiteSpace(saved) ? saved.Trim() : DefaultLanguage;
+        }
         public static void Initialize() { Ensure(); }
         internal static string PreferredLanguage {
-            get { string path = Path.Combine(AppPaths.Resource("languages"), "language.txt"); if (File.Exists(path)) { string name = File.ReadAllText(path).Trim(); if (name == "en" || name == "cs-CZ") return name; } return Language; }
+            get { string path = Path.Combine(AppPaths.ConfigDirectory, "language.txt"); if (File.Exists(path)) { string name = File.ReadAllText(path).Trim(); if (name == "en" || name == "cs-CZ") return name; } return Language; }
         }
         internal static void SaveSelection(string name, string folder = null) {
             if (name != "cs-CZ" && name != "en") throw new ArgumentException("Unsupported language.");
-            folder = folder ?? AppPaths.Resource("languages");
+            bool explicitFolder = folder != null; folder = folder ?? AppPaths.Resource("languages");
             Read(Path.Combine(folder, name + ".lng"));
-            string path = Path.Combine(folder, "language.txt"), temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            string path = Path.Combine(explicitFolder ? folder : AppPaths.ConfigDirectory, "language.txt"), temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
             try {
                 File.WriteAllText(temp, name, new UTF8Encoding(false));
                 if (File.Exists(path)) File.Replace(temp, path, null); else File.Move(temp, path);
@@ -42,9 +46,8 @@ namespace CommanderCZ
                 string folder = Path.Combine(AppPaths.Resource("languages"));
                 var original = Read(Path.Combine(folder, "cs-CZ.lng"));
                 string name = Environment.GetEnvironmentVariable("COMMANDERCZ_LANGUAGE");
-                string config = Path.Combine(folder, "language.txt");
-                if (String.IsNullOrWhiteSpace(name) && File.Exists(config)) name = File.ReadAllText(config).Trim();
-                if (String.IsNullOrWhiteSpace(name)) name = "cs-CZ";
+                string config = Path.Combine(AppPaths.ConfigDirectory, "language.txt");
+                name = StartupLanguage(name, File.Exists(config) ? File.ReadAllText(config) : null);
                 if (name.Length > 40 || name.Any(c => !(Char.IsLetterOrDigit(c) || c == '-'))) throw new IOException("Invalid language identifier.");
                 var translation = name == "cs-CZ" ? original : Read(Path.Combine(folder, name + ".lng"));
                 Apply(original, translation, name);

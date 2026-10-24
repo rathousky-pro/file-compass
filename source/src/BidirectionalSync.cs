@@ -4,7 +4,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal sealed partial class SyncRow
     {

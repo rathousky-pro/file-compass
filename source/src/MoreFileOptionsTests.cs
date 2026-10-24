@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class MoreFileOptionsTests
     {
@@ -40,7 +40,7 @@ namespace CommanderCZ
                 check(panel.CurrentPath == disk, "root preference overrides remembered drive folder");
                 settings.DriveAlwaysRoot = false; panel.ApplyDisplaySettings(settings); panel.SelectDrive(disk); NavigationTests.Wait(panel.NavigationTask);
                 check(panel.CurrentPath == data, "last-folder preference uses remembered drive folder");
-                settings.WindowsMouseSelection = false; panel.ApplyDisplaySettings(settings); check(panel.List.SelectionMode == SelectionMode.Single, "Commander selection can be restored");
+                settings.WindowsMouseSelection = false; panel.ApplyDisplaySettings(settings); check(panel.List.SelectionMode == SelectionMode.Single, "File Compass selection can be restored");
                 DateTime expected = new DateTime(2020, 2, 3, 12, 30, 0, DateTimeKind.Utc); File.SetLastWriteTimeUtc(first, expected.AddDays(-1)); File.SetLastWriteTimeUtc(second, expected);
                 string zip = Path.Combine(root, "dated.zip"); ArchiveEngine.Create(zip, new[] { first, second }, new ArchiveSettings(), CancellationToken.None, null, new ArchivePackOptions { NewestFileDate = true });
                 check(File.GetLastWriteTimeUtc(zip) == expected, "new archive timestamp equals newest input file");

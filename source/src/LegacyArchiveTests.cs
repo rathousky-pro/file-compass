@@ -4,7 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Threading;
 using System.Windows.Controls;
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class LegacyArchiveTests
     {

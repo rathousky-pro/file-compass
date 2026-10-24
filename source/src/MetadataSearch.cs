@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
-namespace CommanderCZ {
+namespace FileCompass {
     public sealed class MetadataSearchCondition {
         public string Field="width", Operator="gt", Value="";
     }

@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static class ZipProgressTests {
         internal static int Run(string root) {
             Directory.CreateDirectory(root);var checks=new List<string>();Window owner=null;

@@ -6,7 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-namespace CommanderCZ {
+namespace FileCompass {
 internal static class FileIconTests {
 static byte[] Pixels(ImageSource image){var visual=new DrawingVisual();using(var d=visual.RenderOpen())d.DrawImage(image,new Rect(0,0,24,24));var bmp=new RenderTargetBitmap(24,24,96,96,PixelFormats.Pbgra32);bmp.Render(visual);var bytes=new byte[24*24*4];bmp.CopyPixels(bytes,24*4,0);return bytes;}
 internal static int Run(string root){Directory.CreateDirectory(root);var checks=new List<string>();Window window=null;try{

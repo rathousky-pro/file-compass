@@ -9,7 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public static partial class DesktopIcons
     {

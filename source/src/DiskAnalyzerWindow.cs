@@ -10,7 +10,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 
-namespace CommanderCZ {
+namespace FileCompass {
     internal sealed class DiskChartRow {
         public string Name { get; set; }
         internal HashSet<string> Keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase); internal string Key;
@@ -34,7 +34,7 @@ namespace CommanderCZ {
         internal Task ScanTask;
         internal DiskAnalyzerWindow(Window owner,string initial,Action<string> openFolder) {
             path=initial; navigate=openFolder; CopyUi.Style(this,owner,L.Text("analyzer.title"),1160);
-            SizeToContent=SizeToContent.Manual; ResizeMode=ResizeMode.CanResize;
+            SizeToContent=SizeToContent.Manual; ResizeMode=ResizeMode.CanResize;ConfigureFolderRows();
             var work=SystemParameters.WorkArea; Width=Math.Min(1160,work.Width-32); Height=Math.Min(820,work.Height-32); MinWidth=Math.Min(780,Width); MinHeight=Math.Min(520,Height);
             var body=new DockPanel { Margin=new Thickness(12) }; Content=body;
             var header=new StackPanel(); DockPanel.SetDock(header,Dock.Top); body.Children.Add(header);
@@ -77,10 +77,11 @@ namespace CommanderCZ {
             var column=new DataGridTextColumn{Header=title,Binding=data,SortMemberPath=binding=="Size"?"Bytes":binding=="Share"?"Value":binding,Width=new DataGridLength(width,DataGridLengthUnitType.Star)};
             if(binding=="RelativePath"){var style=new Style(typeof(TextBlock));style.Setters.Add(new Setter(TextBlock.TextTrimmingProperty,TextTrimming.CharacterEllipsis));style.Setters.Add(new Setter(FrameworkElement.ToolTipProperty,new Binding("Path")));column.ElementStyle=style;}grid.Columns.Add(column);
         }
-        TreeViewItem FolderItem(DiskFolder folder) {
-            var item=new TreeViewItem { Header=folder.Name+"   ·   "+folder.Size+"   ·   "+folder.Files.ToString("N0"),Tag=folder,ToolTip=folder.Path };
+        TreeViewItem FolderItem(DiskFolder folder,int depth=0) {
+            var item=new TreeViewItem { Header=FolderHeader(folder),Style=folderRowStyle,Padding=new Thickness(Math.Min(depth*16,96),0,0,0),Tag=folder,ToolTip=folder.Path };
+            System.Windows.Automation.AutomationProperties.SetName(item,(String.IsNullOrEmpty(folder.Name)?folder.Path:folder.Name)+", "+folder.Size+", "+folder.Files.ToString("N0")+" "+L.Text("analyzer.files"));
             if(folder.Children.Count>0) {
-                item.Items.Add(new TreeViewItem()); item.Expanded+=delegate(object sender,RoutedEventArgs args) { if(args.OriginalSource!=item||item.Items.Count!=1||((TreeViewItem)item.Items[0]).Tag!=null)return;item.Items.Clear();foreach(var child in folder.Children.OrderByDescending(x=>x.Bytes).ThenBy(x=>x.Name))item.Items.Add(FolderItem(child)); };
+                item.Items.Add(new TreeViewItem()); item.Expanded+=delegate(object sender,RoutedEventArgs args) { if(args.OriginalSource!=item||item.Items.Count!=1||((TreeViewItem)item.Items[0]).Tag!=null)return;item.Items.Clear();foreach(var child in folder.Children.OrderByDescending(x=>x.Bytes).ThenBy(x=>x.Name))item.Items.Add(FolderItem(child,depth+1)); };
             }
             return item;
         }

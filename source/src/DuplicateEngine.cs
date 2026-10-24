@@ -4,7 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Threading;
-namespace CommanderCZ {
+namespace FileCompass {
  internal sealed class DuplicateFile {
   public bool Selected {get;set;}
   public int Group {get;set;}

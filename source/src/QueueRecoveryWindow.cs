@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public partial class MainWindow
     {
@@ -83,7 +83,7 @@ namespace CommanderCZ
             var connection = new RemoteConnection(profile); try {
                 bool retryPassword = false;
                 try { await Task.Run(delegate { connection.Open(connection.Options(password)); }); }
-                catch (CommanderCZ.NetworkTransport.SessionRemoteException ex) {
+                catch (FileCompass.NetworkTransport.SessionRemoteException ex) {
                     if (!profile.IsSshTransfer || !String.IsNullOrEmpty(password) || ex.ToString().IndexOf(L.Text("network.authenticationRejectedMatch"),StringComparison.OrdinalIgnoreCase) < 0) throw;
                     retryPassword = true;
                 }

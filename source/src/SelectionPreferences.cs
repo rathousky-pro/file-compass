@@ -1,6 +1,6 @@
 using System.Linq;
 using System.Windows.Controls;
-namespace CommanderCZ
+namespace FileCompass
 {
     public partial class FilePanel
     {

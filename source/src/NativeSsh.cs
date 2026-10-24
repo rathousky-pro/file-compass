@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
-namespace CommanderCZ.NetworkTransport
+namespace FileCompass.NetworkTransport
 {
     internal sealed class NativeSsh : IDisposable
     {
@@ -25,11 +25,7 @@ namespace CommanderCZ.NetworkTransport
         internal NativeSsh(SessionOptions settings, Action cancellation, Action<int> charge = null) { traffic = charge; options = settings; check = cancellation; encoding = settings.Raw("Utf", "2") == "0" ? Encoding.Default : Encoding.UTF8; }
         internal static bool Trusted(string expected, byte[] key)
         {
-            if (String.IsNullOrWhiteSpace(expected) || expected.Trim() == "*") return false;
-            string algorithm = KeyAlgorithm(key), value = expected.Trim(), hash = value.Substring(value.LastIndexOf(' ') + 1);
-            if (value.Contains(" ") && !value.StartsWith(algorithm + " ", StringComparison.Ordinal)) return false;
-            using (var sha = SHA256.Create()) if (hash.Replace("SHA256:", "").TrimEnd('=') == Convert.ToBase64String(sha.ComputeHash(key)).TrimEnd('=')) return true;
-            using (var md5 = MD5.Create()) return hash.Replace("MD5:", "").Equals(BitConverter.ToString(md5.ComputeHash(key)).Replace('-', ':').ToLowerInvariant(), StringComparison.OrdinalIgnoreCase);
+            return SshHostPin.Trusted(expected,key);
         }
         static string KeyAlgorithm(byte[] key) { if (key.Length < 4) throw new IOException(L.Text("ssh.invalidKey")); int n = (key[0] << 24) | (key[1] << 16) | (key[2] << 8) | key[3]; if (n < 1 || n > key.Length - 4) throw new IOException(L.Text("ssh.invalidKey")); return Encoding.ASCII.GetString(key, 4, n); }
         internal void OpenCore(bool probe)
@@ -55,7 +51,7 @@ namespace CommanderCZ.NetworkTransport
             Retry(delegate { return NativeNetwork.libssh2_session_handshake(session, socket.Handle); });
             UIntPtr length; int type; IntPtr hostKey = NativeNetwork.libssh2_session_hostkey(session, out length, out type);
             if (hostKey == IntPtr.Zero) throw new IOException(L.Text("ssh.serverKeyMissing")); var key = new byte[checked((int)length.ToUInt64())]; Marshal.Copy(hostKey, key, 0, key.Length);
-            using (var sha = SHA256.Create()) Fingerprint = KeyAlgorithm(key) + " " + Convert.ToBase64String(sha.ComputeHash(key)).TrimEnd('=');
+            using (var sha = SHA256.Create()) Fingerprint = KeyAlgorithm(key) + " SHA256:" + Convert.ToBase64String(sha.ComputeHash(key)).TrimEnd('=');
             KnownHostKey = KeyAlgorithm(key) + " " + Convert.ToBase64String(key);
             if (probe) return;
             if (!Trusted(options.SshHostKeyFingerprint, key)) throw new SessionRemoteException(L.Text("ssh.hostKeyMismatch"));
@@ -72,7 +68,8 @@ namespace CommanderCZ.NetworkTransport
                     {
                         IntPtr prompt = Marshal.ReadIntPtr(prompts,i*16); int promptLength = Math.Max(0,Math.Min(65536,Marshal.ReadInt32(prompts,i*16+8)));
                         var label = new byte[promptLength]; if(promptLength>0) Marshal.Copy(prompt,label,0,promptLength); string text=Encoding.UTF8.GetString(label);
-                        var bytes=NativeNetwork.Bytes(text.IndexOf("password",StringComparison.OrdinalIgnoreCase)>=0 || text.IndexOf(L.Code("ssh.passwordPromptMatch"),StringComparison.OrdinalIgnoreCase)>=0 ? options.Password : "");
+                        bool echo=Marshal.ReadByte(prompts,i*16+12)!=0;
+                        var bytes=NativeNetwork.Bytes(!echo && (text.IndexOf("password",StringComparison.OrdinalIgnoreCase)>=0 || text.IndexOf(L.Code("ssh.passwordPromptMatch"),StringComparison.OrdinalIgnoreCase)>=0) ? options.Password : "");
                         IntPtr memory = NativeNetwork.cn_alloc((UIntPtr)bytes.Length);
                         if(memory!=IntPtr.Zero) Marshal.Copy(bytes,0,memory,bytes.Length);
                         Marshal.WriteIntPtr(responses,i*16,memory); Marshal.WriteInt32(responses,i*16+8,memory==IntPtr.Zero ? 0 : bytes.Length-1); Array.Clear(bytes,0,bytes.Length);
@@ -185,7 +182,7 @@ namespace CommanderCZ.NetworkTransport
         internal RemoteDirectoryInfo ListCore(string path)
         {
             Sftp(); var b = PathBytes(path); var directory = Obtain(delegate { return NativeNetwork.libssh2_sftp_open_ex(sftp, b, (uint)b.Length, 0, 0, 1); }); var result = new RemoteDirectoryInfo();
-            try { var buffer = new byte[65536]; while (true) { var attrs = new NativeNetwork.Attributes(); int count = Retry(delegate { return NativeNetwork.libssh2_sftp_readdir_ex(directory, buffer, (UIntPtr)buffer.Length, IntPtr.Zero, UIntPtr.Zero, out attrs); }); if (count == 0) break; string name = encoding.GetString(buffer, 0, count); if (name != "." && name != "..") result.Files.Add(Info(RemoteConnection.Combine(path, name), attrs)); } }
+            try { var buffer = new byte[65536]; while (true) { var attrs = new NativeNetwork.Attributes(); int count = Retry(delegate { return NativeNetwork.libssh2_sftp_readdir_ex(directory, buffer, (UIntPtr)buffer.Length, IntPtr.Zero, UIntPtr.Zero, out attrs); }); if (count == 0) break; string name = encoding.GetString(buffer, 0, count); if (name == "." || name == "..") continue; RemoteConnection.ValidateRemoteName(name); result.Files.Add(Info(RemoteConnection.Combine(path, name), attrs)); } }
             finally { Retry(delegate { return NativeNetwork.libssh2_sftp_close_handle(directory); }); } return result;
         }
         internal void MkdirCore(string path) { Sftp(); var b = PathBytes(path); Retry(delegate { return NativeNetwork.libssh2_sftp_mkdir_ex(sftp,b,(uint)b.Length,493); }); }

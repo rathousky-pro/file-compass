@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Web.Script.Serialization;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public sealed class FilePartInfo { public string Name, Hash; public long Length; }
     public sealed class FilePartsManifest { public int Version = 1; public string Name, Hash; public long Length, PartSize; public List<FilePartInfo> Parts = new List<FilePartInfo>(); }

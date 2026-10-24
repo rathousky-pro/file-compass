@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-namespace CommanderCZ {
+namespace FileCompass {
     internal sealed partial class QuickPreviewPane {
         DocumentPreview documentPreview;
         bool documentReady, documentLoading, documentDetailsLoading;

@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using CommanderCZ.NetworkTransport;
+using FileCompass.NetworkTransport;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal sealed class SyncLocation : IDisposable
     {

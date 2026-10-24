@@ -4,7 +4,7 @@ using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web.Script.Serialization;
-namespace CommanderCZ {
+namespace FileCompass {
     // Publisher configuration, shared by all users. User tokens remain per account.
     internal sealed class GoogleDesktopOAuthDocument { public GoogleDesktopOAuthClient installed { get; set; } }
     internal sealed class GoogleDesktopOAuthClient { public string client_id { get; set; } public string client_secret { get; set; } }

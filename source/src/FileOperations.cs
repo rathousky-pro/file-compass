@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     // All operations deliberately fail on collisions; never overwrite user data.
     public static class FileOperations
@@ -40,6 +40,7 @@ namespace CommanderCZ
                     output.Flush(true);
                 }
                 File.SetLastWriteTimeUtc(target, File.GetLastWriteTimeUtc(source));
+                AttachmentSecurity.WriteZone(target, AttachmentSecurity.ReadZone(source));
             }
             catch
             {
@@ -90,10 +91,9 @@ namespace CommanderCZ
                 throw new IOException(L.Text("fileOperation.reservedWindowsName"));
         }
 
-        private static void RejectLink(string path)
+        internal static void RejectLink(string path)
         {
-            if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
-                throw new IOException(L.Text("fileOperation.reparsePointUnsupportedPrefix") + path);
+            PathSafety.RejectLinks(path);
         }
     }
 }

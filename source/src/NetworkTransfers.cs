@@ -1,8 +1,8 @@
 using System;
 using System.IO;
-using CommanderCZ.NetworkTransport;
+using FileCompass.NetworkTransport;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public enum NetworkCopyRule { Reject, Skip, Overwrite, Resume }
     public sealed class NetworkCopyResult { public int Copied, Skipped; }
@@ -53,6 +53,7 @@ namespace CommanderCZ
                     foreach (var child in source.Session.ListDirectory(entry.FullPath).Files)
                     {
                         if (child.Name == "." || child.Name == "..") continue;
+                        RemoteConnection.ValidateRemoteName(child.Name); FileOperations.ValidateName(child.Name);
                         if (child.FileType == 'L') throw new IOException(L.Text("transfer.linkUnsupportedPrefix") + child.FullName);
                         Copy(new Entry { FullPath = child.FullName, IsDirectory = child.IsDirectory }, source, null, destination, rule, result, skipped, check, fileComplete, resolveError);
                     }

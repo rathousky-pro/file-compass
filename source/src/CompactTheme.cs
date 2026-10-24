@@ -3,7 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public static class CompactTheme
     {

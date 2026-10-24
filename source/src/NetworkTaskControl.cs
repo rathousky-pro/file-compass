@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal sealed class TransientNetworkException : IOException { internal TransientNetworkException(string message) : base(message) { } }
     internal static class NetworkRetry

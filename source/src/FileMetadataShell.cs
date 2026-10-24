@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static partial class FileMetadata {
         static object ShellCall(object obj,string method,params object[] args){return obj.GetType().InvokeMember(method,BindingFlags.InvokeMethod,null,obj,args);}
         static void Shell(string path,FileDetails d) {

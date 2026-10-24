@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-namespace CommanderCZ {
+namespace FileCompass {
     internal sealed class DiskScanOptions {
         internal long MinimumBytes;
         internal double MinimumAgeDays;
@@ -32,9 +32,15 @@ namespace CommanderCZ {
         static bool Mask(string name,string mask) { return Regex.IsMatch(name,"^"+Regex.Escape(mask).Replace("\\*",".*").Replace("\\?",".")+"$",RegexOptions.IgnoreCase|RegexOptions.CultureInvariant); }
     }
     internal static class DiskFileIndex {
+        internal static string CreatePath() {
+            string folder=Path.Combine(AppPaths.DataDirectory,"analyzer-index");CloudStore.SecureDirectory(folder);
+            return Path.Combine(folder,Guid.NewGuid().ToString("N")+".idx");
+        }
         internal static bool Within(string path,string folder) { return String.Equals(path.TrimEnd('\\'),folder.TrimEnd('\\'),StringComparison.OrdinalIgnoreCase)||path.StartsWith(folder.TrimEnd('\\')+"\\",StringComparison.OrdinalIgnoreCase); }
         internal static IEnumerable<DiskLargeFile> Read(string path,CancellationToken token) {
-            using(var file=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.ReadWrite|FileShare.Delete))using(var reader=new BinaryReader(file,Encoding.UTF8)) {
+            // ShareWrite is required to read snapshots while the scanner's write handle is open.
+            // That handle itself only shares reads, so another writer or deleter is rejected.
+            using(var file=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.ReadWrite))using(var reader=new BinaryReader(file,Encoding.UTF8)) {
                 long end=file.Length;
                 while(file.Position<end) {token.ThrowIfCancellationRequested();DiskLargeFile row;
                     try { row=new DiskLargeFile{Path=reader.ReadString(),Bytes=reader.ReadInt64(),Modified=new DateTime(reader.ReadInt64(),DateTimeKind.Utc).ToLocalTime()}; }

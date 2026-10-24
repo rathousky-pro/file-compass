@@ -5,7 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public sealed class ArchivePackOptions
     {
@@ -88,7 +88,7 @@ namespace CommanderCZ
                     if (picker.ShowDialog() == System.Windows.Forms.DialogResult.OK) target.Text = Path.Combine(picker.SelectedPath, Path.GetFileName(target.Text));
             }));
             var cancel = CopyUi.Button(L.Text("action.cancel"), delegate { DialogResult = false; }); cancel.IsCancel = true; buttons.Children.Add(cancel);
-            buttons.Children.Add(CopyUi.Button(L.Text("action.help"), delegate { MessageBox.Show(this, L.Text("archive.packDialogHelp"), L.Text("archive.compressFilesTitle")); }));
+            buttons.Children.Add(CopyUi.Button(L.Text("action.help"), delegate { HelpService.Open(this,"archives"); }));
             Loaded += delegate { target.Focus(); target.SelectAll(); };
         }
         internal static string ChangeFormat(string path, string format)

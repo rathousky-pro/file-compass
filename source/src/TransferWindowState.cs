@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Threading;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     // Sending an owned, taskbar-less WPF window through native minimization
     // creates a caption-sized desktop icon. Queueing is hiding, not minimizing.

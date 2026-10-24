@@ -7,7 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using ICSharpCode.AvalonEdit;
-namespace CommanderCZ {
+namespace FileCompass {
  internal static class HtmlPreviewTests {
   internal static int Run(string root) {
    Directory.CreateDirectory(root);var passed=new List<string>();QuickPreviewPane pane=null;Window host=null;

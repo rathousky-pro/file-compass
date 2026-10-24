@@ -1,6 +1,6 @@
 using System;
 using System.Windows.Media;
-namespace CommanderCZ
+namespace FileCompass
 {
     public partial class FilePanel
     {

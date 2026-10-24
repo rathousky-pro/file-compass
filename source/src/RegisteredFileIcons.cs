@@ -6,7 +6,7 @@ using System.Windows.Media;
 using System.Windows.Interop;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
-namespace CommanderCZ {
+namespace FileCompass {
     public static partial class DesktopIcons {
         [DllImport("shell32.dll",CharSet=CharSet.Unicode)]static extern uint ExtractIconEx(string file,int index,IntPtr[] large,IntPtr[] small,uint count);
         static ImageSource RegisteredFileIcon(string extension,string actual) {

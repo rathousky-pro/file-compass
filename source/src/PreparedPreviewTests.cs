@@ -9,7 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Threading;
 using System.Diagnostics;
 using System.Net.Sockets;
-namespace CommanderCZ {
+namespace FileCompass {
  internal static class PreparedPreviewTests {
   static void Wait(Task task){NavigationTests.Wait(task);}
   static void Until(Func<bool> condition){var end=DateTime.UtcNow.AddSeconds(10);while(!condition()&&DateTime.UtcNow<end){Dispatcher.CurrentDispatcher.Invoke(DispatcherPriority.Background,new Action(delegate{}));Thread.Sleep(20);}if(!condition())throw new Exception("Timeout");}

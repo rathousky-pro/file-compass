@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-namespace CommanderCZ {
+namespace FileCompass {
     internal sealed partial class QuickPreviewPane {
         readonly Expander detailsExpander=new Expander {IsExpanded=false,Margin=new Thickness(0,4,0,2),Visibility=Visibility.Collapsed};
         readonly TextBlock detailsHeader=new TextBlock {TextTrimming=TextTrimming.CharacterEllipsis};

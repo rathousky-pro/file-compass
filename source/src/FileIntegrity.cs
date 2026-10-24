@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Xml;
 using System.Xml.Serialization;
-namespace CommanderCZ
+namespace FileCompass
 {
     /// <summary>
     /// State files use HMAC-SHA256 with a key protected by DPAPI for the current user.
@@ -12,6 +12,7 @@ namespace CommanderCZ
     /// </summary>
     internal static class FileIntegrity
     {
+        // Persisted protocol identifier: changing it would invalidate existing user keys.
         static readonly byte[] Entropy = Encoding.UTF8.GetBytes("CommanderCZ.integrity-key.v1");
         static readonly object gate = new object();
         static byte[] key;

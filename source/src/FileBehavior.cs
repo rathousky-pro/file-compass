@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class FileBehavior
     {

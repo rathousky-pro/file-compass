@@ -12,7 +12,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using Microsoft.Win32;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public enum DiffLineKind { Equal, Modified, Added, Removed }
 

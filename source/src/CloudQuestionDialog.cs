@@ -3,12 +3,13 @@ using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-namespace CommanderCZ {
+namespace FileCompass {
     internal sealed class CloudQuestionDialog : Window {
         readonly CloudOption option;
         readonly StackPanel answers = new StackPanel();
         readonly ComboBox combo;
         readonly PasswordBox secret;
+        readonly TextBox appleAccount;
         internal CloudQuestionDialog(Window owner, CloudQuestion question) {
             option = question.Option;
             CopyUi.Style(this, owner, L.Text("cloud.chooseStorage"), 620);
@@ -31,6 +32,12 @@ namespace CommanderCZ {
                 explanation = year.Success ? L.Format("cloud.sharedClientHelp", year.Groups[1].Value) : L.Text("cloud.sharedClientHelpUndated");
             } else if (option.Name == "client_id") { heading = L.Text("cloud.clientIdQuestion"); explanation = L.Text("cloud.clientIdHelp"); }
             else if (option.Name == "client_secret") { heading = L.Text("cloud.clientSecretQuestion"); explanation = L.Text("cloud.clientSecretHelp"); }
+            if(question.Provider==CloudICloud.Provider){
+                Title="iCloud Drive";
+                string key=option.Name=="apple_id"?"icloudAppleId":option.Name=="password"?"icloudPassword":option.Name=="config_2fa_phone"?"icloudPhone":option.Name=="config_2fa_sms"?"icloudSms":option.Name=="config_2fa"?"icloudCode":null;
+                if(key!=null)heading=L.Text("cloud."+key);
+                explanation=key==null?L.Text("cloud.icloudHelp"):null;
+            }
             stack.Children.Add(new TextBlock { Text = String.IsNullOrWhiteSpace(heading) ? L.Text("cloud.questionFallback") : heading.Trim(), TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 10) });
             if (explanation != null) stack.Children.Add(new TextBlock { Text = explanation, TextWrapping = TextWrapping.Wrap, Foreground = FluentTheme.Muted, Margin = new Thickness(0, 0, 0, 12) });
             if (!String.IsNullOrWhiteSpace(question.Error)) stack.Children.Add(new TextBlock { Text = question.Error, TextWrapping = TextWrapping.Wrap, Foreground = CompactTheme.ThemeBrush("#B92331") });
@@ -39,6 +46,7 @@ namespace CommanderCZ {
             string initial = option.Default is bool ? ((bool)option.Default ? "true" : "false") : Convert.ToString(option.Default, CultureInfo.InvariantCulture);
             bool yesNo = choices.Length == 2 && choices.All(x => x.Value == "true" || x.Value == "false");
             if (option.IsPassword || option.Name == "client_secret") { secret = new PasswordBox(); stack.Children.Add(secret); }
+            else if(question.Provider==CloudICloud.Provider&&option.Name=="apple_id"){appleAccount=new TextBox{Text=initial,Margin=new Thickness(0,4,0,8)};stack.Children.Add(appleAccount);}
             else if (yesNo) {
                 foreach (var choice in shared && !changing ? choices.OrderBy(x => x.Value == "false" ? 0 : 1) : choices.AsEnumerable()) {
                     bool yes = choice.Value == "true";
@@ -61,13 +69,14 @@ namespace CommanderCZ {
                 original.Collapsed += delegate { Dispatcher.BeginInvoke(new Action(delegate { FitQuestion(stack); })); };
                 stack.Children.Add(original);
             }
-            Loaded += delegate { FitQuestion(stack); };
+            Loaded += delegate { FitQuestion(stack);if(question.Provider==CloudICloud.Provider){if(secret!=null)secret.Focus();else if(appleAccount!=null)appleAccount.Focus();else if(combo!=null)combo.Focus();} };
         }
         void FitQuestion(StackPanel stack) {
             UpdateLayout(); var scroll = (ScrollViewer)stack.Parent; stack.Measure(new Size(Math.Max(100, scroll.ActualWidth - 18), Double.PositiveInfinity));
             Height = Math.Min(MaxHeight, Math.Max(220, stack.DesiredSize.Height + ActualHeight - scroll.ActualHeight + 8)); SizeToContent = SizeToContent.Manual;
         }
         internal string ReadAnswer() {
+            if(appleAccount!=null)return String.IsNullOrWhiteSpace(appleAccount.Text)?null:appleAccount.Text.Trim();
             if (secret != null) return option.Required && secret.Password.Length == 0 ? null : secret.Password;
             if (combo != null) { var choice = combo.SelectedItem as CloudExample; if (choice != null) return choice.Value; if (!combo.IsEditable) return null; return option.Required && String.IsNullOrWhiteSpace(combo.Text) ? null : combo.Text; }
             var selected = answers.Children.OfType<RadioButton>().FirstOrDefault(x => x.IsChecked == true); return selected == null ? null : (string)selected.Tag;

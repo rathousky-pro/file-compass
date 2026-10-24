@@ -5,7 +5,7 @@ New-Item -ItemType Directory -Path $fixtureRoot -Force | Out-Null
 $targetDirectory = Join-Path $fixtureRoot 'target'
 New-Item -ItemType Directory -Path $targetDirectory -Force | Out-Null
 $payload = Join-Path $fixtureRoot 'payload.txt'
-[IO.File]::WriteAllText($payload, 'CommanderCZ installation fixture', [Text.Encoding]::ASCII)
+[IO.File]::WriteAllText($payload, 'FileCompass installation fixture', [Text.Encoding]::ASCII)
 $msi = Join-Path $fixtureRoot 'fixture.msi'
 if (Test-Path -LiteralPath $msi) { Remove-Item -LiteralPath $msi }
 $installer = New-Object -ComObject WindowsInstaller.Installer
@@ -27,7 +27,7 @@ Sql 'CREATE TABLE `FeatureComponents` (`Feature_` CHAR(38) NOT NULL, `Component_
 Sql 'CREATE TABLE `File` (`File` CHAR(72) NOT NULL, `Component_` CHAR(72) NOT NULL, `FileName` CHAR(255) NOT NULL LOCALIZABLE, `FileSize` LONG NOT NULL, `Version` CHAR(72), `Language` CHAR(20), `Attributes` SHORT, `Sequence` LONG NOT NULL PRIMARY KEY `File`)'
 Sql 'CREATE TABLE `Media` (`DiskId` SHORT NOT NULL, `LastSequence` LONG NOT NULL, `DiskPrompt` CHAR(64) LOCALIZABLE, `Cabinet` CHAR(255), `VolumeLabel` CHAR(32), `Source` CHAR(72) PRIMARY KEY `DiskId`)'
 Sql 'CREATE TABLE `InstallExecuteSequence` (`Action` CHAR(72) NOT NULL, `Condition` CHAR(255), `Sequence` SHORT PRIMARY KEY `Action`)'
-$properties = @{ ProductCode = ('{' + [Guid]::NewGuid().ToString().ToUpperInvariant() + '}'); ProductName = 'CommanderCZ isolated MSI fixture'; Manufacturer = 'CommanderCZ test'; ProductVersion = '1.0.0'; ProductLanguage = '1033'; INSTALLDIR = ($targetDirectory + '\'); INSTALLLEVEL='1' }
+$properties = @{ ProductCode = ('{' + [Guid]::NewGuid().ToString().ToUpperInvariant() + '}'); ProductName = 'FileCompass isolated MSI fixture'; Manufacturer = 'FileCompass test'; ProductVersion = '1.0.0'; ProductLanguage = '1033'; INSTALLDIR = ($targetDirectory + '\'); INSTALLLEVEL='1' }
 foreach ($entry in $properties.GetEnumerator()) { Sql ("INSERT INTO ``Property`` (``Property``, ``Value``) VALUES ('" + (Escape-Sql $entry.Key) + "', '" + (Escape-Sql $entry.Value) + "')") }
 Sql "INSERT INTO ``Directory`` (``Directory``, ``DefaultDir``) VALUES ('TARGETDIR', 'SourceDir')"
 Sql "INSERT INTO ``Directory`` (``Directory``, ``Directory_Parent``, ``DefaultDir``) VALUES ('INSTALLDIR', 'TARGETDIR', '.')"
@@ -41,7 +41,7 @@ $sequence = @{ CostInitialize=800; FileCost=900; CostFinalize=1000; InstallValid
 foreach ($entry in $sequence.GetEnumerator()) { Sql ("INSERT INTO ``InstallExecuteSequence`` (``Action``, ``Sequence``) VALUES ('" + $entry.Key + "', " + $entry.Value + ")") }
 $summary = $database.GetType().InvokeMember('SummaryInformation', 'GetProperty', $null, $database, @(20))
 function Summary([int]$id, $value) { $summary.GetType().InvokeMember('Property', 'SetProperty', $null, $summary, @($id,$value)) | Out-Null }
-Summary 2 'CommanderCZ isolated fixture'
+Summary 2 'FileCompass isolated fixture'
 Summary 7 'Intel;1033'
 Summary 9 ('{' + [Guid]::NewGuid().ToString().ToUpperInvariant() + '}')
 Summary 14 200

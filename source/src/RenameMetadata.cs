@@ -6,12 +6,12 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class RenameMetadata
     {
-        internal static readonly string[] Tokens = { "[EXIF.Date]", "[EXIF.Time]", "[EXIF.Camera]", "[MP3.Artist]", "[MP3.Album]", "[MP3.Title]", "[MP3.Track]", "[MP3.Year]" };
-        internal static bool Needed(string mask) { return mask.Contains("[EXIF.") || mask.Contains("[MP3."); }
+        internal static readonly string[] Tokens = { "[EXIF.Date]", "[EXIF.Time]", "[EXIF.Camera]", "[MP3.Artist]", "[MP3.Album]", "[MP3.Title]", "[MP3.Track]", "[MP3.Year]", "[MP3.Genre]", "[MP3.Disc]", "[MP3.Composer]", "[Image.Title]", "[Image.Author]", "[Image.Comment]", "[Image.Copyright]", "[EXIF.Make]", "[EXIF.Model]" };
+        internal static bool Needed(string mask) { return mask.Contains("[EXIF.") || mask.Contains("[MP3.") || mask.Contains("[Image."); }
         internal static string Safe(string value)
         {
             if (value == null) return "";
@@ -29,24 +29,26 @@ namespace CommanderCZ
                 if (image != null)
                 {
                     if (image.DateTime.HasValue) { values["[EXIF.Date]"] = image.DateTime.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture); values["[EXIF.Time]"] = image.DateTime.Value.ToString("HH-mm-ss", CultureInfo.InvariantCulture); }
+                    values["[Image.Title]"]=Safe(image.Title);values["[Image.Author]"]=Safe(image.Creator);values["[Image.Comment]"]=Safe(image.Comment);values["[Image.Copyright]"]=Safe(image.Copyright);values["[EXIF.Make]"]=Safe(image.Make);values["[EXIF.Model]"]=Safe(image.Model);
                     values["[EXIF.Camera]"] = Safe(String.Join(" ", new[] { image.Make, image.Model }.Where(x => !String.IsNullOrWhiteSpace(x))));
                 }
                 values["[MP3.Artist]"] = Safe(String.Join(", ", media.Tag.Performers ?? new string[0]));
                 values["[MP3.Album]"] = Safe(media.Tag.Album); values["[MP3.Title]"] = Safe(media.Tag.Title);
                 values["[MP3.Track]"] = media.Tag.Track == 0 ? "" : media.Tag.Track.ToString("D2", CultureInfo.InvariantCulture);
+                values["[MP3.Genre]"]=Safe(String.Join(", ",media.Tag.Genres??new string[0]));values["[MP3.Composer]"]=Safe(String.Join(", ",media.Tag.Composers??new string[0]));values["[MP3.Disc]"]=media.Tag.Disc==0?"":media.Tag.Disc.ToString("D2",CultureInfo.InvariantCulture);
                 values["[MP3.Year]"] = media.Tag.Year == 0 ? "" : media.Tag.Year.ToString(CultureInfo.InvariantCulture);
             }
             token.ThrowIfCancellationRequested(); return values;
         }
         internal static string Expand(string mask, Dictionary<string,string> values)
         {
-            return Regex.Replace(mask, @"\[(?:EXIF|MP3)\.[A-Za-z]+\]", delegate(Match match)
+            return Regex.Replace(mask, @"\[(?:EXIF|MP3|Image)\.[A-Za-z]+\]", delegate(Match match)
             {
                 string value; if (!values.TryGetValue(match.Value, out value) || String.IsNullOrWhiteSpace(value)) throw new IOException(L.Format("rename.metadataMissing", match.Value));
                 return value;
             });
         }
-        sealed class MetadataSource : TagLib.File.IFileAbstraction, IDisposable
+        internal sealed class MetadataSource : TagLib.File.IFileAbstraction, IDisposable
         {
             readonly List<Stream> streams = new List<Stream>(); readonly CancellationToken token;
             public string Name { get; private set; }

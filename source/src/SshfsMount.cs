@@ -7,9 +7,9 @@ using System.Linq;
 using System.Threading;
 using System.Xml.Serialization;
 using Microsoft.Win32;
-using CommanderCZ.NetworkTransport;
+using FileCompass.NetworkTransport;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public class SshfsMountRecord
     {
@@ -75,7 +75,7 @@ namespace CommanderCZ
         internal static ProcessStartInfo Launch(NetworkProfile p, string knownHosts)
         {
             p.Validate(); string exe = Executable(); if (exe == null) throw new IOException(DependencyStatus());
-            string algorithm = p.HostKeyFingerprint.Split(' ')[0]; if (algorithm == "ssh-rsa") algorithm = "rsa-sha2-512,rsa-sha2-256,ssh-rsa";
+            string algorithm = SshHostPin.Algorithm(p.HostKeyFingerprint); if (algorithm == "ssh-rsa") algorithm = "rsa-sha2-512,rsa-sha2-256";
             var args = new List<string> { "-f", "-p", p.Port.ToString(), "-o", "ssh_command=/usr/bin/ssh.exe -F /dev/null", "-o", "StrictHostKeyChecking=yes", "-o", "UserKnownHostsFile=" + OptionPath(CygwinPath(knownHosts)), "-o", "HostKeyAlgorithms=" + OptionPath(algorithm), "-o", "ConnectTimeout=" + p.TimeoutSeconds, "-o", "ServerAliveInterval=" + p.SshKeepAliveSeconds, "-o", "ServerAliveCountMax=3", "--VolumePrefix=" + Remote(p).Substring(1), "-o", "volname=SSHFS,fstypename=SSHFS,rellinks" };
             if (p.SshCompression) args.Add("-C");
             args.Add("-o"); args.Add("idmap=user");
@@ -100,7 +100,7 @@ namespace CommanderCZ
                 if (password != null && password.IndexOfAny(new[] { '\r', '\n', '\0' }) >= 0) throw new IOException(L.Text("sshfs.passwordNewlineRejected"));
                 Directory.CreateDirectory(Root); string hosts = Path.Combine(Root, Guid.NewGuid().ToString("N") + ".known_hosts");
                 File.WriteAllText(hosts, "[" + p.Host + "]:" + p.Port + " " + hostKey + "\n" + p.Host + " " + hostKey + "\n");
-                child = SshfsProcess.Start(Launch(p, hosts), String.IsNullOrEmpty(p.PrivateKeyPath) ? password ?? "" : null, hosts + ".log");
+                using(ToolTrust.AcquireSshfs(Executable()))child = SshfsProcess.Start(Launch(p, hosts), String.IsNullOrEmpty(p.PrivateKeyPath) ? password ?? "" : null, hosts + ".log");
                 Func<string> error = delegate { try { using (var file = new FileStream(hosts + ".log", FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete)) { if (file.Length > 4096) file.Position = file.Length - 4096; using (var reader = new StreamReader(file)) return reader.ReadToEnd(); } } catch (IOException) { return ""; } };
                 var timer = Stopwatch.StartNew();
                 while (!DriveInfo.GetDrives().Any(x => x.Name.StartsWith(p.DriveLetter, StringComparison.OrdinalIgnoreCase)))

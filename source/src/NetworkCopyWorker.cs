@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
-using CommanderCZ.NetworkTransport;
+using FileCompass.NetworkTransport;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public sealed class NetworkCopyUpdate
     {
@@ -37,7 +37,7 @@ namespace CommanderCZ
                 var info = connection.Session.GetFileInfo(source);
                 if (info.FileType == 'L') throw new IOException(L.Text("transfer.linkUnsupportedPrefix") + source);
                 directory = info.IsDirectory; bytes = directory ? 0 : info.Length;
-                FileOperations.ValidateName(RemoteConnection.Name(source));
+                RemoteConnection.ValidateRemoteName(info.Name); FileOperations.ValidateName(info.Name);
             }
             else
             {
@@ -51,7 +51,7 @@ namespace CommanderCZ
             if (!directory) return;
             if (download)
                 foreach (var child in connection.Session.ListDirectory(source).Files)
-                { if (child.Name != "." && child.Name != "..") Scan(connection, true, child.FullName, target, batch, token); }
+                { if (child.Name != "." && child.Name != "..") { RemoteConnection.ValidateRemoteName(child.Name); FileOperations.ValidateName(child.Name); Scan(connection, true, child.FullName, target, batch, token); } }
             else foreach (var child in Directory.GetFileSystemEntries(source)) Scan(connection, false, child, target, batch, token);
         }
         public static NetworkCopyResult Run(NetworkTransferJob job, RemoteConnection connection)
@@ -87,7 +87,7 @@ namespace CommanderCZ
                         if (download)
                         {
                             if (entry.IsDirectory)
-                                foreach (var file in connection.Session.EnumerateRemoteFiles(entry.FullPath, null, CommanderCZ.NetworkTransport.EnumerationOptions.AllDirectories))
+                                foreach (var file in connection.Session.EnumerateRemoteFiles(entry.FullPath, null, FileCompass.NetworkTransport.EnumerationOptions.AllDirectories))
                                 { token.ThrowIfCancellationRequested(); if (file.FileType == 'L') throw new IOException(L.Text("transfer.linkUnsupportedPrefix") + file.FullName); bytes += file.Length; fileSizes[file.FullName] = file.Length; }
                             else { bytes = connection.Session.GetFileInfo(entry.FullPath).Length; fileSizes[entry.FullPath] = bytes; }
                         }

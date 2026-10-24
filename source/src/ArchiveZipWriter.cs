@@ -3,7 +3,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Diagnostics;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static partial class ArchiveWorker {
         static DateTimeOffset ZipTime(DateTime value) { return new DateTimeOffset(value.Year<1980?new DateTime(1980,1,1):value.Year>2107?new DateTime(2107,12,31):value); }
         static void WritePlainZip(string archive,string staging,string[] directFiles,string[] args,ArchiveBudget budget,Action<string> progress) {

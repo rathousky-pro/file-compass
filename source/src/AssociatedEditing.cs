@@ -5,13 +5,13 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-namespace CommanderCZ {
+namespace FileCompass {
     public static partial class FileViewers {
         static readonly string[] AdditionalEditFormats = {
             ".webp",".avif",".heic",".heif",".svg",".svgz",".jfif",".jpe",".dib",".cur",".ani",".psd",".psb",".ai",".eps",".raw",".dng",".cr2",".cr3",".nef",".nrw",".arw",".orf",".raf",".rw2",
             ".aif",".aiff",".alac",".ape",".mid",".midi",".m4b",".m4v",".m2ts",".mts",".vob",".ogv",".3gp",".3g2",".mxf",".flv"
         };
-        internal static bool UsesAssociatedEditor(string file) {return Kind(file)!="text"||AdditionalEditFormats.Contains(Path.GetExtension(file).ToLowerInvariant());}
+        internal static bool UsesAssociatedEditor(string file) {string extension=Path.GetExtension(file).ToLowerInvariant(); if(extension==".svg"||extension==".svgz")return false;return Kind(file)!="text"||AdditionalEditFormats.Contains(extension);}
         [DllImport("shlwapi.dll",CharSet=CharSet.Unicode)]
         static extern int AssocQueryString(uint flags,int value,string association,string extra,StringBuilder output,ref uint length);
         static string QueryAssociation(string extension,int value,string verb) {

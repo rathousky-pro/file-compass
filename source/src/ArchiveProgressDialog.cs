@@ -3,7 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Threading;
-namespace CommanderCZ {
+namespace FileCompass {
     internal sealed class ArchiveProgressDialog : Window {
         readonly TransferWindowState placement;
         readonly TextBlock detail = new TextBlock { TextWrapping=TextWrapping.Wrap, Margin=new Thickness(0,12,0,10) };

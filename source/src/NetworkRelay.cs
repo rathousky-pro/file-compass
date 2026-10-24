@@ -5,9 +5,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using CommanderCZ.NetworkTransport;
+using FileCompass.NetworkTransport;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class NetworkRelay
     {

@@ -8,7 +8,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public partial class MainWindow
     {
@@ -31,7 +31,9 @@ namespace CommanderCZ
             var menuRow = new DockPanel();
             var help = new Menu { Background = CompactTheme.Chrome };
             var helpItem = new MenuItem { Header = L.Text("action.help"), Height = 28 }; help.Items.Add(helpItem);
-            AddMenu(helpItem, L.Text("app.aboutMenu"), delegate { MessageBox.Show(this, L.Text("app.aboutText"), ApplicationBrand.Name); });
+            AddMenu(helpItem, L.Text("help.open"), delegate { HelpService.Open(this); }, "F1");
+            helpItem.Items.Add(new Separator());
+            AddMenu(helpItem, L.Text("app.aboutMenu"), delegate { new AboutWindow(this).ShowDialog(); });
             DockPanel.SetDock(help, Dock.Right); menuRow.Children.Add(help);
             var menus = new Menu { Background = CompactTheme.Chrome, Height = 30 };
             var file = MenuRoot(menus, L.Text("menu.file"));
@@ -66,8 +68,7 @@ namespace CommanderCZ
             AddMenu(edit, L.Text("clipboardFile.title"), PasteClipboardAsFile, "Ctrl+Shift+V"); var commands = MenuRoot(menus, L.Text("menu.commands"));
             AddMenu(commands, L.Text("action.refresh"), delegate { left.Refresh(); right.Refresh(); }, "Ctrl+R");
             AddMenu(commands, L.Text("action.parentFolder"), delegate { active.Up(); }, "Backspace");
-            AddMenu(commands, L.Text("panel.swap"), SwapPanels); AddMenu(commands, L.Text("action.openExplorer"), OpenExplorer);
-            AddMenu(commands, L.Text("action.openPowerShellHere"), OpenPowerShell, "Ctrl+Alt+P");
+            AddMenu(commands, L.Text("panel.swap"), SwapPanels);
             AddMenu(commands, L.Text("panel.openSameFolderInOtherPanel"), OpenSameFolder);
             AddMenu(commands, L.Text("favorites.openMenu"), ShowFavorites, "Ctrl+D");
             AddMenu(commands, L.Text("workspace.title"), ShowWorkspaces);
@@ -87,6 +88,7 @@ namespace CommanderCZ
             AddMenu(commands, L.Text("action.batchRename"), MultiRename, "Ctrl+M");
             AddMenu(commands, L.Text("action.compareFiles"), CompareFilesByContent, "Ctrl+Shift+D");
             AddMenu(commands, L.Text("action.compareFolders"), delegate { CompareFolders(false); }); AddMenu(commands, L.Text("action.synchronizeFolders"), delegate { CompareFolders(true); });
+            var media = MenuRoot(menus,L.Text("media.menu"));
             var network = MenuRoot(menus, L.Text("connections.title"));
             AddMenu(network, L.Text("network.manageConnectionsMenu"), delegate { ManageConnections(); });
             network.Items.Add(new Separator());
@@ -111,8 +113,11 @@ namespace CommanderCZ
             config.Items.Add(new Separator()); AddMenu(config, L.Text("settings.saveView"), SaveView);
             AddMenu(config, L.Text("history.openMenu"), ShowOperationHistory);
             var start = MenuRoot(menus, L.Text("menu.start"));
-            AddMenu(start, L.Text("action.runPowerShellHere"), OpenPowerShell, "Ctrl+Alt+P"); start.Items.Add(new Separator());
-            AddMenu(start, L.Text("action.openProjectFolder"), delegate { active.Navigate(Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..")), true); });
+            AddMenu(start, L.Text("action.openExplorer"), OpenExplorer);
+            AddMenu(start, L.Text("action.runCommandPromptHere"), OpenCommandPrompt);
+            AddMenu(start, L.Text("action.runPowerShellHere"), OpenPowerShell, "Ctrl+Alt+P");
+            AddReleaseTools(edit, commands, config);
+            AddMediaMenu(media,file,commands);
             OrganizeMainMenus(file, select, edit, commands, network, display);
             menuRow.Children.Add(menus); top.Children.Add(menuRow);
             var tools = new WrapPanel { Orientation = Orientation.Horizontal };
@@ -124,6 +129,7 @@ namespace CommanderCZ
             Tool(directions, "forward", L.Text("toolbar.folderLeftToRight"), delegate { OpenFolderInOtherPanel(left); });
             Tool(directions, "back", L.Text("toolbar.folderRightToLeft"), delegate { OpenFolderInOtherPanel(right); });
             tools.Children.Add(directions);
+            Tool(tools,"undo",L.Text("undoHistory.title"),ShowSafeUndo);
             updateDirectionTools = delegate {
                 double needed = 0;
                 foreach (UIElement item in directions.Children) { item.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity)); needed += item.DesiredSize.Width; }
@@ -183,6 +189,7 @@ namespace CommanderCZ
         void AddMenu(MenuItem parent, string title, Action action, string shortcut = "")
         {
             var item = new MenuItem { Header = title, InputGestureText = shortcut, IsEnabled = action != null, ToolTip = action == null ? L.Text("common.featureNotImplemented") : null };
+            RegisterReleaseCommand(item, title, action, shortcut);
             ToolTipService.SetShowOnDisabled(item, true);
             if (action != null) item.Click += delegate { if (!busy && !PanelsLoading) action(); }; parent.Items.Add(item);
         }
@@ -203,12 +210,28 @@ namespace CommanderCZ
             return button;
         }
         void ToolSeparator(Panel panel) { panel.Children.Add(new Border { Width = 1, Height = 22, Background = CompactTheme.Line, Margin = new Thickness(5, 7, 5, 7) }); }
-        void OpenExplorer() { if (active.IsArchive) { Process.Start(new ProcessStartInfo(Path.GetDirectoryName(active.Archive.Root.FilePath)) { UseShellExecute = true }); return; } if (active.IsRemote) { MessageBox.Show(this, L.Text("network.directPanelConnectionHelp"), L.Text("network.connectionTitle")); return; } if (active.CurrentPath != null) Process.Start(new ProcessStartInfo(active.CurrentPath) { UseShellExecute = true }); }
+        void OpenExplorer() {
+            if(active.IsRemote){MessageBox.Show(this,L.Text("network.directPanelConnectionHelp"),L.Text("network.connectionTitle"));return;}
+            string path=active.IsArchive?Path.GetDirectoryName(active.Archive.Root.FilePath):active.CurrentPath;if(path==null)return;
+            if(path==NetworkBrowser.Root)path="shell:::{F02C1A0D-BE21-4350-88B0-7367FC96EF3C}";
+            try{Process.Start(new ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows),"explorer.exe"),SshTerminal.QuoteWindowsArgument(path)){UseShellExecute=true});}
+            catch(Exception ex){MessageBox.Show(this,ex.Message,L.Text("error.cannotOpenFile"));}
+        }
         internal void OpenPowerShell()
         {
             if (active.IsRemote || active.IsArchive || active.IsVirtualBrowser || active.CurrentPath == null) { MessageBox.Show(this, L.Text("shell.localFolderRequired"), L.Text("shell.powerShellTitle")); return; }
             try { Process.Start(PowerShellStartInfo(active.CurrentPath)); }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, L.Text("shell.powerShellTitle")); }
+        }
+        void OpenCommandPrompt()
+        {
+            if(active.IsRemote||active.IsArchive||active.IsVirtualBrowser||active.CurrentPath==null){MessageBox.Show(this,L.Text("shell.localFolderRequired"),L.Text("commandLine.title"));return;}
+            try{Process.Start(CommandPromptStartInfo(active.CurrentPath));}catch(Exception ex){MessageBox.Show(this,ex.Message,L.Text("commandLine.title"));}
+        }
+        internal static ProcessStartInfo CommandPromptStartInfo(string path)
+        {
+            // Pass the folder through the environment, never through CMD command source.
+            return new ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System),"cmd.exe"),"/D /K") {UseShellExecute=true,WorkingDirectory=path};
         }
         internal static ProcessStartInfo PowerShellStartInfo(string path)
         {

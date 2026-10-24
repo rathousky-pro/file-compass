@@ -7,7 +7,7 @@ using System.Windows.Media;
 using System.Xml;
 using System.Xml.Serialization;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public enum ToolbarTheme { Classic, Flat, Outline }
     public sealed class ToolbarThemeSettings

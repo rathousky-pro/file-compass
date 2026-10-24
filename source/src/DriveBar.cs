@@ -9,7 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Threading;
 using Microsoft.Win32;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public partial class FilePanel
     {

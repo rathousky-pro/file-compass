@@ -12,7 +12,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public enum PreviewMode { Auto = 0, Text = 1, Binary = 2, Hex = 3 }
 
@@ -73,6 +73,7 @@ namespace CommanderCZ
                     decodedText = reader.ReadToEnd();
                     token.ThrowIfCancellationRequested();
                 }
+                if(CsvDocument.Supports(path)&&decodedText.IndexOf('\0')<0)isBin=false;
                 string status;
                 if (safeOffset == 0 && mode == PreviewMode.Auto && !isBin)
                 {
@@ -305,7 +306,7 @@ namespace CommanderCZ
             };
 
             var archiveColumns = new GridView(); archiveColumns.Columns.Add(new GridViewColumn { Header = L.Text("column.name"), DisplayMemberBinding = new System.Windows.Data.Binding("Path"), Width = 380 }); archiveColumns.Columns.Add(new GridViewColumn { Header = L.Text("column.size"), DisplayMemberBinding = new System.Windows.Data.Binding("Bytes"), Width = 100 }); archiveColumns.Columns.Add(new GridViewColumn { Header = L.Text("column.date"), DisplayMemberBinding = new System.Windows.Data.Binding("Modified") { StringFormat = "dd.MM.yyyy HH:mm" }, Width = 150 }); archiveContents.View = archiveColumns;
-            InitializeDocumentPreview(body); content.Children.Add(archiveContents); content.Children.Add(text); content.Children.Add(picture); content.Children.Add(rich); rich.Visibility = Visibility.Collapsed; body.Children.Add(content);
+            InitializeDocumentPreview(body);InitializeCsvPreview(body); content.Children.Add(archiveContents); content.Children.Add(text); content.Children.Add(picture); content.Children.Add(rich); rich.Visibility = Visibility.Collapsed; body.Children.Add(content);
             encoding.SelectionChanged += delegate { if (current != null) LoadingTask = Load(current, currentOffset); };
         }
 
@@ -413,6 +414,7 @@ namespace CommanderCZ
 
         void UpdateFormat()
         {
+            bool showCsv=UpdateCsvPreview();
             UpdateHtmlControls();
             bool archive = lastData != null && lastData.ArchiveItems != null;
             archiveContents.Visibility = archive ? Visibility.Visible : Visibility.Collapsed;
@@ -424,15 +426,16 @@ namespace CommanderCZ
                 navigationBar.Visibility=Visibility.Collapsed;status.Text=L.Text("preview.loadingStatus");return;
             }
             if(documentPreview!=null)documentPreview.Visibility=ShowingDocument?Visibility.Visible:Visibility.Hidden;
-            bool showRich = !ShowingDocument && (currentMode == PreviewMode.Auto || currentMode == PreviewMode.Text) && richAvailable && (formatted.IsChecked == true || HtmlCodeSelected) && !IsHexOrBinaryActive;
+            bool showRich = !showCsv && !ShowingDocument && (currentMode == PreviewMode.Auto || currentMode == PreviewMode.Text) && richAvailable && (formatted.IsChecked == true || HtmlCodeSelected) && !IsHexOrBinaryActive;
             rich.Visibility = showRich ? Visibility.Visible : Visibility.Collapsed;
             bool showImage = currentMode == PreviewMode.Auto && picture.Source != null;
             picture.Visibility = showImage ? Visibility.Visible : Visibility.Collapsed;
-            text.Visibility = !ShowingDocument && !showImage && !showRich ? Visibility.Visible : Visibility.Collapsed;
+            text.Visibility = !showCsv && !ShowingDocument && !showImage && !showRich ? Visibility.Visible : Visibility.Collapsed;
             if(!ShowingDocument)ApplyDocumentExcerpt();
             text.TextWrapping = IsHexOrBinaryActive ? TextWrapping.NoWrap : (wrap.IsChecked == true ? TextWrapping.Wrap : TextWrapping.NoWrap);
             if (ShowingDocument) status.Text = L.Text("preview.documentReady");
             else if (lastData != null && status.Text == L.Text("preview.loadingStatus")) status.Text = lastData.Status;
+            if(showCsv)status.Text=csvStatus;
         }
 
         void ApplyDataToControls()
@@ -445,12 +448,12 @@ namespace CommanderCZ
             if(WantsDocument&&!DocumentPreview.IsHtml(current))text.Text=L.Text("details.noTextPreview");
             richAvailable = (currentMode == PreviewMode.Auto || currentMode == PreviewMode.Text) && !useHex && lastData.Text != null && currentOffset == 0 && current != null && RichFilePreview.Supports(current);
             if (richAvailable) rich.Show(current, lastData.Text, lastData.Markdown);
-            formatted.IsEnabled = richAvailable || documentReady;
+            formatted.IsEnabled = richAvailable || documentReady || CsvAvailable;
             bool showNav = remoteTemplate == null && lastData.Image == null && (lastData.TotalLength > lastData.ReadBytes || useHex || useBin || currentOffset > 0);
             navigationBar.Visibility = showNav ? Visibility.Visible : Visibility.Collapsed;
             offsetInput.Text = useHex ? "0x" + lastData.Offset.ToString("X") : lastData.Offset.ToString();
             UpdateFormat();
-            status.Text = ShowingDocument ? L.Text("preview.documentReady") : WaitingForDocument?L.Text("preview.loadingStatus"):lastData.Status; ApplyDocumentExcerpt();
+            status.Text = ShowingDocument ? L.Text("preview.documentReady") : WaitingForDocument?L.Text("preview.loadingStatus"):lastData.Status; ApplyDocumentExcerpt();if(CsvGrid.Visibility==Visibility.Visible)status.Text=csvStatus;
         }
 
         internal void ShowMessage(string message)

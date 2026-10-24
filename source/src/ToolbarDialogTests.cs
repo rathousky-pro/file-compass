@@ -6,7 +6,7 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
-namespace CommanderCZ {
+namespace FileCompass {
 internal static class ToolbarDialogTests {
 internal static int Run(string root) {
 Directory.CreateDirectory(root); var checks=new List<string>(); MainWindow main=null;

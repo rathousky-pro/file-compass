@@ -37,3 +37,9 @@ config/
 
 # Runtime data from local portable installations
 /data/
+/local-profile/
+/dist/
+
+# Local interactive proposals, test profiles and build staging
+/work/
+/Navrh-napovedy.html

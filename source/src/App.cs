@@ -10,7 +10,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public partial class Entry : System.ComponentModel.INotifyPropertyChanged
     {
@@ -40,6 +40,9 @@ namespace CommanderCZ
         public string ListName { get { if (LocationName != null) return LocationName; return IsDirectory && !IsParent ? folderBrackets ? "[" + FullName + "]" : FullName : Name; } }
         public string NameToolTip { get { return nameTooltips && !IsParent ? (LocationName == null ? FullName : FullPath) + (TagNames.Length == 0 ? "" : "\n" + TagsLabel) : null; } }
         internal void ApplyNameSettings(bool brackets, bool tooltips) { folderBrackets = brackets; nameTooltips = tooltips; if (PropertyChanged != null) { PropertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs("ListName")); PropertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs("NameToolTip")); } }
+        internal string NetworkDeviceTarget;
+        internal NetworkProfile NetworkServiceProfile;
+        internal bool NetworkServiceSaved;
         public string Attributes { get; set; }
         public DateTime ModifiedTime { get; set; }
         public string FullPath { get; set; }
@@ -75,7 +78,7 @@ namespace CommanderCZ
             Title = ApplicationBrand.Name; Width = 1440; Height = 800; MinWidth = 850; MinHeight = 450;
             FontFamily = new FontFamily("Segoe UI"); FontSize = 12; Background = CompactTheme.Chrome; Foreground = FluentTheme.Text;
             SourceInitialized += delegate { AppearanceTheme.TitleBar(this); }; AppearanceTheme.RegisterShell(this);
-            Icon = DesktopIcons.Drawing("app"); UseLayoutRounding = true;
+            ApplicationBrand.Attach(this); UseLayoutRounding = true;
             TextOptions.SetTextFormattingMode(this, TextFormattingMode.Display);
             var root = new DockPanel { Background = CompactTheme.Chrome, LastChildFill = true }; Content = root;
             var bottom = new StackPanel(); DockPanel.SetDock(bottom, Dock.Bottom); root.Children.Add(bottom);
@@ -113,10 +116,11 @@ namespace CommanderCZ
             right.Navigate(initialDirectory != null ? home : ProgramSettings.StartupFolder(preferences.RightFolder, home), false); SetActive(left);
             if (initialDirectory == null) { left.RestoreTabs(preferences.LeftTabs, preferences.LeftTabIndex, !preferences.SaveFoldersOnExit || preferences.SaveTabsOnExit); right.RestoreTabs(preferences.RightTabs, preferences.RightTabIndex, !preferences.SaveFoldersOnExit || preferences.SaveTabsOnExit); }
             InitializeWorkflows(preferences);
+            InitializeReleaseTools();
             InitializeQuickPreview();
             InitializePanelLayout(initialDirectory == null ? preferences : new ProgramSettings());
             if (initialDirectory == null) StartupRestoration = RestoreStartupFallback(home);
-            Loaded += delegate { active.List.Focus(); };
+            InitializeStartupKeyboardFocus();
             if (initialDirectory == null) Loaded += delegate { if (durableQueue.Pending().Length > 0 || durableQueue.LastError != null) ShowDurableQueue(); };
             if (initialDirectory == null) Loaded += async delegate { await StartupRestoration; await RestoreSshfsConnections(preferences); };
             PreviewKeyDown += HandleKeys;
@@ -139,6 +143,7 @@ namespace CommanderCZ
         }
         void HandleKeys(object sender, KeyEventArgs e)
         {
+            if (HandleReleaseKeys(e)) return;
             if (e.Key == Key.Q && Keyboard.Modifiers == ModifierKeys.Control) { ToggleQuickPreview(); e.Handled = true; return; }
             if (e.Key == Key.Escape && FilePreviewOpen) { ToggleQuickPreview(); e.Handled = true; return; }
             if (e.Key == Key.Escape && PanelsLoading) { active.CancelNavigation(); e.Handled = true; return; }
@@ -186,7 +191,7 @@ namespace CommanderCZ
             if (active.IsRemote) { RemoteNewFolder(); return; }
             if (active.CurrentPath == null) return;
             string name = Ask(L.Text("action.newFolder"), L.Text("folder.nameLabel"), ""); if (name == null) return;
-            try { FileOperations.ValidateName(name); string path = Path.Combine(active.CurrentPath, name); if (File.Exists(path) || Directory.Exists(path)) throw new IOException(L.Text("error.itemAlreadyExists")); Directory.CreateDirectory(path); active.Refresh(); }
+            try { FileOperations.ValidateName(name); string path = Path.Combine(active.CurrentPath, name); if (File.Exists(path) || Directory.Exists(path)) throw new IOException(L.Text("error.itemAlreadyExists")); Directory.CreateDirectory(path); RecordUndoTransaction(L.Text("action.newFolder"),new[]{UndoReceipt.Capture(path,null,false)}); active.Refresh(); }
             catch (Exception ex) { MessageBox.Show(ex.Message, L.Text("folder.createFailed")); }
         }
         async void Rename()
@@ -199,7 +204,8 @@ namespace CommanderCZ
             try
             {
                 string parent = Path.GetDirectoryName(entries[0].FullPath);
-                FileOperations.Rename(entries[0].FullPath, name); await Task.Run(delegate { FileAssociations.Moved(entries[0].FullPath, Path.Combine(parent, name)); }); left.Refresh(); right.Refresh();
+                var undo=UndoReceipt.Capture(entries[0].FullPath,entries[0].FullPath,true);
+                FileOperations.Rename(entries[0].FullPath, name); undo=UndoReceipt.Committed(undo,Path.Combine(parent,name));RecordUndoTransaction(L.Text("action.rename"),new[]{undo}); fileToolsRunning++;try{await Task.Run(delegate { FileAssociations.Moved(entries[0].FullPath, Path.Combine(parent, name)); });}finally{fileToolsRunning--;} left.Refresh(); right.Refresh();
                 await sourcePanel.NavigationTask;
                 if (active == sourcePanel && String.Equals(sourcePanel.CurrentPath, parent, StringComparison.OrdinalIgnoreCase))
                 { var renamed = sourcePanel.List.Items.Cast<Entry>().FirstOrDefault(x => String.Equals(x.FullPath, Path.Combine(parent, name), StringComparison.OrdinalIgnoreCase)); if (renamed != null) { sourcePanel.List.SelectedItem = renamed; sourcePanel.List.ScrollIntoView(renamed); } }
@@ -227,6 +233,18 @@ namespace CommanderCZ
         [STAThread]
         public static int Main(string[] args)
         {
+            try{using(RuntimeIntegrity.Acquire())return RunVerified(args);}
+            catch(Exception ex){if(args.Any(x=>x.StartsWith("--",StringComparison.Ordinal)))Console.Error.WriteLine(ex.Message);else MessageBox.Show(ex.Message,ApplicationBrand.Name,MessageBoxButton.OK,MessageBoxImage.Error);return 2;}
+        }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        static int RunVerified(string[] args)
+        {
+#if APP_TESTS
+            if(args.Length==2&&(args[0]=="--live-language-test"||args[0]=="--help-window-test"||args[0]=="--disk-smart-test"||args[0]=="--disk-analyzer-test"||args[0]=="--disk-analyzer-upgrade-test"||args[0]=="--local-copy-ui-test"||args[0]=="--navigation-focus-test"||args[0]=="--icloud-test"||args[0]=="--release-tools-test"||args[0]=="--media-names-test"||args[0]=="--undo-history-test"||args[0]=="--image-batch-test"||args[0]=="--media-converter-test"||args[0]=="--csv-preview-test"||args[0]=="--media-layout-test"))AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");
+#endif
+#if !APP_TESTS
+            if(args.Any(x=>x.StartsWith("--",StringComparison.Ordinal)&&x.EndsWith("-test",StringComparison.Ordinal))) { Console.Error.WriteLine("Test commands are only available in development builds."); return 2; }
+#endif
             if(args.Length==2&&args[0]=="--cloud-config-key")return CloudStore.PrintKey(args[1]); if (args.Length == 0 || !args[0].StartsWith("--", StringComparison.Ordinal)) StartupAcceleration.Begin();
             try { L.Initialize(); }
             catch (Exception ex) {
@@ -238,19 +256,34 @@ namespace CommanderCZ
             if (args.Length == 1 && args[0] == "--smart-window") { var smartApp = new Application(); FluentTheme.Ensure(); return smartApp.Run(new DiskSmartWindow(null)); }
             if (args.Length > 0 && args[0] == "--sshfs-install-helper") return SshfsSetup.Helper(args);
             if (args.Length == 1 && args[0] == "--everything-worker") return EverythingSearch.Worker();
+            if (args.Contains("--initialize-portable")) { Directory.CreateDirectory(AppPaths.ConfigDirectory); return 0; }
+            if (args.Length == 3 && args[0] == "--content-search-worker") return ContentSearch.Worker(args[1],args[2]);
+            if (args.Length == 3 && args[0] == "--media-image-worker") return MediaImages.Worker(args[1],args[2]);
+            if (args.Length == 3 && args[0] == "--metadata-worker") return FileMetadataService.Worker(args[1],args[2]);
+            if (args.Length == 2 && args[0] == "--archive-worker")
+            { try { return ArchiveWorker.Serve(args[1]); } catch (Exception ex) { Console.Error.WriteLine(ex); return 1; } }
+#if APP_TESTS
+            if (args.Length == 2 && args[0] == "--media-converter-test") return MediaConverterTests.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--image-batch-test") return ImageBatchTests.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--undo-history-test") return UndoHistoryTests.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--media-names-test") return MediaNamesTests.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--release-tools-test") return ReleaseToolsTests.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--help-window-test") return HelpWindowTests.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--live-language-test") return LiveLanguageTests.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--low-audit-test") return LowAuditTests.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--security-audit-test") return SecurityAuditTests.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--medium-audit-test") return MediumAuditTests.Run(args[1]);
             if (args.Length > 1 && args.Any(x => x.EndsWith("-test", StringComparison.Ordinal)))
             {
                 WorkflowStore.TestRoot = Path.Combine(Path.GetFullPath(args[1]), "workflow-profile");
                 FileTagStore.TestPath = Path.Combine(WorkflowStore.TestRoot, "tags.xml");
             }
-            if (args.Length == 2 && args[0] == "--archive-worker")
-            { try { return ArchiveWorker.Serve(args[1]); } catch (Exception ex) { Console.Error.WriteLine(ex); return 1; } }
             if (args.Length == 3 && args[0] == "--instance-forward-test") {
                 try { using (var instance = new InstanceCoordinator(args[1])) { if (instance.Primary) return 3; instance.Forward(args[2]); return 0; } }
                 catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }
             }
             if (args.Length > 1 && args[0] == "--sshfs-setup-test") return SshfsSetupTests.Run(args[1]);
-            if (args.Length > 1 && args.Any(x => x.EndsWith("-test", StringComparison.Ordinal))) CommanderCZ.NetworkTransport.TransferCheckpoint.TestRoot = Path.Combine(Path.GetFullPath(args[1]), "transfer-checkpoints");
+            if (args.Length > 1 && args.Any(x => x.EndsWith("-test", StringComparison.Ordinal))) FileCompass.NetworkTransport.TransferCheckpoint.TestRoot = Path.Combine(Path.GetFullPath(args[1]), "transfer-checkpoints");
             if (args.Length > 1 && args.Any(x => x.EndsWith("-test", StringComparison.Ordinal))) SshfsMount.TestRoot = Path.Combine(Path.GetFullPath(args[1]), "sshfs-state");
             if (args.Length > 1 && args.Any(x => x.EndsWith("-test", StringComparison.Ordinal))) SearchAdvanced.TestDirectory = Path.GetFullPath(args[1]);
             if (args.Length > 1 && args.Any(x => x.EndsWith("-test", StringComparison.Ordinal))) DurableQueue.TestDirectory = Path.GetFullPath(args[1]);
@@ -261,6 +294,8 @@ namespace CommanderCZ
             if (args.Contains("--ftp-resume-test")) return NetworkResumeTests.Run(args[1], Int32.Parse(args[2]), false);
             if (args.Contains("--sftp-resume-test")) return NetworkResumeTests.Run(args[1], Int32.Parse(args[2]), true);
             if (args.Contains("--resume-once-test")) return NetworkResumeTests.Once(args);
+            if (args.Length==2&&args[0]=="--icloud-test")return CloudICloudTests.Run(args[1]);
+            if (args.Length==2&&args[0]=="--navigation-focus-test")return NavigationFocusTests.Run(args[1]);
             if (args.Contains("--navigation-test")) return PanelWorkflowTests.Run(args.Length > 1 ? args[1] : Path.GetTempPath());
             if (args.Contains("--improvements-test")) return ImprovementsTests.Run(args.Length > 1 ? args[1] : Path.GetTempPath());
             if (args.Contains("--ui-test")) return FluentUiTests.Run(args.Length > 1 ? args[1] : Path.GetTempPath());
@@ -270,14 +305,15 @@ namespace CommanderCZ
             if (args.Contains("--ergonomics-test")) return ErgonomicsTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--cloud-question-language-test")) return CloudQuestionLanguageTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--cloud-application-oauth-test")) return CloudApplicationOAuthTests.Run(Path.GetFullPath(args[1]));
-            if (args.Contains("--initialize-portable")) { Directory.CreateDirectory(AppPaths.ConfigDirectory); return 0; }
             if (args.Contains("--ux-surfaces-test")) return UxSurfaceTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--zip-progress-test")) return ZipProgressTests.Run(Path.GetFullPath(args[1]));
-            if (args.Length == 3 && args[0] == "--metadata-worker") return FileMetadataService.Worker(args[1],args[2]);
             if (args.Contains("--duplicate-compare-test")) return DuplicateCompareTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--html-preview-test")) return HtmlPreviewTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--prepared-preview-test")) return PreparedPreviewTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--associated-editing-test")) return AssociatedEditingTests.Run(Path.GetFullPath(args[1]));
+            if(args.Length==2&&args[0]=="--media-layout-test")return MediaLayoutTests.Run(Path.GetFullPath(args[1]));
+            if(args.Length==2&&args[0]=="--csv-preview-test")return CsvPreviewTests.Run(Path.GetFullPath(args[1]));
+            if(args.Length==2&&args[0]=="--preview-library-test")return PreviewLibraryTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--document-preview-test")) return DocumentPreviewTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--connections-dialog-test")) return ConnectionsDialogTests.Run(Path.GetFullPath(args[1])); if (args.Contains("--cloud-storage-test")) return CloudStorageTests.Run(Path.GetFullPath(args[1])); if (args.Contains("--metadata-search-test")) return MetadataSearchTests.Run(Path.GetFullPath(args[1])); if (args.Contains("--clipboard-file-test")) return ClipboardFileTests.Run(Path.GetFullPath(args[1])); if (args.Contains("--metadata-columns-test")) return MetadataColumnTests.Run(Path.GetFullPath(args[1])); if (args.Contains("--file-metadata-test")) return FileMetadataTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--portable-test")) return PortableTests.Run(Path.GetFullPath(args[1]));
@@ -334,6 +370,7 @@ namespace CommanderCZ
             if (args.Contains("--sftp-test")) return NetworkTests.Ftp(args[1], Int32.Parse(args[2]), true, args.Length > 3 ? Int32.Parse(args[3]) : 0);
             if (args.Contains("--ssh-test")) return SshTests.Run(args.Length > 1 ? args[1] : Path.GetTempPath());
             if (args.Contains("--scp-test")) return NativeNetworkTests.Scp(args[1], Int32.Parse(args[2]));
+#endif
             try {
                 var preferences = ProgramSettings.Load(); string folder = InstanceCoordinator.FolderArgument(args);
                 using (var instance = preferences.SingleInstance ? new InstanceCoordinator(InstanceCoordinator.Identity) : null) {
@@ -344,7 +381,7 @@ namespace CommanderCZ
                     var window = new MainWindow(null, preferences);
                     window.Loaded += delegate { window.AcceptLaunch(""); };
                     if (folder.Length > 0) window.AcceptLaunch(folder);
-                    if (instance != null) instance.Attach(delegate(string path) { if (!window.Dispatcher.HasShutdownStarted) window.Dispatcher.BeginInvoke(new Action(delegate { window.AcceptLaunch(path); })); });
+                    if (instance != null) instance.Attach(delegate(string path) { if (!window.Dispatcher.HasShutdownStarted) window.Dispatcher.BeginInvoke(new Action(delegate { if(path.Length>0&&DeleteOperations.IsNetwork(path)&&MessageBox.Show(window,L.Text("security.forwardedNetworkFolder")+"\n\n"+path,ApplicationBrand.Name,MessageBoxButton.YesNo,MessageBoxImage.Question,MessageBoxResult.No)!=MessageBoxResult.Yes)return;window.AcceptLaunch(path); })); });
                     return app.Run(window);
                 }
             } catch (Exception ex) { MessageBox.Show(ex.Message, L.Text("app.errorTitle"), MessageBoxButton.OK, MessageBoxImage.Error); return 1; }

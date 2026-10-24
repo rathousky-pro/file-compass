@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 using System.Windows;
 using System.Windows.Controls;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static class CloudQuestionLanguageTests {
         internal static int Run(string root) {
             Directory.CreateDirectory(root); var checks = new List<string>(); Window window = null;

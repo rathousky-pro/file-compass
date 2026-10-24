@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 using System.Windows;
 using System.Windows.Controls;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static class CloudApplicationOAuthTests {
         internal static int Run(string root) {
             Directory.CreateDirectory(root);var checks=new List<string>();string oldPath=CloudApplicationOAuth.TestPath,oldRoot=CloudStore.TestRoot;Window window=null;
@@ -42,7 +42,7 @@ namespace CommanderCZ {
                 check(CloudStore.Find(account.Id).AuthorizationClient==CloudApplicationOAuth.FileCompass,"Per-account application identity survives storage without duplicating publisher credentials");
                 check(!File.ReadAllText(Path.Combine(CloudStore.Root,"accounts.xml")).Contains(secret),"Account list does not contain publisher credentials");
                 var manager=new CloudManagerWindow(null);window=manager;manager.Show();manager.UpdateLayout();
-                check(AdvancedToolsTests.Visual<TextBlock>(manager).Any(x=>x.IsVisible&&x.Text==L.Text("cloud.applicationLogin")),"Google account management identifies File Compass as the login application");
+                check(!AdvancedToolsTests.Visual<TextBlock>(manager).Any(x=>x.IsVisible&&x.Text==L.Text("cloud.applicationLogin")),"Configured cloud management omits the publisher login explanation");
                 NextStageTests.Draw(manager,Path.Combine(root,"own-login-configured.png"));manager.Close();window=null;
                 File.Delete(CloudApplicationOAuth.TestPath);
                 manager=new CloudManagerWindow(null);window=manager;manager.Show();manager.UpdateLayout();

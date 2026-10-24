@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace CommanderCZ.NetworkTransport
+namespace FileCompass.NetworkTransport
 {
     public sealed partial class Session
     {

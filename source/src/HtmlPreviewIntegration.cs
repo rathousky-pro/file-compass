@@ -1,7 +1,7 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
-namespace CommanderCZ {
+namespace FileCompass {
  internal sealed partial class QuickPreviewPane {
   readonly WrapPanel htmlControls=new WrapPanel {Margin=new Thickness(0,0,0,6),Visibility=Visibility.Collapsed};
   readonly RadioButton htmlPage=new RadioButton {Content=L.Text("preview.htmlPage"),IsChecked=true,Margin=new Thickness(0,0,14,0)};

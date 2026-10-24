@@ -8,7 +8,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public partial class FilePanel
     {

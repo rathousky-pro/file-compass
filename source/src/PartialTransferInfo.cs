@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using System.Xml.Serialization;
-namespace CommanderCZ.NetworkTransport {
+namespace FileCompass.NetworkTransport {
     public sealed class PartialTransferInfo {
         public int Version = 1;
         public string OriginalName, TargetPath, CheckpointIdentity;

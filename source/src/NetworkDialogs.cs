@@ -3,7 +3,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public sealed class NetworkManagerDialog : Window
     {

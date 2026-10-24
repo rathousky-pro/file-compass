@@ -1,4 +1,8 @@
-﻿# File Compass user guide
+# File Compass user guide
+
+**F1** or **Help → Program help** opens native offline help with categories, accent-insensitive search, related-topic links and Back/Forward history. F1 opens the matching topic in supported dialogs. Ctrl+F focuses help search; Alt+Left/Right navigates history and Escape closes help. Core content is available in Czech and English; other interface languages use English help. Detailed reference guides are currently in English and labeled accordingly.
+
+**Help → About File Compass** shows the application logo, the Rathousky.pro developer logo, version, build ID, actual build date and a clickable GitHub link. Copy information copies version/build/UTC timestamp and Windows version without profile paths.
 
 File Compass is a Windows file manager by Rathousky.pro. Start **File Compass.exe** with all supporting installation directories. Settings are in `config`, working/account data in `data`, translations in `languages`, .NET libraries in `libraries`, native tools in `plugins`, artwork in `icons`, renderer assets in `preview`, and this guide in `help`. WebView2 working data is stored in system TEMP.
 
@@ -12,7 +16,7 @@ File Compass is a Windows file manager by Rathousky.pro. Start **File Compass.ex
 
 ## Appearance and language
 
-Settings → Appearance offers light/dark/system themes, Solid/Mica/Mica Alt backgrounds and font-size arrows. Appearance and icon choices are previewed live; Cancel restores saved settings and Save persists them. English is the default for a fresh installation; Czech remains available. Language changes require saving and restarting. Mica requires supported Windows 11; unavailable effects fall back to a solid background.
+Settings → Appearance offers light/dark/system themes, Solid/Mica/Mica Alt backgrounds and font-size arrows. Appearance and icon choices are previewed live; Cancel restores saved settings and Save persists them. English is the default for a fresh installation; Czech, German, Spanish, Dutch, Polish, French and Portuguese are also available. Language changes apply immediately after saving, without restarting. Open panels, selections and transfers stay in place; Cancel keeps the current language. Mica requires supported Windows 11; unavailable effects fall back to a solid background.
 
 ## Detailed guides
 
@@ -45,6 +49,6 @@ Sizes are logical lengths, not allocated space. Hard links can count more than o
 
 Commands → Disk tools → Disk health / SMART lists physical disks. Available data includes identification, volumes, temperature, SMART status, power-on hours/cycles, NVMe wear and read/write totals. SATA provides normalized/raw attributes; NVMe provides its health log. Unknown vendor attributes keep their original names. Missing values are identified, not estimated.
 
-Refresh manually or every one/five minutes, copy details, or export TXT/JSON. NVMe remaining percentage is 100 minus reported percentage used, not a failure prediction. Some SATA disks do not provide reliable lifetime or byte-count summaries.
+Select a disk from the top tile row: each tile shows health, temperature, drive letters and model. Many disks scroll horizontally; arrow keys navigate the tiles. Refresh preserves the selected device. Clipboard copying briefly retries if another application holds the clipboard, then offers a clear retry/TXT fallback message. Refresh manually or every one/five minutes, copy details, or use Save report to export PNG, PDF, TXT or JSON. The adaptive window places drive information beside the SMART table and splits attributes into two tables when needed. Health and temperature use prominent, contrasting tiles. PNG captures the complete result rather than the visible viewport; long PDF reports use multiple landscape pages. NVMe remaining percentage is 100 minus reported percentage used, not a failure prediction. Some SATA disks do not provide reliable lifetime or byte-count summaries.
 
 smartmontools 7.5 runs as a separate `smartctl.exe`; GPLv2 license and corresponding source archive are in `plugins/smart`. Only diagnostics are read: no drive configuration changes or surface tests. If needed, elevation opens a separate SMART-only process; the main manager keeps its original privileges. Support depends on drive/controller/USB bridge. SMART does not replace backups.

@@ -5,7 +5,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
-namespace CommanderCZ {
+namespace FileCompass {
     internal sealed class DiskChart : FrameworkElement {
         internal List<DiskChartRow> Rows=new List<DiskChartRow>();internal bool Pie=true;internal string CenterText="",Subtitle="";
         internal event Action<DiskChartRow> SliceClicked;

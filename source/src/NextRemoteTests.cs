@@ -6,11 +6,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using CommanderCZ.NetworkTransport;
+using FileCompass.NetworkTransport;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class NextRemoteTests
     {

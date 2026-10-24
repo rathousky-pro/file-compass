@@ -4,7 +4,7 @@ Paths below refer to the installation root unless a source path is stated. Origi
 
 ## libcurl 8.22.0 and libssh2 1.11.1
 
-Network operations use the native `CommanderNetwork.dll` adapter in `plugins/network`. It statically links libcurl (curl/MIT-like license), libssh2 (BSD-3-Clause) and dependencies from the official curl 8.22.0_3 Windows x64 package. libcurl handles FTP/FTPS; libssh2 handles SFTP/SCP/SSH. LibreSSL 4.3.3 supplies cryptography. Dependencies include zlib-ng, zstd, Brotli, libpsl, the public suffix list, nghttp2, nghttp3 and ngtcp2.
+Network operations use the native `FileCompassNetwork.dll` adapter in `plugins/network`. It statically links libcurl (curl/MIT-like license), libssh2 (BSD-3-Clause) and dependencies from the official curl 8.22.0_3 Windows x64 package. libcurl handles FTP/FTPS; libssh2 handles SFTP/SCP/SSH. LibreSSL 4.3.3 supplies cryptography. Dependencies include zlib-ng, zstd, Brotli, libpsl, the public suffix list, nghttp2, nghttp3 and ngtcp2.
 
 Original notices are in `plugins/network/licenses`; `BUILD-MANIFEST.txt` lists exact components/source links and the plugin manifest records package provenance/hashes. Static libraries/headers/original downloads are build-time inputs under `source/downloads/network`; adapter sources/build scripts are in `source/native`. No separate runtime installation is required. FluentFTP, SSH.NET and WinSCP are no longer runtime components.
 
@@ -73,14 +73,22 @@ MIT license: `plugins/cloud/LICENSE.txt`; original documentation: `README.txt`. 
 
 ## Local document preview
 
-- docx-preview 0.3.7: MIT, https://github.com/VolodymyrBaydalka/docxjs
+- docx-preview 0.3.7: MIT, https://github.com/VolodymyrBaydalka/docxjs; locally patched to render symbols and stylesheet contents without HTML parsing.
 - JSZip 3.10.1: MIT option, https://github.com/Stuk/jszip
-- SheetJS Community Edition 0.20.3: Apache-2.0, https://cdn.sheetjs.com/
+- SheetJS Community Edition 0.20.3: Apache-2.0, https://cdn.sheetjs.com/; spreadsheets are rendered using text-only DOM cells.
 - Microsoft.Web.WebView2 SDK 1.0.4258.31: Microsoft license; the system runtime is not bundled.
 
-Licenses are in `preview`. Documents render locally.
+The document HTML and JavaScript are embedded in `preview/preview.dll`, together with copies of the license texts and the source component manifest. License files remain readable in `preview`. `WebView2Loader.dll` remains a separate native component. Documents render locally; packaging does not change the component licenses.
 
 ## SMART
 
 smartmontools 7.5 / smartctl.exe: GPLv2. License and corresponding source archive are in `plugins/smart`. The tool runs as a separate process.
 Source: https://github.com/smartmontools/smartmontools/releases/tag/RELEASE_7_5
+
+## Media conversion
+
+- Magick.NET 15.0.0 Q8 x64 and Magick.NET.Core 15.0.0: Apache-2.0 wrapper; ImageMagick and native dependencies have their own licenses. The complete package notice is `plugins/media/MAGICK-NOTICE.txt`.
+- FFmpeg `n9.0.2-35-g9a9b70bb8c-20261024`: BtbN Windows x64 **LGPL shared** build, separate processes. `FFMPEG-LICENSE.txt` and `GPL-3.0.txt` contain LGPLv3 and its incorporated GPLv3 terms. This is not the GPL/nonfree build. Runtime decoding/encoding is limited to local files by protocol/demuxer allowlists. Package SHA-256 and source links are in `plugins/media/SOURCE.json`.
+- Roslyn compiler 4.14.0: MIT, build dependency only, not distributed with the application.
+
+Dependency archives are retained under `source/downloads/media` and restored/verified with `source/prepare-media.ps1`. Do not silently update rotating FFmpeg downloads. Before public distribution, prepare the exact corresponding sources/build scripts for FFmpeg and its LGPL dependencies and all dependency notices; upstream links alone are not a complete source distribution. No patent or Dolby trademark licenses are represented by this integration. There is no Dolby Atmos encoder.

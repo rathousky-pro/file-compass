@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
-namespace CommanderCZ {
+namespace FileCompass {
     internal sealed partial class DiskAnalyzerWindow {
         internal readonly ComboBox FilterCategory=new ComboBox{MinWidth=135};
         internal readonly TextBox FilterSize=new TextBox{Text="0",Width=85},FilterAge=new TextBox{Text="0",Width=85},FilterMasks=new TextBox{MinWidth=140},FilterExclusions=new TextBox{MinWidth=180};
@@ -72,7 +72,7 @@ namespace CommanderCZ {
             finally{bool current=queryCancellation==source;if(current)queryCancellation=null;source.Dispose();if(current&&!closed&&request==queryVersion&&Result!=null&&!Result.IsPartial&&result.IsPartial)MatchesTask=LoadMatches();}
         }
         async void Export(){if(Result==null||cancellation!=null)return;var dialog=new Microsoft.Win32.SaveFileDialog{Filter="CSV (*.csv)|*.csv|HTML (*.html)|*.html|PNG (*.png)|*.png",FileName="File-Compass-analysis",AddExtension=true};if(dialog.ShowDialog(this)!=true)return;var result=Result;try{if(dialog.FilterIndex==1)await Task.Run(()=>DiskAnalysisReports.CsvReport(dialog.FileName,result,CancellationToken.None));else{byte[] png=DiskAnalysisReports.Png(Chart);if(dialog.FilterIndex==3)File.WriteAllBytes(dialog.FileName,png);else DiskAnalysisReports.HtmlReportSet(dialog.FileName,result,CaptureReportCharts());}if(!closed)status.Text=L.Text("analyzer.exported");}catch(Exception ex){if(!closed)status.Text=ex.Message;}}
-        internal List<DiskReportChart> CaptureReportCharts(){var charts=new List<DiskReportChart>();int original=GroupChoice.SelectedIndex;try{for(int i=0;i<GroupChoice.Items.Count;i++){GroupChoice.SelectedIndex=i;UpdateChart();Chart.UpdateLayout();charts.Add(new DiskReportChart{Title=Convert.ToString(GroupChoice.SelectedItem)+" · "+Convert.ToString(MetricChoice.SelectedItem),Scope=scope.Text,Rows=Chart.Rows.ToList(),Image=DiskAnalysisReports.Png(Chart)});}}finally{GroupChoice.SelectedIndex=original;UpdateChart();}return charts;}
+        internal List<DiskReportChart> CaptureReportCharts(){var charts=new List<DiskReportChart>();int original=GroupChoice.SelectedIndex;try{for(int i=0;i<GroupChoice.Items.Count;i++){GroupChoice.SelectedIndex=i;UpdateChart();Chart.UpdateLayout();charts.Add(new DiskReportChart{Title=L.TranslateExisting(Convert.ToString(GroupChoice.SelectedItem))+" · "+L.TranslateExisting(Convert.ToString(MetricChoice.SelectedItem)),Scope=scope.Text,Rows=Chart.Rows.ToList(),Image=DiskAnalysisReports.Png(Chart)});}}finally{GroupChoice.SelectedIndex=original;UpdateChart();}return charts;}
         void SaveSnapshot(){if(Result==null||cancellation!=null)return;var dialog=new Microsoft.Win32.SaveFileDialog{Filter="File Compass (*.fca)|*.fca",FileName="Analysis-"+DateTime.Now.ToString("yyyy-MM-dd-HHmm"),AddExtension=true};if(dialog.ShowDialog(this)==true)try{DiskAnalysisReports.SaveSnapshot(dialog.FileName,Result);status.Text=L.Text("analyzer.snapshotSaved");}catch(Exception ex){status.Text=ex.Message;}}
         async void CompareSnapshot(){if(Result==null||cancellation!=null)return;var dialog=new Microsoft.Win32.OpenFileDialog{Filter="File Compass (*.fca)|*.fca"};if(dialog.ShowDialog(this)!=true)return;var current=DiskAnalysisReports.Capture(Result);try{var rows=await Task.Run(()=>DiskAnalysisReports.Compare(DiskAnalysisReports.LoadSnapshot(dialog.FileName),current));if(!closed){Comparison.ItemsSource=rows;tabs.SelectedIndex=4;status.Text=L.Text("analyzer.comparisonHelp")+" · "+rows.Count.ToString("N0");}}catch(Exception ex){if(!closed)status.Text=ex.Message;}}
         void DisposeAnalyzerExtensions(){liveTimer.Stop();queryVersion++;if(queryCancellation!=null){var oldQuery=queryCancellation;queryCancellation=null;oldQuery.Cancel();}lastMatchRefresh=DateTime.MinValue;matchLabel=L.Text("analyzer.allFiles");DiskFileIndex.Delete(Result==null?null:Result.IndexPath);}

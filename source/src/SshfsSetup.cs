@@ -14,9 +14,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Win32;
-using CommanderCZ.NetworkTransport;
+using FileCompass.NetworkTransport;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal sealed class SshfsPackage
     {
@@ -106,11 +106,11 @@ namespace CommanderCZ
             security.AddAccessRule(new PipeAccessRule(WindowsIdentity.GetCurrent().User, PipeAccessRights.FullControl, AccessControlType.Allow));
             security.AddAccessRule(new PipeAccessRule(new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null), PipeAccessRights.FullControl, AccessControlType.Allow));
             security.AddAccessRule(new PipeAccessRule(new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null), PipeAccessRights.FullControl, AccessControlType.Allow));
-            using (var pipe = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 4096, 4096, security))
+            using (var pipe = CreateInstallerPipe(pipeName, security))
             {
                 var connection = pipe.WaitForConnectionAsync();
                 var info = new ProcessStartInfo(Process.GetCurrentProcess().MainModule.FileName,
-                    "--sshfs-install-helper " + SshTerminal.QuoteWindowsArgument(pipeName) + " " + SshTerminal.QuoteWindowsArgument(Path.GetFullPath(folder)) + " " + mask + (checkOnly ? " --check-only" : ""))
+                    "--sshfs-install-helper " + SshTerminal.QuoteWindowsArgument(pipeName) + " " + SshTerminal.QuoteWindowsArgument(Path.GetFullPath(folder)) + " " + mask + " " + Process.GetCurrentProcess().Id + (checkOnly ? " --check-only" : ""))
                     { UseShellExecute = !checkOnly, Verb = checkOnly ? "" : "runas", WindowStyle = ProcessWindowStyle.Hidden };
                 changed(new SshfsSetupProgress("elevation", -1, checkOnly ? L.Text("sshfsSetup.verifyingInstallerProcess") : L.Text("sshfsSetup.waitingForUac")));
                 Process helper;
@@ -122,6 +122,7 @@ namespace CommanderCZ
                     var first = await Task.WhenAny(connection, exit, Task.Delay(60000)).ConfigureAwait(false);
                     if (first != connection) throw new IOException(L.Text("sshfsSetup.installerPipeTimeout"));
                     await connection.ConfigureAwait(false);
+                    VerifyPipePeer(pipe, helper.Id, true);
                     using (var reader = new StreamReader(pipe, Encoding.UTF8, false, 4096, true))
                     using (var writer = new StreamWriter(pipe, new UTF8Encoding(false), 4096, true) { AutoFlush = true })
                     using (token.Register(delegate { try { writer.WriteLine("cancel"); } catch (IOException) { } catch (ObjectDisposedException) { } }))
@@ -150,17 +151,19 @@ namespace CommanderCZ
         }
         internal static int Helper(string[] args)
         {
-            if (args.Length < 4 || args.Length > 5) return 87;
+            if (args.Length < 5 || args.Length > 6) return 87;
             string pipeName = args[1]; Guid id;
             if (!pipeName.StartsWith("FileCompass-sshfs-", StringComparison.Ordinal) || !Guid.TryParseExact(pipeName.Substring("FileCompass-sshfs-".Length), "N", out id)) return 87;
             int mask; if (!Int32.TryParse(args[3], out mask) || mask < 1 || mask > 3) return 87;
-            bool check = args.Length == 5 && args[4] == "--check-only"; if (args.Length == 5 && !check) return 87;
+            int parent; if (!Int32.TryParse(args[4], out parent) || parent <= 0) return 87;
+            bool check = args.Length == 6 && args[5] == "--check-only"; if (args.Length == 6 && !check) return 87;
             if (!check && !new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator)) return 740;
             try
             {
                 using (var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous, TokenImpersonationLevel.Identification))
                 {
                     pipe.Connect(15000);
+                    VerifyPipePeer(pipe, parent, false);
                     using (var writer = new StreamWriter(pipe, new UTF8Encoding(false), 4096, true) { AutoFlush = true })
                     using (var reader = new StreamReader(pipe, Encoding.UTF8, false, 4096, true))
                     {
@@ -216,6 +219,32 @@ namespace CommanderCZ
             if (code == 1618) return L.Text("sshfsSetup.anotherInstallerRunning");
             if (code == 1638) return L.Text("sshfsSetup.otherVersionInstalled");
             return L.Text("sshfsSetup.windowsInstallerErrorPrefix") + code + ".";
+        }
+        [StructLayout(LayoutKind.Sequential)] struct PipeAttributes { internal int Size; internal IntPtr Descriptor; internal int Inherit; }
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        static extern Microsoft.Win32.SafeHandles.SafePipeHandle CreateNamedPipe(string name, uint mode, uint type, uint instances, uint output, uint input, uint timeout, ref PipeAttributes attributes);
+        [DllImport("kernel32.dll", SetLastError = true)] static extern bool GetNamedPipeClientProcessId(IntPtr pipe, out uint process);
+        [DllImport("kernel32.dll", SetLastError = true)] static extern bool GetNamedPipeServerProcessId(IntPtr pipe, out uint process);
+        internal static NamedPipeServerStream CreateInstallerPipe(string name, PipeSecurity security)
+        {
+            byte[] descriptor = security.GetSecurityDescriptorBinaryForm();
+            IntPtr pointer = Marshal.AllocHGlobal(descriptor.Length);
+            try
+            {
+                Marshal.Copy(descriptor, 0, pointer, descriptor.Length);
+                var attributes = new PipeAttributes { Size = Marshal.SizeOf(typeof(PipeAttributes)), Descriptor = pointer };
+                // .NET Framework does not expose FirstPipeInstance; request it directly from Windows.
+                var handle = CreateNamedPipe("\\\\.\\pipe\\" + name, 3 | 0x40000000 | 0x00080000, 8, 1, 4096, 4096, 0, ref attributes);
+                if (handle.IsInvalid) { int error = Marshal.GetLastWin32Error(); handle.Dispose(); throw new Win32Exception(error); }
+                try { return new NamedPipeServerStream(PipeDirection.InOut, true, false, handle); }
+                catch { handle.Dispose(); throw; }
+            }
+            finally { Marshal.FreeHGlobal(pointer); }
+        }
+        internal static void VerifyPipePeer(PipeStream pipe, int expected, bool client)
+        {
+            uint actual; bool valid = client ? GetNamedPipeClientProcessId(pipe.SafePipeHandle.DangerousGetHandle(), out actual) : GetNamedPipeServerProcessId(pipe.SafePipeHandle.DangerousGetHandle(), out actual);
+            if (!valid || actual != expected) throw new IOException(L.Text("security.installerPeerRejected"));
         }
     }
     internal static class SshfsSignature

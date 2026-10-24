@@ -6,7 +6,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Markup;
 using System.Windows.Media;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public static class FluentTheme
     {
@@ -17,6 +17,7 @@ namespace CommanderCZ
         public static readonly Brush Accent = CompactTheme.ThemeBrush("#0067C0");
         public static void Ensure()
         {
+            HelpService.Ensure();
             var app = Application.Current;
             if (app == null) app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
             if (initialized == app) return;

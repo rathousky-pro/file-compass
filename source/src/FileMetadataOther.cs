@@ -4,7 +4,7 @@ using System.Linq;
 using System.Globalization;
 using System.Collections.Generic;
 using System.Windows.Media;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static partial class FileMetadata {
         static void Archive(string path,FileDetails d) {
             if(Path.GetExtension(path).Equals(".zip",StringComparison.OrdinalIgnoreCase))Zip(path,d);

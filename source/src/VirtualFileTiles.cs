@@ -4,7 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal sealed class VirtualFileTiles : VirtualizingPanel,IScrollInfo
     {

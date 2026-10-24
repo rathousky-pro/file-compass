@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using System.Runtime.InteropServices;
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class ExitPreferences
     {

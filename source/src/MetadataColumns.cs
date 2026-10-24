@@ -10,7 +10,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Xml;
 using System.Xml.Serialization;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static class MetadataColumn {
         internal static readonly string[] Keys = { "dimensions", "megapixels", "taken", "camera", "pages", "sheets", "slides", "author", "title", "duration", "artist", "album", "audioBitrate", "fontFamily", "productVersion", "architecture" };
         internal static string Caption(string key) { return L.Text("details."+key); }

@@ -4,7 +4,7 @@ using System.Text;
 using System.Threading;
 using System.Windows.Media.Imaging;
 
-namespace CommanderCZ.NetworkTransport
+namespace FileCompass.NetworkTransport
 {
     public sealed partial class Session
     {
@@ -19,7 +19,7 @@ namespace CommanderCZ.NetworkTransport
         }
     }
 }
-namespace CommanderCZ
+namespace FileCompass
 {
     internal sealed partial class RemotePreview
     {
@@ -30,11 +30,11 @@ namespace CommanderCZ
                 if (before.IsDirectory || before.FileType == 'L') return new PreviewData { Status = L.Text("remotePreview.folderOrLinkUnsupported") };
                 string kind = FileViewers.Kind(path); bool image = kind == "image";
                 if (image && before.Length > imageLimit) return new PreviewData { Status = L.Text("remotePreview.imageSizeLimitHelp") };
-                if (!image && kind != "text" && Path.HasExtension(path)) return new PreviewData { Status = L.Text("remotePreview.openTypeWithF3") };
+                if (!image && kind != "text" && !CsvDocument.Supports(path) && Path.HasExtension(path)) return new PreviewData { Status = L.Text("remotePreview.openTypeWithF3") };
                 int length = (int)Math.Min(before.Length,image ? 16 * 1024 * 1024 : 131072); var bytes = connection.Session.ReadSlice(path,0,length);
                 if (!NetworkWork.Same(before,connection.Session.GetFileInfo(path))) throw new IOException(L.Text("remotePreview.fileChangedDuringPreview")); token.ThrowIfCancellationRequested();
                 if (image) { var bitmap = new BitmapImage(); using (var stream = new MemoryStream(bytes)) { bitmap.BeginInit(); bitmap.CacheOption = BitmapCacheOption.OnLoad; bitmap.DecodePixelWidth = decodeWidth; bitmap.StreamSource = stream; bitmap.EndInit(); } bitmap.Freeze(); return new PreviewData { Image = bitmap,Status = L.Text("remotePreview.imageConnectionHint") }; }
-                using (var reader = new StreamReader(new MemoryStream(bytes),encoding,true)) return new PreviewData { Text = reader.ReadToEnd(),Status = before.Length > length ? L.Text("remotePreview.textPrefixLimitHelp") : L.Text("remotePreview.readOnlyText") };
+                using (var reader = new StreamReader(new MemoryStream(bytes),encoding,true)) return new PreviewData { TotalLength=before.Length,ReadBytes=length,Text = reader.ReadToEnd(),Status = before.Length > length ? L.Text("remotePreview.textPrefixLimitHelp") : L.Text("remotePreview.readOnlyText") };
             }
         }
     }

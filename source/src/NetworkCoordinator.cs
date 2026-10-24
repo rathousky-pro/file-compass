@@ -4,13 +4,22 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using CommanderCZ.NetworkTransport;
+using FileCompass.NetworkTransport;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public partial class MainWindow
     {
         NetworkSettingsStore networkStore;
+        internal void OpenDiscoveredService(FilePanel panel,Entry entry)
+        {
+            panel.CancelNavigation();
+            SetActive(panel);
+            if(entry.NetworkServiceSaved){ConnectNetwork(entry.NetworkServiceProfile);return;}
+            var dialog=new NetworkProfileDialog(this,entry.NetworkServiceProfile,true);
+            if(dialog.ShowDialog()!=true)return;
+            try{ConnectionSettings.Put(dialog.Profile);ConnectNetwork(dialog.Profile);}catch(Exception ex){MessageBox.Show(this,ex.Message,L.Text("network.connectionsTitle"));}
+        }
         internal NetworkSettingsStore ConnectionSettings { get { return networkStore ?? (networkStore = new NetworkSettingsStore(NetworkSettingsStore.DefaultPath)); } }
         bool PanelsLoading { get { return (left != null && left.IsLoading) || (right != null && right.IsLoading); } }
         void UpdateNetworkActions()
@@ -32,9 +41,21 @@ namespace CommanderCZ
             }
             catch (Exception ex) { MessageBox.Show(this, ex.Message + L.Text("ssh.configurationPathPrefix") + NetworkSettingsStore.DefaultPath, L.Text("network.connectionsTitle"), MessageBoxButton.OK, MessageBoxImage.Error); }
         }
-        void OpenSshTerminal(NetworkProfile profile)
+        async void OpenSshTerminal(NetworkProfile profile)
         {
-            try { SshTerminal.Open(profile); }
+            try {
+                profile = profile.Clone();
+                if (String.IsNullOrWhiteSpace(profile.HostKeyFingerprint))
+                {
+                    var key = await Task.Run(delegate { return SshTerminal.ProbeKey(profile); });
+                    if (MessageBox.Show(this, L.Text("network.serverPrefix") + profile.Host + ":" + profile.Port + L.Text("ssh.hostKeyFingerprintPrefix") + key.Item1 + L.Text("ssh.confirmTrustHostKeySuffix"),
+                        L.Text("network.firstConnectionPrefix") + profile.Protocol, MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+                    profile.HostKeyFingerprint = key.Item1;
+                    if (networkStore == null) networkStore = new NetworkSettingsStore(NetworkSettingsStore.DefaultPath);
+                    networkStore.Put(profile);
+                }
+                await Task.Run(delegate { SshTerminal.Open(profile); });
+            }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, L.Text("ssh.terminalOpenFailed"), MessageBoxButton.OK, MessageBoxImage.Error); }
         }
         void OpenActiveSshTerminal()

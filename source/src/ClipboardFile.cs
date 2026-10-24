@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media.Imaging;
-namespace CommanderCZ {
+namespace FileCompass {
     internal sealed class ClipboardFileContent {
         internal string Text;
         internal BitmapSource Image;
@@ -16,7 +16,7 @@ namespace CommanderCZ {
                 var image=data.GetData(DataFormats.Bitmap) as BitmapSource;
                 if(image!=null){image=image.CloneCurrentValue();image.Freeze();return new ClipboardFileContent{Image=image};}
             }
-            if(data.GetDataPresent(DataFormats.FileDrop)||data.GetDataPresent("CommanderCZ.VirtualSelection"))return null;
+            if(data.GetDataPresent(DataFormats.FileDrop)||data.GetDataPresent("FileCompass.VirtualSelection"))return null;
             string text=data.GetDataPresent(DataFormats.UnicodeText)?data.GetData(DataFormats.UnicodeText) as string:
                 data.GetDataPresent(DataFormats.Text)?data.GetData(DataFormats.Text) as string:null;
             return text==null?null:new ClipboardFileContent{Text=text};

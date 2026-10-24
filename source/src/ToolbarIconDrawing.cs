@@ -3,11 +3,12 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Media;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public static partial class DesktopIcons
     {
         public static ImageSource ToolbarDrawing(string name, ToolbarTheme theme) {
+            if(name=="undo"){var undo=new DrawingGroup();using(var c=undo.Open()){c.DrawRectangle(Brushes.Transparent,null,new Rect(0,0,32,32));var pen=new Pen(Brush("#267ED0"),2.7){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round,LineJoin=PenLineJoin.Round};Shape(c,"M25,25 C32,14 22,5 12,9 L5,14 M5,6 L5,14 L13,14",null,pen);}undo.Freeze();return new DrawingImage(undo);}
             if (name == "invert") {
                 var drawing = new DrawingGroup();
                 using (var c = drawing.Open()) {

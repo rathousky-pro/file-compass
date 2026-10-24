@@ -4,7 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static class PreviewRefreshTests {
         internal static int Run(string root) {
             Directory.CreateDirectory(root);var checks=new List<string>();MainWindow main=null;

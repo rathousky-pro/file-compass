@@ -9,7 +9,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static class SettingsConnectionsTests {
         static Button Find(DependencyObject root, string key) { return AdvancedToolsTests.Visual<Button>(root).First(x => x.IsVisible && Convert.ToString(x.Content) == L.Text(key)); }
         static void Editor(ConfigurationDialog host, Action open, Action<Window> edit) {

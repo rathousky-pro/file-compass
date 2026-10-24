@@ -2,7 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Media;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     // Separate, non-animated tracks keep the copy window stable during updates.
     internal sealed class LocalCopyProgressBar : FrameworkElement

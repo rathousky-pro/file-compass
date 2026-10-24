@@ -4,7 +4,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-namespace CommanderCZ
+namespace FileCompass
 {
     internal sealed class FontChoiceControl : StackPanel
     {

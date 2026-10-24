@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public sealed class ProjectionSpec { public string Kind, Root, Query; public string[] Paths; }
     public sealed class BasketData { public List<string> Paths = new List<string>(); }

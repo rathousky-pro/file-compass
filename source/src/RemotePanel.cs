@@ -5,9 +5,9 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-using CommanderCZ.NetworkTransport;
+using FileCompass.NetworkTransport;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public partial class FilePanel
     {
@@ -129,7 +129,10 @@ namespace CommanderCZ
         }
         internal async Task SwitchConnectionTask(RemoteConnection connection, Func<string, bool> offerRoot = null)
         {
-            if (IsLoading || !openConnections.ContainsKey(connection)) return;
+            if (!openConnections.ContainsKey(connection)) return;
+            var deadline=DateTime.UtcNow.AddSeconds(15);
+            while(IsLoading){if(DateTime.UtcNow>=deadline)throw new IOException(L.Text("network.waitForFileOperations"));await Task.Delay(25);}
+            if (!openConnections.ContainsKey(connection)) return;
             if (Remote == connection) { activate(this); return; }
             Loading(true);
             try

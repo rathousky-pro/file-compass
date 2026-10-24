@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
-namespace CommanderCZ
+namespace FileCompass
 {
     internal sealed class ArchiveMemoryException : IOException { internal ArchiveMemoryException() : base(L.Text("archive.memoryFailed")) { } }
     internal sealed class ArchiveMemoryPlan

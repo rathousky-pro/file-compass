@@ -6,10 +6,11 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal sealed class ImageToolOptions
     {
+        internal int Width = 1920, Height = 1080;
         internal int Rotation, MaxEdge = 1920, Percent = 50, ResizeMode = 1, Quality = 90;
         internal string Format = "PNG", OutputFolder;
     }
@@ -20,9 +21,11 @@ namespace CommanderCZ
         internal static string[] Plan(string[] sources, ImageToolOptions options)
         {
             if (!Directory.Exists(options.OutputFolder) || !new[] { "PNG","JPEG","BMP","TIFF" }.Contains(options.Format) ||
-                !new[] { 0,90,180,270 }.Contains(options.Rotation) || options.ResizeMode < 0 || options.ResizeMode > 2 ||
+                !new[] { 0,90,180,270 }.Contains(options.Rotation) || options.ResizeMode < 0 || options.ResizeMode > 5 ||
+                ((options.ResizeMode==3||options.ResizeMode==4)&&(options.Width<1||options.Width>32768)) || ((options.ResizeMode==3||options.ResizeMode==5)&&(options.Height<1||options.Height>32768)) ||
                 options.MaxEdge < 1 || options.MaxEdge > 32768 || options.Percent < 1 || options.Percent > 100 || options.Quality < 1 || options.Quality > 100)
                 throw new IOException(L.Text("imageTools.invalidOptions"));
+            PathSafety.RejectLinks(options.OutputFolder);foreach(string source in sources)PathSafety.RejectLinks(source);
             string[] outputs = sources.Select(x => Output(x,options)).ToArray();
             if (outputs.Distinct(StringComparer.OrdinalIgnoreCase).Count() != outputs.Length || outputs.Any(x => File.Exists(x) || Directory.Exists(x))) throw new IOException(L.Text("parts.outputExists"));
             if (sources.Any(x => !File.Exists(x) || (File.GetAttributes(x) & FileAttributes.ReparsePoint) != 0)) throw new IOException(L.Text("parts.linkRejected"));
@@ -52,21 +55,28 @@ namespace CommanderCZ
             else if (orientation == 5 || orientation == 8) group.Children.Add(new RotateTransform(270));
             return group.Children.Count == 0 ? bitmap : new TransformedBitmap(bitmap,group);
         }
+        internal static int[] Dimensions(int width,int height,ImageToolOptions options){
+            if(width<1||height<1||options.ResizeMode<0||options.ResizeMode>5)throw new IOException(L.Text("imageTools.invalidOptions"));double scale=options.ResizeMode==1?Math.Min(1.0,(double)options.MaxEdge/Math.Max(width,height)):options.ResizeMode==2?options.Percent/100.0:options.ResizeMode==4?(double)options.Width/width:options.ResizeMode==5?(double)options.Height/height:1.0;
+            double w=options.ResizeMode==3?options.Width:Math.Max(1,Math.Round(width*scale,MidpointRounding.AwayFromZero)),h=options.ResizeMode==3?options.Height:Math.Max(1,Math.Round(height*scale,MidpointRounding.AwayFromZero));if(w<1||h<1||w>32768||h>32768||w*h>200000000)throw new IOException(L.Text("imageTools.pixelLimit"));return new[]{(int)w,(int)h};
+        }
         internal static void Transform(string source, string target, ImageToolOptions options, CancellationToken token)
         {
             string stage = Path.Combine(Path.GetDirectoryName(target),".FileCompass-image-" + Guid.NewGuid().ToString("N"));
+            using(PathSafety.LockAncestors(target))
             try {
+                PathSafety.RejectLinks(source);PathSafety.RejectLinks(target);
                 using (var input = new FileStream(source,FileMode.Open,FileAccess.Read,FileShare.Read)) {
                     var decoder = BitmapDecoder.Create(input,BitmapCreateOptions.PreservePixelFormat,BitmapCacheOption.OnLoad);
                     if (decoder.Frames.Count > 1 && options.Format != "TIFF") throw new IOException(L.Text("imageTools.multiframe"));
                     if (decoder.Frames.Sum(x => (long)x.PixelWidth*x.PixelHeight) > 200000000 || decoder.Frames.Count > 1024) throw new IOException(L.Text("imageTools.pixelLimit"));
                     BitmapEncoder encoder = options.Format == "JPEG" ? (BitmapEncoder)new JpegBitmapEncoder { QualityLevel = options.Quality } : options.Format == "BMP" ? new BmpBitmapEncoder() : options.Format == "TIFF" ? new TiffBitmapEncoder { Compression = TiffCompressOption.Zip } : (BitmapEncoder)new PngBitmapEncoder();
+                    long outputPixels=0;
                     foreach (var frame in decoder.Frames) {
                         token.ThrowIfCancellationRequested();
                         BitmapSource bitmap = Orient(frame,frame.Metadata as BitmapMetadata);
                         if (options.Rotation != 0) bitmap = new TransformedBitmap(bitmap,new RotateTransform(options.Rotation));
-                        double scale = options.ResizeMode == 1 ? Math.Min(1.0, (double)options.MaxEdge/Math.Max(bitmap.PixelWidth,bitmap.PixelHeight)) : options.ResizeMode == 2 ? options.Percent/100.0 : 1.0;
-                        if (scale != 1.0) bitmap = new TransformedBitmap(bitmap,new ScaleTransform(scale,scale));
+                        var dimensions=Dimensions(bitmap.PixelWidth,bitmap.PixelHeight,options);outputPixels+=(long)dimensions[0]*dimensions[1];if(outputPixels>200000000)throw new IOException(L.Text("imageTools.pixelLimit"));
+                        if(dimensions[0]!=bitmap.PixelWidth||dimensions[1]!=bitmap.PixelHeight){var visual=new DrawingVisual();RenderOptions.SetBitmapScalingMode(visual,BitmapScalingMode.HighQuality);using(var draw=visual.RenderOpen())draw.DrawImage(bitmap,new Rect(0,0,dimensions[0],dimensions[1]));var resized=new RenderTargetBitmap(dimensions[0],dimensions[1],96,96,PixelFormats.Pbgra32);resized.Render(visual);bitmap=resized;}
                         if (options.Format == "JPEG" || options.Format == "BMP") {
                             var visual = new DrawingVisual();
                             using (var draw = visual.RenderOpen()) { draw.DrawRectangle(Brushes.White,null,new Rect(0,0,bitmap.PixelWidth,bitmap.PixelHeight)); draw.DrawImage(bitmap,new Rect(0,0,bitmap.PixelWidth,bitmap.PixelHeight)); }

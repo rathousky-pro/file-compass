@@ -10,7 +10,7 @@ using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class MediaWorkflowTests
     {

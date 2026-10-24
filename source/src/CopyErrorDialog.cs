@@ -2,7 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public enum CopyErrorChoice { Skip, Retry, SkipAll, Cancel }
     public sealed class CopyFailure
@@ -22,6 +22,7 @@ namespace CommanderCZ
             int code = failure.Error.HResult & 65535;
             string message = code == 32 || code == 33 ? L.Text("error.fileInUse") : failure.Error.Message;
             panel.Children.Add(new TextBlock { Text = "„" + message + "“", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(2, 0, 2, 16) });
+            if(code==32||code==33)panel.Children.Add(CopyUi.Button(L.Text("tools1.locks"),delegate{FileLocks.Show(this,new[]{failure.Source,failure.Target});}));
             var buttons = new System.Windows.Controls.Primitives.UniformGrid { Rows = 2, Columns = 2, Width = 260, HorizontalAlignment = HorizontalAlignment.Center };
             buttons.Children.Add(CopyUi.Button(L.Text("action.skip"), delegate { Select(CopyErrorChoice.Skip); }));
             buttons.Children.Add(CopyUi.Button(L.Text("action.retry"), delegate { Select(CopyErrorChoice.Retry); }));

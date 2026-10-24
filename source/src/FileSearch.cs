@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public sealed class SearchHit
     {
@@ -14,19 +14,20 @@ namespace CommanderCZ
         public long Bytes { get; set; }
         public bool Directory { get; set; }
         public DateTime Modified { get; set; }
+        public string MatchLocation { get; set; } public string Snippet { get; set; }
         public string DuplicateGroup { get; set; } public string Metadata {get;set;}
         public string Size { get { return Directory ? "<DIR>" : Bytes.ToString("N0"); } }
     }
     public sealed class FileSearchOptions
     {
         public string Root, Mask = "*.*", Text;
-        public bool Regex, TextRegex, CaseSensitive, SelectedOnly;
+        public bool Regex, TextRegex, CaseSensitive, SelectedOnly, DocumentText;
         public int Depth = Int32.MaxValue;
         public long Minimum, Maximum = Int64.MaxValue;
         public DateTime? ModifiedFrom, ModifiedTo;
         public FileAttributes RequiredAttributes, ExcludedAttributes;
         public int EncodingCodePage = 65001;
-        public long MaximumTextBytes = 64L * 1024 * 1024;
+        public long MaximumTextBytes = 0;
         public bool Duplicates; public MetadataSearchCondition[] MetadataConditions = new MetadataSearchCondition[0]; [System.Xml.Serialization.XmlIgnore] public Action<string> MetadataInspecting;
     }
     public static class FileSearchEngine
@@ -55,13 +56,13 @@ namespace CommanderCZ
                     DateTime modified = File.GetLastWriteTimeUtc(path);
                     if (Matches(System.IO.Path.GetFileName(path), options) && bytes >= options.Minimum && bytes <= options.Maximum && SearchAdvanced.Metadata(options,modified,attributes) && (!options.Duplicates || !directory))
                     {
-                        bool text = String.IsNullOrEmpty(options.Text);
+                        ContentMatch match=null;bool text = String.IsNullOrEmpty(options.Text);
                         if (!directory && !text)
                         {
                             if (options.MaximumTextBytes > 0 && bytes > options.MaximumTextBytes) warning(L.Text("search.textSkippedByLimitPrefix") + path);
-                            else text = SearchAdvanced.ContainsText(path,options,token);
+                            else {match=ContentSearch.Find(path,options,token);text=match!=null;}
                         }
-                        string metadataSummary=""; if(text && MetadataSearch.Enabled(options))text=!directory&&MetadataSearch.Check(path,options,token,warning,out metadataSummary); if (text) { emit(new SearchHit { Path = path, Name = System.IO.Path.GetFileName(path), Bytes = bytes, Directory = directory, Modified = modified, Metadata=metadataSummary }); count++; }
+                        string metadataSummary=""; if(text && MetadataSearch.Enabled(options))text=!directory&&MetadataSearch.Check(path,options,token,warning,out metadataSummary); if (text) { emit(new SearchHit { Path = path, Name = System.IO.Path.GetFileName(path), Bytes = bytes, Directory = directory, Modified = modified, Metadata=metadataSummary, MatchLocation=match==null?"":match.Location, Snippet=match==null?"":match.Snippet }); count++; }
                     }
                     if (directory && depth < options.Depth) foreach (string child in System.IO.Directory.EnumerateFileSystemEntries(path)) walk(child, depth + 1);
                 }
@@ -77,7 +78,7 @@ namespace CommanderCZ
         }
         public static int Remote(FileSearchOptions options, IEnumerable<string> selected, RemoteConnection connection, CancellationToken token, Action<SearchHit> found)
         {
-            if(MetadataSearch.Enabled(options))throw new IOException(L.Text("metaSearch.localOnly")); int count = 0; Action<string, int> walk = null;
+            if(!String.IsNullOrEmpty(options.Text)||options.DocumentText)throw new IOException(L.Text("metaSearch.localOnly")); if(MetadataSearch.Enabled(options))throw new IOException(L.Text("metaSearch.localOnly")); int count = 0; Action<string, int> walk = null;
             walk = delegate(string path, int depth)
             {
                 token.ThrowIfCancellationRequested(); if (count >= 20000) return;

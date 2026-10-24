@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 using System.Threading;
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class ArchiveFormatsTests
     {

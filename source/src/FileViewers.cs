@@ -8,7 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public static partial class FileViewers
     {
@@ -42,7 +42,7 @@ namespace CommanderCZ
             if (String.IsNullOrWhiteSpace(program)) throw new IOException(L.Text("viewer.configureProgramHelp"));
             program = Environment.ExpandEnvironmentVariables(program.Trim().Trim('"'));
             if (!File.Exists(program)) throw new IOException(L.Text("viewer.programMissingPrefix") + program + L.Text("viewer.correctProgramPathSuffix"));
-            return new ProcessStartInfo(program, "\"" + Path.GetFullPath(file) + "\"") { UseShellExecute = true };
+            return new ProcessStartInfo(program, SshTerminal.QuoteWindowsArgument(Path.GetFullPath(file))) { UseShellExecute = true };
         }
         public static void Open(Window owner, string file, bool edit = false)
         {
@@ -53,6 +53,8 @@ namespace CommanderCZ
             if (!edit && Kind(file) == "media" && String.IsNullOrWhiteSpace(settings.MediaPlayerPath))
             { new MediaViewerWindow(owner, file).Show(); return; }
             var info=LaunchInfo(file, settings, edit);
+            if(edit && info.UseShellExecute && info.Verb=="open" && (AttachmentSecurity.RequiresLaunchConfirmation(file)||AttachmentSecurity.ReadZone(file)!=null) &&
+                MessageBox.Show(owner,L.Text("security.externalEditorWarning"),L.Text("action.openEditor"),MessageBoxButton.YesNo,MessageBoxImage.Warning,MessageBoxResult.No)!=MessageBoxResult.Yes)return;
             if(edit && UsesAssociatedEditor(file))StartAssociatedEdit(info,delegate(ProcessStartInfo start){Process.Start(start);});
             else Process.Start(info);
         }

@@ -9,7 +9,7 @@ $output=Join-Path (Split-Path $PSScriptRoot -Parent) 'plugins/network'
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 $linkArguments=@('-shared','-O2',('-I'+(Join-Path $Libraries 'include')), (Join-Path $PSScriptRoot 'bridge.c'),(Join-Path $PSScriptRoot 'network.def'), '-Wl,--export-all-symbols','-Wl,--whole-archive',(Join-Path $Libraries 'lib/libcurl.a'),(Join-Path $Libraries 'lib/libssh2.a'),'-Wl,--no-whole-archive','-Wl,--start-group')
 $linkArguments+=Get-ChildItem -LiteralPath (Join-Path $Libraries 'lib') -Filter '*.a' | Where-Object {$_.Name -notin @('libcurl.a','libssh2.a','libcurl.dll.a')} | ForEach-Object {$_.FullName}
-$linkArguments+=@('-Wl,--end-group','-lws2_32','-lcrypt32','-lbcrypt','-ladvapi32','-lwldap32','-lsecur32','-lnormaliz','-liphlpapi','-o',(Join-Path $output 'CommanderNetwork.dll'))
-& $Compiler @args
+$linkArguments+=@('-Wl,--end-group','-lws2_32','-lcrypt32','-lbcrypt','-ladvapi32','-lwldap32','-lsecur32','-lnormaliz','-liphlpapi','-o',(Join-Path $output 'FileCompassNetwork.dll'))
+& $Compiler @linkArguments
 if($LASTEXITCODE -ne 0){throw 'Native network plugin build failed.'}
 'Native plugin built.'

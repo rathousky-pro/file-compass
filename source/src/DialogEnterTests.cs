@@ -6,7 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
-namespace CommanderCZ {
+namespace FileCompass {
 internal static class DialogEnterTests {
 internal static int Run(string root) {
 Directory.CreateDirectory(root);var checks=new List<string>();Window owner=null;

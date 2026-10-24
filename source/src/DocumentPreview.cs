@@ -9,7 +9,7 @@ using System.Windows.Controls;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 
-namespace CommanderCZ {
+namespace FileCompass {
     internal sealed class DocumentPreview : Grid, IDisposable {
         internal const string InstallUrl = "https://developer.microsoft.com/microsoft-edge/webview2/#download-section";
         internal static bool ForceUnavailable; static bool loaderConfigured;
@@ -70,7 +70,7 @@ namespace CommanderCZ {
                     else if(e.Request.Uri.StartsWith(origin+id+"/",StringComparison.Ordinal)) {
                         string name=e.Request.Uri.Substring((origin+id+"/").Length);
                         if(new[]{"index.html","viewer.js","docx-preview.min.js","jszip.min.js","xlsx.full.min.js"}.Contains(name)) {
-                            stream=new MemoryStream(File.ReadAllBytes(Path.Combine(Assets,name)),false);
+                            stream=PreviewAssets.Open(name);
                             mime=name.EndsWith(".html")?"text/html; charset=utf-8":"application/javascript";
                         }
                     }

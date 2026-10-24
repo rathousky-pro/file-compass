@@ -2,8 +2,8 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using CommanderCZ.NetworkTransport;
-namespace CommanderCZ {
+using FileCompass.NetworkTransport;
+namespace FileCompass {
     public partial class MainWindow {
         internal async Task VerifyFtpResumeQueue(RemoteConnection browsing,string root,Action<bool,string> check) {
             string first=Path.Combine(root,"ui-first.bin"), second=Path.Combine(root,"ui-second.bin");

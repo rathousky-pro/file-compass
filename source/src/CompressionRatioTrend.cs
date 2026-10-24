@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Media;
-namespace CommanderCZ {
+namespace FileCompass {
     internal sealed class CompressionRatioTrend : FrameworkElement {
         readonly List<Tuple<double,double>> samples=new List<Tuple<double,double>>();
         internal bool SpeedMode;

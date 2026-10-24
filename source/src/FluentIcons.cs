@@ -4,7 +4,7 @@ using System.IO;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     // Local, frozen high-resolution assets: no SVG decoder or network access at runtime.
     public static class FluentIcons

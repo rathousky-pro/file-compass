@@ -5,7 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class ArchiveUpgradeTests
     {

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public partial class MainWindow
     {

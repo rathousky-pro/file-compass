@@ -10,13 +10,13 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public partial class MainWindow
     {
         List<FavoriteLocation> favorites;
         const string CutFormat = "Preferred DropEffect";
-        const string VirtualClipboardFormat = "CommanderCZ.VirtualSelection";
+        const string VirtualClipboardFormat = "FileCompass.VirtualSelection";
         string virtualClipboardId, virtualClipboardDisplay;
         Entry[] virtualClipboardEntries;
         RemoteConnection virtualClipboardRemote;

@@ -9,7 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-namespace CommanderCZ
+namespace FileCompass
 {
     internal sealed class InstanceCoordinator : IDisposable
     {
@@ -26,7 +26,7 @@ namespace CommanderCZ
         {
             string key;
             using (var sha = SHA256.Create()) key = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(identity))).Replace("-", "").Substring(0, 24);
-            pipeName = "CommanderCZ-instance-" + key;
+            pipeName = "FileCompass-instance-" + key;
             var security = new MutexSecurity(); security.SetAccessRuleProtection(true, false);
             security.AddAccessRule(new MutexAccessRule(WindowsIdentity.GetCurrent().User, MutexRights.FullControl, AccessControlType.Allow));
             bool created; mutex = new Mutex(false, @"Local\" + pipeName, out created, security);
@@ -57,8 +57,8 @@ namespace CommanderCZ
         {
             folder = ValidateFolder(folder);
             try {
-                using (var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous)) {
-                    pipe.Connect(5000); uint pid; if (GetNamedPipeServerProcessId(pipe.SafePipeHandle.DangerousGetHandle(), out pid)) AllowSetForegroundWindow(pid);
+                using (var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous,TokenImpersonationLevel.Identification)) {
+                    pipe.Connect(5000); uint pid; if(!GetNamedPipeServerProcessId(pipe.SafePipeHandle.DangerousGetHandle(), out pid))throw new IOException("Cannot verify the running instance.");ProcessIdentity.VerifyExecutable(pid,System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName);AllowSetForegroundWindow(pid);
                     using (var writer = new BinaryWriter(pipe, Encoding.UTF8, true)) { byte[] bytes = Encoding.UTF8.GetBytes(folder); writer.Write(bytes.Length); writer.Write(bytes); writer.Flush(); }
                     var reply = new byte[1]; var read = pipe.ReadAsync(reply, 0, 1);
                     if (!read.Wait(5000) || read.Result != 1 || reply[0] != 1) throw new IOException(L.Text("instance.forwardFailed"));
@@ -76,9 +76,10 @@ namespace CommanderCZ
                     var acl = new PipeSecurity(); acl.SetAccessRuleProtection(true, false);
                     acl.AddAccessRule(new PipeAccessRule(new SecurityIdentifier(WellKnownSidType.NetworkSid, null), PipeAccessRights.FullControl, AccessControlType.Deny));
                     acl.AddAccessRule(new PipeAccessRule(WindowsIdentity.GetCurrent().User, PipeAccessRights.FullControl, AccessControlType.Allow));
-                    using (var pipe = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 4096, 4096, acl)) {
+                    using (var pipe = SshfsSetup.CreateInstallerPipe(pipeName,acl)) {
                         lock (gate) { if (stopping.IsCancellationRequested) return; current = pipe; }
                         await pipe.WaitForConnectionAsync().ConfigureAwait(false);
+                        uint client;if(!GetNamedPipeClientProcessId(pipe.SafePipeHandle.DangerousGetHandle(),out client))throw new IOException("Cannot verify the forwarding instance.");ProcessIdentity.VerifyExecutable(client,System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName);
                         var read = Task.Run(delegate { using (var reader = new BinaryReader(pipe, Encoding.UTF8, true)) { int length = reader.ReadInt32(); if (length < 0 || length > 32768) throw new IOException(); byte[] bytes = reader.ReadBytes(length); if (bytes.Length != length) throw new IOException(); return ValidateFolder(new UTF8Encoding(false, true).GetString(bytes)); } });
                         if (await Task.WhenAny(read, Task.Delay(3000)).ConfigureAwait(false) != read) { Observe(read); continue; }
                         string folder = await read.ConfigureAwait(false); Action<string> action;
@@ -98,6 +99,7 @@ namespace CommanderCZ
             if (Primary) mutex.ReleaseMutex(); mutex.Dispose();
         }
         [DllImport("kernel32.dll", SetLastError = true)] static extern bool GetNamedPipeServerProcessId(IntPtr pipe, out uint process);
+        [DllImport("kernel32.dll", SetLastError = true)] static extern bool GetNamedPipeClientProcessId(IntPtr pipe, out uint process);
         [DllImport("user32.dll")] static extern bool AllowSetForegroundWindow(uint process);
     }
 }

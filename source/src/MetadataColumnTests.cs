@@ -10,7 +10,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static class MetadataColumnTests {
         internal static int Run(string root) {
             Directory.CreateDirectory(root);var results=new List<string>();MainWindow main=null;

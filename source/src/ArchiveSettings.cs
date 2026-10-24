@@ -7,7 +7,7 @@ using System.Xml;
 using System.Xml.Serialization;
 using Microsoft.Win32;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public class ArchiveSettings
     {
@@ -25,8 +25,7 @@ namespace CommanderCZ
         {
             path = path ?? TestPath ?? ConfigPath;
             if (!File.Exists(path)) return new ArchiveSettings { WinRarPath = FindWinRar() ?? "" };
-            using (var reader = XmlReader.Create(path, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null }))
-            { var settings = (ArchiveSettings)new XmlSerializer(typeof(ArchiveSettings)).Deserialize(reader); settings.ValidateLimits(); settings.ArjPath=AppPaths.ResolveLegacyResourceFile(settings.ArjPath); settings.LhaPath=AppPaths.ResolveLegacyResourceFile(settings.LhaPath); settings.WinRarPath=AppPaths.ResolveLegacyResourceFile(settings.WinRarPath); return settings; }
+            var settings = ConfigurationIntegrity.Read<ArchiveSettings>(path); settings.ValidateLimits(); settings.ArjPath=AppPaths.ResolveLegacyResourceFile(settings.ArjPath); settings.LhaPath=AppPaths.ResolveLegacyResourceFile(settings.LhaPath); settings.WinRarPath=AppPaths.ResolveLegacyResourceFile(settings.WinRarPath); return settings;
         }
         public void Save(string path = null)
         {
@@ -34,26 +33,22 @@ namespace CommanderCZ
             string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
             try
             {
-                using (var stream = File.Create(temp)) { new XmlSerializer(typeof(ArchiveSettings)).Serialize(stream, this); stream.Flush(true); }
-                if (File.Exists(path)) File.Replace(temp, path, null); else File.Move(temp, path);
+                ConfigurationIntegrity.Write(path,this);
             }
             finally { if (File.Exists(temp)) File.Delete(temp); }
         }
         public static string FindWinRar()
         {
-            foreach (string folder in new[] { Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) })
-                foreach (string sub in new[] { "WinRAR", "Programs\\WinRAR" })
+            foreach (string folder in new[] { Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86) })
+                foreach (string sub in new[] { "WinRAR" })
                 foreach (string name in new[] { "WinRAR.exe", "Rar.exe" })
                 { string path = Path.Combine(folder, sub, name); if (File.Exists(path)) return path; }
-            foreach (string folder in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';'))
-                foreach (string name in new[] { "WinRAR.exe", "Rar.exe" })
-                    try { string path = Path.Combine(folder.Trim('"'), name); if (Path.IsPathRooted(path) && File.Exists(path)) return path; } catch (ArgumentException) { }
             return null;
         }
         public static string FindLegacyArchiver(bool arj)
         {
             string[] names = arj ? new[] { "ARJ32.exe", "arj.exe" } : new[] { "lha.exe" };
-            var folders = new System.Collections.Generic.List<string>((Environment.GetEnvironmentVariable("PATH") ?? "").Split(';'));
+            var folders = new System.Collections.Generic.List<string>();
             foreach (string root in new[] { Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86) })
                 foreach (string sub in new[] { "ARJ", "ARJ32", "LHA", "GnuWin32\\bin" }) folders.Add(Path.Combine(root, sub));
             foreach (string folder in folders) foreach (string name in names)
@@ -115,6 +110,7 @@ namespace CommanderCZ
                 {
                     settings.WinRarPath = input.Text.Trim().Trim('"');
                     limits.Apply(settings);
+                    if(!String.IsNullOrWhiteSpace(settings.WinRarPath)) {string executable=settings.RarExecutable();ToolTrust.Approve(executable);}
                     if (settings.WinRarPath.Length > 0 && !File.Exists(Environment.ExpandEnvironmentVariables(settings.WinRarPath))) throw new IOException(L.Text("error.programPathMissing"));
                     settings.Save(); DialogResult = true;
                 }

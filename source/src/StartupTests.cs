@@ -7,7 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public static class StartupTests
     {

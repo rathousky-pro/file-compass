@@ -1,12 +1,12 @@
-﻿# File Compass
+# File Compass
 
 A Windows file manager by Rathousky.pro, currently in development. Two-panel file management, local/network/cloud transfers, archives, document previews, a disk analyzer and SMART diagnostics.
 
 ## Run
 
-Start **bin/File Compass.exe** and keep all supporting directories beside it (see the layout below). Read the [user guide](docs/README.md); packaged help is in `help`.
+Start **bin/File Compass.exe** and keep all supporting directories beside it (see the layout below). Press **F1** or choose **Help → Program help** for searchable offline help inside the application. Read the [user guide](docs/README.md); packaged reference guides are in `help`. **Help → About File Compass** shows the application logo, developer logo, version, build ID and build date; Copy information prepares diagnostic version information.
 
-Settings offer Czech/English, light/dark/system themes, Solid/Mica/Mica Alt backgrounds, fonts, icon sets and operation defaults. Appearance changes are previewed immediately; Cancel restores saved settings. Language changes apply after saving and restarting.
+Settings offer English, Czech, German, Spanish, Dutch, Polish, French and Portuguese, light/dark/system themes, Solid/Mica/Mica Alt backgrounds, fonts, icon sets and operation defaults. Appearance changes are previewed immediately; Cancel restores saved settings. Language changes apply immediately after saving, without restarting.
 
 ## Build
 
@@ -17,6 +17,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File source/build.ps1
 ```
 
 Use `-OutputDirectory ai-docs/artifacts/build` to build separately from an installed executable. Sources and bundled dependencies are in `source/`, supporting tools in `tools/`, maintained documentation in `docs/`. See [third-party notices](docs/THIRD-PARTY-NOTICES.md); original upstream licenses are retained unchanged.
+
+Version and channel are maintained in `source/version.json`. The current release is pinned to `0.9.5 beta`; subsequent builds increment the build ID without automatically increasing the minor version. Both build entry points generate embedded assembly metadata, a UTC date/sequence build ID (for example `20261024.01`) and timestamp automatically; the daily sequence restarts when the application version changes. The local counter and generated files live under ignored `source/obj`; build dates are not inferred from file modification times.
+
+The SDK project is `source/FileCompass.csproj`; application code uses the `FileCompass` namespace and the native network adapter is `FileCompassNetwork.dll`. Historical cryptographic identifiers remain unchanged so existing profiles and recovery state stay readable.
 
 ## Features
 
@@ -41,6 +45,8 @@ WebView2 profiles/cache use `%TEMP%/FileCompass/WebView2`, separated by installa
 
 AI/development notes, reports, screenshots and working builds belong under Git-ignored `ai-docs/`; put new outputs in `ai-docs/artifacts/`, not `source/` or `bin/`. Historical reports describe the tested version, not necessarily the current application.
 
+`tools/clean-old-artifacts.ps1` previews removal of historical artifacts, staging builds and verification outputs. Run it with `-Apply` to remove those directories. It preserves current sources, test suites, build tools, `bin`, `local-profile` and development notes.
+
 ## Installed directory layout
 
 Copy the complete installation, not only the executable:
@@ -58,4 +64,4 @@ Copy the complete installation, not only the executable:
 
 Older resource paths remain readable as a fallback. Runtime state is migrated once without overwriting existing destination files; original data remains recoverable. Configured managed-archiver/viewer paths are resolved to the new plugin location when available. WebView2 caches remain in system TEMP. Both config and data can contain sensitive local information and must be excluded when preparing a clean public distribution.
 
-English is the default on a fresh installation. Czech remains selectable in Settings; a saved language preference takes priority over the default.
+English is the default on a fresh installation. Czech, German, Spanish, Dutch, Polish, French and Portuguese remain selectable in Settings; a saved language preference takes priority over the default.

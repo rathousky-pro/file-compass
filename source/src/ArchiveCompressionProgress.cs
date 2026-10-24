@@ -1,6 +1,6 @@
 using System;
 using System.Globalization;
-namespace CommanderCZ
+namespace FileCompass
 {
     internal sealed class ArchiveCompressionProgress
     {

@@ -5,14 +5,41 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-namespace CommanderCZ {
+namespace FileCompass {
+    internal sealed partial class DiskAnalyzerWindow {
+        internal void VerifyFolderColumnOverflow(string output,Action<bool,string> check) {
+            var original=Result;double width=Width,height=Height;string theme=AppearanceTheme.Mode;
+            try {
+                var disk=new DiskFolder{Path=@"G:\\",Bytes=216466742476,Files=199393};
+                for(int i=0;i<45;i++)disk.Children.Add(new DiskFolder{Path=@"G:\"+(i==0?"SteamLibrary":"A long directory name - "+i),Bytes=i==0?161007797043:1024L*i*i,Files=i==0?188283:123});
+                disk.Children[0].Children.Add(new DiskFolder{Path=@"G:\SteamLibrary\A nested folder with a long name",Bytes=123456789,Files=12345});
+                var synthetic=new DiskAnalysis{Root=disk};
+                foreach(double testWidth in new[]{780.0,1160.0}) {
+                    Width=testWidth;Height=560;Present(synthetic);((System.Windows.Controls.TreeViewItem)((System.Windows.Controls.TreeViewItem)Folders.Items[0]).Items[0]).IsExpanded=true;
+                    NavigationTests.Wait(Task.Delay(100));UpdateLayout();
+                    var rows=AdvancedToolsTests.Visual<System.Windows.Controls.Grid>(Folders).Where(x=>Convert.ToString(x.Tag)=="analyzer.folderRow").ToArray();
+                    var scroll=AdvancedToolsTests.Visual<System.Windows.Controls.ScrollViewer>(Folders).First();
+                    var viewport=AdvancedToolsTests.Visual<System.Windows.Controls.ScrollContentPresenter>(scroll).First();
+                    double limit=viewport.TranslatePoint(new Point(viewport.ActualWidth,0),Folders).X;
+                    foreach(var bar in AdvancedToolsTests.Visual<System.Windows.Controls.Primitives.ScrollBar>(scroll).Where(x=>x.Orientation==System.Windows.Controls.Orientation.Vertical&&x.IsVisible&&x.ActualWidth>0))limit=Math.Min(limit,bar.TranslatePoint(new Point(0,0),Folders).X);
+                    check(scroll.ScrollableHeight>0,"Large folder list exercises a visible vertical scrollbar at width "+testWidth);
+                    check(rows.All(row=>{var count=(System.Windows.Controls.TextBlock)row.Children[2];return count.ActualHeight<25&&count.TranslatePoint(new Point(count.ActualWidth,0),Folders).X<=limit-2;}),"Entire file-count column remains inside the viewport and clear of the scrollbar at width "+testWidth);
+                    var rootCount=(System.Windows.Controls.TextBlock)rows[0].Children[2];
+                    var measured=new System.Windows.Media.FormattedText(rootCount.Text,System.Globalization.CultureInfo.CurrentCulture,FlowDirection.LeftToRight,new System.Windows.Media.Typeface(rootCount.FontFamily,rootCount.FontStyle,rootCount.FontWeight,rootCount.FontStretch),rootCount.FontSize,System.Windows.Media.Brushes.Black,System.Windows.Media.VisualTreeHelper.GetDpi(rootCount).PixelsPerDip);
+                    check(rootCount.Text==disk.Files.ToString("N0")&&rootCount.ActualWidth>=measured.WidthIncludingTrailingWhitespace-1,"Six-digit total fits completely on one line at width "+testWidth);
+                    check(((System.Windows.Controls.TextBlock)rows[0].Children[0]).ActualWidth>=100,"Compact numeric columns retain room for folder names at width "+testWidth);
+                    NextStageTests.Draw(this,Path.Combine(output,"folder-counts-"+testWidth+".png"));
+                }
+            }finally{Width=width;Height=height;AppearanceTheme.Apply(theme);Present(original);}
+        }
+    }
     internal static class DiskAnalyzerUpgradeTests {
         internal static int Run(string root){
             Directory.CreateDirectory(root);var checks=new List<string>();var indexes=new List<string>();DiskAnalyzerWindow window=null;string language=L.Language,theme=AppearanceTheme.Mode;
             Action<bool,string> check=(ok,label)=>{if(!ok)throw new Exception(label);checks.Add(label);};
             try{
                 SynchronizationContext.SetSynchronizationContext(new System.Windows.Threading.DispatcherSynchronizationContext(System.Windows.Threading.Dispatcher.CurrentDispatcher));FluentTheme.Ensure();
-                string folder=Directory.CreateDirectory(Path.Combine(root,"fixture-"+Guid.NewGuid().ToString("N"))).FullName;string video=Directory.CreateDirectory(Path.Combine(folder,"videos")).FullName,excluded=Directory.CreateDirectory(Path.Combine(folder,"cache")).FullName,docs=Directory.CreateDirectory(Path.Combine(folder,"docs&more")).FullName;DateTime clock=DateTime.UtcNow;
+                string folder=Directory.CreateDirectory(Path.Combine(root,"fixture-"+Guid.NewGuid().ToString("N"))).FullName;string video=Directory.CreateDirectory(Path.Combine(folder,"videos")).FullName,excluded=Directory.CreateDirectory(Path.Combine(folder,"cache")).FullName,docs=Directory.CreateDirectory(Path.Combine(folder,"docs&more")).FullName;Directory.CreateDirectory(Path.Combine(docs,"A long nested folder name for aligned columns"));DateTime clock=DateTime.UtcNow;
                 Action<string,int,int> write=(path,length,age)=>{File.WriteAllBytes(path,new byte[length]);File.SetLastWriteTimeUtc(path,clock.AddDays(-age));};
                 write(Path.Combine(video,"old.mp4"),4096,500);write(Path.Combine(video,"recent.mkv"),8192,2);write(Path.Combine(video,"small.mp4"),10,500);write(Path.Combine(excluded,"skip.mp4"),9000,500);write(Path.Combine(docs,"notes.pdf"),2000,10);write(Path.Combine(folder,"future.jpg"),500,-2);
                 for(int i=0;i<1100;i++)write(Path.Combine(docs,"file-"+i+".txt"),2,40);
@@ -35,6 +62,7 @@ namespace CommanderCZ {
                 var unsafeSnapshot=DiskAnalysisReports.Capture(after);unsafeSnapshot.Partial=true;rejected=false;try{DiskAnalysisReports.Compare(loaded,unsafeSnapshot);}catch(IOException){rejected=true;}check(rejected,"Partial scans cannot produce misleading comparisons");
                 string csv=Path.Combine(root,"files.csv");DiskAnalysisReports.CsvReport(csv,all,CancellationToken.None);check(File.ReadLines(csv).Count()==1107&&File.ReadAllText(csv).Contains("docs&more"),"CSV exports the full index rather than only top files");
                 window=new DiskAnalyzerWindow(null,folder,null){Left=-18000,Top=-18000,ShowActivated=false,WindowStartupLocation=WindowStartupLocation.Manual};window.Show();NavigationTests.Wait(window.ScanTask);indexes.Add(window.Result.IndexPath);window.UpdateLayout();
+                DiskAnalyzerTests.CheckFolderAlignment(window,root,check);
                 check(window.GroupChoice.Items.Count==5,"Analyzer offers category grouping alongside folder, extension, age and size");window.GroupChoice.SelectedIndex=4;window.MetricChoice.SelectedIndex=0;window.UpdateLayout();
                 var row=window.Chart.Rows.Single(x=>x.Keys.Contains("analyzer.category.video"));window.SelectChartRow(row);NavigationTests.Wait(window.MatchesTask);check(window.MatchingFiles.Items.Count==5,"Clicking a chart category lists its actual files");
                 window.MetricChoice.SelectedIndex=1;window.UpdateLayout();var other=window.Chart.Rows.Single(x=>x.Key=="__other");window.SelectChartRow(other);NavigationTests.Wait(window.MatchesTask);check(window.MatchingFiles.Items.Count==6,"Other slice includes every grouped category, including small video and image groups");
@@ -53,6 +81,7 @@ namespace CommanderCZ {
                 check(snapshots.Select(x=>x.Root.Files).SequenceEqual(snapshots.Select(x=>x.Root.Files).OrderBy(x=>x))&&snapshots.All(x=>x.Root.Bytes==x.Categories.Values.Sum(b=>b.Bytes)),"Published live totals are monotonic and internally consistent");
                 if(window.MatchesTask!=null)NavigationTests.Wait(window.MatchesTask);check(window.MatchingFiles.Items.Count==1000,"Fast rescan refreshes the visible file page instead of leaving it empty");NextStageTests.Draw(window,Path.Combine(root,"upgraded-light.png"));AppearanceTheme.Apply("Dark");window.UpdateLayout();NextStageTests.Draw(window,Path.Combine(root,"upgraded-dark.png"));window.Close();window=null;
                 L.LoadForTests(AppPaths.Resource("languages"),"en");window=new DiskAnalyzerWindow(null,folder,null){Left=-18000,Top=-18000,Width=850,Height=650,ShowActivated=false,WindowStartupLocation=WindowStartupLocation.Manual};window.Show();NavigationTests.Wait(window.ScanTask);window.UpdateLayout();NextStageTests.Draw(window,Path.Combine(root,"english-small.png"));check(window.Chart.ActualHeight>=100,"Compact English layout retains usable chart and wrapping actions");
+                window.VerifyFolderColumnOverflow(root,check);
                 File.WriteAllLines(Path.Combine(root,"result.txt"),checks.Concat(new[]{"PASS: "+checks.Count+" checks"}));return 0;
             }catch(Exception ex){File.WriteAllText(Path.Combine(root,"result.txt"),"FAIL: "+ex);return 1;}
             finally{if(window!=null)window.Close();foreach(string index in indexes)DiskFileIndex.Delete(index);L.LoadForTests(AppPaths.Resource("languages"),language);AppearanceTheme.Apply(theme);}

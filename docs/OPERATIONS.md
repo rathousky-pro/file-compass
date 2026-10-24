@@ -47,3 +47,17 @@ Volume presets are 100 MB / 700 MB / 4 GB or custom sizes, using multiples of 10
 File → Split file creates `.001`, `.002`, … and a `.parts.json` manifest, retaining the source. File → Combine files finds the series from `.001`; with a manifest it verifies part counts, lengths and SHA-256 hashes, including the final result. Missing/damaged parts prevent publication.
 
 Other programs' parts can be combined without a manifest, but original hashes and a missing final part cannot be verified. Retain the manifest for your own transfers. Input parts are never deleted; the result requires a new name.
+
+## Safe Undo and locking applications
+
+Edit / Undo (Ctrl+Z) previews this session's new copies, created directories, renames and local/mounted-network moves. The session retains up to 20 groups and 5,000 receipts per group. New copies are checked by volume/file identity and SHA-256 before removal. Namespace moves are restored through guarded handles without replacing the original name. Newly created directories must be empty before removal. Reparse paths are rejected and parent directories are held during changes.
+
+Overwrites, deletions, archives and remote/cloud operations are excluded. Undo may complete only part of a batch before a conflict; remaining receipts stay reviewable. The history is deliberately session-only. Cross-volume recovery can leave both copies if restoring/deleting fails; existing user files are never overwritten.
+
+Sharing errors expose Windows Restart Manager's list of locking applications. The user can activate an available application window, save/close the file there, and choose Retry or Skip. The feature does not forcibly terminate processes. Network locks and background services may not have a useful local process/window.
+
+## Transaction history from the toolbar
+
+The curved Undo arrow immediately after the left/right transfer arrows opens the transaction list; Ctrl+Z opens the same window. Green rows have available Undo steps, amber rows are partially reversible, and grey rows show the reason Undo is unavailable. Select an operation to review paths and undo it; this is not restricted to the latest transaction. Availability refreshes while the window is open and is revalidated before any changes.
+
+A later rename/move can disable an earlier one until the dependent action is undone. Deleting a renamed file makes that rename unavailable; a new file with the same name cannot inherit the original identity. Mixed new-copy/overwrite batches explicitly exclude overwritten files from Undo. Partial Undo preserves unavailable steps and user-added content. Completed transactions remain visible as Undone. The persistent journal also includes irreversible operations and previous-session records; safe Undo receipts remain session-only (20 retained groups / 5,000 steps per group).

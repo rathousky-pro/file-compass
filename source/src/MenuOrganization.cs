@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Windows.Controls;
-namespace CommanderCZ {
+namespace FileCompass {
     public partial class MainWindow {
         void OrganizeMainMenus(MenuItem file, MenuItem selection, MenuItem edit, MenuItem commands, MenuItem network, MenuItem display) {
             GroupMenu(file, "menuGroup.archives", "action.compress", "action.extract", "action.testArchive");
@@ -19,7 +19,6 @@ namespace CommanderCZ {
             GroupMenu(commands, "menuGroup.operations", "queue.copyTitle", "queue.restoreSaved", "queue.saveAndExit", "queue.networkCopyTitle");
             GroupMenu(commands, "menuGroup.compare", "action.compareFiles", "action.compareFolders", "action.synchronizeFolders");
             GroupMenu(commands, "analyzer.menuGroup", "analyzer.title", "smart.title", "diskUsage.title");
-            GroupMenu(commands, "menuGroup.external", "action.openExplorer", "action.openPowerShellHere");
             var duplicate = commands.Items.OfType<MenuItem>().FirstOrDefault(x => Convert.ToString(x.Header) == L.Text("action.batchRename")); if (duplicate != null) commands.Items.Remove(duplicate);
             GroupMenu(network, "menuGroup.networkDrives", "network.mapDriveMenu", "network.browseDevices");
             GroupMenu(network, "menuGroup.networkSession", "network.openActiveSshTerminal", "network.disconnectActivePanel");

@@ -2,11 +2,11 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
-namespace CommanderCZ.NetworkTransport
+namespace FileCompass.NetworkTransport
 {
     internal static class NativeNetwork
     {
-        const string Dll = "CommanderNetwork.dll";
+        const string Dll = "FileCompassNetwork.dll";
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] static extern IntPtr LoadLibraryEx(string path, IntPtr file, uint flags);
         static NativeNetwork()
         {

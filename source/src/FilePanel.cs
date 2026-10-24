@@ -13,7 +13,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public partial class FilePanel : Border
     {
@@ -436,7 +436,10 @@ namespace CommanderCZ
                 LocalLoading = false; List.IsEnabled = true; navigationCancellation = null;
                 if (loadError == null && LocalNavigationCompleted != null) LocalNavigationCompleted();
                 var owner = Window.GetWindow(this);
-                if (restoreListFocus && IsActivePanel && (owner == null || owner.IsActive) && (Keyboard.FocusedElement == focusAfterDisable || List.IsKeyboardFocusWithin)) FocusFiles();
+                // Removing the disabled old row can leave keyboard focus on the owner window.
+                // Restore the selected new row unless focus moved to another control/panel.
+                var focused = Keyboard.FocusedElement;
+                if (restoreListFocus && IsActivePanel && (owner == null || owner.IsActive) && (focused == focusAfterDisable || focused == null || focused == owner || List.IsKeyboardFocusWithin)) FocusFiles();
             });
             if (pendingLoad == null || pendingLoad.IsCompleted) cancellation.Dispose();
             else { var observe = pendingLoad.ContinueWith(delegate(Task completed) { var observed = completed.Exception; cancellation.Dispose(); }, TaskScheduler.Default); }
@@ -521,6 +524,8 @@ namespace CommanderCZ
         public void OpenSelected()
         {
             var entry = List.SelectedItem as Entry; if (entry == null) return;
+            if(entry.NetworkServiceProfile!=null){var main=Window.GetWindow(this) as MainWindow;if(main!=null)main.OpenDiscoveredService(this,entry);return;}
+            if(entry.NetworkDeviceTarget!=null){try{Process.Start(new ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows),"explorer.exe"),SshTerminal.QuoteWindowsArgument("shell:"+entry.NetworkDeviceTarget)){UseShellExecute=true});}catch(Exception ex){MessageBox.Show(ex.Message,L.Text("error.cannotOpenFile"));}return;}
             if (entry.IsDirectory) Navigate(entry.FullPath, true);
             else if (IsArchive) { if (ArchiveFileRequested != null) ArchiveFileRequested(this, entry, false, false); }
             else if (IsRemote) OpenRemoteFile(entry);

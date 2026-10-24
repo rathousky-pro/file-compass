@@ -5,7 +5,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static class ConnectionsDialogTests {
         static Button Button(Window window,string key){return AdvancedToolsTests.Visual<Button>(window).First(x=>x.IsVisible&&Convert.ToString(x.Content)==L.Text(key));}
         static void CheckEditor(ConnectionsDialog host,string button,string file,Action<bool,string> check,bool cloud){
@@ -14,7 +14,7 @@ namespace CommanderCZ {
                 var child=host.OwnedWindows.Cast<Window>().FirstOrDefault(x=>x.IsVisible);if(child==null)return;
                 timer.Stop();check(child.Owner==host,"Child editor is owned by the unified window: "+button);
                 child.UpdateLayout();
-                if(cloud)check(AdvancedToolsTests.Visual<ComboBox>(child).Single().Items.Cast<string>().SequenceEqual(new[]{"Google Drive","OneDrive","Dropbox"}),"Cloud wizard retains all three providers inside the shared window");
+                if(cloud)check(AdvancedToolsTests.Visual<ComboBox>(child).Single().Items.Cast<string>().SequenceEqual(new[]{"Google Drive","OneDrive","Dropbox","iCloud Drive"}),"Cloud wizard retains all four providers inside the shared window");
                 else check(child is NetworkProfileDialog,"Network profile editor opens from the network tab");
                 NextStageTests.Draw(child,file);child.DialogResult=false;
             };

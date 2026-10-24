@@ -10,7 +10,7 @@ using Markdig.Syntax.Inlines;
 using ICSharpCode.AvalonEdit;
 using ICSharpCode.AvalonEdit.Highlighting;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal sealed class RichFilePreview : Grid
     {

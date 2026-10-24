@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using CommanderCZ.NetworkTransport;
+using FileCompass.NetworkTransport;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class SshfsTests
     {
@@ -42,7 +42,7 @@ namespace CommanderCZ
                 string root = SshfsMount.Mount(profile, "test-password", key.Item2);
                 check(File.ReadAllText(Path.Combine(root, "český soubor.txt")) == "Příliš žluťoučký kůň", "real SSHFS disk reads Czech filename and content through WinFsp");
                 check(SshfsMount.Connected(profile) && FilePanel.RememberedDrives().ContainsKey(root), "managed SSHFS drive is discoverable with its network address");
-                string created = Path.Combine(root, "commander-sshfs-test.txt"); File.WriteAllText(created, "verified SSHFS write");
+                string created = Path.Combine(root, "filecompass-sshfs-test.txt"); File.WriteAllText(created, "verified SSHFS write");
                 check(File.ReadAllText(created) == "verified SSHFS write", "real SSHFS disk writes exact content");
                 File.Move(created, Path.Combine(root, "renamed-test.txt")); File.Delete(Path.Combine(root, "renamed-test.txt")); check(!File.Exists(created), "real SSHFS disk supports rename and deletion");
                 check(CopyEngine.NetworkPath(root), "copy engine recognizes actual SSHFS drive as a network path");
@@ -65,9 +65,9 @@ namespace CommanderCZ
                 var keep = profile.Clone(); keep.SshfsKeepMounted = true; keep.EncryptedPassword = NetworkSettingsStore.Protect("test-password");
                 new NetworkSettingsStore(Path.Combine(directory, "keep-profile.xml")).Put(keep);
                 var start = new System.Diagnostics.ProcessStartInfo(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName, "--sshfs-keep-test " + SshTerminal.QuoteWindowsArgument(directory) + " " + port) { UseShellExecute = false, CreateNoWindow = true };
-                using (var child = System.Diagnostics.Process.Start(start)) { if (!child.WaitForExit(30000)) { child.Kill(); throw new Exception("Persistent mount test timeout."); } check(child.ExitCode == 0, "separate Commander process mounts a persistent SSHFS drive"); }
-                check(SshfsMount.Connected(profile) && File.ReadAllText(Path.Combine(profile.DriveLetter + "\\", "český soubor.txt")) == "Příliš žluťoučký kůň", "SSHFS remains usable after the creating Commander process exits");
-                SshfsMount.Disconnect(profile); check(!SshfsMount.Connected(profile), "a new Commander process can safely disconnect the persisted mount using recorded process identity");
+                using (var child = System.Diagnostics.Process.Start(start)) { if (!child.WaitForExit(30000)) { child.Kill(); throw new Exception("Persistent mount test timeout."); } check(child.ExitCode == 0, "separate File Compass process mounts a persistent SSHFS drive"); }
+                check(SshfsMount.Connected(profile) && File.ReadAllText(Path.Combine(profile.DriveLetter + "\\", "český soubor.txt")) == "Příliš žluťoučký kůň", "SSHFS remains usable after the creating File Compass process exits");
+                SshfsMount.Disconnect(profile); check(!SshfsMount.Connected(profile), "a new File Compass process can safely disconnect the persisted mount using recorded process identity");
                 File.WriteAllLines(result, checks.Concat(new[] { "PASS: " + checks.Count + " checks" })); return 0;
             }
             catch (Exception ex) { File.WriteAllText(result, "FAIL after " + checks.Count + " checks\n" + String.Join("\n", checks) + "\n" + ex); return 1; }

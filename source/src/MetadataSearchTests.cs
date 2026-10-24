@@ -10,7 +10,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static class MetadataSearchTests {
         static FileSearchOptions Options(string root,string field,string op,string value){return new FileSearchOptions{Root=root,MetadataConditions=new[]{new MetadataSearchCondition{Field=field,Operator=op,Value=value}}};}
         static SearchHit[] Find(FileSearchOptions options,List<string> warnings=null,CancellationToken token=default(CancellationToken)){

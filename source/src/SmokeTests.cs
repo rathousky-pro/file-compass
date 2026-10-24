@@ -6,13 +6,13 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public static class SmokeTests
     {
         public static int Run(string workspace)
         {
-            string root = Path.Combine(Path.GetFullPath(workspace), "commandercz-test-" + Guid.NewGuid().ToString("N"));
+            string root = Path.Combine(Path.GetFullPath(workspace), "filecompass-test-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(root);
             int checks = 0;
             try

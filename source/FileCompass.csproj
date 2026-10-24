@@ -12,11 +12,20 @@
     <AppConfig>FileVoyager.exe.config</AppConfig>
     <ApplicationIcon>assets\file-voyager\FileVoyager-FloppyOrbit.ico</ApplicationIcon>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <DefineConstants>$(DefineConstants);APP_TESTS</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
-    <Compile Include="src\*.cs" />
+    <Compile Include="src\*.cs" Exclude="src\*Tests.cs" />
+    <Compile Include="obj\BuildInfo.g.cs" />
+    <EmbeddedResource Include="assets\branding\rathousky-pro.png" LogicalName="FileCompass.Branding.RathouskyPro.png" />
+    <EmbeddedResource Include="help\cs-CZ.json" LogicalName="FileCompass.Help.cs-CZ.json" />
+    <EmbeddedResource Include="help\en.json" LogicalName="FileCompass.Help.en.json" />
+    <Compile Include="src\*Tests.cs" Condition="'$(Configuration)' == 'Debug'" />
     <Reference Include="Microsoft.Web.WebView2.Core"><HintPath>ui\Microsoft.Web.WebView2.Core.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Microsoft.Web.WebView2.Wpf"><HintPath>ui\Microsoft.Web.WebView2.Wpf.dll</HintPath><Private>false</Private></Reference>
-    <Content Include="preview\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="preview\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Content Include="preview\*.dll;preview\*.txt" CopyToOutputDirectory="PreserveNewest" TargetPath="preview\%(Filename)%(Extension)" />
+    <Content Include="obj\preview\preview.dll" CopyToOutputDirectory="PreserveNewest" TargetPath="preview\preview.dll" />
     <Reference Include="Microsoft.Bcl.HashCode"><HintPath>ui\Microsoft.Bcl.HashCode.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UglyToad.PdfPig.Core"><HintPath>ui\UglyToad.PdfPig.Core.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UglyToad.PdfPig"><HintPath>ui\UglyToad.PdfPig.dll</HintPath><Private>false</Private></Reference>
@@ -25,6 +34,9 @@
     <Reference Include="UglyToad.PdfPig.Package"><HintPath>ui\UglyToad.PdfPig.Package.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UglyToad.PdfPig.Tokenization"><HintPath>ui\UglyToad.PdfPig.Tokenization.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UglyToad.PdfPig.Tokens"><HintPath>ui\UglyToad.PdfPig.Tokens.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Magick.NET-Q8-x64"><HintPath>ui\Magick.NET-Q8-x64.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Magick.NET.Core"><HintPath>ui\Magick.NET.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="netstandard" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="System.IO.Compression" />
@@ -41,7 +53,7 @@
     <None Update="languages\*.lng" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />
     <None Update="languages\README.md" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />
     <None Update="THIRD-PARTY-NOTICES.md" CopyToOutputDirectory="PreserveNewest" />
-    <None Update="plugins\cloud\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />
+    <None Update="plugins\cloud\rclone.exe;plugins\cloud\README.txt;plugins\cloud\LICENSE.txt" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />
     <None Update="plugins\7zip\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />
     <None Update="plugins\network\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />
     <Content Include="..\bin\icons\*.dll" Link="icons\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
@@ -50,9 +62,13 @@
     <None Update="plugins\cloud\google-oauth.json" CopyToOutputDirectory="Never" />
     <Content Include="plugins\cloud\google-oauth.json" Condition="Exists('plugins\cloud\google-oauth.json')" CopyToOutputDirectory="PreserveNewest" TargetPath="config\oauth\google.json" />
     <Content Include="..\docs\*.md" Link="help\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="plugins\media\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />
     <None Update="plugins\smart\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />
     <None Update="plugins\sshfs\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />
   </ItemGroup>
+  <Target Name="GenerateBuildInfo" BeforeTargets="BeforeCompile;CoreCompile">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\gen-build-info.ps1&quot;" />
+  </Target>
   <Target Name="GeneratePluginHashes" BeforeTargets="BeforeCompile;CoreCompile">
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\gen-plugin-hashes.ps1&quot;" />
   </Target>

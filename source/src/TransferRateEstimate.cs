@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-namespace CommanderCZ {
+namespace FileCompass {
     internal sealed class TransferRateEstimate {
         readonly Queue<Tuple<double,long>> history=new Queue<Tuple<double,long>>();
         internal double? Remaining(long bytes,double activeSeconds,long remaining) {

@@ -7,7 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Threading.Tasks;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal sealed class AttributeChanges
     {
@@ -87,7 +87,7 @@ namespace CommanderCZ
                 try { var changes = new AttributeChanges { ReadOnly = readOnly.IsChecked, Hidden = hidden.IsChecked, System = system.IsChecked, Archive = archive.IsChecked, Recursive = recursive.IsChecked == true, Created = Parse(created.Text), Modified = changeTime.IsChecked == true ? Parse(date.Text + " " + time.Text) : null, Accessed = Parse(accessed.Text) }; if (changeTime.IsChecked == true && !changes.Modified.HasValue) throw new FormatException(L.Text("attributes.modifiedTimestampRequired")); apply(paths, changes); DialogResult = true; }
                 catch (FormatException ex) { MessageBox.Show(this, ex.Message, L.Text("attributes.invalidTimeTitle")); }
             }); ok.IsDefault = true; buttons.Children.Add(ok); var cancel = CopyUi.Button(L.Text("action.cancel"), delegate { DialogResult = false; }); cancel.IsCancel = true; buttons.Children.Add(cancel);
-            buttons.Children.Add(CopyUi.Button(L.Text("action.help"), delegate { MessageBox.Show(this, L.Text("attributes.dialogHelp"), L.Text("attributes.changeTitle")); }));
+            buttons.Children.Add(CopyUi.Button(L.Text("action.help"), delegate { HelpService.Open(this,"attributes"); }));
             Loaded += delegate { LoadValues(paths, false); };
         }
         static void Add(Grid row, UIElement child, int column) { Grid.SetColumn(child, column); row.Children.Add(child); }

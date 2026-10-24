@@ -8,7 +8,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public static class CopyUi
     {
@@ -95,7 +95,7 @@ namespace CommanderCZ
         }
     }
 
-    public class CopySetupDialog : Window
+    public partial class CopySetupDialog : Window
     {
         public CopyOptions Options;
         readonly ComboBox destination = new ComboBox { IsEditable = true, Height = 26 };
@@ -125,7 +125,7 @@ namespace CommanderCZ
             buttons.Children.Add(CopyUi.Button(L.Text("functionKey.enqueue"), delegate { Accept(true); }));
             var ok = CopyUi.Button(L.Text(move ? "copy.designMove" : "copy.designCopy"), delegate { Accept(false); }); ok.IsDefault = true; FluentTheme.Primary(ok); ok.Background = FluentTheme.Accent; ok.Foreground = Brushes.White; ok.BorderBrush = FluentTheme.Accent; buttons.Children.Add(ok);
             CopyUi.EnterDefault(this, ok);
-            var body = new StackPanel();
+            var body = new StackPanel(); AddPresets(body);
             var scroll = new ScrollViewer { Content = body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, MaxHeight = Math.Max(160, MaxHeight - 130) }; panel.Children.Add(scroll);
             var destinationSection = FluentTheme.Section(body, L.Text(move ? "copy.designMove" : "copy.designCopy"));
             destinationSection.Children.Add(new TextBlock { Text = L.Format("copy.designSummary", entries.Count(x => !x.IsDirectory), entries.Count(x => x.IsDirectory)) + (entries.Any(x => !x.IsDirectory) ? " · " + CopyUi.Bytes(entries.Where(x => !x.IsDirectory).Sum(x => x.Bytes)) : ""), Foreground = FluentTheme.Muted, Margin = new Thickness(2,0,2,18) });
@@ -252,7 +252,7 @@ namespace CommanderCZ
         {
             var group = new GroupBox { Header = title, Margin = new Thickness(1, 0, 1, 0), Padding = new Thickness(8, 2, 8, 6) };
             var inner = new DockPanel(); var image = new Image { Tag = path, Width = 64, Height = 56, Margin = new Thickness(6), Visibility = Visibility.Collapsed }; thumbs.Add(image); DockPanel.SetDock(image, Dock.Right); inner.Children.Add(image);
-            var text = new StackPanel(); text.Children.Add(CopyUi.Label(path)); text.Children.Add(new TextBlock { Text = (directory ? L.Text("common.folder") : bytes.ToString("N0") + L.Text("common.bytesSuffix")) + ", " + time.ToString("dd.MM.yyyy HH:mm:ss"), Margin = new Thickness(12, 0, 0, 0) });
+            var text = new StackPanel(); text.Children.Add(new PathTextBlock{FullPath=path,Margin=new Thickness(2,4,2,7)}); text.Children.Add(new TextBlock { Text = (directory ? L.Text("common.folder") : bytes.ToString("N0") + L.Text("common.bytesSuffix")) + ", " + time.ToString("dd.MM.yyyy HH:mm:ss"), Margin = new Thickness(12, 0, 0, 0) });
             inner.Children.Add(text); group.Content = inner; return group;
         }
         static ImageSource Thumbnail(string path)
@@ -271,7 +271,8 @@ namespace CommanderCZ
         readonly CompressionRatioTrend speedTrend = new CompressionRatioTrend { SpeedMode=true,Height=60 };
         Button pauseButton;
         internal void TogglePause() { control.Pause(!control.Paused); pauseButton.Content = control.Paused ? L.Text("action.resume") : L.Text("action.pause"); UpdateMetrics(); }
-        readonly TextBlock phase = Line(L.Text("copy.loadingFiles")), source = Line(""), target = Line(""), count = Line(""), totals = Line("");
+        readonly TextBlock phase = Line(L.Text("copy.loadingFiles")), count = Line(""), totals = Line("");
+        readonly PathTextBlock source = new PathTextBlock(), target = new PathTextBlock();
         readonly TextBlock filePercent = Line("0 %"), totalPercent = Line("0 %"), speed = Line(L.Text("transfer.unknownRate"));
         readonly LocalCopyProgressBar fileProgress = new LocalCopyProgressBar(false) { Height = 3, ToolTip = L.Text("progress.currentFileLabel") };
         readonly LocalCopyProgressBar totalProgress = new LocalCopyProgressBar(true) { Height = 3, ToolTip = L.Text("progress.wholeJobLabel") };
@@ -330,8 +331,7 @@ namespace CommanderCZ
         public void Update(CopyUpdate update)
         {
             latest = update; lastUpdate = DateTime.UtcNow; UpdateMetrics();
-            source.Text = L.Text("transfer.sourceLabel") + update.Source; target.Text = L.Text("transfer.targetLabel") + update.Target;
-            source.ToolTip = source.Text; target.ToolTip = target.Text;
+            source.SetPath(L.Text("transfer.sourceLabel"),update.Source);target.SetPath(L.Text("transfer.targetLabel"),update.Target);
             double file = update.FileTotal == 0 ? 0 : (double)update.FileDone / update.FileTotal;
             double total = update.TotalBytes == 0 ? (update.TotalFiles == 0 ? 0 : (double)update.Completed / update.TotalFiles) : (double)update.TotalDone / update.TotalBytes;
             fileProgress.Update(file); totalProgress.Update(total); filePercent.Text = (Math.Max(0,Math.Min(1,file)) * 100).ToString("F0") + " %"; totalPercent.Text = (Math.Max(0,Math.Min(1,total)) * 100).ToString("F0") + " %";

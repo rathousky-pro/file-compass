@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public partial class MainWindow
     {
@@ -107,6 +107,7 @@ namespace CommanderCZ
                         if (!left.IsRemote && (job.Options.Move || left.CurrentPath == job.Options.Target)) left.Refresh();
                         if (!right.IsRemote && (job.Options.Move || right.CurrentPath == job.Options.Target)) right.Refresh();
                         operation.Text = (result.Cancelled ? L.Code("state.cancelled") : L.Code("state.completed")) + (job.Options.Move ? L.Text("copy.movedCountPrefix") : L.Text("copy.copiedCountPrefix")) + result.Copied + L.Text("copy.skippedCountSeparator") + result.Skipped + L.Text("operation.errorCountSeparator") + result.Errors.Count;
+                        activity.Record.Undo=SafeUndo.Record(L.Text(job.Options.Move?"action.move":"action.copy"),result.Undo);
                         activity.Record.Items.AddRange(result.Items);
                         durableQueue.Finish(job.Durable,(result.Cancelled && !preserveQueueOnExit) || (!result.Cancelled && result.Errors.Count == 0 && !result.Items.Any(x => x.State == L.Code("state.error"))));
                         activity.Finish(operation.Text, !result.Cancelled && result.Errors.Count == 0 && !result.Items.Any(x => x.State == L.Code("state.error")));

@@ -1,4 +1,4 @@
-// Compatibility entry point for existing CommanderCZ desktop shortcuts.
+// Compatibility entry point for existing FileCompass desktop shortcuts.
 using System;
 using System.Diagnostics;
 using System.IO;

@@ -7,7 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal sealed class DirectorySyncWindow : Window
     {

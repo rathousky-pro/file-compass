@@ -62,3 +62,59 @@ The selection basket collects references from different folders. Delete/F8 remov
 Commands → Fast search with Everything uses a separately installed/running Everything index; only its SDK is bundled. Queries accept Everything syntax and return at most 20,000 results. The helper has a 15-second timeout. Ordinary Alt+F7 search remains available when Everything is unavailable.
 
 Startup can use a JIT profile on later runs. Thumbnails load for realized rows and release images outside the visible area. Same-folder refresh applies incremental row changes and preserves selection/scroll. Performance depends on storage, antivirus and available caches.
+
+## Command search, linked browsing and operation presets
+
+Ctrl+Shift+P searches registered menu commands. Settings / Custom keyboard shortcuts persists overrides by language-independent command IDs, checks collisions, and supports clearing or restoring bindings. Text editors keep normal typing.
+
+Commands / Linked panel browsing captures the two current local or mounted-network folder roots. Relative navigation is mirrored only when the counterpart exists. Leaving a root disables linking. Missing counterparts do not change the other panel and do not create directories.
+
+F5/F6 includes named operation presets for destination, include/exclude masks, verification, conflict policy and metadata flags. Loading fills the dialog only; the current Copy/Move action remains authoritative. At most 100 presets are stored.
+
+Text search defaults to a zero (unlimited) source size limit and streams ordinary text. Results include line/location and an excerpt. Optional PDF/DOCX text search runs in a 512 MB worker with a 15-second deadline and 64 MB source limit. DOCX XML is bounded to 16 MB per part / 64 MB total. This does not perform OCR. Unsupported, protected and over-limit documents produce warnings.
+
+## File names and embedded media metadata
+
+Media / Metadata from file names previews a pattern against file names without extensions. For audio use `[MP3.Artist] - [MP3.Track] - [MP3.Title]`; MP3 tokens also represent supported other audio containers. For pictures use `[EXIF.Date]_[EXIF.Time] - [Image.Title]`. Dates accept `yyyy-MM-dd` or `yyyyMMdd`, times `HH-mm-ss` or `HHmmss`. `[Ignore]` skips a segment; variable fields require literal separators.
+
+Existing values are retained unless Replace existing metadata is enabled. Only previewed changes are written, using a temporary copy and post-save field verification. An exact original `.filecompass-metadata-<id>.bak` is retained beside every successfully replaced file. Preserve those backups until satisfied with the result. Unsupported writes fail without replacing the original. Files changed after preview, read-only files and linked paths are rejected. Limits: 500 files per batch and 1 GB per source. The feature works with local and mounted network paths.
+
+Media / Rename using metadata opens the existing collision-checked batch rename preview with a media preset. Additional tokens include image title/author/comment/copyright, separate EXIF make/model, and audio genre/disc/composer. Missing values produce per-file warnings and preserve the original name. Extensions are retained by default.
+
+## File system fields in rename templates
+
+The main Media menu contains batch rename, metadata-to-name rename, name-to-metadata writing and simple image editing. Existing keyboard shortcuts remain available.
+
+Rename templates now accept `[File.Created]`, `[File.Modified]` and `[File.Accessed]` for local file-system dates, plus `[File.CreatedTime]`, `[File.ModifiedTime]` and `[File.AccessedTime]`. Defaults are `yyyy-MM-dd` and `HH-mm-ss`; a custom date/time pattern can be supplied as `[File.Created:yyyyMMdd_HHmmss]`. `[File.Size]` is the file size in bytes and `[File.Folder]` is the parent folder name. These fields work without embedded EXIF or audio tags and do not write file timestamps. Missing values preserve the old name and show a warning; file size is unavailable for directories. Filename-unsafe output characters are sanitized. Existing `[RMD]` and `[hms]` templates retain their behavior.
+
+## Batch image dimensions
+
+Select all images to process and open Simple image editing from the shared submenu. The same rotation, size and format settings apply to every selected image, producing new `_upraveno` files. Originals and existing output files are never overwritten.
+
+In addition to longest edge and percentage, choose exact width × height, width only, or height only. Exact dimensions can stretch the image if the aspect ratio differs. A single specified side calculates the other side independently for each image after EXIF orientation and rotation, rounding to whole pixels. These explicit dimensions can enlarge smaller images; longest-edge mode still only shrinks. Output dimensions and aggregate frame pixel budgets are bounded before allocating resized images. Metadata is not carried into edited image copies, as described in the dialog.
+
+## Média – převody obrázků a zvuku
+
+Hlavní nabídka **Média** sdružuje převod obrázků a zvuku, jednoduché hromadné úpravy obrázků, přejmenování podle metadat a zápis metadat z názvu. Nástroje pracují s lokálními soubory. Pro cloud nebo archiv je nejdříve stáhněte či rozbalte.
+
+Převodník má záložky **Obrázky** a **Převést zvuk**. Přidejte soubory, vyberte zaškrtnuté položky a nastavte výstupní složku. Parametry zdroje a stav převodu jsou viditelné v seznamu; po výběru řádku se zobrazí celá zdrojová a cílová cesta i podrobnosti chyby. Výstupy mají `_converted`, při kolizi další číslo. Originály se nepřepisují. Úspěšné položky se odškrtnou, aby se omylem nepřeváděly znovu. Zrušení ponechá již dokončené soubory. Výstupy jsou zapojené do historie a bezpečného vrácení operací.
+
+- Obrázky: PNG, JPEG, WebP (také bezeztrátový), AVIF, TIFF, BMP, GIF; kvalita, otáčení, původní rozměry, delší strana, procenta, pevné rozměry nebo jedna strana se zachováním poměru. JPEG/BMP vyplní průhlednost bílou. GIF má omezenou paletu. Vícesnímkové soubory zachovávají snímky jen v GIF/WebP/TIFF, jinak je nutné výslovně zvolit první snímek. Zachování metadat závisí na cílovém formátu.
+- Zvuk: MP3, AAC v M4A nebo ADTS, AC-3, E-AC-3, FLAC, WAV, Opus, Ogg Vorbis, ALAC v M4A. Bitrate a VBR podle kodeku, mono/stereo/5.1/7.1 podle podpory, vzorkovací frekvence, 16/24 bitů u bezeztrátových kodeků a také 32bit float u WAV. Pořadí zvukové stopy se počítá od 1. Dostupná je normalizace, výslovný stereo upmix a kopírování kompatibilní stopy bez překódování.
+- Video: převádí se zvuková stopa nebo se extrahuje. U AAC/ALAC lze zachovat původní video v MP4 bez překódování; nekompatibilní video končí chybou. Převod obrazové části videa není součástí nástroje.
+
+AC-3 a E-AC-3 umí nejvýše 5.1. Upmix ze sterea nevytváří původní prostorový záznam ani Dolby Atmos. Zvýšení bitrate nebo bitové hloubky neobnoví ztracené informace. Výsledek se před uložením znovu kontroluje; zvuk se také celý dekóduje pro ověření čitelnosti.
+
+Převodník umožňuje zvolit 1, 2, 3, 4, 6 nebo 8 souběžně zpracovávaných souborů. Volba se pamatuje pro další otevření okna; výchozí jsou 2. Platí pro obrázky i zvuk. Zrušení zastaví všechny aktivní převody a ponechá již dokončené výstupy. Vyšší souběžnost zvyšuje nároky na paměť a CPU a nemusí vždy zkrátit čas. VBR je dostupné u MP3, AAC, Vorbis a Opus; AC-3/E-AC-3 tuto volbu nenabízejí.
+
+Náhledy dokumentů: HTML a JavaScript pro DOCX a tabulky jsou přibalené jako prostředky v `preview/preview.dll`; na disk se při prohlížení nerozbalují. Samostatně zůstává nativní `WebView2Loader.dll` a licenční texty. PDF a HTML nadále vykresluje WebView2. Obrazové náhledy WPF se tímto balením nemění.
+
+Nastavení převodníku včetně cílové složky a souběžnosti je nahoře. Pod ním je seznam souborů přes celou šířku okna; průběh a tlačítka zůstávají dole. Pole se vzorem názvu v obou metadata nástrojích nabízí po kliknutí nebo Alt+šipka dolů seznam platných příkazů. Výběr nahradí označený text nebo se vloží na pozici kurzoru.
+
+Režim datového toku se vybírá samostatně: MP3 nabízí CBR, ABR s cílovým průměrem a VBR podle kvality (0 nejlepší až 9 nejnižší). AAC a Vorbis nabízejí cílový průměr ABR nebo kvalitu VBR; u Vorbis je vyšší číslo kvalitnější (−1 až 10), u AAC také vyšší. Opus podporuje CBR, VBR a omezené CVBR s cílovým bitrate. Skutečný průměr závisí na obsahu a délce nahrávky. Neaktivní pole se nezohledňují při kódování. Pokročilé volby pro obrázky i zvuk jsou ve společné sekci pod zarovnanými základními poli. Detailní okénko cílového názvu pod seznamem bylo odstraněno; dlouhé stavy jsou dostupné v nápovědě buněk.
+
+### CSV table preview
+
+F3 and Ctrl+Q render CSV/TSV/TAB/PSV in a read-only native table. The shared bounded parser detects comma, semicolon, tab and pipe outside quoted fields, honors `sep=`, and preserves escaped quotes, multiline values, trailing empty cells and leading zeros. Manual separator selection also supports colon; headers can be disabled. Source text remains available through the formatted-preview toggle. Local and remote text previews use the same parser; encoding follows the preview selector/BOM. Limits: 128 KiB source, 2,000 records, 128 columns, 100,000 cells, 16,384 characters per cell. Truncation is reported; unfinished final records are omitted.
+
+Media converter layout: Conversion settings and Advanced are separate tabs without a nested settings ScrollViewer. Destination and parallelism remain below both tabs. Queue column widths are recomputed from the grid width, reserving vertical scrollbar space; long text uses ellipsis and tooltips. Column dragging is disabled to keep the last column visible.

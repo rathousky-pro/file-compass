@@ -2,7 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-namespace CommanderCZ
+namespace FileCompass
 {
     public sealed class NetworkCopyDialog : Window
     {
@@ -42,8 +42,8 @@ namespace CommanderCZ
             else heading += L.Text("transfer.localFolderLabel");
             var body = new StackPanel { Margin = new Thickness(6, 4, 6, 4) };
             body.Children.Add(new TextBlock { Text = heading, FontWeight = FontWeights.Bold, TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = heading });
-            body.Children.Add(new TextBlock { Text = details, Foreground = FluentTheme.Muted, TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = details, Margin = new Thickness(0, 2, 0, 0) });
-            if (path != null) body.Children.Add(new TextBlock { Text = L.Text("transfer.folderPrefix") + path, TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = path, Margin = new Thickness(0, 2, 0, 0) });
+            if(profile==null&&!remote)body.Children.Add(new PathTextBlock{FullPath=details,Foreground=FluentTheme.Muted,Margin=new Thickness(0,2,0,0)});else body.Children.Add(new TextBlock { Text = details, Foreground = FluentTheme.Muted, TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = details, Margin = new Thickness(0, 2, 0, 0) });
+            if (path != null) body.Children.Add(new PathTextBlock { Prefix=L.Text("transfer.folderPrefix"),FullPath=path,Margin=new Thickness(0,2,0,0) });
             panel.Children.Add(new Border { Child = body, Background = CompactTheme.ThemeBrush("#E6E6E6"), CornerRadius = new CornerRadius(3), BorderBrush = CompactTheme.Line, BorderThickness = new Thickness(1), Margin = new Thickness(2, 2, 2, 6), Padding = new Thickness(4) });
         }
     }

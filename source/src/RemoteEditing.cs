@@ -5,14 +5,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using CommanderCZ.NetworkTransport;
+using FileCompass.NetworkTransport;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal sealed class RemoteEditDocument : IDisposable
     {
         readonly RemoteConnection template; internal readonly string RemotePath, LocalPath; internal RemoteFileInfo Expected;
         string expectedEdges;
+        long savedTime,savedLength;
+        internal bool HasLocalChanges {get{return Expected!=null&&File.Exists(LocalPath)&&(File.GetLastWriteTimeUtc(LocalPath).Ticks!=savedTime||new FileInfo(LocalPath).Length!=savedLength);}}
+        void RememberLocal(){savedTime=File.GetLastWriteTimeUtc(LocalPath).Ticks;savedLength=new FileInfo(LocalPath).Length;}
         string LocalEdges(CancellationToken token)
         {
             using (var input = File.OpenRead(LocalPath)) { var parts = new System.Collections.Generic.List<string>(); foreach (long start in new[] { 0L,Math.Max(0,input.Length - 65536) }.Distinct()) { input.Position = start; parts.Add(TransferCheckpoint.Hash(input,Math.Min(65536,input.Length - start),token.ThrowIfCancellationRequested)); } return String.Join(";",parts); }
@@ -30,8 +33,10 @@ namespace CommanderCZ
                 token.ThrowIfCancellationRequested(); connection.OpenTransfer(); Expected = connection.Session.GetFileInfo(RemotePath);
                 if (Expected.IsDirectory || Expected.FileType == 'L') throw new IOException(L.Text("remoteEditor.regularFileRequired"));
                 connection.Session.GetFiles(RemotePath,LocalPath).Check(); token.ThrowIfCancellationRequested();
+                AttachmentSecurity.MarkInternet(LocalPath);
                 if (!NetworkWork.Same(Expected,connection.Session.GetFileInfo(RemotePath))) throw new IOException(L.Text("remoteEditor.changedDuringDownload"));
                 expectedEdges = template.Profile.Protocol == NetworkProtocol.SCP ? null : LocalEdges(token);
+                RememberLocal();
             }
         }
         internal void Save(CancellationToken token)
@@ -47,9 +52,10 @@ namespace CommanderCZ
                 connection.Session.UploadRelay(input,input.Length,File.GetLastWriteTime(LocalPath),RemotePath,Expected,delegate { token.ThrowIfCancellationRequested(); },validate,delegate { });
                 Expected = connection.Session.GetFileInfo(RemotePath);
                 expectedEdges = template.Profile.Protocol == NetworkProtocol.SCP ? null : LocalEdges(token);
+                RememberLocal();
             }
         }
-        public void Dispose() { template.Dispose(); }
+        public void Dispose() { template.Dispose(); try { PathSafety.DeleteTree(Path.GetDirectoryName(LocalPath)); } catch(IOException) { } catch(UnauthorizedAccessException) { } }
     }
     public partial class MainWindow
     {
@@ -73,7 +79,7 @@ namespace CommanderCZ
             }); save.IsEnabled = false; buttons.Children.Add(save);
             buttons.Children.Add(CopyUi.Button(L.Text("action.close"),window.Close));
             body.Children.Add(CopyUi.Button(L.Text("transfer.cancelActiveTransfer"),delegate { cancellation.Cancel(); }));
-            window.Closing += delegate(object s,System.ComponentModel.CancelEventArgs e) { if (working) { cancellation.Cancel(); e.Cancel = true; status.Text = L.Text("transfer.cancellingStatus"); } };
+            window.Closing += delegate(object s,System.ComponentModel.CancelEventArgs e) { if (working) { cancellation.Cancel(); e.Cancel = true; status.Text = L.Text("transfer.cancellingStatus"); } else if(document.HasLocalChanges&&MessageBox.Show(window,L.Text("archive.confirmDiscardEditorChanges"),L.Text("archive.unsavedChangesTitle"),MessageBoxButton.YesNo,MessageBoxImage.Warning,MessageBoxResult.No)!=MessageBoxResult.Yes)e.Cancel=true; };
             window.Closed += delegate { document.Dispose(); cancellation.Dispose(); }; window.Show(); networkCopies++;
             try { await Task.Run(delegate { document.Download(cancellation.Token); }); open.IsEnabled = save.IsEnabled = true; status.Text = L.Text("remoteEditor.readyWithConflictChecks"); FileViewers.Open(window,document.LocalPath,true); }
             catch (Exception ex) { status.Text = L.Text("remoteEditor.openFailedPrefix") + ex.Message; }
@@ -82,7 +88,7 @@ namespace CommanderCZ
         static GroupBox FluentThemeSection(string title,UIElement content) { return new GroupBox { Header = title,Content = content,Padding = new Thickness(8) }; }
     }
 }
-namespace CommanderCZ.NetworkTransport
+namespace FileCompass.NetworkTransport
 {
     public sealed partial class Session
     {

@@ -19,7 +19,7 @@ foreach($mode in $Modes) {
   while(!(Test-Path -LiteralPath $portFile) -and !$server.HasExited -and (Get-Date) -lt $deadline){Start-Sleep -Milliseconds 100}
   if(!(Test-Path -LiteralPath $portFile)){Get-Content -LiteralPath (Join-Path $run 'server-errors.log'); throw 'Feature server did not start.'}
   if($mode -eq 'agent') {
-   $env:SSH_AUTH_SOCK='\\.\pipe\CommanderCZ-agent-test-'+[Guid]::NewGuid().ToString('N')
+   $env:SSH_AUTH_SOCK='\\.\pipe\FileCompass-agent-test-'+[Guid]::NewGuid().ToString('N')
    $agentReady=Join-Path $run 'agent-ready.txt'
    $agentArguments=@((Join-Path $PSScriptRoot 'agent_fixture.py'),[IO.Path]::GetFullPath($Dependencies),(Join-Path $run 'id_test'),$env:SSH_AUTH_SOCK,$agentReady) | ForEach-Object {'"'+$_+'"'}
    $agentServer=Start-Process -FilePath $Python -ArgumentList $agentArguments -WindowStyle Hidden -PassThru -RedirectStandardError (Join-Path $run 'agent-errors.txt')

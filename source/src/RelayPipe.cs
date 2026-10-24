@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     // One producer and one consumer. Backpressure limits memory independently of file size.
     internal sealed class RelayPipe : Stream

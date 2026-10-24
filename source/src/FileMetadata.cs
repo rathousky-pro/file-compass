@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Script.Serialization;
-namespace CommanderCZ {
+namespace FileCompass {
     public sealed class DetailRow { public string Key {get;set;} public string Label {get;set;} public string Value {get;set;} }
     public sealed class FileDetails {
         public bool IsDocument {get;set;}
@@ -71,7 +71,7 @@ namespace CommanderCZ {
             try{var data=FileMetadata.Read(path);File.WriteAllText(result,new JavaScriptSerializer{MaxJsonLength=131072}.Serialize(data),Encoding.UTF8);return 0;}
             catch{return 1;}
         }
-        static string Quote(string value){return "\""+value.Replace("\"","\\\"")+"\"";}
+        static string Quote(string value){return SshTerminal.QuoteWindowsArgument(value);}
         internal static async Task<FileDetails> Load(string path,CancellationToken token) {
             await gate.WaitAsync(token);
             try {

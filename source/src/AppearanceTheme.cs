@@ -6,7 +6,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using Microsoft.Win32;
 
-namespace CommanderCZ {
+namespace FileCompass {
     internal static class AppearanceTheme {
         static readonly Dictionary<string, ThemeColor> brushes = new Dictionary<string, ThemeColor>(StringComparer.OrdinalIgnoreCase);
         static readonly Dictionary<string, string> dark = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
@@ -20,7 +20,9 @@ namespace CommanderCZ {
             {"#939AA2", "#8A98A9"}, {"#B8C2CE", "#495563"}, {"#F0F3F8", "#303B49"},
             {"#D0E7FA", "#264E77"}, {"#DCEBFF", "#315D88"}, {"#89BFE5", "#538CB8"}, {"#B92331", "#FF8C97"},
             {"#E6F9E6", "#244A32"}, {"#EEFBF0", "#244A32"}, {"#E7ECF3", "#303B49"},
-            {"#FFE8E8", "#592F36"}, {"#FFF6D6", "#51482B"}
+            {"#FFE8E8", "#592F36"}, {"#FFF6D6", "#51482B"},
+            {"#DCF5E8", "#17452E"}, {"#12623C", "#9EF0BA"}, {"#DFEEFF", "#163B5A"}, {"#135C9E", "#9DD5FF"},
+            {"#FFF0C2", "#5A4516"}, {"#704600", "#FFE08B"}, {"#FFE0E0", "#5B202B"}, {"#9E2031", "#FFB6C0"}
         };
         static string mode = "System";
         internal static string Backdrop = "None";

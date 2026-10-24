@@ -3,7 +3,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class ApplicationShortcut
     {

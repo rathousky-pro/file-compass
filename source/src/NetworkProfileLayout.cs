@@ -3,7 +3,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
-namespace CommanderCZ {
+namespace FileCompass {
     public sealed partial class NetworkProfileDialog {
         internal Rect? LayoutWorkArea;
         bool profileFitQueued, fittingProfile;

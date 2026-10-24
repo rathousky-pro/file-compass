@@ -5,9 +5,9 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.VisualBasic.FileIO;
-using CommanderCZ.NetworkTransport;
+using FileCompass.NetworkTransport;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public static class DeleteOperations
     {
@@ -33,10 +33,13 @@ namespace CommanderCZ
         public static void Local(string path, bool permanent)
         {
             Validate(path, false);
+            if(permanent){PathSafety.DeleteTree(path);return;}
+            using(PathSafety.LockAncestors(path)) {
             // Shell recycling also handles directory links without walking their targets.
             var recycle = permanent ? RecycleOption.DeletePermanently : RecycleOption.SendToRecycleBin;
             if (Directory.Exists(path)) FileSystem.DeleteDirectory(path, UIOption.OnlyErrorDialogs, recycle, UICancelOption.ThrowException);
             else FileSystem.DeleteFile(path, UIOption.OnlyErrorDialogs, recycle, UICancelOption.ThrowException);
+            }
         }
         public static void Remote(Session session, string path)
         {

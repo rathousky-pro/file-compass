@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static partial class RelayTests
     {

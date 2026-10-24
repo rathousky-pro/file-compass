@@ -9,7 +9,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public partial class MainWindow
     {
@@ -196,7 +196,11 @@ namespace CommanderCZ
                 body.Children.Add(CopyUi.Label(document.Display + "\\" + member.Replace('/', '\\')));
                 body.Children.Add(CopyUi.Label(L.Text("archive.editTemporaryFileHelp")));
                 var buttons = new UniformGrid { Columns = 3 }; body.Children.Add(buttons);
-                Action launch = delegate { try { if (edit || viewOnly) FileViewers.Open(viewer, file, edit); else Process.Start(new ProcessStartInfo(file) { UseShellExecute = true }); } catch (Exception ex) { MessageBox.Show(viewer, ex.Message, L.Text("error.cannotOpenFile")); } };
+                Action launch = delegate { try {
+                    if (!edit && !viewOnly && AttachmentSecurity.RequiresLaunchConfirmation(file) &&
+                        MessageBox.Show(viewer, L.Text("security.archiveLaunchWarning") + "\n\n" + member, L.Text("security.archiveLaunchTitle"), MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+                    if (edit || viewOnly) FileViewers.Open(viewer, file, edit); else Process.Start(new ProcessStartInfo(file) { UseShellExecute = true });
+                } catch (Exception ex) { MessageBox.Show(viewer, ex.Message, L.Text("error.cannotOpenFile")); } };
                 buttons.Children.Add(CopyUi.Button(edit ? L.Text("action.openEditor") : viewOnly ? L.Text("action.viewFile") : L.Text("action.openFile"), launch));
                 bool saving = false; DateTime saved = File.GetLastWriteTimeUtc(file);
                 var save = CopyUi.Button(L.Text("archive.saveEditedFile"), async delegate

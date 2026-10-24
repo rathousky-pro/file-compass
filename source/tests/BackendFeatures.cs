@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using CommanderCZ.NetworkTransport;
+using FileCompass.NetworkTransport;
 class BackendFeatures
 {
     static int Main(string[] args)

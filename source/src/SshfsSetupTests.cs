@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class SshfsSetupTests
     {
@@ -67,7 +67,7 @@ namespace CommanderCZ
                     if (File.Exists(target)) File.Delete(target);
                     events.Clear(); result = SshfsMsi.Install(msi, "Testovací balíček", delegate(SshfsSetupProgress p) { events.Add(p); }, delegate { return false; });
                     File.WriteAllLines(Path.Combine(folder, "fixture-progress.txt"), events.Select(SshfsSetup.Encode));
-                    check(result == 0 && File.Exists(target) && File.ReadAllText(target) == "CommanderCZ installation fixture", "real per-user MSI copies fixture file only into test workspace");
+                    check(result == 0 && File.Exists(target) && File.ReadAllText(target) == "FileCompass installation fixture", "real per-user MSI copies fixture file only into test workspace");
                     check(events.Any(x => x.Stage == "install" && x.Percent > 0), "real Windows Installer progress callback reaches our progress channel");
                     File.Delete(target);
                     result = SshfsMsi.Install(msi, "Test zrušení", delegate { }, delegate { return true; });

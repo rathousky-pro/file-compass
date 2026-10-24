@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static class PortableTests {
         static void VerifyLayoutMigration(string root,Action<bool,string> check) {
             string install=Path.Combine(root,"old-install"),config=Path.Combine(install,"config");

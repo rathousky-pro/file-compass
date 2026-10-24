@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class SshfsProcess
     {
@@ -27,15 +27,16 @@ namespace CommanderCZ
         {
             var security = new Security { Size = Marshal.SizeOf(typeof(Security)), Inherit = true };
             IntPtr read = IntPtr.Zero, write = IntPtr.Zero, output = IntPtr.Zero, error = IntPtr.Zero, environment = IntPtr.Zero;
-            Process child = null;
+            Process child = null; int environmentBytes=0;
             try
             {
                 if (!CreatePipe(out read, out write, ref security, 0) || !SetHandleInformation(write, 1, 0)) throw new Win32Exception(Marshal.GetLastWin32Error());
                 output = CreateFile("NUL", 0x40000000, 7, ref security, 3, 0x80, IntPtr.Zero);
-                error = CreateFile(log, 0x40000000, 7, ref security, 2, 0x80, IntPtr.Zero);
+                error = CreateFile(log, 0x40000000, 1, ref security, 2, 0x80, IntPtr.Zero);
                 if (output == new IntPtr(-1) || error == new IntPtr(-1)) throw new Win32Exception(Marshal.GetLastWin32Error());
                 string block = String.Join("\0", info.EnvironmentVariables.Keys.Cast<string>().OrderBy(x => x, StringComparer.OrdinalIgnoreCase).Select(x => x + "=" + info.EnvironmentVariables[x])) + "\0\0";
                 environment = Marshal.StringToHGlobalUni(block);
+                environmentBytes=(block.Length+1)*2;
                 var startup = new Startup { Size = Marshal.SizeOf(typeof(Startup)), Flags = 0x100, Input = read, Output = output, Error = error };
                 ProcessData data;
                 if (!CreateProcess(info.FileName, new StringBuilder(SshTerminal.QuoteWindowsArgument(info.FileName) + " " + info.Arguments), IntPtr.Zero, IntPtr.Zero, true, 0x08000400, environment, info.WorkingDirectory, ref startup, out data)) throw new Win32Exception(Marshal.GetLastWin32Error());
@@ -48,7 +49,7 @@ namespace CommanderCZ
             finally
             {
                 if (child != null) { if (!child.HasExited) child.Kill(); child.Dispose(); }
-                Close(read); Close(write); Close(output); Close(error); if (environment != IntPtr.Zero) Marshal.FreeHGlobal(environment);
+                Close(read); Close(write); Close(output); Close(error); SensitiveMemory.Free(environment,environmentBytes);
             }
         }
     }

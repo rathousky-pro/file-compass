@@ -6,7 +6,7 @@ using System.Threading;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal sealed class ArchiveSourceVersion
     {

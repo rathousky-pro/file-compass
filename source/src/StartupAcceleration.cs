@@ -2,7 +2,7 @@
 using System.IO;
 using System.Runtime;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class StartupAcceleration
     {

@@ -1,4 +1,4 @@
-﻿# Cloud storage: Google Drive, OneDrive and Dropbox
+﻿# Cloud storage: Google Drive, OneDrive, Dropbox and iCloud Drive
 
 New Google sign-ins use File Compass's publisher desktop OAuth configuration, `config/oauth/google.json`. Each user signs in with their own account without entering Client ID/Secret. Without publisher configuration, new Google sign-in is unavailable with an explanation. Existing accounts retain their old authorization identity until explicitly signed in again.
 
@@ -16,7 +16,7 @@ As of **23 October 2026**, the external OAuth app is **in production but not ver
 4. OneDrive may ask for a drive/library; work/school accounts may need administrator approval.
 5. When authorization succeeds, choose Connect.
 
-Multiple accounts per provider are supported. Provider passwords are entered only in the provider's browser page; authorization returns automatically. The app name may appear as rclone depending on provider/client; Google's File Compass branding is awaiting verification. Use Sign in again if authorization expires or is cancelled. Provider questions include explanatory wording and access to the original question.
+Multiple accounts per provider are supported. Google/Microsoft/Dropbox passwords are entered only in the provider's browser page; authorization returns automatically. The app name may appear as rclone depending on provider/client; Google's File Compass branding is awaiting verification. Use Sign in again if authorization expires or is cancelled. Provider questions include explanatory wording and access to the original question.
 
 ## Imported profiles
 
@@ -41,3 +41,11 @@ Disconnect through Connections → Active connections or the connection-button c
 Accounts are in `data/cloud`; each has an encrypted `rclone.conf` and a key protected with Windows DPAPI for the current user. Copying the program does not transfer usable authorization to another user/computer. Cloud directories have restricted permissions. Tokens are not process arguments or user log output.
 
 A hidden local helper provides SFTP on `127.0.0.1` only, with per-account passwords and pinned host keys. It is not accessible from the LAN and stops with File Compass.
+
+## iCloud Drive
+
+Choose iCloud Drive when adding an account. Enter the Apple Account and its regular password in the native sign-in wizard, then the verification code from an Apple device. Enter `sms` at the device-code prompt to request SMS; select a trusted phone number if prompted. App-specific passwords are not supported. The password and backend authentication state are written only into the encrypted account configuration; they are not command-line arguments.
+
+Enable Access iCloud Data on the Web in Apple settings and approve trusted-device access if requested, including with Advanced Data Protection. The bundled rclone 1.75.2 implements the Apple SRP/2FA and PCS approval flow. Sessions can require reauthentication after about 30 days; disconnect the account and use Log in again. Existing authorization remains intact if renewed sign-in is cancelled.
+
+iCloud Drive uses the same account switching, panels, transfer queue and file operations as the other providers. iCloud Photos is not offered as a writable file account. Live Apple-account authorization and transfers require validation with an actual account; offline wizard tests do not establish live Apple compatibility.

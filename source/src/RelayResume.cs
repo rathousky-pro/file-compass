@@ -2,7 +2,7 @@
 using System.IO;
 using System.Linq;
 
-namespace CommanderCZ.NetworkTransport
+namespace FileCompass.NetworkTransport
 {
     internal sealed class RelayLease : IDisposable
     {

@@ -3,7 +3,7 @@ using System.IO;
 using System.Xml;
 using System.Xml.Serialization;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public sealed class SavedTab { public ProjectionSpec Projection; public string Filter = ""; public string Path = "", Home = "", Label = "", Caption = "", ProfileId = "", ArchiveFile = "", ArchivePrefix = ""; public bool Locked; public PanelView View; }
     public sealed class FavoriteLocation { public string Name = "", Group = "", Left = "", Right = ""; public SavedTab LeftLocation, RightLocation; public override string ToString() { return (String.IsNullOrEmpty(Group) ? "" : Group + " / ") + Name; } }
@@ -48,10 +48,9 @@ namespace CommanderCZ
             try
             {
                 path = path ?? ConfigPath; if (!File.Exists(path)) return new ProgramSettings();
-                using (var reader = XmlReader.Create(path, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null }))
-                    { var saved=(ProgramSettings)new XmlSerializer(typeof(ProgramSettings)).Deserialize(reader); saved.ImageViewerPath=AppPaths.ResolveLegacyResourceFile(saved.ImageViewerPath); saved.MediaPlayerPath=AppPaths.ResolveLegacyResourceFile(saved.MediaPlayerPath); saved.TextEditorPath=AppPaths.ResolveLegacyResourceFile(saved.TextEditorPath); return saved; }
+                var saved=ConfigurationIntegrity.Read<ProgramSettings>(path); saved.ImageViewerPath=AppPaths.ResolveLegacyResourceFile(saved.ImageViewerPath); saved.MediaPlayerPath=AppPaths.ResolveLegacyResourceFile(saved.MediaPlayerPath); saved.TextEditorPath=AppPaths.ResolveLegacyResourceFile(saved.TextEditorPath); return saved;
             }
-            catch (Exception ex) { if (!(ex is IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException || ex is XmlException)) throw; return new ProgramSettings(); }
+            catch (Exception ex) { if (ex is ConfigurationIntegrityException || !(ex is IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException || ex is XmlException)) throw; return new ProgramSettings(); }
         }
         public void Save(string path = null)
         {
@@ -59,8 +58,7 @@ namespace CommanderCZ
             string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
             try
             {
-                using (var stream = File.Create(temp)) { new XmlSerializer(typeof(ProgramSettings)).Serialize(stream, this); stream.Flush(true); }
-                if (File.Exists(path)) File.Replace(temp, path, null); else File.Move(temp, path);
+                ConfigurationIntegrity.Write(path,this);
             }
             finally { if (File.Exists(temp)) File.Delete(temp); }
         }

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Threading;
 
-namespace CommanderCZ {
+namespace FileCompass {
     internal sealed class DiskBucket {
         internal string Key;
         public string Name { get; set; }
@@ -53,7 +53,7 @@ namespace CommanderCZ {
             if (!Directory.Exists(result.Root.Path)) throw new DirectoryNotFoundException(path);
             options=options??new DiskScanOptions();result.FilterSignature=options.Signature;result.FilterDescription=options.Description;result.ScannedUtc=now??DateTime.UtcNow;
             BinaryWriter index=null;
-            if(options.StoreIndex){result.IndexPath=System.IO.Path.Combine(System.IO.Path.GetTempPath(),"FileCompass-analyzer-"+Guid.NewGuid().ToString("N")+".idx");index=new BinaryWriter(new FileStream(result.IndexPath,FileMode.CreateNew,FileAccess.Write,FileShare.Read|FileShare.Delete),System.Text.Encoding.UTF8);}
+            if(options.StoreIndex){result.IndexPath=DiskFileIndex.CreatePath();index=new BinaryWriter(new FileStream(result.IndexPath,FileMode.CreateNew,FileAccess.Write,FileShare.Read),System.Text.Encoding.UTF8);}
             try {
             var stack = new Stack<DiskFolder>(); var visited = new List<DiskFolder>(); stack.Push(result.Root);
             DateTime clock = result.ScannedUtc; var timer = System.Diagnostics.Stopwatch.StartNew();
@@ -93,7 +93,7 @@ namespace CommanderCZ {
             }
             result.Cancelled = token.IsCancellationRequested;result.IsPartial=result.Cancelled;if(index!=null)index.Flush();
             return result;
-            }catch{DiskFileIndex.Delete(result.IndexPath);throw;}finally{if(index!=null)index.Dispose();}
+            }catch{if(index!=null){index.Dispose();index=null;}DiskFileIndex.Delete(result.IndexPath);throw;}finally{if(index!=null)index.Dispose();}
         }
         internal static int AgeBucket(DateTime modified,DateTime clock){double days=(clock-modified).TotalDays;return days<7?0:days<30?1:days<90?2:days<365?3:days<1095?4:5;}
         internal static int SizeBucket(long bytes){return bytes<1024?0:bytes<1048576?1:bytes<104857600?2:bytes<1073741824L?3:bytes<10737418240L?4:5;}

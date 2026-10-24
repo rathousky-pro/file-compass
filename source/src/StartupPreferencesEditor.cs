@@ -2,7 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Collections.Generic;
-namespace CommanderCZ
+namespace FileCompass
 {
     internal sealed class StartupPreferencesEditor : StackPanel
     {

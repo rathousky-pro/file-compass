@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Xml.Serialization;
 
-namespace CommanderCZ.NetworkTransport
+namespace FileCompass.NetworkTransport
 {
     public sealed class TransferBlock
     {

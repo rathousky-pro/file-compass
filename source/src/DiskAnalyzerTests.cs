@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static class DiskAnalyzerTests {
         internal static int Run(string root) {
             Directory.CreateDirectory(root);var checks=new List<string>();DiskAnalyzerWindow window=null; string boundaryFixture=null;
@@ -54,6 +54,19 @@ namespace CommanderCZ {
                 File.WriteAllLines(Path.Combine(root,"result.txt"),checks.Concat(new[]{"PASS: "+checks.Count+" checks"}));return 0;
             } catch(Exception ex){File.WriteAllText(Path.Combine(root,"result.txt"),"FAIL: "+ex);return 1;}
             finally{if(boundaryFixture!=null)for(int i=0;i<6;i++){string file=Path.Combine(boundaryFixture,i+".dat");if(File.Exists(file))File.Delete(file);}if(window!=null)window.Close();AppearanceTheme.Apply(originalTheme);L.LoadForTests(languageFolder,originalLanguage);}
+        }
+        internal static void CheckFolderAlignment(DiskAnalyzerWindow window,string root,Action<bool,string> check) {
+            var treeRoot=(TreeViewItem)window.Folders.Items[0];
+            foreach(TreeViewItem child in treeRoot.Items)if(child.Tag!=null)child.IsExpanded=true;
+            NavigationTests.Wait(System.Threading.Tasks.Task.Delay(50));window.UpdateLayout();
+                var folderRows=AdvancedToolsTests.Visual<System.Windows.Controls.Grid>(window.Folders).Where(x=>Convert.ToString(x.Tag)=="analyzer.folderRow").ToArray();
+                check(folderRows.Length>=4,"Folder rows retain lazy expansion and display nested folders");
+                Func<int,double[]> rightEdges=column=>folderRows.Select(row=>((TextBlock)row.Children[column]).TranslatePoint(new Point(((TextBlock)row.Children[column]).ActualWidth,0),window.Folders).X).ToArray();
+                var sizeEdges=rightEdges(1);var countEdges=rightEdges(2);
+                check(sizeEdges.Max()-sizeEdges.Min()<1&&countEdges.Max()-countEdges.Min()<1,"Size and file-count columns align across parent, child and grandchild rows");
+                check(folderRows.All(row=>row.ColumnDefinitions.Count==3)&&ScrollViewer.GetHorizontalScrollBarVisibility(window.Folders)==ScrollBarVisibility.Disabled,"Folder names use a separate flexible column without horizontal overflow");
+                NextStageTests.Draw(window,Path.Combine(root,"aligned-folders.png"));
+
         }
         [System.Runtime.InteropServices.DllImport("kernel32.dll",SetLastError=true)] static extern bool DeviceIoControl(Microsoft.Win32.SafeHandles.SafeFileHandle handle,uint code,IntPtr input,uint inputSize,IntPtr output,uint outputSize,out uint returned,IntPtr overlapped);
     }

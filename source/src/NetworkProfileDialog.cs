@@ -3,7 +3,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public sealed partial class NetworkProfileDialog : Window
     {
@@ -145,7 +145,7 @@ namespace CommanderCZ
             }
             if (transfer || ssh || sshfs)
             {
-                if (transfer || sshfs) Row(advanced, L.Text("ssh.hostKeyFingerprintLabel"), fingerprint);
+                Row(advanced, L.Text("ssh.hostKeyFingerprintLabel"), fingerprint);
                 if (transfer) Row(advanced, L.Text("network.filenameEncodingLabel"), encoding);
                 advanced.Children.Add(compression); if (!sshfs) advanced.Children.Add(agent);
                 Row(advanced, L.Text("ssh.terminalShellLabel"), shell); advanced.Children.Add(terminal);
@@ -216,7 +216,7 @@ namespace CommanderCZ
             if (result.Protocol == NetworkProtocol.SMB || result.Protocol == NetworkProtocol.NFS) result.Host = host.Text.Trim();
             else ParseHost(host.Text, result.Protocol == NetworkProtocol.FTP ? (tls.IsChecked == true && tlsMode.SelectedIndex == 1 ? 990 : 21) : 22, out result.Host, out result.Port);
             result.Path = path.Text.Trim(); result.LocalPath = local.Text.Trim(); result.UserName = user.Text.Trim();
-            result.PrivateKeyPath = key.Text.Trim(); result.HostKeyFingerprint = result.Protocol == NetworkProtocol.SSH ? "" : fingerprint.Text.Trim();
+            result.PrivateKeyPath = key.Text.Trim(); result.HostKeyFingerprint = fingerprint.Text.Trim();
             result.FtpTls = tls.IsChecked == true; result.FtpImplicitTls = tlsMode.SelectedIndex == 1; result.FtpPassive = passive.IsChecked == true;
             result.NfsAnonymous = anon.IsChecked == true; result.DriveLetter = drive.SelectedItem as string;
             result.TimeoutSeconds = Number(timeout.Text, L.Text("network.timeoutFieldName")); result.FilenameEncoding = encoding.SelectedIndex;

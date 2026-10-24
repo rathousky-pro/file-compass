@@ -9,7 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public partial class FilePanel
     {
@@ -59,7 +59,7 @@ namespace CommanderCZ
                 if (!leftDragReady || e.LeftButton != MouseButtonState.Pressed || LocalLoading || IsLoading) return;
                 var position = e.GetPosition(List); if (Math.Abs(position.X - dragStart.X) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(position.Y - dragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
                 leftDragReady = false; var files = Selected().Select(x => x.FullPath).ToArray(); if (files.Length == 0) return;
-                var data = new DataObject(); if (!IsRemote && !IsArchive) data.SetData(DataFormats.FileDrop, files); data.SetData(L.Code("clipboard.panelDataFormat"), this); data.SetData("CommanderCZ.Entries", Selected().ToArray());
+                var data = new DataObject(); if (!IsRemote && !IsArchive) data.SetData(DataFormats.FileDrop, files); data.SetData(L.Code("clipboard.panelDataFormat"), this); data.SetData("FileCompass.Entries", Selected().ToArray());
                 DragDrop.DoDragDrop(List, data, DragDropEffects.Copy);
             };
             List.DragOver += delegate(object s, DragEventArgs e) {
@@ -68,7 +68,7 @@ namespace CommanderCZ
             };
             List.Drop += delegate(object s, DragEventArgs e) {
                 if (LocalLoading || IsLoading) return;
-                if (e.Data.GetDataPresent(L.Code("clipboard.panelDataFormat"))) { var source = e.Data.GetData(L.Code("clipboard.panelDataFormat")) as FilePanel; var entries = e.Data.GetData("CommanderCZ.Entries") as Entry[]; if (source != null && entries != null && PanelFilesDropped != null) PanelFilesDropped(source, this, entries, (e.KeyStates & DragDropKeyStates.ShiftKey) != 0); e.Effects = DragDropEffects.Copy; e.Handled = true; return; }
+                if (e.Data.GetDataPresent(L.Code("clipboard.panelDataFormat"))) { var source = e.Data.GetData(L.Code("clipboard.panelDataFormat")) as FilePanel; var entries = e.Data.GetData("FileCompass.Entries") as Entry[]; if (source != null && entries != null && PanelFilesDropped != null) PanelFilesDropped(source, this, entries, (e.KeyStates & DragDropKeyStates.ShiftKey) != 0); e.Effects = DragDropEffects.Copy; e.Handled = true; return; }
                 if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
                 var paths = e.Data.GetData(DataFormats.FileDrop) as string[]; if (paths == null) return;
                 bool move = e.Data.GetDataPresent(L.Code("clipboard.panelDataFormat")) && (e.KeyStates & DragDropKeyStates.ShiftKey) != 0;

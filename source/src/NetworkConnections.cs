@@ -1,19 +1,19 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using CommanderCZ.NetworkTransport;
+using FileCompass.NetworkTransport;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public sealed class RemoteConnection : IDisposable
     {
         public readonly NetworkProfile Profile;
         public Session Session { get; private set; }
         SessionOptions login;
-        public void Open(SessionOptions options) { if(!String.IsNullOrEmpty(Profile.CloudAccountId))CloudRuntime.Ensure(Profile.CloudAccountId); Session.Open(options); login = options; }
+        public void Open(SessionOptions options) { if(!String.IsNullOrEmpty(Profile.CloudAccountId))CloudRuntime.ApplyEndpoint(Profile,options); Session.Open(options); login = options; }
         public RemoteConnection TransferConnection()
         {
             if (login == null) throw new InvalidOperationException(L.Text("network.transferCredentialsMissing"));
@@ -26,10 +26,10 @@ namespace CommanderCZ
             connection.login.SshHostKeyFingerprint = login.SshHostKeyFingerprint;
             return connection;
         }
-        public void OpenTransfer() { if(!String.IsNullOrEmpty(Profile.CloudAccountId))CloudRuntime.Ensure(Profile.CloudAccountId); Session.Open(login); }
+        public void OpenTransfer() { if(!String.IsNullOrEmpty(Profile.CloudAccountId))CloudRuntime.ApplyEndpoint(Profile,login); Session.Open(login); }
         internal void ReopenTransfer(System.Threading.CancellationToken token)
         {
-            Session.Dispose(); token.ThrowIfCancellationRequested(); if(!String.IsNullOrEmpty(Profile.CloudAccountId))CloudRuntime.Ensure(Profile.CloudAccountId); Session = new Session();
+            Session.Dispose(); token.ThrowIfCancellationRequested(); if(!String.IsNullOrEmpty(Profile.CloudAccountId))CloudRuntime.ApplyEndpoint(Profile,login); Session = new Session();
             using (token.Register(delegate { Session.Abort(); })) { token.ThrowIfCancellationRequested(); Session.Open(login); token.ThrowIfCancellationRequested(); }
         }
         internal void ConfigureRelay() { login.AddRawSettings("TransientTransfer", "1"); }
@@ -39,8 +39,8 @@ namespace CommanderCZ
             // Release the failed FTP browser connection before logging in again,
             // so recovery does not temporarily consume another server slot.
             // Transfer workers own independent Session instances.
-            if (login.Protocol == CommanderCZ.NetworkTransport.Protocol.Ftp) Session.Dispose();
-            if(!String.IsNullOrEmpty(Profile.CloudAccountId))CloudRuntime.Ensure(Profile.CloudAccountId); var replacement = new Session();
+            if (login.Protocol == FileCompass.NetworkTransport.Protocol.Ftp) Session.Dispose();
+            if(!String.IsNullOrEmpty(Profile.CloudAccountId))CloudRuntime.ApplyEndpoint(Profile,login); var replacement = new Session();
             try {
                 replacement.Open(login); var listing = replacement.ListDirectory(path);
                 var previous = Session; Session = replacement; replacement = null; previous.Dispose();
@@ -50,7 +50,7 @@ namespace CommanderCZ
         public RemoteConnection(NetworkProfile profile)
         {
             Profile = profile.Clone();
-            string plugin = "network/CommanderNetwork.dll";
+            string plugin = "network/FileCompassNetwork.dll";
             if (!File.Exists(System.IO.Path.Combine(AppPaths.Resource("plugins"), plugin)))
                 throw new IOException(L.Text("network.pluginMissingPrefix") + plugin + L.Text("network.restorePluginFolderSuffix"));
             Session = new Session();
@@ -58,7 +58,7 @@ namespace CommanderCZ
         public SessionOptions Options(string password)
         {
             if (Profile.Protocol != NetworkProtocol.FTP && !Profile.IsSshTransfer) throw new ArgumentException(L.Text("network.profilePanelUnsupported"));
-            var options = new SessionOptions { Protocol = Profile.Protocol == NetworkProtocol.SCP ? CommanderCZ.NetworkTransport.Protocol.Scp : Profile.Protocol == NetworkProtocol.SFTP ? CommanderCZ.NetworkTransport.Protocol.Sftp : CommanderCZ.NetworkTransport.Protocol.Ftp,
+            var options = new SessionOptions { Protocol = Profile.Protocol == NetworkProtocol.SCP ? FileCompass.NetworkTransport.Protocol.Scp : Profile.Protocol == NetworkProtocol.SFTP ? FileCompass.NetworkTransport.Protocol.Sftp : FileCompass.NetworkTransport.Protocol.Ftp,
                 HostName = Profile.Host, PortNumber = Profile.Port,
                 UserName = Profile.Protocol == NetworkProtocol.FTP && String.IsNullOrWhiteSpace(Profile.UserName) ? "anonymous" : Profile.UserName,
                 Password = password, Timeout = TimeSpan.FromSeconds(Profile.TimeoutSeconds) };
@@ -112,6 +112,16 @@ namespace CommanderCZ
         {
             if (String.IsNullOrWhiteSpace(name) || name == "." || name == ".." || name.IndexOfAny(new[] { '/', '\\', '\r', '\n', '\0' }) >= 0)
                 throw new IOException(L.Text("network.itemNameWithoutPathRequired"));
+        }
+        internal static string DownloadTarget(string local, string name)
+        {
+            ValidateRemoteName(name);
+            FileOperations.ValidateName(name);
+            if (!local.EndsWith("\\") && !local.EndsWith("/") && !Directory.Exists(local)) return Path.GetFullPath(local);
+            string root = Path.GetFullPath(local).TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
+            string target = Path.GetFullPath(Path.Combine(root, name));
+            if (!target.StartsWith(root, StringComparison.OrdinalIgnoreCase)) throw new IOException(L.Text("network.invalidRemotePath"));
+            return target;
         }
         public void Dispose() { Session.Dispose(); login = null; }
     }

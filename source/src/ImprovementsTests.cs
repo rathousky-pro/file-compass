@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class ImprovementsTests
     {
@@ -57,7 +57,7 @@ namespace CommanderCZ
                 check(File.Exists(Path.Combine(filtered, "stay.bin")) && !File.Exists(Path.Combine(filtered, "keep.txt")), "move filter never removes excluded sources");
                 if (!String.Equals(Path.GetPathRoot(Path.GetTempPath()), Path.GetPathRoot(root), StringComparison.OrdinalIgnoreCase))
                 {
-                    string cross = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "CommanderCZ-move-" + Guid.NewGuid().ToString("N"))).FullName;
+                    string cross = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "FileCompass-move-" + Guid.NewGuid().ToString("N"))).FullName;
                     try { File.WriteAllText(Path.Combine(cross, "cross.txt"), "cross volume"); var moved = Copy(cross, output, true); check(moved.Errors.Count == 0 && !Directory.Exists(cross) && File.ReadAllText(Path.Combine(output, Path.GetFileName(cross), "cross.txt")) == "cross volume", "real directory move across different Windows volumes"); }
                     finally { if (Directory.Exists(cross)) Directory.Delete(cross, true); }
                 }

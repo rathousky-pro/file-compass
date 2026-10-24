@@ -4,8 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Xml.Serialization;
 using System.Security.Cryptography;
-using CommanderCZ.NetworkTransport;
-namespace CommanderCZ
+using FileCompass.NetworkTransport;
+namespace FileCompass
 {
     /// <summary>State-file integrity tests for transfer queues and HMAC signatures.</summary>
     public static class IntegrityTests
@@ -62,7 +62,7 @@ namespace CommanderCZ
                 string protectedValue = NetworkSettingsStore.Protect(secret);
                 Check(NetworkSettingsStore.Unprotect(protectedValue) == secret, "heslo musí projít DPAPI s entropií");
                 string legacy = Convert.ToBase64String(System.Security.Cryptography.ProtectedData.Protect(System.Text.Encoding.UTF8.GetBytes(secret), null, System.Security.Cryptography.DataProtectionScope.CurrentUser));
-                Check(NetworkSettingsStore.Unprotect(legacy) == secret, "heslo uložené starší verzí (bez entropie) se musí stále načíst");
+                Check(NetworkSettingsStore.Unprotect(NetworkSettingsStore.UpgradePassword(legacy)) == secret, "heslo uložené starší verzí (bez entropie) se musí stále načíst");
                 Report(workspace, "Integrity test OK, kontrol: " + checks);
                 return 0;
             }

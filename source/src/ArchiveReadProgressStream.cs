@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-namespace CommanderCZ
+namespace FileCompass
 {
     internal sealed class ArchiveReadProgressStream : Stream
     {

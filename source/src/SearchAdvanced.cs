@@ -9,7 +9,7 @@ using System.Threading;
 using System.Xml;
 using System.Xml.Serialization;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public sealed class SearchProfile
     {

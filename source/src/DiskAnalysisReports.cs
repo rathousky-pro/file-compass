@@ -8,7 +8,7 @@ using System.Web.Script.Serialization;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-namespace CommanderCZ {
+namespace FileCompass {
     internal sealed class DiskReportChart {internal string Title,Scope;internal List<DiskChartRow> Rows;internal byte[] Image;}
     public sealed class DiskSnapshotFolder {public string Path;public long Bytes,Files;}
     public sealed class DiskSnapshot {public int Version=1;public string Root,Filters;public DateTime Created;public bool Partial;public List<DiskSnapshotFolder> Folders=new List<DiskSnapshotFolder>();}
@@ -37,7 +37,7 @@ namespace CommanderCZ {
             int width=Math.Max(1,(int)Math.Ceiling(element.ActualWidth)),height=Math.Max(1,(int)Math.Ceiling(element.ActualHeight));var visual=new DrawingVisual();using(var dc=visual.RenderOpen()){dc.DrawRectangle(CompactTheme.WhiteSurface,null,new Rect(0,0,width,height));dc.DrawRectangle(new VisualBrush(element),null,new Rect(0,0,width,height));}
             var bitmap=new RenderTargetBitmap(width*2,height*2,192,192,PixelFormats.Pbgra32);bitmap.Render(visual);var encoder=new PngBitmapEncoder();encoder.Frames.Add(BitmapFrame.Create(bitmap));using(var output=new MemoryStream()){encoder.Save(output);return output.ToArray();}
         }
-        static string Csv(string value){return "\""+value.Replace("\"","\"\"")+"\"";}
+        internal static string Csv(string value){value=value??"";if(value.Length>0&&"=+-@\t\r\n".IndexOf(value[0])>=0)value="'"+value;return "\""+value.Replace("\"","\"\"")+"\"";}
         internal static void CsvReport(string target,DiskAnalysis result,CancellationToken token){
             using(var writer=new StreamWriter(target,false,new System.Text.UTF8Encoding(true))){writer.WriteLine("Path,Bytes,ModifiedUtc,Category");foreach(var file in DiskFileIndex.Read(result.IndexPath,token))writer.WriteLine(Csv(file.Path)+","+file.Bytes.ToString(CultureInfo.InvariantCulture)+","+Csv(file.Modified.ToUniversalTime().ToString("o"))+","+Csv(DiskScanOptions.FileCategory(file.Path)));}
         }

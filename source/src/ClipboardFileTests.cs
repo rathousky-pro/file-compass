@@ -6,7 +6,7 @@ using System.Text;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-namespace CommanderCZ {
+namespace FileCompass {
     public partial class MainWindow {
         internal async System.Threading.Tasks.Task CheckClipboardCreation(string root,Action<bool,string> check) {
             check(AdvancedToolsTests.Visual<System.Windows.Controls.Menu>(this).SelectMany(x=>x.Items.OfType<System.Windows.Controls.MenuItem>()).SelectMany(x=>x.Items.OfType<System.Windows.Controls.MenuItem>()).Any(x=>Convert.ToString(x.Header)==L.Text("clipboardFile.title")&&x.InputGestureText=="Ctrl+Shift+V"),"Edit menu exposes the new command and keyboard shortcut");

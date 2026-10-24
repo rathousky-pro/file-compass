@@ -1,11 +1,13 @@
 ﻿using System;
 using System.IO;
+using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using Microsoft.Win32;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public sealed partial class ConfigurationDialog : Window
     {
@@ -17,6 +19,8 @@ namespace CommanderCZ
         readonly FileBehaviorEditor fileBehavior;
         readonly StartupPreferencesEditor startupPreferences;
         readonly TextBox imagePath, mediaPath, editorPath, rarPath, arjPath, lhaPath;
+        readonly Dictionary<TextBox,string> savedProgramPaths=new Dictionary<TextBox,string>();
+        readonly HashSet<TextBox> explicitProgramSelections=new HashSet<TextBox>();
         readonly TextBlock savedFolders = new TextBlock { TextWrapping = TextWrapping.Wrap };
         ToolbarTheme selectedTheme;
         ApplicationIcon selectedApplicationIcon;
@@ -159,45 +163,62 @@ namespace CommanderCZ
         {
             panel.Children.Add(new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 4) });
             var row = new DockPanel(); panel.Children.Add(row); var input = new TextBox { Text = path ?? "", MinHeight = 30, VerticalContentAlignment = VerticalAlignment.Center };
-            var browse = CopyUi.Button(L.Text("common.ellipsis"), delegate { var picker = new OpenFileDialog { Filter = L.Text("settings.executableFileFilter"), CheckFileExists = true }; if (picker.ShowDialog(this) == true) input.Text = picker.FileName; }); browse.Width = 36; browse.MinWidth = 36; browse.Height = Double.NaN; browse.MinHeight = 30; browse.Margin = new Thickness(4, 0, 0, 0); DockPanel.SetDock(browse, Dock.Right); row.Children.Add(browse); row.Children.Add(input); return input;
+            savedProgramPaths[input]=CleanPath(input.Text);
+            var browse = CopyUi.Button(L.Text("common.ellipsis"), delegate { var picker = new OpenFileDialog { Filter = L.Text("settings.executableFileFilter"), CheckFileExists = true }; if (picker.ShowDialog(this) == true) { input.Text = picker.FileName; explicitProgramSelections.Add(input); } }); browse.Width = 36; browse.MinWidth = 36; browse.Height = Double.NaN; browse.MinHeight = 30; browse.Margin = new Thickness(4, 0, 0, 0); DockPanel.SetDock(browse, Dock.Right); row.Children.Add(browse); row.Children.Add(input); return input;
         }
-        void Find(TextBox input, string found) { if (!String.IsNullOrEmpty(found)) input.Text = found; else MessageBox.Show(this, L.Text("settings.programNotFound"), L.Text("settings.programSearchTitle")); }
+        void Find(TextBox input, string found) { if (!String.IsNullOrEmpty(found)) { input.Text = found; explicitProgramSelections.Add(input); } else MessageBox.Show(this, L.Text("settings.programNotFound"), L.Text("settings.programSearchTitle")); }
+        static string CleanPath(string value) { return (value??"").Trim().Trim('"'); }
+        bool ProgramPathChanged(TextBox input) { string original;return explicitProgramSelections.Contains(input)||!savedProgramPaths.TryGetValue(input,out original)||!String.Equals(CleanPath(input.Text),original,StringComparison.OrdinalIgnoreCase); }
         void PreviewToolbar(ToolbarTheme theme) { ToolbarThemeSettings.Current = theme; if (main != null) main.ApplyToolbarTheme(theme); }
         void UpdateFolders() { savedFolders.Text = L.Text("settings.leftPanelPrefix") + (String.IsNullOrEmpty(settings.LeftFolder) ? L.Text("settings.defaultFolder") : settings.LeftFolder) + L.Text("settings.rightPanelPrefix") + (String.IsNullOrEmpty(settings.RightFolder) ? L.Text("settings.defaultFolder") : settings.RightFolder); savedFolders.Margin = new Thickness(0, 0, 0, 16); }
         void RefreshArchivePaths()
         {
             var current = ArchiveSettings.Load();
-            if (rarPath.Text == archives.WinRarPath) { rarPath.Text = current.WinRarPath; archives.WinRarPath = current.WinRarPath; }
-            if (arjPath.Text == archives.ArjPath) { arjPath.Text = current.ArjPath; archives.ArjPath = current.ArjPath; }
-            if (lhaPath.Text == archives.LhaPath) { lhaPath.Text = current.LhaPath; archives.LhaPath = current.LhaPath; }
+            if (!ProgramPathChanged(rarPath)) { rarPath.Text = current.WinRarPath; savedProgramPaths[rarPath]=CleanPath(current.WinRarPath); archives.WinRarPath = current.WinRarPath; }
+            if (!ProgramPathChanged(arjPath)) { arjPath.Text = current.ArjPath; savedProgramPaths[arjPath]=CleanPath(current.ArjPath); archives.ArjPath = current.ArjPath; }
+            if (!ProgramPathChanged(lhaPath)) { lhaPath.Text = current.LhaPath; savedProgramPaths[lhaPath]=CleanPath(current.LhaPath); archives.LhaPath = current.LhaPath; }
         }
         void Save()
         {
-            try
-            {
+            try { SaveChanges(); appearanceSaved = true; DialogResult = true; }
+            catch (Exception ex) { MessageBox.Show(this, ex.Message, L.Text("menu.configuration"), MessageBoxButton.OK, MessageBoxImage.Warning); }
+        }
+        internal void SaveChanges()
+        {
                 RefreshArchivePaths();
                 foreach (var input in new[] { imagePath, mediaPath, editorPath, rarPath, arjPath, lhaPath })
-                { string value = input.Text.Trim().Trim('"'); if (value.Length > 0 && !File.Exists(Environment.ExpandEnvironmentVariables(value))) throw new IOException(L.Text("settings.programNotFound") + "\n" + value); }
+                { string value = input.Text.Trim().Trim('"'); if (ProgramPathChanged(input) && value.Length > 0 && !File.Exists(Environment.ExpandEnvironmentVariables(value))) throw new IOException(L.Text("settings.programNotFound") + "\n" + value); }
                 settings.ImageViewerPath = imagePath.Text.Trim().Trim('"'); settings.MediaPlayerPath = mediaPath.Text.Trim().Trim('"'); settings.TextEditorPath = editorPath.Text.Trim().Trim('"');
                 settings.AutoRefresh = automaticRefresh.IsChecked == true; settings.WatchNetworkFolders = networkRefresh.IsChecked == true;
                 settings.InternalCodePreview = internalCodePreview.IsChecked == true; settings.AutomaticFolderViews = automaticFolderViews.IsChecked == true;
                 settings.ShowHiddenFiles = showHidden.IsChecked == true; settings.ShowSystemFiles = showSystem.IsChecked == true;
                 fileBehavior.Apply(); startupPreferences.Apply();
                 settings.WindowBackdrop = new[] { "None", "Mica", "MicaAlt" }[BackdropChoice.SelectedIndex]; settings.ColorTheme = new[] { "Light", "Dark", "System" }[ColorThemeChoice.SelectedIndex];
-                string language = LanguageChoice.SelectedIndex == 1 ? "en" : "cs-CZ";
-                L.SaveSelection(language);
+                string language = L.SupportedLanguages[LanguageChoice.SelectedIndex];
                 interfaceFont.Read(out settings.InterfaceFontFamily, out settings.InterfaceFontSize); fileListFont.Read(out settings.FileListFontFamily, out settings.FileListFontSize);
-                archiveLimits.Apply(archives); archives.WinRarPath = rarPath.Text.Trim().Trim('"'); archives.ArjPath = arjPath.Text.Trim().Trim('"'); archives.LhaPath = lhaPath.Text.Trim().Trim('"'); settings.Save(); archives.Save(); new ToolbarThemeSettings { Theme = selectedTheme, ApplicationIcon = selectedApplicationIcon }.Save();
-                ApplicationBrand.Apply(selectedApplicationIcon); ToolbarThemeSettings.Current = selectedTheme; if (main != null) { main.ApplyRefreshSettings(settings.AutoRefresh, settings.WatchNetworkFolders); main.ApplyDisplaySettings(settings); main.ApplyToolbarTheme(selectedTheme); } appearanceSaved = true; DialogResult = true;
+            archiveLimits.Apply(archives); archives.WinRarPath = rarPath.Text.Trim().Trim('"'); archives.ArjPath = arjPath.Text.Trim().Trim('"'); archives.LhaPath = lhaPath.Text.Trim().Trim('"');
+            // Approve only programs explicitly selected or edited in this dialog.
+            // Language/appearance saves must neither read an unrelated trust store
+            // nor silently authorize a replaced executable at an unchanged path.
+            var approvals=new List<string>();
+            foreach(var input in new[]{rarPath,arjPath,lhaPath})if(ProgramPathChanged(input)&&!String.IsNullOrWhiteSpace(CleanPath(input.Text))) {
+                approvals.Add(Environment.ExpandEnvironmentVariables(CleanPath(input.Text)));
+                if(Object.ReferenceEquals(input,rarPath))approvals.Add(archives.RarExecutable());
             }
-            catch (Exception ex) { MessageBox.Show(this, ex.Message, L.Text("menu.configuration"), MessageBoxButton.OK, MessageBoxImage.Warning); }
+            foreach(string tool in approvals.Distinct(StringComparer.OrdinalIgnoreCase))ToolTrust.Approve(tool);
+            settings.Save(); archives.Save(); new ToolbarThemeSettings { Theme = selectedTheme, ApplicationIcon = selectedApplicationIcon }.Save();
+                L.SaveSelection(language);
+                ApplicationBrand.Apply(selectedApplicationIcon); ToolbarThemeSettings.Current = selectedTheme; if (main != null) { main.ApplyRefreshSettings(settings.AutoRefresh, settings.WatchNetworkFolders); main.ApplyDisplaySettings(settings); main.ApplyToolbarTheme(selectedTheme); }
+                if(L.Language!=language){L.ChangeLanguage(language);LiveLanguage.Refresh(main);}
+                foreach(var input in new[]{imagePath,mediaPath,editorPath,rarPath,arjPath,lhaPath})savedProgramPaths[input]=CleanPath(input.Text);
+                explicitProgramSelections.Clear();
         }
         void AddAppearanceChoices(StackPanel appearance) {
             foreach (var font in new[] { interfaceFont, fileListFont }) ((FrameworkElement)font.Children[font.Children.Count-1]).Margin = new Thickness(0,4,0,2);
             foreach (string key in new[] { "settings.themeLight", "settings.themeDark", "settings.themeSystem" }) ColorThemeChoice.Items.Add(L.Text(key));
             ColorThemeChoice.SelectedIndex = Array.IndexOf(new[] { "Light", "Dark", "System" }, AppearanceTheme.Normalize(settings.ColorTheme));
             ColorThemeChoice.SelectionChanged += delegate { if (ColorThemeChoice.SelectedIndex >= 0) AppearanceTheme.Apply(new[] { "Light", "Dark", "System" }[ColorThemeChoice.SelectedIndex]); };
-            LanguageChoice.Items.Add("Čeština"); LanguageChoice.Items.Add("English"); LanguageChoice.SelectedIndex = L.PreferredLanguage == "en" ? 1 : 0;
+            foreach (var name in L.LanguageNames) LanguageChoice.Items.Add(name); LanguageChoice.SelectedIndex = Array.IndexOf(L.SupportedLanguages,L.PreferredLanguage); if(LanguageChoice.SelectedIndex<0)LanguageChoice.SelectedIndex=Array.IndexOf(L.SupportedLanguages,L.DefaultLanguage);
             var theme = new StackPanel(); theme.Children.Add(new TextBlock { Text = L.Text("settings.colorTheme"), Margin = new Thickness(0,0,0,5) }); theme.Children.Add(ColorThemeChoice);
             var language = new StackPanel(); language.Children.Add(new TextBlock { Text = L.Text("settings.language"), Margin = new Thickness(0,0,0,5) }); language.Children.Add(LanguageChoice);
             LanguageChoice.ToolTip = L.Text("settings.languageRestart");

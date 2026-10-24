@@ -9,7 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class LocalCopyPresentationTests
     {
@@ -52,18 +52,31 @@ namespace CommanderCZ
                     var texts = FluentUiTests.Children<TextBlock>(dialog).ToArray();
                     check(texts.Any(x => x.Text.Contains("135") && x.Text.Contains("MB/s")) && texts.Any(x => x.Text.Contains("00:01:34")),"foreground local copy displays rate and ETA");
                     check(texts.Any(x => x.Text == "56 %") && texts.Any(x => x.Text == "4 %") && texts.Any(x => x.Text == "1 / 19"),"compact dialog displays file percent, total percent and file count");
-                    var tracks = FluentUiTests.Children<LocalCopyProgressBar>(dialog).ToArray(); check(tracks.Length == 2 && tracks.All(x => x.ActualHeight == 3),"file and total progress use thin three-pixel lines");
+                    var tracks = FluentUiTests.Children<LocalCopyProgressBar>(dialog).ToArray(); check(tracks.Length == 2 && tracks.All(x => x.Height == 3 && Math.Abs(x.ActualHeight-3)<=1/VisualTreeHelper.GetDpi(x).DpiScaleY),"file and total progress use thin three-pixel lines");
                     var content = (FrameworkElement)dialog.Content; var bitmap = new RenderTargetBitmap((int)(content.ActualWidth + content.Margin.Left + content.Margin.Right),(int)(content.ActualHeight + content.Margin.Top + content.Margin.Bottom),96,96,PixelFormats.Pbgra32); var background = new DrawingVisual(); using (var drawing = background.RenderOpen()) drawing.DrawRectangle(dialog.Background,null,new Rect(0,0,bitmap.PixelWidth,bitmap.PixelHeight)); bitmap.Render(background); bitmap.Render(content);
                     foreach (int i in new[] { 0,1 }) { var point = tracks[i].TranslatePoint(new Point(3,tracks[i].ActualHeight / 2),content); byte[] pixel = new byte[4]; bitmap.CopyPixels(new Int32Rect((int)(point.X + content.Margin.Left),(int)(point.Y + content.Margin.Top),1,1),pixel,4,0); check(pixel[0] == (i == 0 ? 244 : 162) && pixel[1] == (i == 0 ? 197 : 87) && pixel[2] == (i == 0 ? 133 : 20),(i == 0 ? "file bar is light blue" : "total bar is dark blue") + " pixel=" + String.Join(",",pixel) + " point=" + point); }
                     var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap)); using (var stream = File.Create(Path.Combine(directory,"local-copy-progress.png"))) encoder.Save(stream);
                     double height = dialog.ActualHeight, width = dialog.ActualWidth; var foreground = GetForegroundWindow(); int activated = 0; EventHandler activatedHandler = delegate { activated++; }; Activated += activatedHandler;
                     for (int i = 0; i < 30; i++) { update.Source = "E:\\" + new string('a',i * 10) + "\\soubor.bin"; dialog.Update(update); dialog.UpdateLayout(); }
                     check(dialog.ActualHeight == height && dialog.ActualWidth == width,"varying path lengths do not resize the copy window");
+                    var pathLines=FluentUiTests.Children<PathTextBlock>(dialog).ToArray();
+                    var sourceLine=pathLines.Single(x=>x.FullPath==update.Source);
+                    check(sourceLine.Text.Contains("…")&&sourceLine.Text.StartsWith(L.Text("transfer.sourceLabel")+"E:\\")&&sourceLine.Text.EndsWith("soubor.bin"),"long source path retains its beginning and complete filename with middle ellipsis; text="+sourceLine.Text+"; width="+sourceLine.ActualWidth+"; prefix="+sourceLine.Prefix);
+                    check(sourceLine.TextWrapping==TextWrapping.NoWrap&&(string)sourceLine.ToolTip==L.Text("transfer.sourceLabel")+update.Source,"path stays on one line and tooltip retains the complete original path");
+                    foreach(string route in new[]{@"\\server\share\"+new string('W',130)+@"\Příliš žluťoučký 🧭 soubor.txt",@"sftp://server.example/data/"+new string('m',130)+"/soubor.txt"}) {
+                        update.Source=route;dialog.Update(update);dialog.UpdateLayout();
+                        check(sourceLine.Text.Contains("…")&&sourceLine.Text.EndsWith(route.Substring(Math.Max(route.LastIndexOf('\\'),route.LastIndexOf('/'))+1)),"UNC or remote path retains its full Unicode filename");
+                    }
+                    var singleLineHeight=sourceLine.ActualHeight;update.Source=@"E:\\"+new string('W',300)+".txt";dialog.Update(update);dialog.UpdateLayout();
+                    check(sourceLine.ActualHeight==singleLineHeight&&sourceLine.Text.EndsWith(".txt"),"oversized filename still stays on one line and preserves its extension");
+                    update.Source=@"E:\krátký.txt";dialog.Update(update);dialog.UpdateLayout();check(sourceLine.Text==L.Text("transfer.sourceLabel")+update.Source,"short paths remain complete without an ellipsis");
+                    update.Source=@"E:\Fotografie\Dovolená\"+new string('a',150)+@"\Rodinná fotografie 2026.jpg";dialog.Update(update);dialog.UpdateLayout();
+                    NextStageTests.Draw(dialog,Path.Combine(directory,"copy-middle-ellipsis.png"));
                     // A real watcher event must remain pending while the foreground copy is open.
                     string watched = Path.Combine(left.CurrentPath,"watch-proof.txt"); File.WriteAllText(watched,"watcher test"); await Task.Delay(1800);
                     check(!left.List.Items.Cast<Entry>().Any(x => x.FullPath == watched) && !right.List.Items.Cast<Entry>().Any(x => x.FullPath == watched),"automatic panel refresh is deferred behind foreground copy");
                     check(activated == 0 && GetForegroundWindow() == foreground,"progress and watcher updates do not activate windows behind copy"); Activated -= activatedHandler;
-                    var buttons = FluentUiTests.Children<Button>(dialog).ToArray(); buttons.Single(x => (string)x.Content == "Minimalizovat").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); dialog.Update(update);
+                    var buttons = FluentUiTests.Children<Button>(dialog).ToArray(); buttons.Single(x => (string)x.Content == L.Text("copy.backgroundAction")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); dialog.Update(update);
                     activity.Update("Kopírování", .56, .04, false); UpdateLayout();
                     check(summaryTrack.Height == 3 && summaryTrack.Value == .04 && summaryPercent.Text == "4 %" && summaryLabel.Text == "Kopírování fotografií" && summaryRoute.Text.Contains("→"), "minimized transfer uses title, route, percentage and a thin progress track");
                     check(!dialog.IsVisible && copySummary.Visibility == Visibility.Visible && summaryTransferInfo.Visibility == Visibility.Visible && summaryTransferInfo.Text.Contains("135") && summaryTransferInfo.Text.Contains("00:01:34"),"minimized local copy shows speed and ETA before Cancel in bottom queue");

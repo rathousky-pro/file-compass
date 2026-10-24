@@ -5,7 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public sealed class DriveChoice : INotifyPropertyChanged
     {

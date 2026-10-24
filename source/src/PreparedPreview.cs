@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-namespace CommanderCZ {
+namespace FileCompass {
     internal sealed partial class QuickPreviewPane {
         const long PreparedPreviewLimit=64L*1024*1024;
         ArchiveTemp previewTemp;
@@ -43,6 +43,7 @@ namespace CommanderCZ {
                     using(var output=new FileStream(file,FileMode.CreateNew,FileAccess.Write,FileShare.None))
                         transfer.Session.DownloadRelay(path,output,before.Length,delegate{token.ThrowIfCancellationRequested();});
                     if(!NetworkWork.Same(before,transfer.Session.GetFileInfo(path)))throw new IOException(L.Text("remotePreview.fileChangedDuringPreview"));
+                    AttachmentSecurity.MarkInternet(file);
                     token.ThrowIfCancellationRequested();return file;
                 }
             },transfer);

@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
-namespace CommanderCZ {
+namespace FileCompass {
  internal static class HtmlPreviewAssets {
   static readonly Dictionary<string,string> Types=new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase){
    {".css","text/css"},{".png","image/png"},{".jpg","image/jpeg"},{".jpeg","image/jpeg"},{".gif","image/gif"},{".svg","image/svg+xml"},{".webp","image/webp"},{".avif","image/avif"},{".ico","image/x-icon"},{".bmp","image/bmp"},{".woff","font/woff"},{".woff2","font/woff2"},{".ttf","font/ttf"},{".otf","font/otf"}

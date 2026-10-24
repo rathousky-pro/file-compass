@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public sealed class RenameOptions
     {
@@ -48,11 +48,12 @@ namespace CommanderCZ
                 int count = checked(options.Start + i * options.Step); DateTime date = File.GetLastWriteTime(path);
                 string nameMask = Expand(options.Name.Replace("[C]", count.ToString("D" + options.Digits)), name, ext, count, date);
                 string extensionMask = folder ? "" : Expand(options.Extension.Replace("[C]", count.ToString("D" + options.Digits)), name, ext, count, date);
-                if (RenameMetadata.Needed(nameMask + extensionMask))
+                if (RenameMetadata.Needed(nameMask + extensionMask)||FileRenameFields.Needed(nameMask+extensionMask))
                 {
                     try
                     {
-                        var metadata = RenameMetadata.Read(path, token);
+                        if(FileRenameFields.Needed(nameMask+extensionMask)){var fileFields=FileRenameFields.Read(path);nameMask=FileRenameFields.Expand(nameMask,fileFields);extensionMask=FileRenameFields.Expand(extensionMask,fileFields);}
+                        var metadata = RenameMetadata.Needed(nameMask+extensionMask)?RenameMetadata.Read(path, token):new Dictionary<string,string>();
                         nameMask = RenameMetadata.Expand(nameMask, metadata); extensionMask = RenameMetadata.Expand(extensionMask, metadata);
                     }
                     catch (Exception ex)

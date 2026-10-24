@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using System.Windows;
-namespace CommanderCZ
+namespace FileCompass
 {
     public partial class MainWindow
     {

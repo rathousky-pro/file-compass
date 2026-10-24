@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static class QueuePersistenceTests {
         internal static int Run(string root) {
             try {

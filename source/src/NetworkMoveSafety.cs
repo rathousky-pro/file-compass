@@ -3,7 +3,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal sealed class LocalMoveGuard : IDisposable
     {
@@ -24,7 +24,7 @@ namespace CommanderCZ
         public void Dispose() { if (guard != null) guard.Dispose(); guard = null; }
     }
 }
-namespace CommanderCZ.NetworkTransport
+namespace FileCompass.NetworkTransport
 {
     public sealed partial class Session
     {

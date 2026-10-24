@@ -9,7 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class ExplorerTreeTests
     {

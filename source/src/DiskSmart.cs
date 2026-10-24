@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 using System.Management;
 
-namespace CommanderCZ {
+namespace FileCompass {
     internal sealed class SmartAttribute {
         public string Id { get; set; }
         public string Name { get; set; }
@@ -22,14 +22,25 @@ namespace CommanderCZ {
         public string Threshold { get; set; }
         public string Raw { get; set; }
         public string State { get; set; }
+        public string DisplayName { get { return String.IsNullOrEmpty(State)?Name:Name+" · "+State; } }
+        public string Normalized { get { return Current+" / "+Worst+" / "+Threshold; } }
     }
     internal sealed class SmartDisk {
         internal string Device, Type, RawJson, Error, Letters="", Health="unknown";
+        internal DateTime CollectedUtc=DateTime.UtcNow;
         internal Dictionary<string,object> Data;
         internal readonly List<SmartAttribute> Attributes = new List<SmartAttribute>();
         internal decimal? Temperature, Remaining;
         internal string Model { get { return SmartData.Text(SmartData.Get(Data,"model_name"),Device); } }
         public string Label { get { return Model + (Letters.Length>0?"  ·  "+Letters:""); } }
+        public string TileModel { get { return Model; } }
+        public string TileTemperature { get { return Temperature.HasValue?Temperature.Value.ToString("N0")+" °C":"—"; } }
+        public string TileVolumes { get { return !String.IsNullOrWhiteSpace(Letters)?Letters:Device; } }
+        public string TileHealth { get { return L.Text("smart."+Health)+(Remaining.HasValue?" · "+Remaining.Value.ToString("N0")+" %":""); } }
+        public System.Windows.Media.Brush TileHealthBrush { get { return CompactTheme.ThemeBrush(Health=="good"?"#12623C":Health=="caution"?"#704600":Health=="bad"?"#9E2031":"#596572"); } }
+        public System.Windows.Media.Brush TileTemperatureBrush { get { return Temperature.HasValue?FluentTheme.Accent:FluentTheme.Muted; } }
+        public string TileHint { get { return Model+Environment.NewLine+TileVolumes+" · "+Device+Environment.NewLine+TileHealth+" · "+TileTemperature+Environment.NewLine+SmartData.Capacity(SmartData.Get(Data,"user_capacity","bytes"))+(String.IsNullOrWhiteSpace(Error)?"":Environment.NewLine+Error); } }
+
         internal static SmartDisk Parse(string device,string type,string json) {
             var disk=new SmartDisk{Device=device,Type=type,RawJson=json,Data=SmartData.Parse(json)};var data=disk.Data;
             disk.Temperature=SmartData.Number(SmartData.Get(data,"temperature","current"));
@@ -73,6 +84,7 @@ namespace CommanderCZ {
         const string ToolHash="B5DB94E5082C042BE44994B7A4FA8F7B5C8E713B2AB1C9A560D8F7A7995EA27D";
         internal static void ValidateTool() { using(var file=File.OpenRead(ToolPath))using(var hash=SHA256.Create())if(BitConverter.ToString(hash.ComputeHash(file)).Replace("-","")!=ToolHash)throw new IOException(L.Text("smart.toolInvalid")); }
         internal static string Run(string arguments,CancellationToken token) {
+            using(var trusted=PluginIntegrity.Acquire("smart\\smartctl.exe"))
             using(var process=new Process{StartInfo=new ProcessStartInfo(ToolPath,arguments){UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true}}) {
                 process.Start();var output=process.StandardOutput.ReadToEndAsync();var error=process.StandardError.ReadToEndAsync();var timer=Stopwatch.StartNew();
                 while(!process.WaitForExit(100))if(token.IsCancellationRequested||timer.ElapsedMilliseconds>30000){try{process.Kill();}catch(InvalidOperationException){}token.ThrowIfCancellationRequested();throw new TimeoutException(L.Text("smart.timeout"));}

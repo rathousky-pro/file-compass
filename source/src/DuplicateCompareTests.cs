@@ -8,7 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Threading;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-namespace CommanderCZ {
+namespace FileCompass {
  internal static class DuplicateCompareTests {
   [System.Runtime.InteropServices.DllImport("kernel32.dll",CharSet=System.Runtime.InteropServices.CharSet.Unicode,SetLastError=true)]
   static extern bool CreateHardLink(string link,string existing,IntPtr security);

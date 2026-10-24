@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static class ErgonomicsTests {
         internal static int Run(string root) {
             Directory.CreateDirectory(root); var checks = new List<string>(); Window current = null; MainWindow main = null;

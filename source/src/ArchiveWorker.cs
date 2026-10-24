@@ -16,7 +16,7 @@ using SharpSevenZip;
 using SharpSevenZip.Exceptions;
 using SharpSevenZip.EventArguments;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     // The isolated worker owns the native codec. Only a private pipe carries passwords.
     internal static partial class ArchiveWorker
@@ -216,7 +216,7 @@ namespace CommanderCZ
                 string list = args.FirstOrDefault(x => x.StartsWith("-i@", StringComparison.Ordinal));
                 string[] members = list == null ? args.Skip(archiveIndex + 1).ToArray() : File.ReadAllLines(list.Substring(3), Encoding.UTF8);
                 string[] directFiles = null;
-                if (args.Contains("-commander-direct") && !File.Exists(archive) && !delete) {
+                if (args.Contains("-filecompass-direct") && !File.Exists(archive) && !delete) {
                     directFiles = members.Select(member => { if (member != Path.GetFileName(member) || member == "." || member == "..") throw new IOException(L.Text("archive.archivePathMissing")); string file = Path.Combine(directory, member); RejectLinks(file); if (!File.Exists(file)) throw new FileNotFoundException(member); return file; }).ToArray();
                 }
                 var memberSet = new HashSet<string>(members.Select(x => x.Replace('\\', '/')), StringComparer.OrdinalIgnoreCase);
@@ -260,7 +260,7 @@ namespace CommanderCZ
                 string level = args.FirstOrDefault(x => x.StartsWith("-mx=", StringComparison.Ordinal)); int value = level == null ? 6 : Int32.Parse(level.Substring(4));
                 compressor.CompressionLevel = value <= 0 ? CompressionLevel.None : value <= 1 ? CompressionLevel.Fast : value <= 3 ? CompressionLevel.Low : value <= 5 ? CompressionLevel.Normal : value <= 7 ? CompressionLevel.High : CompressionLevel.Ultra;
                 if ((extension == ".7z" || outputFormat == OutArchiveFormat.XZ) && value > 0) {
-                    var plan = ArchiveMemoryPlan.Choose(budget.Settings.MaximumMemoryMiB, ArchiveMemoryPlan.AvailableBytes(), itemCount, value, args.Contains("-commander-low-memory"));
+                    var plan = ArchiveMemoryPlan.Choose(budget.Settings.MaximumMemoryMiB, ArchiveMemoryPlan.AvailableBytes(), itemCount, value, args.Contains("-filecompass-low-memory"));
                     compressor.CompressionMethod = CompressionMethod.Lzma2;
                     compressor.CustomParameters[outputFormat == OutArchiveFormat.XZ ? "d" : "0d"] = plan.DictionaryMiB.ToString(System.Globalization.CultureInfo.InvariantCulture) + "m";
                     compressor.CustomParameters["mt"] = plan.Threads.ToString(System.Globalization.CultureInfo.InvariantCulture);

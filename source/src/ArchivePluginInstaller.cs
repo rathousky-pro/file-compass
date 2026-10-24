@@ -4,9 +4,9 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Threading;
-using CommanderCZ.NetworkTransport;
+using FileCompass.NetworkTransport;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal sealed class ArchivePluginPackage
     {
@@ -42,7 +42,7 @@ namespace CommanderCZ
                 if (String.Equals(Path.GetFullPath(path), Path.GetFullPath(Target(package, root)), StringComparison.OrdinalIgnoreCase)) return VerifyHash(path, package.ExecutableHash);
             string full = Path.GetFullPath(path), managedRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
             if (full.StartsWith(managedRoot, StringComparison.OrdinalIgnoreCase)) throw new IOException(L.Text("archivePlugin.unknownExecutable"));
-            return null;
+            return ToolTrust.Acquire(full);
         }
         internal static string Find(ArchivePluginPackage package, string root = null)
         {

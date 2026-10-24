@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static partial class FileMetadata {
         static void Icons(string path,FileDetails d) {
             using(var stream=Open(path))using(var reader=new BinaryReader(stream)) {

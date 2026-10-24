@@ -5,9 +5,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using CommanderCZ.NetworkTransport;
+using FileCompass.NetworkTransport;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public partial class MainWindow
     {
@@ -73,6 +73,8 @@ namespace CommanderCZ
                     string password = NetworkSettingsStore.Unprotect(profile.EncryptedPassword); bool remember = false;
                     if (String.IsNullOrEmpty(profile.PrivateKeyPath) && String.IsNullOrEmpty(profile.EncryptedPassword)) { password = RequestPassword(profile, out remember); if (password == null) return; }
                     operation.Text = L.Text("sshfs.connectingPrefix") + profile.Name + L.Text("transfer.destinationNameSeparator") + profile.DriveLetter;
+                    try{using(ToolTrust.AcquireSshfs(SshfsMount.Executable())){}}
+                    catch(IOException){if(startup)throw;if(MessageBox.Show(this,L.Text("security.sshfsTrustWarning")+"\n\n"+SshfsMount.Executable(),"SSHFS",MessageBoxButton.YesNo,MessageBoxImage.Warning,MessageBoxResult.No)!=MessageBoxResult.Yes)return;ToolTrust.ApproveSshfs(SshfsMount.Executable());}
                     root = await Task.Run(delegate { return SshfsMount.Mount(profile, password, key.Item2); });
                     if (remember || source.HostKeyFingerprint != profile.HostKeyFingerprint)
                     {

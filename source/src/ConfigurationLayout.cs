@@ -6,7 +6,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
 using System.Windows.Threading;
 
-namespace CommanderCZ {
+namespace FileCompass {
     public sealed partial class ConfigurationDialog {
         bool fitQueued, fitting;
         Rect lastWorkArea;

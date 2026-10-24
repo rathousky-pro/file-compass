@@ -10,7 +10,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class AdvancedToolsTests
     {
@@ -92,7 +92,7 @@ namespace CommanderCZ
             string empty = Path.Combine(dir,"empty"); File.WriteAllBytes(empty,new byte[0]); FileParts.Split(empty,empty,1024,none,delegate {}); FileParts.Combine(empty+".001",empty+".joined",none,delegate {});
             check(new FileInfo(empty+".joined").Length == 0,"empty files split and combine correctly");
         }
-        static void TestImages(string root,Action<bool,string> check)
+        internal static void TestImages(string root,Action<bool,string> check)
         {
             string dir = Directory.CreateDirectory(Path.Combine(root,"images")).FullName, source = Path.Combine(dir,"picture.png");
             var pixels = new byte[32*16*4]; for (int i=0;i<pixels.Length;i+=4) { pixels[i]=25;pixels[i+1]=100;pixels[i+2]=220;pixels[i+3]=(byte)(i%3==0?0:255); }

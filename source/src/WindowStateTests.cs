@@ -7,7 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Threading;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class WindowStateTests
     {

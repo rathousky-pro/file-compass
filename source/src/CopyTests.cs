@@ -9,7 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public static class CopyTests
     {
@@ -119,7 +119,7 @@ namespace CommanderCZ
                     int prompts = 0;
                     result = new CopyEngine(new CopyOptions { Target = output, Rule = CopyRule.OverwriteAll }, control, c => new CopyDecision(CopyChoice.Overwrite), null,
                         failure => { prompts++; locked.Dispose(); return CopyErrorChoice.Retry; }).Run(new[] { a });
-                    assert(prompts == 1 && result.Copied == 1 && result.Skipped == 0 && result.Errors.Count == 0 && File.ReadAllText(da) == "NEW" && !Directory.GetFiles(output, ".commandercz-*").Any(), "retry succeeds after lock release without partial files");
+                    assert(prompts == 1 && result.Copied == 1 && result.Skipped == 0 && result.Errors.Count == 0 && File.ReadAllText(da) == "NEW" && !Directory.GetFiles(output, ".filecompass-*").Any(), "retry succeeds after lock release without partial files");
                 }
                 string lockedSecond = Path.Combine(input, "locked-second.txt"), good = Path.Combine(input, "good-after-lock.txt");
                 string changing = Path.Combine(input, "retry-changing.txt"); File.WriteAllText(changing, "OLD");
@@ -155,7 +155,7 @@ namespace CommanderCZ
                     result = new CopyEngine(new CopyOptions { Target = output, Rule = CopyRule.OverwriteAll }, control, c => new CopyDecision(CopyChoice.Overwrite), u =>
                     { if (u.FileDone > 0 && u.Phase == "Kopírování") { sample = u; control.Cancel(); } }).Run(new[] { large });
                 }
-                assert(result.Cancelled && File.ReadAllText(largeTarget) == "ORIGINAL" && !Directory.GetFiles(output, ".commandercz-*").Any(), "cancel mid-overwrite preserves target and cleans temp");
+                assert(result.Cancelled && File.ReadAllText(largeTarget) == "ORIGINAL" && !Directory.GetFiles(output, ".filecompass-*").Any(), "cancel mid-overwrite preserves target and cleans temp");
                 using (var control = new CopyControl())
                 {
                     result = new CopyEngine(new CopyOptions { Target = output, Rule = CopyRule.OverwriteAll }, control, c => new CopyDecision(CopyChoice.Overwrite), u =>

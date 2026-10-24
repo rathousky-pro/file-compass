@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 
-namespace CommanderCZ.NetworkTransport
+namespace FileCompass.NetworkTransport
 {
     public sealed partial class Session
     {
@@ -45,7 +45,7 @@ namespace CommanderCZ.NetworkTransport
         TransferResult DownloadCheckpointed(string remote, string local, bool remove, TransferOptions transfer)
         {
             var info = GetFileInfo(remote); if (info.IsDirectory || info.FileType == 'L') throw new IOException(L.Text("transfer.regularSourceFileRequiredPrefix") + remote);
-            string target = Path.GetFullPath(local.EndsWith("\\") || Directory.Exists(local) ? Path.Combine(local, info.Name) : local);
+            string target = RemoteConnection.DownloadTarget(local, info.Name);
             using (var checkpoint = new TransferCheckpoint(options, false, RemoteConnection.Normalize(remote), target))
             {
                 string stageFolder = Path.Combine(Path.GetDirectoryName(target), ".FileCompass-partials");

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
-namespace CommanderCZ
+namespace FileCompass
 {
     /// <summary>Verify native plugins against compiled-in hashes (see gen-plugin-hashes.ps1).</summary>
     internal static class PluginIntegrity

@@ -10,7 +10,7 @@ using System.Windows.Controls;
 using System.Xml;
 using System.Xml.Serialization;
 using Microsoft.Win32;
-namespace CommanderCZ
+namespace FileCompass
 {
     public sealed class OperationItem
     {
@@ -27,6 +27,7 @@ namespace CommanderCZ
         public string Title = "", State = L.Code("state.running"), Summary = "";
         public List<OperationItem> Items = new List<OperationItem>();
         public CopyOptions Copy;
+        [XmlIgnore] internal UndoGroup Undo;
         [XmlIgnore] public Action Retry;
         [XmlIgnore] public bool RetryInterrupted;
         [XmlIgnore] public Action Cancel;

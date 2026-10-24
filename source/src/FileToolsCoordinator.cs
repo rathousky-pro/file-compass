@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Windows;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public partial class MainWindow
     {
@@ -61,7 +61,7 @@ namespace CommanderCZ
             if (active.IsArchive || active.IsRemote) { MessageBox.Show(this, L.Text("rename.supportedLocationsHelp"), L.Text("rename.batchTitle")); return; }
             string[] paths = active.Selected().Select(x => x.FullPath).ToArray(); if (paths.Length == 0) return;
             var parents = paths.Select(Path.GetDirectoryName).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-            new BatchRenameWindow(this, paths, delegate { foreach (var panel in new[] { left, right }) if (!panel.IsRemote && !panel.IsArchive && parents.Contains(panel.CurrentPath, StringComparer.OrdinalIgnoreCase)) panel.Refresh(); }, delegate(bool running) { fileToolsRunning += running ? 1 : -1; }).Show();
+            BatchRenameWindow renameWindow=null;renameWindow=new BatchRenameWindow(this, paths, delegate { foreach (var panel in new[] { left, right }) if (!panel.IsRemote && !panel.IsArchive && parents.Contains(panel.CurrentPath, StringComparer.OrdinalIgnoreCase)) panel.Refresh(); }, delegate(bool running) { fileToolsRunning += running ? 1 : -1; },null,delegate{RecordUndoTransaction(L.Text("action.batchRename"),renameWindow.LastUndoReceipts);});renameWindow.Show();
         }
     }
 }

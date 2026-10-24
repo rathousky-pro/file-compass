@@ -1,7 +1,7 @@
 using System;
 using System.Windows;
 using System.Windows.Interop;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static class DialogGeometry {
         internal static Rect WorkArea(Window window) {
             var handle = new WindowInteropHelper(window.IsLoaded ? window : window.Owner ?? window).Handle;

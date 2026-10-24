@@ -11,7 +11,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static class FileMetadataTests {
         static void Package(string path,params string[] parts) {using(var file=File.Create(path))using(var zip=new ZipArchive(file,ZipArchiveMode.Create))for(int i=0;i<parts.Length;i+=2)using(var writer=new StreamWriter(zip.CreateEntry(parts[i]).Open(),Encoding.UTF8))writer.Write(parts[i+1]);}
         static string Get(FileDetails data,string key){var row=data.Rows.FirstOrDefault(x=>x.Label==L.Text("details."+key));return row==null?null:row.Value;}

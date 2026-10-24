@@ -8,7 +8,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static class UsabilityTests {
         internal static int Run(string root) {
             Directory.CreateDirectory(root); var checks = new List<string>(); MainWindow main = null; Window previewWindow = null; QuickPreviewPane preview = null; ConfigurationDialog configuration = null;

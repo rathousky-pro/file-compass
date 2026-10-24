@@ -7,7 +7,7 @@ using System.Text;
 using System.Xml;
 using System.Xml.Serialization;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public enum NetworkProtocol { SMB, FTP, SFTP, NFS, SSH, SCP, SSHFS }
 
@@ -83,6 +83,7 @@ namespace CommanderCZ
             if (Protocol == NetworkProtocol.SSHFS) SshfsMount.Validate(this);
             if (HostKeyFingerprint == "*" || (!String.IsNullOrEmpty(HostKeyFingerprint) && HostKeyFingerprint.IndexOf(';') >= 0))
                 throw new ArgumentException(L.Text("ssh.explicitHostKeyRequired"));
+            if(CanOpenSsh&&!String.IsNullOrWhiteSpace(HostKeyFingerprint))HostKeyFingerprint=SshHostPin.Normalize(HostKeyFingerprint);
         }
     }
 
@@ -100,9 +101,9 @@ namespace CommanderCZ
         {
             FilePath = path; Settings = new NetworkSettings();
             if (!File.Exists(path)) return;
-            using (var reader = XmlReader.Create(path, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null }))
-                Settings = (NetworkSettings)new XmlSerializer(typeof(NetworkSettings)).Deserialize(reader);
+            Settings = ConfigurationIntegrity.Read<NetworkSettings>(path);
             if (Settings.Version != 1 || Settings.Connections == null) throw new IOException(L.Text("network.unsupportedConfigurationFormat"));
+            if (MigratePasswords()) Save();
         }
         public static string DefaultPath
         {
@@ -110,15 +111,12 @@ namespace CommanderCZ
         }
         public void Save()
         {
+            MigratePasswords();
             Directory.CreateDirectory(System.IO.Path.GetDirectoryName(FilePath));
             string temporary = FilePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
             try
             {
-                using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-                {
-                    new XmlSerializer(typeof(NetworkSettings)).Serialize(stream, Settings); stream.Flush(true);
-                }
-                if (File.Exists(FilePath)) File.Replace(temporary, FilePath, null); else File.Move(temporary, FilePath);
+                ConfigurationIntegrity.Write(FilePath,Settings);
             }
             finally { if (File.Exists(temporary)) File.Delete(temporary); }
         }
@@ -135,21 +133,49 @@ namespace CommanderCZ
             var previous = Settings.Connections.ToList(); Settings.Connections.RemoveAll(x => x.Id == profile.Id);
             try { Save(); } catch { Settings.Connections = previous; throw; }
         }
-        // Application entropy preserves compatibility with existing encrypted records. Legacy records
-        // without entropy remain readable and gain entropy when the password is saved again.
+        // Unversioned records are converted only at the authenticated store boundary.
+        // Persisted cryptographic identifiers are independent of the application brand/namespace.
         static readonly byte[] Entropy = Encoding.UTF8.GetBytes("CommanderCZ.connections.v2");
+        const string PasswordPrefix = "dpapi-v3:";
+        static readonly byte[] CurrentEntropy = Encoding.UTF8.GetBytes("CommanderCZ.connections.v3");
+        bool MigratePasswords()
+        {
+            var updates = new List<Action>();
+            foreach (var profile in Settings.Connections)
+            {
+                var entry=profile;
+                string password=UpgradePassword(entry.EncryptedPassword), proxy=UpgradePassword(entry.EncryptedProxyPassword);
+                if(password!=entry.EncryptedPassword||proxy!=entry.EncryptedProxyPassword)
+                    updates.Add(delegate { entry.EncryptedPassword=password; entry.EncryptedProxyPassword=proxy; });
+            }
+            foreach(var update in updates)update();
+            return updates.Count>0;
+        }
+        internal static string UpgradePassword(string value)
+        {
+            if(String.IsNullOrEmpty(value)||value.StartsWith(PasswordPrefix,StringComparison.Ordinal))return value;
+            byte[] blob=Convert.FromBase64String(value),plain;
+            try { plain=ProtectedData.Unprotect(blob,Entropy,DataProtectionScope.CurrentUser); }
+            catch(CryptographicException) { plain=ProtectedData.Unprotect(blob,null,DataProtectionScope.CurrentUser); }
+            try { return PasswordPrefix+Convert.ToBase64String(ProtectedData.Protect(plain,CurrentEntropy,DataProtectionScope.CurrentUser)); }
+            finally { Array.Clear(plain,0,plain.Length); }
+        }
         public static string Protect(string password)
         {
-            return String.IsNullOrEmpty(password) ? "" : Convert.ToBase64String(ProtectedData.Protect(Encoding.UTF8.GetBytes(password), Entropy, DataProtectionScope.CurrentUser));
+            if(String.IsNullOrEmpty(password))return "";
+            byte[] plain=Encoding.UTF8.GetBytes(password);
+            try{return PasswordPrefix+Convert.ToBase64String(ProtectedData.Protect(plain,CurrentEntropy,DataProtectionScope.CurrentUser));}
+            finally{Array.Clear(plain,0,plain.Length);}
         }
         public static string Unprotect(string password)
         {
             if (String.IsNullOrEmpty(password)) return "";
             try
             {
-                byte[] blob = Convert.FromBase64String(password);
-                try { return Encoding.UTF8.GetString(ProtectedData.Unprotect(blob, Entropy, DataProtectionScope.CurrentUser)); }
-                catch (CryptographicException) { return Encoding.UTF8.GetString(ProtectedData.Unprotect(blob, null, DataProtectionScope.CurrentUser)); }
+                if(!password.StartsWith(PasswordPrefix,StringComparison.Ordinal))throw new CryptographicException("Legacy credentials require profile migration.");
+                byte[] blob = Convert.FromBase64String(password.Substring(PasswordPrefix.Length));
+                byte[] plain=ProtectedData.Unprotect(blob,CurrentEntropy,DataProtectionScope.CurrentUser);
+                try{return Encoding.UTF8.GetString(plain);}finally{Array.Clear(plain,0,plain.Length);}
             }
             catch (Exception ex) { throw new IOException(L.Text("network.savedPasswordCannotBeDecrypted"), ex); }
         }

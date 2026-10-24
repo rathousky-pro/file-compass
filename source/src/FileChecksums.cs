@@ -13,7 +13,7 @@ using System.Windows.Data;
 using System.Windows.Media;
 using Microsoft.Win32;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public enum ChecksumAlgorithm { Sha256, Md5, Crc32 }
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,7 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public partial class FilePanel
     {
@@ -103,7 +103,8 @@ namespace CommanderCZ
                         var observe = read.ContinueWith(t => { var ignored = t.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
                         throw new IOException(L.Text("tree.locationUnavailable"));
                     }
-                    names = (await read).Where(x => !x.IsParent).Select(x => new ShellLocation { Path = x.FullPath, Name = x.Name, Directory = true, Icon = DesktopIcons.StockIcon(NetworkBrowser.IsServer(x.FullPath) ? 15 : 4) }).ToArray();
+                    var listed=await read; if(path==NetworkBrowser.Root&&NetworkBrowser.TestProvider==null){var deadline=DateTime.UtcNow.AddSeconds(35);while(NetworkBrowser.DiscoveryRunning&&DateTime.UtcNow<deadline)await Task.Delay(350);listed=NetworkBrowser.Snapshot();}
+                    names = listed.Where(x => !x.IsParent && x.NetworkDeviceTarget==null && x.NetworkServiceProfile==null).Select(x => new ShellLocation { Path = x.FullPath, Name = x.Name, Directory = true, Icon = DesktopIcons.StockIcon(NetworkBrowser.IsServer(x.FullPath) ? 15 : 4) }).ToArray();
                 } else {
                     names = await BoundedShellRead(WindowsShell.IsLocation(path) ? WindowsShell.Read(path, true) : WindowsShell.Folders(path, showHiddenFiles, showSystemFiles));
                 }

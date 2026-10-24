@@ -1,4 +1,8 @@
-﻿# Panels, icons and previews
+# Panels, icons and previews
+
+The Start menu contains Open in Explorer, Run Command Prompt and Run PowerShell, using the active local folder. The former External tools submenu and development-only project-folder shortcut are no longer shown.
+
+Network combines Windows discovery, mapped drives, saved network connections and bounded IPv4 file-service probes on attached private networks. It checks SMB (445), FTP (21), SSH/SFTP (22), implicit FTPS (990) and NFS (2049), showing results progressively. SMB opens shared folders; newly found transfer services open their connection settings before connecting. A listening port indicates a possible service, not confirmed credentials or permissions. Large prefixes are bounded to the adapter's /24, with at most 1,024 candidate addresses and a time limit. Devices on other VPN subnets, IPv6-only devices, nonstandard ports or services hidden by a firewall may require a saved/manual connection. Permission-blocked probes produce a warning in the Network status tooltip.
 
 ## Layout and navigation
 
@@ -8,7 +12,7 @@ The toolbar groups navigation/selection separately from preview/edit/thumbnails.
 
 Returning from a subfolder selects that subfolder in the parent. Automatic local refresh leaves the list enabled and applies only added/removed/changed rows, preserving unchanged row instances, marks and scroll position. Network watching is separately configurable and can be disabled for slow paths; Ctrl+R refreshes manually.
 
-Single-panel mode has an adjustable folder tree with Windows names/icons: Home/Quick Access, Desktop, profile, registered cloud folders, This PC, Network and other available system roots such as Libraries, Recycle Bin or Linux. This PC includes local/mapped drives; Network shows discovered servers/shares. Redirected OneDrive paths come from Windows. Branches load asynchronously on expansion and can be retried. The tree tracks navigation and retains selection/expanded branches. Open an actual filesystem folder for file operations. Dual-panel modes hide the tree, even when older tabs/views requested it.
+Single-panel mode has an adjustable folder tree with Windows names/icons: Home/Quick Access, Desktop, profile, registered cloud folders, This PC, Network and other available system roots such as Libraries, Recycle Bin or Linux. This PC includes local/mapped drives; Network lists computers and devices discovered by Windows, with cached and partial results available during discovery. Computers open their shared folders inside File Compass; other devices open through Explorer. Ctrl+R refreshes discovery. Redirected OneDrive paths come from Windows. Branches load asynchronously on expansion and can be retried. The tree tracks navigation and retains selection/expanded branches. Open an actual filesystem folder for file operations. Dual-panel modes hide the tree, even when older tabs/views requested it.
 
 ## Unified preview
 

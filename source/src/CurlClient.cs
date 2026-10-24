@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-namespace CommanderCZ.NetworkTransport
+namespace FileCompass.NetworkTransport
 {
     // Each worker owns its handles. Only multi_wakeup is called from cancellation.
     internal sealed class CurlClient : IDisposable
@@ -14,7 +14,7 @@ namespace CommanderCZ.NetworkTransport
         readonly Action<int> traffic;
         readonly object gate = new object();
         IntPtr easy, multi;
-        readonly List<IntPtr> memory = new List<IntPtr>();
+        readonly Dictionary<IntPtr,int> memory = new Dictionary<IntPtr,int>();
         IntPtr quotes;
         IntPtr errorBuffer;
         Exception failure;
@@ -50,13 +50,13 @@ namespace CommanderCZ.NetworkTransport
         void Number(int option, int value) { Result(NativeNetwork.cn_setopt_long(easy, option, value)); }
         void Pointer(int option, IntPtr value) { Result(NativeNetwork.cn_setopt_ptr(easy, option, value)); }
         void Text(int option, string value)
-        { var bytes = NativeNetwork.Bytes(value); IntPtr ptr = Marshal.AllocHGlobal(bytes.Length); memory.Add(ptr); Marshal.Copy(bytes, 0, ptr, bytes.Length); Pointer(option, ptr); }
+        { var bytes = NativeNetwork.Bytes(value); IntPtr ptr = Marshal.AllocHGlobal(bytes.Length); memory.Add(ptr,bytes.Length); try { Marshal.Copy(bytes, 0, ptr, bytes.Length); Pointer(option, ptr); } finally {Array.Clear(bytes,0,bytes.Length);} }
         void FileBlob(int option,string path)
         {
             // LibreSSL file APIs use ANSI paths on Windows. Read through .NET so
             // certificates work in Czech-named directories too.
             byte[] bytes=File.ReadAllBytes(path); IntPtr data=Marshal.AllocHGlobal(bytes.Length),blob=Marshal.AllocHGlobal(24);
-            memory.Add(data); memory.Add(blob); Marshal.Copy(bytes,0,data,bytes.Length); Marshal.WriteIntPtr(blob,0,data); Marshal.WriteInt64(blob,8,bytes.Length); Marshal.WriteInt32(blob,16,1); Pointer(option,blob); Array.Clear(bytes,0,bytes.Length);
+            memory.Add(data,bytes.Length); memory.Add(blob,24); try {Marshal.Copy(bytes,0,data,bytes.Length); Marshal.WriteIntPtr(blob,0,data); Marshal.WriteInt64(blob,8,bytes.Length); Marshal.WriteInt32(blob,16,1); Pointer(option,blob);}finally{Array.Clear(bytes,0,bytes.Length);}
         }
         string Url(string path, bool directory)
         {
@@ -74,7 +74,7 @@ namespace CommanderCZ.NetworkTransport
         void Configure(string path, bool directory)
         {
             check(); failure = null; Number(44,0); Number(46,0); Number(50,0); Result(NativeNetwork.cn_setopt_off(easy,30116,0)); Pointer(10007,IntPtr.Zero); Pointer(10036,IntPtr.Zero); Pointer(10028,IntPtr.Zero);
-            errorBuffer=Marshal.AllocHGlobal(256); memory.Add(errorBuffer); Marshal.Copy(new byte[256],0,errorBuffer,256); Pointer(10010,errorBuffer);
+            errorBuffer=Marshal.AllocHGlobal(256); memory.Add(errorBuffer,256); Marshal.Copy(new byte[256],0,errorBuffer,256); Pointer(10010,errorBuffer);
             Text(10002, Url(path, directory));
             if (options.Raw("Utf", "2") == "1") {
                 quotes = NativeNetwork.curl_slist_append(quotes, Encoding.ASCII.GetBytes("*OPTS UTF8 ON\0"));
@@ -138,7 +138,7 @@ namespace CommanderCZ.NetworkTransport
             }
         }
         void Release()
-        { Pointer(10028,IntPtr.Zero); Pointer(10010,IntPtr.Zero); Pointer(20011,IntPtr.Zero); Pointer(20012,IntPtr.Zero); Pointer(20219,IntPtr.Zero); Pointer(20079,IntPtr.Zero); if (quotes != IntPtr.Zero) { NativeNetwork.curl_slist_free_all(quotes); quotes = IntPtr.Zero; } foreach (var ptr in memory) Marshal.FreeHGlobal(ptr); memory.Clear(); errorBuffer=IntPtr.Zero; write = read = header = null; progress = null; }
+        { Pointer(10028,IntPtr.Zero); Pointer(10010,IntPtr.Zero); Pointer(20011,IntPtr.Zero); Pointer(20012,IntPtr.Zero); Pointer(20219,IntPtr.Zero); Pointer(20079,IntPtr.Zero); if (quotes != IntPtr.Zero) { NativeNetwork.curl_slist_free_all(quotes); quotes = IntPtr.Zero; } foreach (var ptr in memory) SensitiveMemory.Free(ptr.Key,ptr.Value); memory.Clear(); errorBuffer=IntPtr.Zero; write = read = header = null; progress = null; }
         internal byte[] Listing(string path, string command)
         { try { Configure(path, true); Text(10036, command); using (var result = new MemoryStream()) { Run(null, result, -1, null); return result.ToArray(); } } finally { Release(); } }
         internal void Commands(params string[] commands)

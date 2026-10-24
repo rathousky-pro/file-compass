@@ -1,6 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static class QueuePresentation {
         internal static TextBlock Heading(string text) { return new TextBlock { Text=text, FontSize=17, FontWeight=FontWeights.SemiBold, Margin=new Thickness(2,2,2,10) }; }
         internal static StackPanel Empty(string title, string description) {

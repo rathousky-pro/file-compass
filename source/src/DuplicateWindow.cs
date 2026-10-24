@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-namespace CommanderCZ {
+namespace FileCompass {
  internal sealed class DuplicateWindow:Window {
   readonly TextBox roots=new TextBox();
   internal readonly DataGrid Results=new DataGrid{AutoGenerateColumns=false,CanUserAddRows=false,SelectionMode=DataGridSelectionMode.Extended,Background=CompactTheme.WhiteSurface,RowBackground=CompactTheme.WhiteSurface,AlternatingRowBackground=CompactTheme.ThemeBrush("#F4F7FB"),BorderThickness=new Thickness(0)};

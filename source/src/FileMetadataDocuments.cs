@@ -7,7 +7,7 @@ using System.Xml;
 using System.Globalization;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static partial class FileMetadata {
         static XmlDocument Xml(Stream stream) {
             var doc=new XmlDocument{XmlResolver=null};
@@ -69,7 +69,7 @@ namespace CommanderCZ {
             }
         }
         static void Text(string path,FileDetails d,string ext) {
-            if(!new[]{".txt",".log",".csv",".tsv",".json",".xml",".svg",".html",".htm",".md",".ini",".config",".yaml",".yml",".cs",".js",".ts",".py",".ps1",".bat",".sql",".css",".rtf"}.Contains(ext))return;
+            if(!new[]{".txt",".log",".csv",".tsv",".tab",".psv",".json",".xml",".svg",".html",".htm",".md",".ini",".config",".yaml",".yml",".cs",".js",".ts",".py",".ps1",".bat",".sql",".css",".rtf"}.Contains(ext))return;
             byte[] bytes;using(var stream=Open(path)){bytes=new byte[(int)Math.Min(stream.Length,65536)];int n=stream.Read(bytes,0,bytes.Length);if(n<bytes.Length)Array.Resize(ref bytes,n);}
             string source;string encoding;
             if(bytes.Length>=2&&bytes[0]==255&&bytes[1]==254){source=Encoding.Unicode.GetString(bytes,2,bytes.Length-2);encoding="UTF-16 LE";}
@@ -77,7 +77,8 @@ namespace CommanderCZ {
             else {if(bytes.Any(x=>x==0))return;try{var decoder=new UTF8Encoding(false,true).GetDecoder();var chars=new char[bytes.Length+2];int used,generated;bool done;decoder.Convert(bytes,0,bytes.Length,chars,0,chars.Length,new FileInfo(path).Length<=bytes.Length,out used,out generated,out done);source=new string(chars,0,generated);encoding="UTF-8";}catch{source=Encoding.GetEncoding(1250).GetString(bytes);encoding="Windows-1250 ("+L.Text("details.estimate")+")";}}
             d.Add("encoding",encoding);bool complete=new FileInfo(path).Length<=bytes.Length;d.Add(complete?"lines":"sampleLines",source.Length==0?0:source.Count(x=>x=='\n')+1);
             d.Add("lineEndings",source.Contains("\r\n")?"CRLF":source.Contains("\n")?"LF":source.Contains("\r")?"CR":null);
-            if(ext==".csv"||ext==".tsv"){string first=source.Split('\n')[0];char separator=ext==".tsv"?'\t':first.Count(x=>x==';')>first.Count(x=>x==',')?';':',';bool quoted=false;int columns=1;for(int i=0;i<first.Length;i++){if(first[i]=='"')quoted=!quoted;else if(!quoted&&first[i]==separator)columns++;}d.Add("separator",separator=='\t'?"TAB":separator.ToString());d.Add("columns",columns);}
+            if(CsvDocument.Supports(path)){var csv=CsvDocument.Parse(source,null,!complete,path);d.Add("separator",csv.Separator=='\t'?"TAB":csv.Separator.ToString());d.Add("columns",csv.Columns);}
+
             if((ext==".xml"||ext==".svg")&&complete)using(var memory=new MemoryStream(bytes)){var xml=Xml(memory);d.Add("xmlRoot",xml.DocumentElement.Name);if(ext==".svg"){if(xml.DocumentElement.HasAttribute("width")&&xml.DocumentElement.HasAttribute("height"))d.Add("dimensions",xml.DocumentElement.GetAttribute("width")+" × "+xml.DocumentElement.GetAttribute("height"));d.Add("viewBox",xml.DocumentElement.GetAttribute("viewBox"));}}
             if(ext==".json"&&complete){var obj=new System.Web.Script.Serialization.JavaScriptSerializer{MaxJsonLength=65536,RecursionLimit=64}.DeserializeObject(source.TrimStart('\ufeff'));var array=obj as object[];var dict=obj as Dictionary<string,object>;d.Add("jsonRoot",array!=null?L.Text("details.array"):dict!=null?L.Text("details.object"):L.Text("details.value"));if(array!=null)d.Add("entries",array.Length);if(dict!=null)d.Add("entries",dict.Count);}
         }

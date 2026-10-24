@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Web.Script.Serialization;
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class LanguageTests
     {
@@ -35,9 +35,9 @@ namespace CommanderCZ
                 check(L.Text("action.paste") == "Legacy paste", "old hash-based translation loads under semantic key");
                 check(L.Text("action.copy") == "Copy", "explicit semantic translation takes precedence over old alias");
                 check(L.Text("text.d24832d8225672a7") == "Legacy paste" && L.Code("text.d24832d8225672a7") == source["action.paste"], "legacy lookup API and canonical values remain compatible");
-                string command = SshTerminal.BuildCommand(new NetworkProfile { Host = "server", Name = "test" }, "ssh.exe");
+                string command = SshTerminal.BuildCommand(new NetworkProfile { Host = "server", Name = "test" }, "ssh.exe", Path.Combine(root, "known_hosts"));
                 check(!command.Contains("UNTRUSTED_SCRIPT") && command.Contains(L.Code("internal.sshExitStatusScript")), "translation cannot replace executable SSH script");
-                check(L.Code("proxy.basicAuthorizationHeader") == "Proxy-Authorization: Basic " && L.Code("clipboard.panelDataFormat") == "CommanderCZ.Panel", "protocol and clipboard identifiers remain independent of translation");
+                check(L.Code("proxy.basicAuthorizationHeader") == "Proxy-Authorization: Basic " && L.Code("clipboard.panelDataFormat") == "FileCompass.Panel", "protocol and clipboard identifiers remain independent of translation");
                 var aliases = (Dictionary<string,string>)typeof(LanguageKeyAliases).GetField("names", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic).GetValue(null);
                 check(aliases.All(x => L.Code(x.Key) == L.Code(x.Value)), "all legacy aliases resolve to unchanged canonical values");
                 File.WriteAllText(Path.Combine(root, "bad.lng"), "{broken", Encoding.UTF8);

@@ -9,7 +9,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public sealed class ArchivePasswordException : IOException
     { public ArchivePasswordException() : base(L.Text("archive.passwordMissingOrIncorrect")) { } }
@@ -30,12 +30,12 @@ namespace CommanderCZ
     public sealed class ArchiveTemp : IDisposable
     {
         public readonly string Path;
-        public ArchiveTemp(string parent = null) { Path = System.IO.Path.Combine(parent ?? System.IO.Path.Combine(System.IO.Path.GetTempPath(), "FileCompass-archives"), Guid.NewGuid().ToString("N")); Directory.CreateDirectory(Path); }
+        readonly string ownerRoot;
+        public ArchiveTemp(string parent = null) { ownerRoot=System.IO.Path.GetFullPath(parent ?? System.IO.Path.Combine(System.IO.Path.GetTempPath(), "FileCompass-archives")); Path = System.IO.Path.Combine(ownerRoot, Guid.NewGuid().ToString("N")); PathSafety.RejectLinks(Path); using(PathSafety.LockAncestors(Path))Directory.CreateDirectory(Path); CloudStore.SecureDirectory(Path); }
         public void Dispose()
         {
-            string root = System.IO.Path.GetFullPath(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "FileCompass-archives")).TrimEnd('\\') + "\\";
-            if (!System.IO.Path.GetFullPath(Path).StartsWith(root, StringComparison.OrdinalIgnoreCase)) throw new IOException(L.Text("archive.invalidTempPath"));
-            if (Directory.Exists(Path)) Directory.Delete(Path, true);
+            if (!String.Equals(System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(Path)),ownerRoot.TrimEnd('\\'),StringComparison.OrdinalIgnoreCase)) throw new IOException(L.Text("archive.invalidTempPath"));
+            if (Directory.Exists(Path)) PathSafety.DeleteTree(Path);
         }
     }
     public static class ArchiveEngine
@@ -214,11 +214,17 @@ namespace CommanderCZ
             using (var archiveLock = new FileStream(doc.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
             var selected = Select(doc, members); Directory.CreateDirectory(destination);
+            string zone = AttachmentSecurity.ReadZone(doc.Root.FilePath) ?? AttachmentSecurity.ReadZone(doc.FilePath);
             using (var manifest = new ArchiveTemp())
             {
                 string list = System.IO.Path.Combine(manifest.Path, "items.txt"); File.WriteAllLines(list, selected.Select(x => x.Path), new UTF8Encoding(false));
                 try { Run(SevenZipPath, new[] { "x", "-scsUTF-8", "-bsp1", "-o" + destination, "-i@" + list }.Concat(Options(doc)).Concat(new[] { "--", doc.FilePath }), null, token, progress); }
                 catch (ArchivePasswordException) { doc.Password = null; throw; }
+                finally
+                {
+                    // Include partially extracted files if extraction was cancelled or failed.
+                    PropagateExtractedZone(selected, destination, zone);
+                }
                 foreach (var item in selected)
                 {
                     string path = DiskPath(destination, item.Path);
@@ -226,6 +232,14 @@ namespace CommanderCZ
                     if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0) throw new IOException(L.Text("archive.extractedFileIsLink"));
                 }
             }
+            }
+        }
+        internal static void PropagateExtractedZone(IEnumerable<ArchiveItem> selected, string destination, string zone)
+        {
+            foreach (var item in selected.Where(x => !x.Directory))
+            {
+                string extracted = DiskPath(destination, item.Path);
+                if (File.Exists(extracted)) AttachmentSecurity.WriteZone(extracted, zone);
             }
         }
         public static bool Writable(ArchiveDocument doc) { return !doc.MultiVolume && new[] { "zip", "7z", "rar", "rar5" }.Contains(doc.Type.ToLowerInvariant()) && (!doc.Type.StartsWith("Rar", StringComparison.OrdinalIgnoreCase) || (String.IsNullOrEmpty(doc.Password) && (doc.Items == null || !doc.Items.Any(x => x.Encrypted)))) && (doc.Parent == null || Writable(doc.Parent)); }
@@ -364,13 +378,13 @@ namespace CommanderCZ
                     };
                     if (progress != null) progress(new ArchiveCompressionProgress { Original = originalBytes }.Encode());
                     var members = (direct ? sourceFiles : Directory.GetFileSystemEntries(input.Path)).Select(x => System.IO.Path.GetFileName(x)).ToList();
-                    var compressionOptions = new[] { extension == ".rar" ? "-m" + Math.Min(5, (pack.Level * 5 + 4) / 9) : "-mx=" + pack.Level }.Concat(direct && extension != ".rar" ? new[] { "-commander-direct" } : new string[0]).ToArray();
+                    var compressionOptions = new[] { extension == ".rar" ? "-m" + Math.Min(5, (pack.Level * 5 + 4) / 9) : "-mx=" + pack.Level }.Concat(direct && extension != ".rar" ? new[] { "-filecompass-direct" } : new string[0]).ToArray();
                     try { Write(doc, stage, workingInput, members, false, settings, token, compressionProgress, compressionOptions); }
                     catch (ArchiveMemoryException) {
                         if (extension != ".7z") throw;
                         token.ThrowIfCancellationRequested(); if (File.Exists(stage)) File.Delete(stage);
                         if (progress != null) progress(L.Code("state.verifying") + " " + L.Text("archive.memoryRetry"));
-                        Write(doc, stage, workingInput, members, false, settings, token, compressionProgress, compressionOptions.Concat(new[] { "-commander-low-memory" }).ToArray());
+                        Write(doc, stage, workingInput, members, false, settings, token, compressionProgress, compressionOptions.Concat(new[] { "-filecompass-low-memory" }).ToArray());
                     }
                     if (progress != null) progress(L.Text("archive.verifying"));
                     try {

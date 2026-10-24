@@ -4,7 +4,7 @@ using System.Xml;
 using System.Xml.Serialization;
 using System.Threading;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class WorkflowStore
     {

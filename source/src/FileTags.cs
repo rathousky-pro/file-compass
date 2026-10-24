@@ -6,7 +6,7 @@ using System.Threading;
 using System.Xml;
 using System.Xml.Serialization;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public sealed class FileTagRecord { public string Path, Identity; public long CreatedUtc; public string[] Tags = new string[0]; }
     public sealed class FileTagData { public List<FileTagRecord> Items = new List<FileTagRecord>(); }

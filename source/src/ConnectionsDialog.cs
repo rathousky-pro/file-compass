@@ -1,7 +1,7 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
-namespace CommanderCZ {
+namespace FileCompass {
     internal sealed class ConnectionsDialog : Window {
         internal readonly TabControl Tabs=new TabControl();
         internal readonly NetworkManagerDialog Network;

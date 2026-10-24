@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static partial class CloudStore {
         internal static string AccountKeyFile(CloudAccount account) { return Path.Combine(AccountPath(account), "encryption-key.dat"); }
         static void CreateAccountKey(CloudAccount account) {
@@ -52,6 +52,7 @@ namespace CommanderCZ {
                 account.Port = saved.Port = staged.Port; account.BridgePassword = saved.BridgePassword = staged.BridgePassword; account.Fingerprint = saved.Fingerprint = staged.Fingerprint; account.Ready = saved.Ready = true;
                 account.AuthorizationClient = saved.AuthorizationClient = staged.AuthorizationClient;
                 Save(accounts); committed = true;
+                if(movedOld)PathSafety.DeleteTree(backup);
             } finally {
                 if (!committed) {
                     account.Port = oldPort; account.BridgePassword = oldPassword; account.Fingerprint = oldFingerprint; account.Ready = oldReady;
@@ -60,7 +61,7 @@ namespace CommanderCZ {
                     if (movedOld) Directory.Move(backup, destination);
                 }
                 string full = Path.GetFullPath(stagePath), root = Path.GetFullPath(Root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-                if (full.StartsWith(root, StringComparison.OrdinalIgnoreCase) && Directory.Exists(full) && (File.GetAttributes(full) & FileAttributes.ReparsePoint) == 0) Directory.Delete(full, true);
+                if (full.StartsWith(root, StringComparison.OrdinalIgnoreCase) && Directory.Exists(full)) PathSafety.DeleteTree(full);
             }
         }
     }

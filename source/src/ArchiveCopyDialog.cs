@@ -3,7 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public sealed class ArchiveCopyDialog : Window
     {
@@ -13,7 +13,8 @@ namespace CommanderCZ
             CopyUi.Style(this, owner, intoArchive ? L.Text("archive.copyIntoTitle") : L.Text("archive.copyOutTitle"), 590);
             var body = new StackPanel { Margin = new Thickness(10) }; Content = body;
             body.Children.Add(CopyUi.Label(L.Text("copy.selectionQuestionPrefix") + count + L.Text("copy.selectionQuestionSuffix")));
-            body.Children.Add(CopyUi.Label("Z: " + source + "\nDo: " + target));
+            body.Children.Add(new PathTextBlock{Prefix=L.Text("transfer.sourceLabel"),FullPath=source,Margin=new Thickness(2,4,2,4)});
+            body.Children.Add(new PathTextBlock{Prefix=L.Text("transfer.targetLabel"),FullPath=target,Margin=new Thickness(2,4,2,7)});
             body.Children.Add(CopyUi.Label(L.Text("copy.fileMaskLabel")));
             var filter = new ComboBox { IsEditable = true, Text = "*.*", Margin = new Thickness(2, 2, 2, 8) };
             foreach (string value in new[] { "*.*", "*.txt;*.md", "*.jpg;*.png", "*.* | *.tmp;*.bak" }) filter.Items.Add(value);

@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-namespace CommanderCZ {
+namespace FileCompass {
     internal sealed class NumberSpinner : Grid {
         internal readonly TextBox Input;
         readonly double minimum, maximum, increment;

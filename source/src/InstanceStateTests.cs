@@ -8,7 +8,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class InstanceStateTests
     {

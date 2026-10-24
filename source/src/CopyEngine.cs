@@ -7,7 +7,7 @@ using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public enum CopyRule { Ask, OverwriteAll, Older, SkipAll, Different, Larger, Smaller, RenameAll }
     public enum CopyChoice { Overwrite, OverwriteAll, Older, Skip, SkipAll, Rename, RenameAll, Append, Different, Larger, Smaller, Cancel }
@@ -46,6 +46,7 @@ namespace CommanderCZ
         public int Copied, Skipped;
         public bool Cancelled;
         public readonly List<string> Errors = new List<string>();
+        internal readonly List<UndoReceipt> Undo = new List<UndoReceipt>();
         public readonly List<OperationItem> Items = new List<OperationItem>();
     }
     public class CopyControl : IDisposable
@@ -217,7 +218,9 @@ namespace CommanderCZ
                     try
                     {
                         Publish(node.Source, target, L.Code("state.moving"), 0, node.Bytes, true);
+                        var undo = UndoReceipt.Capture(node.Source,node.Source,true);
                         if (node.Directory) Directory.Move(node.Source, target); else File.Move(node.Source, target);
+                        undo=UndoReceipt.Committed(undo,target);if(undo!=null)result.Undo.Add(undo);
                         FileAssociations.Moved(node.Source, target); RecordRenamed(node, target); Publish(node.Source, target, L.Code("state.completed"), node.Bytes, node.Bytes, true); return;
                     }
                     catch (IOException ex) { if ((ex.HResult & 65535) != 17) throw; } // Cross-device mount: fall back to verified copy.
@@ -225,6 +228,7 @@ namespace CommanderCZ
                 if (node.Directory)
                 {
                     Directory.CreateDirectory(target);
+                    if(!stamp.Exists){var folderUndo=UndoReceipt.Capture(target,node.Source,false);folderUndo.RestoreFolder=options.Move;result.Undo.Add(folderUndo);}
                     foreach (Node child in node.Children) Process(child, Path.Combine(target, Path.GetFileName(child.Source)));
                     // Do not change metadata of existing merged folders.
                     if (!stamp.Exists)
@@ -239,11 +243,12 @@ namespace CommanderCZ
                 {
                     if (options.Move && append) throw new IOException(L.Text("copy.appendDuringMoveRejected"));
                     node.SourceTime = File.GetLastWriteTimeUtc(node.Source);
-                    CopyFile(node, target, stamp, append);
+                    var undo = CopyFile(node, target, stamp, append);
                     if (options.Move)
                     {
                         RemoveVerifiedSource(node, target); FileAssociations.Moved(node.Source, target);
                     }
+                    if(undo!=null)result.Undo.Add(undo);
                     result.Items.Add(new OperationItem { Source = node.Source, Target = target, State = L.Code("state.completed") });
                     result.Copied++; doneBytes += node.Bytes; finishedFiles++;
                     if (PersistDone != null) PersistDone(node.Source);
@@ -314,10 +319,10 @@ namespace CommanderCZ
             if (node.Directory) foreach (var child in node.Children) RecordRenamed(child, Path.Combine(target, Path.GetFileName(child.Source)));
             else { result.Copied++; finishedFiles++; doneBytes += node.Bytes; if (PersistDone != null) PersistDone(node.Source); }
         }
-        void CopyFile(Node node, string target, Stamp expected, bool append)
+        UndoReceipt CopyFile(Node node, string target, Stamp expected, bool append)
         {
             lastReport = DateTime.MinValue;
-            string temp = Path.Combine(Path.GetDirectoryName(target), ".commandercz-" + Guid.NewGuid().ToString("N") + ".tmp");
+            string temp = Path.Combine(Path.GetDirectoryName(target), ".filecompass-" + Guid.NewGuid().ToString("N") + ".tmp");
             string backup = null;
             bool committed = false, ownedTemp = false, changedReadOnly = false;
             FileAttributes oldAttributes = expected.Exists ? File.GetAttributes(target) : FileAttributes.Normal;
@@ -357,6 +362,7 @@ namespace CommanderCZ
                     }
                 }
                 control.Check(); RejectLinks(target);
+                AttachmentSecurity.WriteZone(temp, AttachmentSecurity.ReadZone(node.Source));
                 if (options.Times) File.SetLastWriteTimeUtc(temp, sourceTime);
                 if (security != null) File.SetAccessControl(temp, security);
                 if (!expected.Matches(target)) throw new IOException(L.Text("copy.targetChangedOverwriteStopped"));
@@ -364,16 +370,19 @@ namespace CommanderCZ
                 {
                     if ((oldAttributes & FileAttributes.ReadOnly) != 0)
                     { File.SetAttributes(target, oldAttributes & ~FileAttributes.ReadOnly); changedReadOnly = true; }
-                    backup = Path.Combine(Path.GetDirectoryName(target), ".commandercz-" + Guid.NewGuid().ToString("N") + ".bak");
+                    backup = Path.Combine(Path.GetDirectoryName(target), ".filecompass-" + Guid.NewGuid().ToString("N") + ".bak");
                     File.Replace(temp, target, backup, false);
                 }
-                else File.Move(temp, target); // Fails if another process created the target.
+                UndoReceipt receipt=null;
+                if(!expected.Exists&&!append){receipt=UndoReceipt.Capture(temp,node.Source,options.Move,expectedHash);receipt.Target=target;}
+                if(!expected.Exists)File.Move(temp, target); // Fails if another process created the target.
                 committed = true;
                 // No cancellation between commit and metadata/rollback.
                 if (security != null) File.SetAccessControl(target, security);
                 if (options.Attributes) File.SetAttributes(target, sourceAttributes & (FileAttributes.ReadOnly | FileAttributes.Hidden | FileAttributes.System | FileAttributes.Archive));
                 else if (changedReadOnly) File.SetAttributes(target, oldAttributes);
                 if (backup != null) { File.SetAttributes(backup, FileAttributes.Normal); File.Delete(backup); backup = null; }
+                return UndoReceipt.Committed(receipt,target);
             }
             catch
             {
@@ -470,7 +479,7 @@ namespace CommanderCZ
             if (String.Equals(a, b, StringComparison.OrdinalIgnoreCase) || (Directory.Exists(source) && b.StartsWith(a + "\\", StringComparison.OrdinalIgnoreCase)))
                 throw new IOException(L.Text("copy.sameOrNestedDestination"));
         }
-        static void RejectLinks(string path)
+        internal static void RejectLinks(string path)
         {
             for (string p = Path.GetFullPath(path); !String.IsNullOrEmpty(p); p = Path.GetDirectoryName(p))
                 if ((File.Exists(p) || Directory.Exists(p)) && (File.GetAttributes(p) & FileAttributes.ReparsePoint) != 0)

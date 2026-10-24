@@ -1,5 +1,5 @@
 {
-  "name": "CommanderCZ Network",
+  "name": "File Compass Network",
   "architecture": "windows-x64",
   "components": {
     "libcurl": "8.22.0",
@@ -7,7 +7,7 @@
     "libssh2": "1.11.1"
   },
   "dll": {
-    "file": "CommanderNetwork.dll",
+    "file": "FileCompassNetwork.dll",
     "sha256": "0a0a03bb2a023e1f06e82f106b5460266505d15b5036a18bb7de8391271f0113"
   },
   "package": {

@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
-namespace CommanderCZ {
+namespace FileCompass {
     internal static class CloudStorageTests {
         internal static int Run(string root){
             Directory.CreateDirectory(root);var checks=new List<string>();string previous=CloudStore.TestRoot,previousOAuth=CloudApplicationOAuth.TestPath;
@@ -71,7 +71,7 @@ namespace CommanderCZ {
                 timer.Tick+=delegate{
                     var editor=manager.OwnedWindows.Cast<Window>().FirstOrDefault();if(editor==null)return;timer.Stop();editor.UpdateLayout();
                     var services=AdvancedToolsTests.Visual<System.Windows.Controls.ComboBox>(editor).Single();
-                    check(services.Items.Cast<string>().SequenceEqual(new[]{"Google Drive","OneDrive","Dropbox"}),"Account wizard offers exactly the three requested cloud services");
+                    check(services.Items.Cast<string>().SequenceEqual(new[]{"Google Drive","OneDrive","Dropbox","iCloud Drive"}),"Account wizard offers all four cloud services");
                     NextStageTests.Draw(editor,Path.Combine(root,"cloud-add-account.png"));editor.DialogResult=false;
                 };
                 timer.Start();AdvancedToolsTests.Visual<System.Windows.Controls.Button>(manager).First(x=>Convert.ToString(x.Content)==L.Text("cloud.add")).RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));timer.Stop();manager.Close();
@@ -85,6 +85,7 @@ namespace CommanderCZ {
         internal async Task CheckCloudPanel(CloudAccount account,string root,Action<bool,string> check){
             await ConnectCloud(account);check(left.IsRemote&&left.Remote.Profile.CloudAccountId==account.Id,"Cloud account opens in the active file panel");
             check(!AdvancedToolsTests.Visual<System.Windows.Controls.TextBlock>(left).Any(x=>x.IsVisible&&x.Text.Contains("127.0.0.1")),"Cloud panel headings show the account and service rather than an internal endpoint");check(left.List.Items.Cast<Entry>().Any(x=>FilePanel.EntryName(x)=="český soubor.txt"),"Cloud panel renders the remote file listing");
+            var originalConnection=left.Remote;await ConnectCloud(account);check(Object.ReferenceEquals(left.Remote,originalConnection),"Reopening an already connected cloud account reuses its existing connection");
             var saved=left.SaveTabs();check(saved.Any(x=>x.ProfileId=="cloud-"+account.Id),"Saved cloud tabs retain the account identity");
             check(CloudInUse(account.Id),"Account removal detects open cloud panels");
             UpdateLayout();NextStageTests.Draw(this,Path.Combine(root,"cloud-panel.png"));

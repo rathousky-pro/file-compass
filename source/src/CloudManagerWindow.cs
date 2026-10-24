@@ -5,14 +5,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-namespace CommanderCZ {
+namespace FileCompass {
     public partial class FilePanel {
+        internal async Task<bool> SwitchCloudAccount(string id){var connection=openConnections.Keys.FirstOrDefault(x=>x.Profile.CloudAccountId==id);if(connection==null)return false;await SwitchConnectionTask(connection);return true;}
         internal bool HasCloudAccount(string id){return openConnections.Keys.Any(x=>x.Profile.CloudAccountId==id);}
     }
     public partial class MainWindow {
         internal void ShowCloudConnections(){ManageConnections(null,null,true);}
         internal bool CloudInUse(string id){return left.HasCloudAccount(id)||right.HasCloudAccount(id)||networkJobs.Any(x=>!x.Finished&&(x.Profile.CloudAccountId==id||(x.RelayTarget!=null&&x.RelayTarget.CloudAccountId==id)))||durableQueue.Pending().Any(x=>x.SourceProfileId=="cloud-"+id||x.TargetProfileId=="cloud-"+id);}
-        internal bool CloudIsActive(string id){return active.IsRemote&&active.Remote.Profile.CloudAccountId==id;} internal async Task ConnectCloud(CloudAccount a){var profile=CloudRuntime.Profile(a);await ConnectNetworkTask(profile);}
+        internal bool CloudIsActive(string id){return active.IsRemote&&active.Remote.Profile.CloudAccountId==id;} internal async Task ConnectCloud(CloudAccount a){if(await active.SwitchCloudAccount(a.Id))return;var profile=CloudRuntime.Profile(a);await ConnectNetworkTask(profile);}
     }
     internal sealed class CloudManagerWindow : Window {
         internal Window HostWindow; internal event Action<bool> BusyChanged; Window UiOwner {get{return HostWindow??this;}} internal bool AllowHostClose(){if(cancellation!=null){cancellation.Cancel();return false;}return true;} void CloseManager(){if(HostWindow!=null)HostWindow.Close();else Close();} readonly MainWindow main;
@@ -80,7 +81,7 @@ namespace CommanderCZ {
             foreach(var button in selectionButtons)button.IsEnabled=cancellation==null&&list.SelectedItem is CloudAccount;
             var account=list.SelectedItem as CloudAccount;string error=account==null?null:CloudApplicationOAuth.AvailabilityError(account.Provider);
             if(signInAgain!=null){if(error!=null)signInAgain.IsEnabled=false;signInAgain.ToolTip=error;}
-            applicationStatus.Text=account!=null&&account.Provider=="drive"?(error??L.Text("cloud.applicationLogin")):"";
+            applicationStatus.Text=account!=null&&account.Provider=="drive"?(error??""):"";
             applicationStatus.Visibility=applicationStatus.Text.Length==0?Visibility.Collapsed:Visibility.Visible;
         }
         async Task Work(Func<CancellationToken,Task> work){
@@ -93,18 +94,18 @@ namespace CommanderCZ {
         CloudAccount NewAccount(){
             var window=new Window();CopyUi.Style(window,UiOwner,L.Text("cloud.add"),450);
             var body=new StackPanel();window.Content=new Border{Child=body,Margin=new Thickness(12),Padding=new Thickness(14),Background=CompactTheme.PanelSurface,BorderBrush=CompactTheme.ChromeLine,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(8)};
-            body.Children.Add(CopyUi.Label(L.Text("cloud.service")));var providers=new ComboBox{ItemsSource=new[]{"Google Drive","OneDrive","Dropbox"},SelectedIndex=0};body.Children.Add(providers);
+            body.Children.Add(CopyUi.Label(L.Text("cloud.service")));var providers=new ComboBox{ItemsSource=new[]{"Google Drive","OneDrive","Dropbox","iCloud Drive"},SelectedIndex=0};body.Children.Add(providers);
             body.Children.Add(CopyUi.Label(L.Text("common.nameLabel")));var name=new TextBox{Text="Google Drive",Margin=new Thickness(0,5,0,12)};body.Children.Add(name);
             providers.SelectionChanged+=delegate{name.Text=Convert.ToString(providers.SelectedItem);};
-            body.Children.Add(new TextBlock{Text=L.Text("cloud.browserHelp"),TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,0,0,12)});
+            var loginHelp=new TextBlock{Text=L.Text("cloud.browserHelp"),TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,0,0,12)};body.Children.Add(loginHelp);
             var availability=new TextBlock{TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,0,0,10)};body.Children.Add(availability);
             var actions=FluentTheme.Actions();body.Children.Add(actions);
             var signInButton=CopyUi.Button(L.Text("cloud.signIn"),delegate{if(!String.IsNullOrWhiteSpace(name.Text)&&name.Text.Trim().Length<=120)window.DialogResult=true;});actions.Children.Add(signInButton);
-            Action updateAvailability=delegate{string provider=new[]{"drive","onedrive","dropbox"}[providers.SelectedIndex];string error=CloudApplicationOAuth.AvailabilityError(provider);availability.Text=error??(provider=="drive"?L.Text("cloud.applicationLogin"):"");signInButton.IsEnabled=error==null;};
+            Action updateAvailability=delegate{string provider=new[]{"drive","onedrive","dropbox",CloudICloud.Provider}[providers.SelectedIndex];string error=CloudApplicationOAuth.AvailabilityError(provider);availability.Text=error??"";signInButton.Content=L.Text(provider==CloudICloud.Provider?"cloud.icloudSignIn":"cloud.signIn");loginHelp.Text=L.Text(provider==CloudICloud.Provider?"cloud.icloudHelp":"cloud.browserHelp");signInButton.IsEnabled=error==null;};
             providers.SelectionChanged+=delegate{updateAvailability();};updateAvailability();
             var cancel=CopyUi.Button(L.Text("action.cancel"),delegate{window.DialogResult=false;});cancel.IsCancel=true;actions.Children.Add(cancel);
             if(window.ShowDialog()!=true)return null;
-            return new CloudAccount{Name=name.Text.Trim(),Provider=new[]{"drive","onedrive","dropbox"}[providers.SelectedIndex]};
+            return new CloudAccount{Name=name.Text.Trim(),Provider=new[]{"drive","onedrive","dropbox",CloudICloud.Provider}[providers.SelectedIndex]};
         }
         void OpenBrowser(string url){
             Dispatcher.BeginInvoke(new Action(delegate{

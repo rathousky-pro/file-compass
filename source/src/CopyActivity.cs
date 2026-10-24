@@ -4,7 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Linq;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public sealed class CopyActivity : Border
     {

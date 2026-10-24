@@ -2,7 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal static class LocalFileIdentity
     {

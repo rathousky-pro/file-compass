@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     internal sealed class ArchivePluginWindow : Window
     {
@@ -58,6 +58,7 @@ namespace CommanderCZ
             if (package.Installer) settings.WinRarPath = path;
             else if (package == ArchivePluginInstaller.Arj) settings.ArjPath = path;
             else settings.LhaPath = path;
+            ToolTrust.Approve(path);
             settings.Save(); use(path);
         }
         async void Start()

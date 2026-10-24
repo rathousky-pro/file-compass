@@ -9,7 +9,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
-namespace CommanderCZ
+namespace FileCompass
 {
     public static class NetworkTests
     {
@@ -68,8 +68,8 @@ namespace CommanderCZ
                 using (var connection = new RemoteConnection(detailedRestored))
                 {
                     var options = connection.Options("test");
-                    assert(options.FtpMode == CommanderCZ.NetworkTransport.FtpMode.Active && options.FtpSecure == CommanderCZ.NetworkTransport.FtpSecure.Implicit && options.Timeout == TimeSpan.FromSeconds(45), "FTP mode TLS and timeout forwarded to transport");
-                    var raw = (Dictionary<string, string>)typeof(CommanderCZ.NetworkTransport.SessionOptions).GetProperty("RawSettings", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(options, null);
+                    assert(options.FtpMode == FileCompass.NetworkTransport.FtpMode.Active && options.FtpSecure == FileCompass.NetworkTransport.FtpSecure.Implicit && options.Timeout == TimeSpan.FromSeconds(45), "FTP mode TLS and timeout forwarded to transport");
+                    var raw = (Dictionary<string, string>)typeof(FileCompass.NetworkTransport.SessionOptions).GetProperty("RawSettings", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(options, null);
                     assert(raw["FtpUseMlsd"] == "on" && raw["Utf"] == "1" && raw["PostLoginCommands"] == "NOOP\nSYST" && raw["ProxyHost"] == "proxy.example", "FTP commands encoding MLSD and proxy forwarded to transport");
                 }
                 string parsedHost; int parsedPort;
@@ -89,7 +89,7 @@ namespace CommanderCZ
                 using (var connection = new RemoteConnection(scp))
                 {
                     var options = connection.Options("test-secret");
-                    assert(options.Protocol == CommanderCZ.NetworkTransport.Protocol.Scp, "SCP selects genuine SCP protocol without SFTP fallback");
+                    assert(options.Protocol == FileCompass.NetworkTransport.Protocol.Scp, "SCP selects genuine SCP protocol without SFTP fallback");
                     assert(options.PortNumber == scp.Port && options.UserName == scp.UserName && options.Password == "test-secret" &&
                         options.SshHostKeyFingerprint == scp.HostKeyFingerprint, "SCP port, username, password and SSH host key passed to transport");
                     assert(connection.Display("/data") == "scp://server.example:22/data", "SCP panel address uses scp scheme");
@@ -211,7 +211,7 @@ namespace CommanderCZ
                         var wrongOptions = wrong.Options("test-password");
                         wrongOptions.SshHostKeyFingerprint = "ssh-rsa 2048 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
                         bool rejected = false;
-                        try { wrong.Session.Open(wrongOptions); } catch (CommanderCZ.NetworkTransport.SessionRemoteException) { rejected = true; }
+                        try { wrong.Session.Open(wrongOptions); } catch (FileCompass.NetworkTransport.SessionRemoteException) { rejected = true; }
                         assert(rejected, "SFTP host key mismatch rejected during connection");
                     }
                     passed.Add("SFTP changed server key rejected");
@@ -249,8 +249,8 @@ namespace CommanderCZ
                     using (var iconUpload = browsing.TransferConnection()) {
                         iconUpload.OpenTransfer();
                         string source = Path.Combine(workspace, "icon-upload.bin"); File.WriteAllBytes(source, new byte[8388608]);
-                        long uploaded = 0; iconUpload.Session.FileTransferProgress += delegate(object sender, CommanderCZ.NetworkTransport.FileTransferProgressEventArgs e) { System.Threading.Interlocked.Exchange(ref uploaded, (long)(e.FileProgress * 8388608)); };
-                        var uploading = System.Threading.Tasks.Task.Run(delegate { iconUpload.Session.PutFiles(source, "/icon-upload.bin", false, new CommanderCZ.NetworkTransport.TransferOptions()).Check(); });
+                        long uploaded = 0; iconUpload.Session.FileTransferProgress += delegate(object sender, FileCompass.NetworkTransport.FileTransferProgressEventArgs e) { System.Threading.Interlocked.Exchange(ref uploaded, (long)(e.FileProgress * 8388608)); };
+                        var uploading = System.Threading.Tasks.Task.Run(delegate { iconUpload.Session.PutFiles(source, "/icon-upload.bin", false, new FileCompass.NetworkTransport.TransferOptions()).Check(); });
                         var deadline = DateTime.UtcNow.AddSeconds(15);
                         while (System.Threading.Interlocked.Read(ref uploaded) == 0 && !uploading.IsCompleted && DateTime.UtcNow < deadline) { Dispatcher.CurrentDispatcher.Invoke(DispatcherPriority.Background, new Action(delegate { })); System.Threading.Thread.Sleep(10); }
                         assert(!uploading.IsCompleted && uploaded > 0, "FTP upload is running before browser reconnect test");
@@ -385,12 +385,12 @@ namespace CommanderCZ
                     File.WriteAllText(literal, "remove only this"); File.WriteAllText(neighbour, "keep neighbour");
                     NetworkTransfers.Copy(new Entry { FullPath = literal }, null, deleting, "/", NetworkCopyRule.Overwrite);
                     assert(deleting.Session.FileExists("/literal[1].txt"), "FTP uploads local literal brackets in filename");
-                    deleting.Session.PutFiles(CommanderCZ.NetworkTransport.RemotePath.EscapeFileMask(neighbour), "/literal1.txt").Check();
+                    deleting.Session.PutFiles(FileCompass.NetworkTransport.RemotePath.EscapeFileMask(neighbour), "/literal1.txt").Check();
                     DeleteOperations.Remote(deleting.Session, "/literal[1].txt");
                     assert(!deleting.Session.FileExists("/literal[1].txt") && deleting.Session.FileExists("/literal1.txt"), "FTP delete escapes literal filename and preserves neighbour");
                     deleting.Session.CreateDirectory("/delete-folder");
                     deleting.Session.CreateDirectory("/delete-folder/nested");
-                    deleting.Session.PutFiles(CommanderCZ.NetworkTransport.RemotePath.EscapeFileMask(neighbour), "/delete-folder/nested/item.txt").Check();
+                    deleting.Session.PutFiles(FileCompass.NetworkTransport.RemotePath.EscapeFileMask(neighbour), "/delete-folder/nested/item.txt").Check();
                     DeleteOperations.Remote(deleting.Session, "/delete-folder");
                     assert(!deleting.Session.FileExists("/delete-folder") && panel.Remote.Session.FileExists("/literal1.txt"), "FTP deletes nonempty directory on independent session and browsing stays usable");
                     Reject(delegate { DeleteOperations.Remote(deleting.Session, "/"); }, "remote delete refuses root");

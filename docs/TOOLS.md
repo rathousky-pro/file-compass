@@ -1,4 +1,4 @@
-﻿# Search, metadata and workflow tools
+# Search, metadata and workflow tools
 
 ## Search and batch rename
 
@@ -118,3 +118,52 @@ Režim datového toku se vybírá samostatně: MP3 nabízí CBR, ABR s cílovým
 F3 and Ctrl+Q render CSV/TSV/TAB/PSV in a read-only native table. The shared bounded parser detects comma, semicolon, tab and pipe outside quoted fields, honors `sep=`, and preserves escaped quotes, multiline values, trailing empty cells and leading zeros. Manual separator selection also supports colon; headers can be disabled. Source text remains available through the formatted-preview toggle. Local and remote text previews use the same parser; encoding follows the preview selector/BOM. Limits: 128 KiB source, 2,000 records, 128 columns, 100,000 cells, 16,384 characters per cell. Truncation is reported; unfinished final records are omitted.
 
 Media converter layout: Conversion settings and Advanced are separate tabs without a nested settings ScrollViewer. Destination and parallelism remain below both tabs. Queue column widths are recomputed from the grid width, reserving vertical scrollbar space; long text uses ellipsis and tooltips. Column dragging is disabled to keep the last column visible.
+
+### Illustrated native help
+
+F1 opens context-sensitive native help with 44 linked topics in Czech or English. Numbered screenshots explain real controls using generated demonstration files. Click an illustration for native zoom (slider, scroll, Escape to close); no browser or internet is needed. Other interface languages show the English article language explicitly. Figures are embedded resources under source/help/images and accept curated identifiers only, never file paths or external URLs.
+
+
+## Linux disks (read-only)
+
+Connections → Linux disks opens a native ext2/3/4 browser for physical USB disks without Windows drive letters and raw images. Select source, scan MBR/GPT partitions, select a filesystem, navigate with Enter/Backspace, preview with F3 or copy out with F5. Administrator access may be needed for raw physical disks; the reader has an explicit elevation button. Sources are opened read-only; dirty or unsupported filesystems are rejected. LUKS, LVM, RAID, Btrfs and ZFS are not supported. Export uses a new folder and refuses the source physical disk; symbolic links and special files are skipped. See F1 → Linux disks for limits and collision handling.
+
+Only confirmed removable USB drives receive native safe-removal and Windows format commands on right-click. System/application disks are excluded. No native eject or formatting action is exercised by automated tests.
+
+
+### Flash drive actions
+
+Removable drives use the native Windows removable-drive icon in the drive bar and selector. Right-click a drive to safely remove its physical USB device or open the Windows Format dialog for its exact letter. The system and application disks are protected, including shared removable-parent ancestry. Operations are revalidated against device identity before invoking Windows. Active file operations disable these commands. Affected panels leave the disk and their watchers/previews are released; safe removal handles all drive letters of that physical disk. Failure leaves Windows in control and reports the veto, without forced dismount or process termination.
+
+
+## Internal editor and analyzer expansion
+
+F4 opens local text/source files in the tabbed AvalonEdit editor by default; a setting retains the external-editor workflow. The menu, context menu and Shift+F4 provide explicit external editing. JSON formatting preserves exact numeric lexemes and rejects duplicate keys. YAML is syntax-checked with YamlDotNet without alias expansion; XML prohibits DTD/external entities. The editor supports indentation guides, JSON/YAML folding, search, next replacement, line navigation, encoding/BOM and EOL preservation. Complete documents are limited to 16 MiB. Saves reject concurrent external changes and use a flushed adjacent temporary file. Closing modified documents or the main window prompts for save/discard/cancel. Remote/archive editors retain their established working-copy commit workflows.
+
+The analyzer adds treemaps, per-row share bars/percentages (whole scan or parent), context actions across charts/tree/results, recycling UI virtualization, multiple roots with overlap deduplication, verified empty-folder candidates, and current-path/progress/error diagnostics. Treemaps show up to 512 individual child folders and 1024 direct files, with exact remainder groups and matching-file selection. Multiple roots retain independent totals and combined indexes/snapshots. Cancelling blocked OS reads waits for the call to return; retry starts only after the previous scan exits.
+
+Batch rename retains stable row containers across previews, disables Start while a new calculation is pending or invalid, and persists ten recent values independently for name/find/replacement. Token menus open on Alt alone or Alt+Down, without opening on ordinary mouse clicks. SMB enumeration uses independent workers and a 15-second UI timeout; late reads cannot overwrite newer results. Watcher shutdown and creation run away from the UI. Icon cache locks never surround filesystem or shell I/O.
+
+
+### Editor menus and audio tempo
+
+The internal editor uses File/Edit/View/Tools/Help menus instead of a command-button strip. Encoding and line endings remain in the status area and are retained per tab. View exposes line wrapping, line numbers, whitespace and indentation. File keeps save/conflict/unsaved-close guards.
+
+Audio conversion has a separate Speed and duration settings tab. Defaults preserve pitch using atempo; an alternative uses asetrate plus resampling to change both speed and pitch. Presets include exact 24000/1001 film ratios and 50/75/125/150/200 percent, custom 10–1000 percent, and target duration per file. Duration accepts hours/minutes/seconds and milliseconds. Target mode aligns the final PCM duration with end trimming/padding; compressed encoders may introduce frame padding. Conversion progress and output-duration checks use the changed duration. Stream copy and unchanged video timing are rejected with active tempo changes. Timed chapters are omitted rather than copied with invalid timestamps. No additional runtime library is required.
+
+
+### External application dispatch and transfer units
+
+F4 uses an explicit internal-text/source allowlist. Office/PDF and other non-text types open through the default Windows Open association, not the optional Edit verb. Shift+F4 invokes the external application directly from the main window or current editor document. Executables and scripts retain data-only text editing. Copy progress, background summaries and transfer graphs label their existing binary conversion correctly as MiB/s; byte counters, rate timing and the copy engine are unchanged.
+
+
+External editing explicitly routes CSV to Microsoft Excel (App Paths, XLSX executable association or standard Office install paths) and HTML/HTM to Windows Notepad. It does not change system associations. Missing Excel reports an actionable error. The external-edit toolbar icon is removed; menu/context commands and Shift+F4 remain. Plain internal F4 editing is unchanged for CSV/HTML.
+
+
+Missing or broken Windows associations for external editing now show the native owned Open with dialog, including XLS with no default application. Users can opt into a permanent association when Windows offers it; cancellation is not an error. Explicit CSV-to-Excel and HTML-to-Notepad routes remain unchanged.
+
+## Current processing and layout
+
+The analyzer waits for **Start** so scope and minimum-size filters can be configured first. Chart type selection is above the chart; result and chart panes have priority over options. SMART cards distinguish detected HDD, SSD and NVMe types, with unknown types retained explicitly. Supported tools dock via **Background** and restore via **Detail**.
+
+Image conversion uses the matched Magick.NET Q8 OpenMP x64 15.0.0 package. Whole-file workers share a CPU thread budget; codec limits still apply. Audio workers process separate whole files with FFmpeg. Parallelism above the logical CPU count is permitted, but does not guarantee acceleration. Progress percentages have a dedicated column. Queue ETA uses source duration (audio) or image work estimates, observed throughput and the parallel schedule; it warms up and remains an estimate. Final verification/commit is a distinct finishing phase. Some MP3 metadata duration estimates can currently cause false duration-check rejection.

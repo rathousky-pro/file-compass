@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -50,10 +50,19 @@ namespace FileCompass
                     check(closed && owner.IsVisible && owner.WindowState == ownerState && !IsIconic(new WindowInteropHelper(owner).Handle),"stopping network copy preserves owner state (" + ownerState + ", background=" + background + ")"); queue = null;
                     }
                 }
+                foreach(var state in new[]{WindowState.Normal,WindowState.Maximized}){
+                    owner.WindowState=state;owner.Activate();Pump();
+                    var reader=new ExtBrowserWindow(owner){Left=-18000,Top=-18000,ShowInTaskbar=false,WindowStartupLocation=WindowStartupLocation.Manual};reader.Show();NavigationTests.Wait(reader.Pending);reader.Activate();Pump();
+                    check(reader.IsActive,"Linux reader is active before native Close ("+state+")");SendMessage(new WindowInteropHelper(reader).Handle,0x0112,(IntPtr)0xf060,IntPtr.Zero);Pump();
+                    check(owner.IsActive&&owner.WindowState==state&&!IsIconic(new WindowInteropHelper(owner).Handle),"Closing Linux reader returns to visible owner and preserves its state ("+state+")");
+                    var modal=new Window{Height=160,Content=new TextBlock{Text="Example dialog"},Left=-18000,Top=-18000};CopyUi.Style(modal,owner,"Example",320);modal.WindowStartupLocation=WindowStartupLocation.Manual;modal.Loaded+=delegate{modal.Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle,new Action(modal.Close));};modal.ShowDialog();Pump();
+                    check(owner.IsActive&&owner.IsEnabled&&owner.WindowState==state&&!IsIconic(new WindowInteropHelper(owner).Handle),"Closing modal dialog returns to enabled owner without minimizing ("+state+")");
+                    var parentDialog=new Window{Height=160,Content=new TextBlock{Text="Parent"},Left=-18000,Top=-18000};CopyUi.Style(parentDialog,owner,"Parent",320);parentDialog.WindowStartupLocation=WindowStartupLocation.Manual;parentDialog.Show();var childDialog=new Window{Height=160,Content=new TextBlock{Text="Child"},Left=-18000,Top=-18000};CopyUi.Style(childDialog,parentDialog,"Child",320);childDialog.WindowStartupLocation=WindowStartupLocation.Manual;childDialog.Show();childDialog.Activate();Pump();childDialog.Close();Pump();check(parentDialog.IsActive&&owner.WindowState==state,"Nested dialog close returns to immediate owner ("+state+")");parentDialog.Close();Pump();check(owner.IsActive&&owner.WindowState==state,"Closing final nested dialog returns to main owner ("+state+")");
+                }
+                owner.WindowState=WindowState.Normal;var backgroundDialog=new Window{Height=160,Content=new TextBlock{Text="Background"},Left=-18000,Top=-18000};CopyUi.Style(backgroundDialog,owner,"Background",320);backgroundDialog.WindowStartupLocation=WindowStartupLocation.Manual;backgroundDialog.Show();var other=new Window{Height=160,Width=320,Left=-18000,Top=-18000,WindowStartupLocation=WindowStartupLocation.Manual,Content=new TextBlock{Text="Other window"}};other.Show();other.Activate();Pump();backgroundDialog.Close();Pump();check(other.IsActive,"Closing an inactive dialog does not steal focus from another window");other.Close();owner.Activate();Pump();var minimized=new Window{Height=160,Content=new TextBlock{Text="Minimized"},Left=-18000,Top=-18000};CopyUi.Style(minimized,owner,"Minimized",320);minimized.WindowStartupLocation=WindowStartupLocation.Manual;minimized.Show();owner.WindowState=WindowState.Minimized;Pump();minimized.Close();Pump();check(owner.WindowState==WindowState.Minimized,"Closing a dialog does not restore an intentionally minimized owner");owner.WindowState=WindowState.Normal;
                 owner.Close(); owner = null; File.WriteAllLines(Path.Combine(directory,"window-state-result.txt"),checks); File.AppendAllText(Path.Combine(directory,"window-state-result.txt"),"\nPASS: " + checks.Count + " checks"); return 0;
             } catch (Exception ex) { File.WriteAllText(Path.Combine(directory,"window-state-result.txt"),"FAIL after " + checks.Count + " checks\n" + ex); return 1; }
             finally { if (copy != null) copy.Finish(); if (owner != null) owner.Close(); }
         }
     }
 }
-

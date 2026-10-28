@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>LTRData.DiscUtils.Streams</id>
+    <version>1.0.90</version>
+    <authors>Kenneth Bell,LordMike,Bianco Veigel,Olof Lagerkvist</authors>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <readme>README.md</readme>
+    <projectUrl>https://github.com/LTRData/DiscUtils</projectUrl>
+    <description>.NET sparse-stream, buffer, extent, caching and stream-building primitives used by DiscUtils storage implementations.</description>
+    <tags>DiscUtils Streams SparseStream Buffers Extents</tags>
+    <repository type="git" url="https://github.com/LTRData/DiscUtils.git" branch="refs/heads/LTRData.DiscUtils-initial" commit="414c7f7b2d82c42b07bc6fdfc18a763331334697" />
+    <dependencies>
+      <group targetFramework=".NETFramework4.6">
+        <dependency id="LTRData.Extensions" version="1.0.23" exclude="Build,Analyzers" />
+        <dependency id="System.Collections.Immutable" version="1.7.1" exclude="Build,Analyzers" />
+        <dependency id="System.Memory" version="4.5.5" exclude="Build,Analyzers" />
+        <dependency id="System.Security.Cryptography.Algorithms" version="4.3.1" exclude="Build,Analyzers" />
+        <dependency id="System.Threading.Tasks.Extensions" version="4.5.4" exclude="Build,Analyzers" />
+        <dependency id="System.ValueTuple" version="4.5.0" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETFramework4.8">
+        <dependency id="LTRData.Extensions" version="1.0.23" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Bcl.HashCode" version="6.0.0" exclude="Build,Analyzers" />
+        <dependency id="System.Collections.Immutable" version="9.0.20" exclude="Build,Analyzers" />
+        <dependency id="System.Memory" version="4.6.3" exclude="Build,Analyzers" />
+        <dependency id="System.Threading.Tasks.Extensions" version="4.6.3" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework="net8.0">
+        <dependency id="LTRData.Extensions" version="1.0.23" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework="net9.0">
+        <dependency id="LTRData.Extensions" version="1.0.23" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework="net10.0">
+        <dependency id="LTRData.Extensions" version="1.0.23" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="LTRData.Extensions" version="1.0.23" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Bcl.HashCode" version="6.0.0" exclude="Build,Analyzers" />
+        <dependency id="System.Collections.Immutable" version="9.0.20" exclude="Build,Analyzers" />
+        <dependency id="System.Memory" version="4.6.3" exclude="Build,Analyzers" />
+        <dependency id="System.Threading.Tasks.Extensions" version="4.6.3" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETStandard2.1">
+        <dependency id="LTRData.Extensions" version="1.0.23" exclude="Build,Analyzers" />
+        <dependency id="System.Collections.Immutable" version="9.0.20" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>

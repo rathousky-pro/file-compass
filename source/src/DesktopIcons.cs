@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -25,15 +25,18 @@ namespace FileCompass
         [DllImport("user32.dll")] static extern bool DestroyIcon(IntPtr icon);
         static readonly Dictionary<string, ImageSource> files = new Dictionary<string, ImageSource>(StringComparer.OrdinalIgnoreCase);
 
+        [DllImport("kernel32.dll",CharSet=CharSet.Unicode)] static extern uint GetDriveType(string root);
+        internal static bool NetworkPath(string path){if(String.IsNullOrEmpty(path))return false;if(path.StartsWith(@"\\",StringComparison.Ordinal))return true;try{return GetDriveType(Path.GetPathRoot(path))==4;}catch(ArgumentException){return false;}}
         public static ImageSource FileIcon(string path, bool folder)
         {
             if (folder) return FluentIcons.Load("folder");
-            lock (files) {
+            {
                 string extension = Path.GetExtension(path ?? "").ToLowerInvariant();
-                bool actual = !String.IsNullOrEmpty(path) && File.Exists(path);
+                // Network files use association icons. Cache locks protect only dictionary access; shell I/O never holds them.
+                bool actual = !String.IsNullOrEmpty(path) && !NetworkPath(path) && File.Exists(path);
                 bool individual = extension == ".exe" || extension == ".dll" || extension == ".lnk" || extension == ".ico" || extension == ".url";
                 string key = (actual ? "local:" : "type:") + (actual && individual ? Path.GetFullPath(path) : extension);
-                ImageSource result; if (files.TryGetValue(key, out result)) return result;
+                ImageSource result; lock(files){if(files.TryGetValue(key,out result))return result;}
                 ShellInfo info; SHGetFileInfo(actual ? path : "file" + extension, actual ? 0u : 128u, out info, (uint)Marshal.SizeOf(typeof(ShellInfo)), 0x100 | 0x1 | (actual ? 0u : 0x10u));
                 if (info.Icon != IntPtr.Zero) {
                     try { result = Imaging.CreateBitmapSourceFromHIcon(info.Icon, Int32Rect.Empty, System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions()); result.Freeze(); }
@@ -50,7 +53,7 @@ namespace FileCompass
                 }
                 if(result==null)result=Drawing("document");
                 if(!result.IsFrozen && result.CanFreeze)result.Freeze();
-                if(files.Count>=1024)files.Clear();files[key]=result;return result;
+                lock(files){if(files.Count>=1024)files.Clear();files[key]=result;}return result;
             }
         }
 
@@ -155,4 +158,3 @@ namespace FileCompass
         }
     }
 }
-

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -30,14 +30,14 @@ namespace FileCompass {
                 return file;
             });
         }
-        internal void ShowDownloadedPreview(string path,RemoteConnection remote) {
+        internal void ShowDownloadedPreview(string path,RemoteConnection remote,long limit=PreparedPreviewLimit,string videoOrigin=null) {
             var transfer=remote.TransferConnection();
             LoadingTask=LoadPreparedPreview(path,remote.Display(path),L.Text("preview.downloadingTemporary"),delegate(ArchiveTemp temp,CancellationToken token) {
                 using(token.Register(delegate{transfer.Session.Abort();})) {
                     token.ThrowIfCancellationRequested();transfer.OpenTransfer();token.ThrowIfCancellationRequested();
                     var before=transfer.Session.GetFileInfo(path);
                     if(before.IsDirectory||before.FileType=='L')throw new IOException(L.Text("remotePreview.folderOrLinkUnsupported"));
-                    if(before.Length<0||before.Length>PreparedPreviewLimit)throw new IOException(L.Text("preview.preparedSizeLimit"));
+                    if(before.Length<0||before.Length>limit)throw new IOException(L.Text(limit==VideoRemoteLimit?"video.remoteLimit":"preview.preparedSizeLimit"));
                     string name=RemoteConnection.Name(path);FileOperations.ValidateName(name);
                     string file=Path.Combine(temp.Path,name);
                     using(var output=new FileStream(file,FileMode.CreateNew,FileAccess.Write,FileShare.None))
@@ -46,15 +46,16 @@ namespace FileCompass {
                     AttachmentSecurity.MarkInternet(file);
                     token.ThrowIfCancellationRequested();return file;
                 }
-            },transfer);
+            },transfer,videoOrigin:videoOrigin);
         }
-        async Task LoadPreparedPreview(string name,string location,string phase,Func<ArchiveTemp,CancellationToken,string> prepare,IDisposable transfer=null) {
+        async Task LoadPreparedPreview(string name,string location,string phase,Func<ArchiveTemp,CancellationToken,string> prepare,IDisposable transfer=null,string tempParent=null,string videoOrigin=null) {
             ShowMessage(phase);title.Text=Path.GetFileName(name);title.ToolTip=location;
+            videoRemoteKey=videoOrigin;
             var token=cancellation.Token;int request=version;ArchiveTemp temp=null;
             try {
                 await Task.Delay(150,token);
                 string file=await Task.Run(delegate {
-                    token.ThrowIfCancellationRequested();temp=new ArchiveTemp();
+                    token.ThrowIfCancellationRequested();temp=new ArchiveTemp(tempParent);
                     return prepare(temp,token);
                 });
                 token.ThrowIfCancellationRequested();if(request!=version)return;

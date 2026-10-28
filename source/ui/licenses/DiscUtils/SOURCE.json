@@ -1,0 +1,107 @@
+[
+  {
+    "package": "ltrdata.discutils.ext",
+    "version": "1.0.90",
+    "license": "MIT",
+    "sha256": "125449782a784bb0b76f2b915ef6a6cfaeaf57de0101e4ecc53c7bd141b42ad6",
+    "source": "https://github.com/LTRData/DiscUtils.git",
+    "commit": "414c7f7b2d82c42b07bc6fdfc18a763331334697",
+    "framework": "net48",
+    "files": [
+      {
+        "name": "DiscUtils.Ext.dll",
+        "sha256": "aae761b32ba82ec3a658fa75e94ee689bc68176eacd53cae9c3696a44770949e"
+      }
+    ]
+  },
+  {
+    "package": "ltrdata.discutils.core",
+    "version": "1.0.90",
+    "license": "MIT",
+    "sha256": "66894d8cdfc3023ff0fd5afa93605fa225e3e42ddb60fe643ec975a5db0a9b49",
+    "source": "https://github.com/LTRData/DiscUtils.git",
+    "commit": "414c7f7b2d82c42b07bc6fdfc18a763331334697",
+    "framework": "net48",
+    "files": [
+      {
+        "name": "DiscUtils.Core.dll",
+        "sha256": "07473f1085dcfdc78457b22aeec27ed23cd43a50ff169fafaeac66eef3155b04"
+      }
+    ]
+  },
+  {
+    "package": "ltrdata.discutils.streams",
+    "version": "1.0.90",
+    "license": "MIT",
+    "sha256": "034526ec2797f7ba2f6090d7fabd9ea9a37fcdc184824484e44eca6a0b810e69",
+    "source": "https://github.com/LTRData/DiscUtils.git",
+    "commit": "414c7f7b2d82c42b07bc6fdfc18a763331334697",
+    "framework": "net48",
+    "files": [
+      {
+        "name": "DiscUtils.Streams.dll",
+        "sha256": "6b7933b90c40f731234f6d7ca5fc07b03169ec86ca3c1216a22b591f8ca77dbd"
+      }
+    ]
+  },
+  {
+    "package": "ltrdata.extensions",
+    "version": "1.0.23",
+    "license": "MIT",
+    "sha256": "752c78cc2a6984399a41386ecbe5a90dbff47153efee0c24b7ec8cda3d5999bb",
+    "source": "https://github.com/LTRData/Library.git",
+    "commit": "915cdf4eaac22bffd2623de0721f7e7d18c93268",
+    "framework": "net48",
+    "files": [
+      {
+        "name": "LTRData.Extensions.dll",
+        "sha256": "121e60de458052110b5d1510824bfe4d43f04619db0c72cc5c5cfce8577957b7"
+      }
+    ]
+  },
+  {
+    "package": "system.collections.immutable",
+    "version": "9.0.20",
+    "license": "MIT",
+    "sha256": "f5f60393fc38fa739ce18e852fdf4ba3e44e71533a3414e2ba1e7c5c5d8ea8b0",
+    "source": "https://github.com/dotnet/runtime",
+    "commit": "3879076d9a06ce098d37c3882fb1845a6627335b",
+    "framework": "net462",
+    "files": [
+      {
+        "name": "System.Collections.Immutable.dll",
+        "sha256": "2ccaeb8ed5e9b545f94cded76d24cc0ef6aad59f84c8169f689a43b340c0543d"
+      }
+    ]
+  },
+  {
+    "package": "system.threading.tasks.extensions",
+    "version": "4.6.3",
+    "license": "MIT",
+    "sha256": "1abc92c7517a021ead7e79d0b7f3c70be75bce0fac7cfe3b38e157d32245ff1a",
+    "source": "https://github.com/dotnet/maintenance-packages",
+    "commit": "f62ca0009b038cab4725a720f386623a969d73ad",
+    "framework": "net462",
+    "files": [
+      {
+        "name": "System.Threading.Tasks.Extensions.dll",
+        "sha256": "af4e13ef418fd89b432de20cd1dfb7fa10a7179c8dd049c9856316e50c5949ca"
+      }
+    ]
+  },
+  {
+    "package": "system.text.encoding.codepages",
+    "version": "9.0.20",
+    "license": "MIT",
+    "sha256": "7f3e4880a365ab8b69380aa009e474d659312faba4a02f1765c808a0b33f37b0",
+    "source": "https://github.com/dotnet/runtime",
+    "commit": "3879076d9a06ce098d37c3882fb1845a6627335b",
+    "framework": "net462",
+    "files": [
+      {
+        "name": "System.Text.Encoding.CodePages.dll",
+        "sha256": "23c3e00c2f0c46b42f177f81c2ae81fdb71fb8c912c7424e3d0668d239e53e0d"
+      }
+    ]
+  }
+]

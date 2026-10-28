@@ -75,7 +75,7 @@ namespace FileCompass
         { return options.Verify || (options.Move && !NetworkPath(node.Source) && !NetworkPath(target)); }
         sealed class Node
         {
-            public string Source; public bool Directory; public long Bytes; public DateTime SourceTime;
+            public string Source; public bool Directory, Incomplete; public long Bytes; public DateTime SourceTime;
             public readonly List<Node> Children = new List<Node>();
         }
         sealed class Stamp
@@ -128,9 +128,9 @@ namespace FileCompass
                 {
                     control.Check();
                     string destination = RecoveryTargets != null ? RecoveryTargets[source] : options.TargetIsFile ? target : Path.Combine(target, Path.GetFileName(source.TrimEnd('\\')));
-                    currentSource = source; currentTarget = destination; ValidateRelation(source, destination); RejectLinks(source);
+                    currentSource = source; currentTarget = destination;
                     Publish(source, destination, L.Code("copy.loadingFiles"), 0, 0, true);
-                    var node = Scan(source); if (node != null) nodes.Add(node);
+                    var node = ScanSafe(new FileInfo(source), destination); if (node != null) nodes.Add(node);
                 }
                 Publish(currentSource, currentTarget, L.Code("copy.savingPlan"), 0, 0, true);
                 if (PlanReady != null) { var plan = new List<DurableFile>(); foreach (var node in nodes) AddPlan(node,RecoveryTargets != null ? RecoveryTargets[node.Source] : options.TargetIsFile ? target : Path.Combine(target,Path.GetFileName(node.Source.TrimEnd('\\'))),plan); PlanReady(plan); }
@@ -152,15 +152,33 @@ namespace FileCompass
             result.Add(new DurableFile { Source = node.Source,Target = target,Directory = node.Directory,Bytes = node.Bytes,Modified = node.SourceTime });
             foreach (var child in node.Children) AddPlan(child,Path.Combine(target,Path.GetFileName(child.Source)),result);
         }
-        Node Scan(string source)
+        Node ScanSafe(FileSystemInfo info, string destination)
         {
-            control.Check(); RejectLinks(source);
-            return Scan(new FileInfo(source), null);
+            while(true){
+                control.Check();
+                try{info.Refresh();ValidateRelation(info.FullName,destination);RejectLinks(info.FullName);return Scan(info,destination);}
+                catch(OperationCanceledException){throw;}
+                catch(Exception ex){
+                    if(resolveError==null||!(ex is IOException||ex is UnauthorizedAccessException))throw;
+                    if(ErrorChoice(info.FullName,destination,ex)==CopyErrorChoice.Retry)continue;
+                    result.Skipped++;
+                    result.Items.Add(new OperationItem{Source=info.FullName,Target=destination,Directory=Directory.Exists(info.FullName),State=L.Code("state.error"),Error=ex.Message});
+                    return null;
+                }
+            }
+        }
+        CopyErrorChoice ErrorChoice(string source,string target,Exception error){
+            var choice=skipErrors?CopyErrorChoice.Skip:resolveError(new CopyFailure{Source=source,Target=target,Error=error});
+            control.Check();
+            if(choice==CopyErrorChoice.Cancel)throw new OperationCanceledException();
+            if(choice==CopyErrorChoice.SkipAll)skipErrors=true;
+            return choice;
         }
         Node Scan(FileSystemInfo info, string destination)
         {
             control.Check();
             string source = info.FullName;
+            if(!File.Exists(source)&&!Directory.Exists(source))throw new FileNotFoundException(L.Text("fileFields.missing")+" "+source,source);
             FileAttributes attributes = info.Attributes;
             if ((attributes & FileAttributes.ReparsePoint) != 0) throw new IOException(L.Text("copy.reparsePointRejectedPrefix") + source);
             if (options.SkipHidden && (attributes & (FileAttributes.Hidden | FileAttributes.System)) != 0) return null;
@@ -170,7 +188,8 @@ namespace FileCompass
             if (destination == null) destination = RecoveryTargets != null ? RecoveryTargets[source] : options.TargetIsFile ? Path.GetFullPath(options.Target) : Path.Combine(Path.GetFullPath(options.Target), info.Name);
             if (dir)
             {
-                if (RecoveryTargets == null) foreach (var child in new DirectoryInfo(source).EnumerateFileSystemInfos()) { var next = Scan(child, Path.Combine(destination, child.Name)); if (next != null) node.Children.Add(next); }
+                // Finish enumeration before scanning children so a retry cannot duplicate planned files/totals.
+                if (RecoveryTargets == null) foreach (var child in new DirectoryInfo(source).GetFileSystemInfos()) { var next = ScanSafe(child, Path.Combine(destination, child.Name)); if (next != null){node.Children.Add(next);node.Incomplete|=next.Incomplete;}else node.Incomplete=true; }
                 if (RecoveryTargets == null && !options.EmptyFolders && node.Children.Count == 0) return null;
             }
             else { node.Bytes = ((FileInfo)info).Length; totalBytes = checked(totalBytes + node.Bytes); totalFiles++; }
@@ -181,6 +200,7 @@ namespace FileCompass
         void Process(Node node, string target)
         {
             bool refreshSource = false;
+            int processedChildren=0;
             while (true)
             {
             control.Check();
@@ -210,7 +230,7 @@ namespace FileCompass
                     if ((File.GetAttributes(target) & FileAttributes.ReadOnly) != 0 && !options.ReadOnly)
                         throw new IOException(L.Text("copy.readOnlyOverwriteNotAllowed"));
                 }
-                if (options.Move && RecoveryTargets == null && !stamp.Exists && options.Times && options.Attributes && !options.Permissions &&
+                if (options.Move && !node.Incomplete && RecoveryTargets == null && !stamp.Exists && options.Times && options.Attributes && !options.Permissions &&
                     String.Equals(Path.GetPathRoot(node.Source), Path.GetPathRoot(target), StringComparison.OrdinalIgnoreCase) &&
                     (!node.Directory || (!options.SkipHidden && options.EmptyFolders && (String.IsNullOrWhiteSpace(options.Filter) || options.Filter.Trim() == "*.*"))))
                 {
@@ -223,13 +243,14 @@ namespace FileCompass
                         undo=UndoReceipt.Committed(undo,target);if(undo!=null)result.Undo.Add(undo);
                         FileAssociations.Moved(node.Source, target); RecordRenamed(node, target); Publish(node.Source, target, L.Code("state.completed"), node.Bytes, node.Bytes, true); return;
                     }
-                    catch (IOException ex) { if ((ex.HResult & 65535) != 17) throw; } // Cross-device mount: fall back to verified copy.
+                    catch (IOException ex) { int code=ex.HResult&65535;if(code!=17&&(!node.Directory||(code!=5&&code!=32&&code!=33)))throw; } // Cross-device mount or busy folder: process files individually.
+                    catch (UnauthorizedAccessException) { if(!node.Directory)throw; }
                 }
                 if (node.Directory)
                 {
                     Directory.CreateDirectory(target);
                     if(!stamp.Exists){var folderUndo=UndoReceipt.Capture(target,node.Source,false);folderUndo.RestoreFolder=options.Move;result.Undo.Add(folderUndo);}
-                    foreach (Node child in node.Children) Process(child, Path.Combine(target, Path.GetFileName(child.Source)));
+                    for(;processedChildren<node.Children.Count;processedChildren++){var child=node.Children[processedChildren];Process(child,Path.Combine(target,Path.GetFileName(child.Source)));}
                     // Do not change metadata of existing merged folders.
                     if (!stamp.Exists)
                     {
@@ -258,14 +279,12 @@ namespace FileCompass
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
-                if (!node.Directory && resolveError != null && (ex is IOException || ex is UnauthorizedAccessException))
+                if (resolveError != null && (ex is IOException || ex is UnauthorizedAccessException))
                 {
-                    var choice = skipErrors ? CopyErrorChoice.Skip : resolveError(new CopyFailure { Source = node.Source, Target = target, Error = ex });
-                    control.Check();
+                    var choice = ErrorChoice(node.Source,target,ex);
                     if (choice == CopyErrorChoice.Retry) { refreshSource = true; continue; }
-                    if (choice == CopyErrorChoice.Cancel) throw new OperationCanceledException();
-                    if (choice == CopyErrorChoice.SkipAll) skipErrors = true;
                     result.Items.Add(new OperationItem { Source = node.Source, Target = target, State = L.Code("state.error"), Error = ex.Message, Directory = node.Directory });
+                    if(node.Directory&&node.Children.Count==0)result.Skipped++;
                     Skip(node, false); return;
                 }
                 result.Items.Add(new OperationItem { Source = node.Source, Target = target, State = L.Code("state.error"), Error = ex.Message, Directory = node.Directory }); result.Errors.Add(node.Source + L.Text("common.routeArrow") + target + "\n" + ex.Message); if (!node.Directory) { doneBytes += node.Bytes; finishedFiles++; }
@@ -492,4 +511,3 @@ namespace FileCompass
         }
     }
 }
-

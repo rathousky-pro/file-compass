@@ -9,10 +9,10 @@
       "sha256": "5a204635723d3c28365aec847b79649f340873d8cc4bde632c619187c17992fd"
     },
     {
-      "name": "Magick.NET-Q8-x64",
+      "name": "Magick.NET-Q8-OpenMP-x64",
       "version": "15.0.0",
-      "url": "https://api.nuget.org/v3-flatcontainer/magick.net-q8-x64/15.0.0/magick.net-q8-x64.15.0.0.nupkg",
-      "sha256": "96bf50fcbc586e8a149b467a97fb3d1bf09c0362b5d8ff828a9936b23fdc5374"
+      "url": "https://api.nuget.org/v3-flatcontainer/magick.net-q8-openmp-x64/15.0.0/magick.net-q8-openmp-x64.15.0.0.nupkg",
+      "sha256": "cc86dcedf1b7c6c495b383d30302a9a8a6f15b8bc86987bed983f3ce71cfefeb"
     },
     {
       "name": "Magick.NET.Core",

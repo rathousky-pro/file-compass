@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -20,7 +20,7 @@ namespace FileCompass
         string localNetworkPath;
         public event Action<FilePanel> DisconnectLocalNetwork;
         string localReturnPath;
-        public string DisplayPath { get { return IsArchive ? Archive.Display + "\\" + (ArchivePrefix ?? "").Replace('/', '\\') : IsRemote ? Remote.Display(CurrentPath) : IsShellBrowser ? ShellLocationName : CurrentPath; } }
+        public string DisplayPath { get { return IsExt ? ExtLocations.Get(CurrentPath).Label+" / "+ExtLocations.Relative(CurrentPath) : IsArchive ? Archive.Display + "\\" + (ArchivePrefix ?? "").Replace('/', '\\') : IsRemote ? Remote.Display(CurrentPath) : IsShellBrowser ? ShellLocationName : CurrentPath; } }
         public event EventHandler LoadingChanged;
         void Loading(bool value)
         {
@@ -117,7 +117,9 @@ namespace FileCompass
         public void DisconnectRemote()
         {
             if (IsLoading) return;
+            CaptureTab();bool pinnedRemote=tabs.Count>0&&tabs[tabIndex].Saved.Locked&&!String.IsNullOrEmpty(tabs[tabIndex].Saved.ProfileId);
             if (Remote != null) { openConnections.Remove(Remote); Remote.Dispose(); Remote = null; }
+            if(pinnedRemote){ShowTabUnavailable(tabs[tabIndex],L.Text("tabs.disconnected"));NotifyTabsChanged();return;}
             history.Clear(); forwardHistory.Clear();
             Navigate(localReturnPath ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), false);
         }
@@ -201,6 +203,12 @@ namespace FileCompass
         }
         public void SetLocalNetwork(NetworkProfile profile, string path) { localNetworkProfile = profile == null ? null : profile.Clone(); localNetworkPath = path; UpdateConnectionButtons(); }
         public NetworkProfile LocalNetworkProfile { get { return localNetworkProfile; } }
+        internal NetworkProfile CurrentSshProfile() {
+            if(IsRemote){var profile=Remote.Profile.Clone();profile.Path=CurrentPath;return profile;}
+            var mounted=localNetworkProfile.Clone();
+            string relative=CurrentPath.Substring(localNetworkPath.TrimEnd('\\').Length).TrimStart('\\').Replace('\\','/');
+            mounted.Path=mounted.Path.TrimEnd('/')+(relative.Length==0?"/":"/"+relative);return mounted;
+        }
         public bool IsAtLocalNetwork { get { return !IsRemote && localNetworkPath != null && CurrentPath != null &&
             (String.Equals(CurrentPath.TrimEnd('\\'), localNetworkPath.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase) ||
             CurrentPath.StartsWith(localNetworkPath.TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase)); } }
@@ -221,11 +229,10 @@ namespace FileCompass
                 FileOperations.ValidateName(name);
                 string file = Path.Combine(folder, name);
                 await Task.Run(delegate { Remote.Session.GetFiles(RemotePath.EscapeFileMask(entry.FullPath), file).Check(); });
-                if (view) FileViewers.Open(Window.GetWindow(this), file); else Process.Start(new ProcessStartInfo(file) { UseShellExecute = true });
+                if (view) MainWindow.ShowRichPreviewWindow(Window.GetWindow(this), file); else Process.Start(new ProcessStartInfo(file) { UseShellExecute = true });
             }
             catch (Exception ex) { MessageBox.Show(Window.GetWindow(this), ex.Message, L.Text("network.remoteFileOpenFailedTitle")); }
             finally { Loading(false); }
         }
     }
 }
-

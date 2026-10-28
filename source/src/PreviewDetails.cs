@@ -14,7 +14,7 @@ namespace FileCompass {
         internal Task MetadataLoadingTask {get;private set;}
         internal FileDetails Metadata {get{return detailsData;}}
         void InitializeDetails(DockPanel body,bool compact) {
-            detailsExpander.Header=detailsHeader;
+            detailsHeader.FontWeight=FontWeights.SemiBold;detailsHeader.Foreground=FluentTheme.Accent;detailsExpander.Header=detailsHeader;
             var rows=new DockPanel();
             var copy=CopyUi.Button(L.Text("details.copy"),delegate {if(detailsData!=null)try{Clipboard.SetText(String.Join(Environment.NewLine,detailsData.Rows.Select(x=>x.Label+": "+x.Value)));}catch(System.Runtime.InteropServices.COMException){}});
             copy.HorizontalAlignment=HorizontalAlignment.Right;DockPanel.SetDock(copy,Dock.Top);rows.Children.Add(copy);
@@ -26,7 +26,7 @@ namespace FileCompass {
                 detailsExpander.Expanded+=delegate {copy.Visibility=Visibility.Visible;DockPanel.SetDock(detailsExpander,Dock.Right);detailsExpander.Width=330;detailsExpander.Margin=new Thickness(8,0,0,0);};
                 detailsExpander.Collapsed+=delegate {copy.Visibility=Visibility.Collapsed;DockPanel.SetDock(detailsExpander,Dock.Right);detailsExpander.Width=160;detailsExpander.Margin=new Thickness(8,0,0,0);};
             }
-            detailsExpander.Content=new Border {Child=rows,Background=CompactTheme.WhiteSurface,BorderBrush=CompactTheme.ChromeLine,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(5),Padding=new Thickness(8)};
+            detailsExpander.Content=new Border {Child=rows,Background=CompactTheme.WhiteSurface,BorderBrush=CompactTheme.Line,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(5),Padding=new Thickness(12)};
             DockPanel.SetDock(detailsExpander,compact?Dock.Right:Dock.Bottom);body.Children.Add(detailsExpander);
         }
         void ClearDetails(){detailsData=null;detailsRows.Children.Clear();detailsHeader.Text="";detailsExpander.Visibility=Visibility.Collapsed;}
@@ -34,12 +34,12 @@ namespace FileCompass {
             try {
                 var data=await Task.Run(delegate { return FileMetadataService.Load(path,token); });
                 if(request!=version||token.IsCancellationRequested)return;
-                detailsData=data;detailsHeader.Text=L.Text("details.heading")+" · "+data.Summary;detailsHeader.ToolTip=detailsHeader.Text;
+                detailsData=data;detailsHeader.Text=L.Text("details.heading");detailsHeader.ToolTip=L.Text("details.heading")+" · "+data.Summary;
                 detailsRows.Children.Clear();
-                foreach(var item in data.Rows) {
+                int rowIndex=0;foreach(var item in data.Rows) {
                     var row=new Grid {Margin=new Thickness(0,3,0,3)};row.ColumnDefinitions.Add(new ColumnDefinition {Width=new GridLength(125)});row.ColumnDefinitions.Add(new ColumnDefinition());
                     row.Children.Add(new TextBlock {Text=item.Label,TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,0,9,0)});
-                    var value=new TextBlock {Text=item.Value,TextWrapping=TextWrapping.Wrap,ToolTip=item.Value};Grid.SetColumn(value,1);row.Children.Add(value);detailsRows.Children.Add(row);
+                    var value=new TextBlock {Text=item.Value,TextWrapping=TextWrapping.Wrap,ToolTip=item.Value};Grid.SetColumn(value,1);value.FontWeight=FontWeights.SemiBold;row.Children.Add(value);detailsRows.Children.Add(new Border{Child=row,Padding=new Thickness(6,2,6,2),Background=rowIndex++%2==0?CompactTheme.PanelSurface:CompactTheme.WhiteSurface,CornerRadius=new CornerRadius(3)});
                 }
                 detailsExpander.Visibility=Visibility.Visible;ApplyDocumentExcerpt();
             }catch(OperationCanceledException){}catch(Exception){}
@@ -54,8 +54,3 @@ namespace FileCompass {
         }
     }
 }
-
-
-
-
-

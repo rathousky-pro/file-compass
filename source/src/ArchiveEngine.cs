@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -41,8 +41,8 @@ namespace FileCompass
     public static class ArchiveEngine
     {
         static readonly ConcurrentDictionary<string, object> Locks = new ConcurrentDictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-        public static string SevenZipPath { get { return System.IO.Path.Combine(AppPaths.Resource("plugins"), "7zip", "7z.exe"); } }
-        public static string SevenZipLibraryPath { get { return System.IO.Path.Combine(AppPaths.Resource("plugins"), "7zip", "7z.dll"); } }
+        public static string SevenZipPath { get { return UpdateRegistry.Resolve("7zip\\7z.exe"); } }
+        public static string SevenZipLibraryPath { get { return UpdateRegistry.Resolve("7zip\\7z.dll"); } }
         internal static string OutputSuffix(string path)
         { string lower = path.ToLowerInvariant(); return new[] { ".tar.gz", ".tar.bz2", ".tar.xz" }.FirstOrDefault(lower.EndsWith) ?? System.IO.Path.GetExtension(path); }
         public static bool Recognized(string path)
@@ -312,11 +312,13 @@ namespace FileCompass
         public static void Create(string target, IEnumerable<string> sources, ArchiveSettings settings, CancellationToken token, Action<string> progress = null, ArchivePackOptions pack = null)
         {
             settings.ValidateCreationTool(target);
+            if(pack!=null)ArchiveCompressionQuality.Validate(pack.Level);
             if (pack != null && (pack.Move || pack.VolumeBytes > 0)) { ArchiveExtended.Create(target,sources,settings,token,progress,pack); return; }
             string lower = target.ToLowerInvariant();
             string suffix = new[] { ".tar.gz", ".tar.bz2", ".tar.xz", ".tgz", ".tbz2", ".txz" }.FirstOrDefault(lower.EndsWith);
             if (suffix == null) { CreateCore(target, sources, settings, token, progress, pack); return; }
             pack = pack ?? new ArchivePackOptions();
+            ArchiveCompressionQuality.Validate(pack.Level);
             if (!String.IsNullOrEmpty(pack.Password)) throw new IOException(L.Text("archive.passwordRequiresZipOr7z"));
             using (var temp = new ArchiveTemp()) {
                 string tar = System.IO.Path.Combine(temp.Path, System.IO.Path.GetFileName(target).Substring(0, System.IO.Path.GetFileName(target).Length - suffix.Length) + ".tar");
@@ -327,7 +329,7 @@ namespace FileCompass
                     progress(L.Text("archive.buildingTar") + " " + (ArchiveCompressionProgress.TryParse(text, out update) ? update.Percent.ToString("F0") + "%" : text));
                 };
                 CreateCore(tar, sources, settings, token, preparing, pack);
-                CreateCore(target, new[] { tar }, settings, token, progress, new ArchivePackOptions { Level = pack.Level, NewestFileDate = pack.NewestFileDate });
+                CreateCore(target, new[] { tar }, settings, token, progress, new ArchivePackOptions { Level = pack.Level, NewestFileDate = pack.NewestFileDate,Inputs=pack.Inputs });
             }
         }
         static void CreateCore(string target, IEnumerable<string> sources, ArchiveSettings settings, CancellationToken token, Action<string> progress, ArchivePackOptions pack)
@@ -354,14 +356,17 @@ namespace FileCompass
                 var budget = new ArchiveBudget(ArchiveSettings.Load());
                 try
                 {
+                    var accepted=new List<string>();
                     foreach (string source in sourceFiles)
                     {
                         if (direct) {
                             token.ThrowIfCancellationRequested(); budget.Item();
                             for (string ancestor = source; !String.IsNullOrEmpty(ancestor); ancestor = System.IO.Path.GetDirectoryName(ancestor)) if ((File.GetAttributes(ancestor) & FileAttributes.ReparsePoint) != 0) throw new IOException(L.Text("archive.addLinkRejectedPrefix") + source);
-                            inputLocks.Add(new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read));
+                            var sourceLock=ArchiveInputPolicy.Open(source,pack,token);
+                            if(sourceLock==null)continue;inputLocks.Add(sourceLock);accepted.Add(source);
                         } else StagePackedInput(source, input.Path, pack.ExcludeBase && Directory.Exists(source) ? "" : SafeMember(System.IO.Path.GetFileName(source.TrimEnd('\\', '/'))), pack, token, budget, preparation);
                     }
+                    if(direct){sourceFiles=accepted.ToArray();if(sourceFiles.Length==0)throw new ArchiveAllInputsSkippedException();}
                     preparation.Complete();
                     var doc = new ArchiveDocument { FilePath = stage, Type = extension.TrimStart('.'), Password = pack.Password };
                     DateTime? newestFile = null; bool archiveDate = pack.NewestFileDate ?? ProgramSettings.Load().ArchiveNewestFileDate;
@@ -378,7 +383,7 @@ namespace FileCompass
                     };
                     if (progress != null) progress(new ArchiveCompressionProgress { Original = originalBytes }.Encode());
                     var members = (direct ? sourceFiles : Directory.GetFileSystemEntries(input.Path)).Select(x => System.IO.Path.GetFileName(x)).ToList();
-                    var compressionOptions = new[] { extension == ".rar" ? "-m" + Math.Min(5, (pack.Level * 5 + 4) / 9) : "-mx=" + pack.Level }.Concat(direct && extension != ".rar" ? new[] { "-filecompass-direct" } : new string[0]).ToArray();
+                    var compressionOptions = new[] { extension == ".rar" ? ArchiveCompressionQuality.Rar(pack.Level) : "-mx=" + pack.Level }.Concat(direct && extension != ".rar" ? new[] { "-filecompass-direct" } : new string[0]).ToArray();
                     try { Write(doc, stage, workingInput, members, false, settings, token, compressionProgress, compressionOptions); }
                     catch (ArchiveMemoryException) {
                         if (extension != ".7z") throw;
@@ -438,7 +443,7 @@ namespace FileCompass
             {
                 string target = DiskPath(root, options.Paths ? member : SafeMember(System.IO.Path.GetFileName(source)));
                 if (File.Exists(target) || Directory.Exists(target)) throw new IOException(L.Text("archive.duplicateInputNamesPrefix") + member);
-                CopyInput(source, target, token, budget, preparation);
+                ArchiveInputPolicy.Copy(source,target,options,token,budget,preparation);
             }
         }
         static void Write(ArchiveDocument doc, string stage, string input, List<string> files, bool delete, ArchiveSettings settings, CancellationToken token, Action<string> progress, string[] extra = null)
@@ -448,7 +453,9 @@ namespace FileCompass
                 if (doc.Type == "arj" || doc.Type == "lzh" || doc.Type == "lha") {
                     if (delete || File.Exists(stage) || !String.IsNullOrEmpty(doc.Password)) throw new IOException(L.Text("archive.readOnlyFormat"));
                     bool arj = doc.Type == "arj";
-                    var args = new List<string>(arj ? new[] { "a", "-+", "-r", "-y", "-a1", "-m1", stage } : new[] { "a", stage });
+                    string quality=(extra??new string[0]).FirstOrDefault(x=>x.StartsWith("-mx=",StringComparison.Ordinal));
+                    int requested=quality==null?6:Int32.Parse(quality.Substring(4));
+                    var args = new List<string>(arj ? new[] { "a", "-+", "-r", "-y", "-a1", ArchiveCompressionQuality.Arj(requested), stage } : new[] { "a", stage });
                     if (!arj && files.Any(x => x.StartsWith("-", StringComparison.Ordinal) || x.StartsWith("@", StringComparison.Ordinal))) throw new IOException(L.Text("archive.legacyUnsafeName"));
                     args.AddRange(files.Select(x => arj ? "." + System.IO.Path.DirectorySeparatorChar + x : x));
                     if (args.Sum(x => x.Length + 3) > 28000) throw new IOException(L.Text("archive.legacyCommandTooLong"));
@@ -528,7 +535,3 @@ namespace FileCompass
         }
     }
 }
-
-
-
-

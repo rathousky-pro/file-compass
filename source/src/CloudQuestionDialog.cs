@@ -15,12 +15,11 @@ namespace FileCompass {
             CopyUi.Style(this, owner, L.Text("cloud.chooseStorage"), 620);
             MaxWidth = DialogGeometry.WorkArea(this).Width - 32; MaxHeight = DialogGeometry.WorkArea(this).Height - 32;
             Width = Math.Min(620, MaxWidth); ResizeMode = ResizeMode.CanResize;
-            var body = new DockPanel { Margin = new Thickness(14) }; Content = body;
-            var actions = FluentTheme.Actions(); DockPanel.SetDock(actions, Dock.Bottom); body.Children.Add(actions);
+            StackPanel actions;var body=SettingsUx.Frame(this,L.Text("cloud.chooseStorage"),out actions);
             var error = new TextBlock { Foreground = CompactTheme.ThemeBrush("#B92331"), TextWrapping = TextWrapping.Wrap };
-            var ok = CopyUi.Button(L.Text("action.resume"), delegate { if (ReadAnswer() == null) { error.Text = L.Text("cloud.selectAnswer"); return; } DialogResult = true; }); ok.IsDefault = true; actions.Children.Add(ok);
-            var cancel = CopyUi.Button(L.Text("action.cancel"), delegate { DialogResult = false; }); cancel.IsCancel = true; actions.Children.Add(cancel);
-            var stack = new StackPanel(); body.Children.Add(new ScrollViewer { Content = stack, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
+            var ok = CopyUi.Button(L.Text("action.resume"), delegate { if (ReadAnswer() == null) { error.Text = L.Text("cloud.selectAnswer"); return; } DialogResult = true; }); ok.IsDefault = true;FluentTheme.Primary(ok); actions.Children.Add(ok);
+            var cancel = CopyUi.Button(L.Text("action.cancel"), delegate { DialogResult = false; }); cancel.IsCancel = true; actions.Children.Add(cancel);actions.Children.Remove(ok);actions.Children.Add(ok);
+            var stack = new StackPanel{Margin=new Thickness(20,16,20,16)}; body.Children.Add(new ScrollViewer { Content = stack, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
             bool shared = option.Name == "config_change_team_drive";
             bool clientWarning = option.Name == "config_shared_client_id";
             bool changing = shared && (option.Help ?? "").StartsWith("Change current", StringComparison.OrdinalIgnoreCase);

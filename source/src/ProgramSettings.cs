@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Xml;
 using System.Xml.Serialization;
 
 namespace FileCompass
 {
-    public sealed class SavedTab { public ProjectionSpec Projection; public string Filter = ""; public string Path = "", Home = "", Label = "", Caption = "", ProfileId = "", ArchiveFile = "", ArchivePrefix = ""; public bool Locked; public PanelView View; }
+    public sealed class SavedTab { public ExtSource ExtSource; public ExtVolume ExtVolume; public ProjectionSpec Projection; public string Filter = ""; public string Path = "", Home = "", Label = "", Caption = "", ProfileId = "", ArchiveFile = "", ArchivePrefix = ""; public bool Locked; public PanelView View; }
     public sealed class FavoriteLocation { public string Name = "", Group = "", Left = "", Right = ""; public SavedTab LeftLocation, RightLocation; public override string ToString() { return (String.IsNullOrEmpty(Group) ? "" : Group + " / ") + Name; } }
     public sealed class PanelView
     {
@@ -18,6 +18,7 @@ namespace FileCompass
     public sealed class ProgramSettings
     {
         public string ColorTheme = "System"; public string WindowBackdrop = "None";
+        public string InterfaceMotif = "Balanced";
         public string LeftFolder = "", RightFolder = "";
         public double WindowLeft = Double.NaN, WindowTop = Double.NaN, WindowWidth = 1440, WindowHeight = 800, SplitRatio = .5;
         public bool Maximized;
@@ -28,6 +29,7 @@ namespace FileCompass
         public bool SingleInstance, SaveFoldersOnExit, SaveTabsOnExit, SaveViewOnExit, SaveWindowOnExit;
         public PanelView LeftView = new PanelView(), RightView = new PanelView();
         public double[] ColumnWidths = new double[0];
+        public bool InternalTextEditor=true;
         public string ImageViewerPath = "", MediaPlayerPath = "", TextEditorPath = "";
         public SavedTab[] LeftTabs = new SavedTab[0], RightTabs = new SavedTab[0];
         public int LeftTabIndex, RightTabIndex;
@@ -48,12 +50,13 @@ namespace FileCompass
             try
             {
                 path = path ?? ConfigPath; if (!File.Exists(path)) return new ProgramSettings();
-                var saved=ConfigurationIntegrity.Read<ProgramSettings>(path); saved.ImageViewerPath=AppPaths.ResolveLegacyResourceFile(saved.ImageViewerPath); saved.MediaPlayerPath=AppPaths.ResolveLegacyResourceFile(saved.MediaPlayerPath); saved.TextEditorPath=AppPaths.ResolveLegacyResourceFile(saved.TextEditorPath); return saved;
+                var saved=ConfigurationIntegrity.Read<ProgramSettings>(path); saved.InterfaceMotif="Balanced"; saved.ImageViewerPath=AppPaths.ResolveLegacyResourceFile(saved.ImageViewerPath); saved.MediaPlayerPath=AppPaths.ResolveLegacyResourceFile(saved.MediaPlayerPath); saved.TextEditorPath=AppPaths.ResolveLegacyResourceFile(saved.TextEditorPath); return saved;
             }
             catch (Exception ex) { if (ex is ConfigurationIntegrityException || !(ex is IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException || ex is XmlException)) throw; return new ProgramSettings(); }
         }
         public void Save(string path = null)
         {
+            InterfaceMotif = "Balanced";
             path = path ?? ConfigPath; Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path)));
             string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
             try
@@ -76,4 +79,3 @@ namespace FileCompass
         }
     }
 }
-

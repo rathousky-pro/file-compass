@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -61,6 +61,7 @@ namespace FileCompass
                     ArchiveCompressionProgress completed; string result = ArchiveCompressionProgress.TryParse(latestCompression ?? "", out completed) && completed.Complete ? " · " + completed.Summary() : "";
                     activity.Finish(title + L.Text("state.completedSuffix") + result, true); return true;
                 }
+                catch (ArchiveAllInputsSkippedException) { activity.Finish(title+" · "+L.Text("archive.allInputsSkipped"),true);return true; }
                 catch (OperationCanceledException) { activity.Finish(title + L.Text("state.cancelledSuffix"), false); return false; }
                 catch (Exception ex) { activity.Record.Items.Add(new OperationItem { Source = title, State = L.Code("state.error"), Error = ex.Message }); activity.Record.Retry = retryAction ?? delegate { var retry = ArchiveOperation(title, work); }; activity.Finish(title + L.Text("state.errorSuffix"), false); MessageBox.Show(this, ex.Message, title, MessageBoxButton.OK, MessageBoxImage.Warning); return false; }
                 finally { dialog.Finish(); archiveOperations--; }
@@ -199,7 +200,7 @@ namespace FileCompass
                 Action launch = delegate { try {
                     if (!edit && !viewOnly && AttachmentSecurity.RequiresLaunchConfirmation(file) &&
                         MessageBox.Show(viewer, L.Text("security.archiveLaunchWarning") + "\n\n" + member, L.Text("security.archiveLaunchTitle"), MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
-                    if (edit || viewOnly) FileViewers.Open(viewer, file, edit); else Process.Start(new ProcessStartInfo(file) { UseShellExecute = true });
+                    if (edit) FileViewers.Open(viewer,file,true); else if(viewOnly)ShowRichPreviewWindow(viewer,file); else Process.Start(new ProcessStartInfo(file) { UseShellExecute = true });
                 } catch (Exception ex) { MessageBox.Show(viewer, ex.Message, L.Text("error.cannotOpenFile")); } };
                 buttons.Children.Add(CopyUi.Button(edit ? L.Text("action.openEditor") : viewOnly ? L.Text("action.viewFile") : L.Text("action.openFile"), launch));
                 bool saving = false; DateTime saved = File.GetLastWriteTimeUtc(file);
@@ -279,12 +280,16 @@ namespace FileCompass
             var existing = targets.Where(File.Exists).ToArray();
             if (existing.Length > 0 && MessageBox.Show(this, L.Text("archive.confirmReplacePrefix") + String.Join("\n", existing.Take(5)), L.Text("action.compressArchive"), MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
             var settings = ArchiveSettings.Load();
+            options.Inputs=new ArchiveInputPolicy{Decide=failure=>Dispatcher.Invoke(new Func<ArchiveInputChoice>(delegate{
+                var prompt=new ArchiveInputDialog(this,failure);prompt.ShowDialog();return prompt.Choice;
+            }))};
             for (int i = 0; i < targets.Length; i++)
             {
                 string archiveTarget = targets[i]; string[] archiveSources = options.Separate ? new[] { files[i] } : files;
                 if (!await ArchiveOperation(L.Text("archive.creatingPrefix") + archiveTarget, delegate(CancellationToken token, Action<string> progress) { ArchiveEngine.Create(archiveTarget, archiveSources, settings, token, progress, options); })) break;
                 foreach (var panel in new[] { left, right }) if (!panel.IsArchive && !panel.IsRemote && (panel.CurrentPath == Path.GetDirectoryName(archiveTarget) || options.Move)) panel.Refresh();
             }
+            if(options.Inputs.Skipped.Count>0)MessageBox.Show(this,L.Text("archive.skippedInputs")+" "+options.Inputs.Skipped.Count+"\n"+String.Join("\n",options.Inputs.Skipped.Take(10))+(options.Inputs.Skipped.Count>10?"\n…":""),L.Text("archive.packFilesTitle"),MessageBoxButton.OK,MessageBoxImage.Warning);
         }
         internal static string DefaultArchiveTarget(string[] files, string source, string destination)
         {
@@ -294,6 +299,3 @@ namespace FileCompass
         }
     }
 }
-
-
-

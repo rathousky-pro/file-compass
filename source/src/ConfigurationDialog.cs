@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +14,7 @@ namespace FileCompass
         internal readonly ListBox Sections = new ListBox();
         readonly ContentControl page = new ContentControl();
         readonly ProgramSettings settings;
+        internal readonly UpdatesView UpdatePage;
         readonly ArchiveSettings archives;
         readonly ArchiveLimitEditor archiveLimits;
         readonly FileBehaviorEditor fileBehavior;
@@ -29,11 +30,12 @@ namespace FileCompass
         bool appearanceSaved;
         internal readonly ComboBox ColorThemeChoice = new ComboBox { MinWidth = 180 };
         internal readonly ComboBox LanguageChoice = new ComboBox { MinWidth = 180 };
-        string originalColorTheme, originalBackdrop; internal readonly ComboBox BackdropChoice = new ComboBox { MinWidth = 140 };
+        string originalColorTheme, originalBackdrop, originalMotif; internal readonly ComboBox BackdropChoice = new ComboBox { MinWidth = 140 };
         readonly MainWindow main;
         internal readonly ConnectionsView Connections;
         readonly FontChoiceControl interfaceFont, fileListFont;
-        readonly CheckBox automaticFolderViews = new CheckBox { Content = L.Text("columns.autoSetting"), Margin = new Thickness(0, 6, 0, 6) }; readonly CheckBox internalCodePreview = new CheckBox { Content = L.Text("settings.internalCodePreview"), Margin = new Thickness(0, 8, 0, 4) };
+        readonly CheckBox internalEditor=new CheckBox{Content=L.Text("codeEditor.setting"),Margin=new Thickness(0)};
+        readonly CheckBox automaticFolderViews = new CheckBox { Content = L.Text("columns.autoSetting"), Margin = new Thickness(0, 6, 0, 6) }; readonly CheckBox internalCodePreview = new CheckBox { Content = L.Text("settings.internalCodePreview"), Margin = new Thickness(0) };
         readonly CheckBox showHidden = new CheckBox { Content = L.Text("settings.showHiddenFiles"), Margin = new Thickness(0, 5, 0, 5) };
         readonly CheckBox showSystem = new CheckBox { Content = L.Text("settings.showSystemFiles"), Margin = new Thickness(0, 5, 0, 5) };
         readonly CheckBox automaticRefresh = new CheckBox { Content = L.Text("settings.autoRefreshLocal"), Margin = new Thickness(0, 14, 0, 6) };
@@ -44,21 +46,18 @@ namespace FileCompass
             CopyUi.Style(this, owner, L.Text("menu.configuration"), 1080); InitializeSettingsSize();
             main = owner as MainWindow ?? (owner == null ? null : owner.Owner as MainWindow);
             settings = ProgramSettings.Load(); archives = ArchiveSettings.Load(); selectedTheme = ToolbarThemeSettings.Current;
-            originalColorTheme = AppearanceTheme.Mode; originalBackdrop = AppearanceTheme.Backdrop; AppearanceTheme.RegisterShell(this);
+            originalColorTheme = AppearanceTheme.Mode; originalBackdrop = AppearanceTheme.Backdrop; originalMotif = AppearanceTheme.Motif; AppearanceTheme.RegisterShell(this);
             originalTheme = selectedTheme; originalApplicationIcon = ApplicationBrand.Current;
-            var body = new DockPanel { Margin = new Thickness(12) }; Content = body;
-            var actions = FluentTheme.Actions(); DockPanel.SetDock(actions, Dock.Bottom); body.Children.Add(actions);
-            var ok = CopyUi.Button(L.Text("action.save"), Save); ok.IsDefault = true; actions.Children.Add(ok);
-            var cancel = CopyUi.Button(L.Text("action.cancel"), delegate { DialogResult = false; }); cancel.IsCancel = true; actions.Children.Add(cancel);
-            var navigation = new Border { Width = 155, Margin = new Thickness(0, 0, 16, 0), Background = CompactTheme.PanelSurface, BorderBrush = CompactTheme.ChromeLine, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8), Padding = new Thickness(4), Child = Sections };
-            DockPanel.SetDock(navigation, Dock.Left); body.Children.Add(navigation);
-            Sections.Background = Brushes.Transparent; Sections.BorderThickness = new Thickness(0);
-            body.Children.Add(new Border { Child = page, Background = CompactTheme.ToolbarSurface, BorderBrush = CompactTheme.ChromeLine, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8), Padding = new Thickness(12) });
+            StackPanel actions;var body=SettingsUx.Frame(this,L.Text("menu.configuration"),out actions);
+            var cancel=CopyUi.Button(L.Text("action.cancel"),delegate{DialogResult=false;});cancel.IsCancel=true;actions.Children.Add(cancel);
+            var ok=CopyUi.Button(L.Text("action.save"),Save);ok.IsDefault=true;FluentTheme.Primary(ok);actions.Children.Add(ok);
+            var navigation=new Border{Width=170,Background=CompactTheme.PanelSurface,BorderBrush=CompactTheme.Line,BorderThickness=new Thickness(0,0,1,0),Padding=new Thickness(7,10,7,10),Child=Sections};DockPanel.SetDock(navigation,Dock.Left);body.Children.Add(navigation);SettingsUx.Navigation(Sections);
+            body.Children.Add(new Border{Child=page,Background=CompactTheme.WhiteSurface,Padding=new Thickness(18,14,18,14)});
             var appearance = Page(L.Text("settings.appearanceSection"), L.Text("settings.compactInterfaceDescription"));
             var fonts = FluentTheme.Section(appearance, L.Text("settings.fontTitle"));
             interfaceFont = new FontChoiceControl(L.Text("settings.interfaceFont"), settings.InterfaceFontFamily, settings.InterfaceFontSize, 12);
             fileListFont = new FontChoiceControl(L.Text("settings.fileListFont"), settings.FileListFontFamily, settings.FileListFontSize, 24);
-            fonts.Children.Add(interfaceFont); fonts.Children.Add(fileListFont);
+            interfaceFont.Family.MinWidth=fileListFont.Family.MinWidth=100;fonts.Children.Add(interfaceFont); fonts.Children.Add(fileListFont);
             showHidden.IsChecked = settings.ShowHiddenFiles; showSystem.IsChecked = settings.ShowSystemFiles;
             var visibility = FluentTheme.Section(appearance, L.Text("settings.fileVisibility")); visibility.Children.Add(showHidden); visibility.Children.Add(showSystem);
             automaticFolderViews.IsChecked = settings.AutomaticFolderViews; var folderViews = FluentTheme.Section(appearance, L.Text("columns.autoTitle")); folderViews.Children.Add(automaticFolderViews); folderViews.Children.Add(new TextBlock { Text = L.Text("columns.autoHelp"), TextWrapping = TextWrapping.Wrap, Foreground = FluentTheme.Muted }); appearance.Children.Add(new TextBlock { Text = L.Text("settings.panelColorsDescription"), Margin = new Thickness(0, 16, 0, 0), Foreground = FluentTheme.Muted });
@@ -123,8 +122,8 @@ namespace FileCompass
             mediaPath = ProgramPath(mediaSection, L.Text("settings.mediaPlayerLabel"), settings.MediaPlayerPath);
             mediaSection.Children.Add(CopyUi.Button(L.Text("settings.findMediaPlayerClassic"), delegate { Find(mediaPath, FileViewers.FindMediaPlayer()); }));
             editorPath = ProgramPath(FluentTheme.Section(viewers, L.Text("settings.textEditorLabel")), L.Text("settings.notepadDefaultHint"), settings.TextEditorPath);
-            internalCodePreview.IsChecked = settings.InternalCodePreview; viewers.Children.Add(internalCodePreview);
-            viewers.Children.Add(new TextBlock { Text = L.Text("settings.supportedViewerFormatsHelp"), TextWrapping = TextWrapping.Wrap, Foreground = FluentTheme.Muted, Margin = new Thickness(0, 12, 0, 0) });
+            internalEditor.IsChecked=settings.InternalTextEditor;viewers.Children.Add(internalEditor);internalCodePreview.IsChecked = settings.InternalCodePreview; viewers.Children.Add(internalCodePreview);
+            viewers.Children.Add(new TextBlock { Text = L.Text("settings.supportedViewerFormatsHelp"), TextWrapping = TextWrapping.Wrap, Foreground = FluentTheme.Muted, Margin = new Thickness(0, 8, 0, 0) });
             var view = Page(L.Text("settings.startupViewTitle"), L.Text("settings.restoreViewDescription"));
             startupPreferences = new StartupPreferencesEditor(settings); view.Children.Add(startupPreferences);
             UpdateFolders(); view.Children.Add(savedFolders);
@@ -143,11 +142,12 @@ namespace FileCompass
             } catch (Exception ex) { network.Children.Add(new TextBlock { Text = ex.Message, TextWrapping = TextWrapping.Wrap, Foreground = CompactTheme.ThemeBrush("#B92331") }); }
             network.Children.Add(new TextBlock { Text = L.Text("connections.immediateSave"), TextWrapping = TextWrapping.Wrap, Foreground = FluentTheme.Muted, Margin = new Thickness(0, 10, 0, 0) });
             Closing += delegate(object sender, System.ComponentModel.CancelEventArgs e) { if (Connections != null && !Connections.AllowHostClose()) e.Cancel = true; };
-            Closed += delegate { if (!appearanceSaved) { AppearanceTheme.Backdrop = originalBackdrop; AppearanceTheme.Apply(originalColorTheme); ApplicationBrand.Apply(originalApplicationIcon); PreviewToolbar(originalTheme); } if (Connections != null) Connections.DisposeManagers(); };
+            Closed += delegate { if (!appearanceSaved) { AppearanceTheme.Backdrop = originalBackdrop; AppearanceTheme.SetMotif(originalMotif); AppearanceTheme.Apply(originalColorTheme); ApplicationBrand.Apply(originalApplicationIcon); PreviewToolbar(originalTheme); } if (Connections != null) Connections.DisposeManagers(); };
             var behavior = Page(L.Text("settings.fileOperations"), L.Text("settings.fileOperationsDescription"));
             fileBehavior = new FileBehaviorEditor(settings); behavior.Children.Add(fileBehavior);
-            var names = new[] { L.Text("settings.appearanceSection"), L.Text("settings.iconsSection"), L.Text("settings.archivesSection"), L.Text("settings.viewersTitle"), L.Text("settings.startupViewTitle"), L.Text("network.connectionsTitle"), L.Text("settings.fileOperations") };
-            var pages = new[] { appearance, icons, archivePage, viewers, view, network, behavior };
+            var updates=Page(L.Text("updates.title"),L.Text("updates.description"));UpdatePage=new UpdatesView(main);updates.Children.Add(UpdatePage);Closed+=delegate{UpdatePage.Dispose();};
+            var names = new[] { L.Text("settings.appearanceSection"), L.Text("settings.iconsSection"), L.Text("settings.archivesSection"), L.Text("settings.viewersTitle"), L.Text("settings.startupViewTitle"), L.Text("network.connectionsTitle"), L.Text("settings.fileOperations"),L.Text("updates.title") };
+            var pages = new[] { appearance, icons, archivePage, viewers, view, network, behavior,updates };
             ArrangeSettingsPages(pages);
             AddAppearanceChoices(appearance);
             foreach (string name in names) Sections.Items.Add(name);
@@ -188,12 +188,13 @@ namespace FileCompass
                 RefreshArchivePaths();
                 foreach (var input in new[] { imagePath, mediaPath, editorPath, rarPath, arjPath, lhaPath })
                 { string value = input.Text.Trim().Trim('"'); if (ProgramPathChanged(input) && value.Length > 0 && !File.Exists(Environment.ExpandEnvironmentVariables(value))) throw new IOException(L.Text("settings.programNotFound") + "\n" + value); }
-                settings.ImageViewerPath = imagePath.Text.Trim().Trim('"'); settings.MediaPlayerPath = mediaPath.Text.Trim().Trim('"'); settings.TextEditorPath = editorPath.Text.Trim().Trim('"');
+                settings.ImageViewerPath = imagePath.Text.Trim().Trim('"'); settings.MediaPlayerPath = mediaPath.Text.Trim().Trim('"'); settings.TextEditorPath = editorPath.Text.Trim().Trim('"');settings.InternalTextEditor=internalEditor.IsChecked==true;
                 settings.AutoRefresh = automaticRefresh.IsChecked == true; settings.WatchNetworkFolders = networkRefresh.IsChecked == true;
                 settings.InternalCodePreview = internalCodePreview.IsChecked == true; settings.AutomaticFolderViews = automaticFolderViews.IsChecked == true;
                 settings.ShowHiddenFiles = showHidden.IsChecked == true; settings.ShowSystemFiles = showSystem.IsChecked == true;
                 fileBehavior.Apply(); startupPreferences.Apply();
                 settings.WindowBackdrop = new[] { "None", "Mica", "MicaAlt" }[BackdropChoice.SelectedIndex]; settings.ColorTheme = new[] { "Light", "Dark", "System" }[ColorThemeChoice.SelectedIndex];
+                settings.InterfaceMotif = "Balanced";
                 string language = L.SupportedLanguages[LanguageChoice.SelectedIndex];
                 interfaceFont.Read(out settings.InterfaceFontFamily, out settings.InterfaceFontSize); fileListFont.Read(out settings.FileListFontFamily, out settings.FileListFontSize);
             archiveLimits.Apply(archives); archives.WinRarPath = rarPath.Text.Trim().Trim('"'); archives.ArjPath = arjPath.Text.Trim().Trim('"'); archives.LhaPath = lhaPath.Text.Trim().Trim('"');
@@ -206,7 +207,7 @@ namespace FileCompass
                 if(Object.ReferenceEquals(input,rarPath))approvals.Add(archives.RarExecutable());
             }
             foreach(string tool in approvals.Distinct(StringComparer.OrdinalIgnoreCase))ToolTrust.Approve(tool);
-            settings.Save(); archives.Save(); new ToolbarThemeSettings { Theme = selectedTheme, ApplicationIcon = selectedApplicationIcon }.Save();
+            UpdatePage.SavePreferences(); settings.Save(); archives.Save(); new ToolbarThemeSettings { Theme = selectedTheme, ApplicationIcon = selectedApplicationIcon }.Save();
                 L.SaveSelection(language);
                 ApplicationBrand.Apply(selectedApplicationIcon); ToolbarThemeSettings.Current = selectedTheme; if (main != null) { main.ApplyRefreshSettings(settings.AutoRefresh, settings.WatchNetworkFolders); main.ApplyDisplaySettings(settings); main.ApplyToolbarTheme(selectedTheme); }
                 if(L.Language!=language){L.ChangeLanguage(language);LiveLanguage.Refresh(main);}
@@ -229,12 +230,8 @@ namespace FileCompass
             BackdropChoice.SelectionChanged += delegate { if (BackdropChoice.SelectedIndex >= 0) AppearanceTheme.SetBackdrop(new[] { "None", "Mica", "MicaAlt" }[BackdropChoice.SelectedIndex]); };
             BackdropChoice.ToolTip = L.Text("settings.backdropHelp");
             var backdrop = new StackPanel(); backdrop.Children.Add(new TextBlock { Text = L.Text("settings.backdrop"), Margin = new Thickness(0,0,0,5) }); backdrop.Children.Add(BackdropChoice);
-            var themeAndBackdrop = new Grid(); themeAndBackdrop.ColumnDefinitions.Add(new ColumnDefinition()); themeAndBackdrop.ColumnDefinitions.Add(new ColumnDefinition());
-            theme.Margin = new Thickness(0,0,8,0); themeAndBackdrop.Children.Add(theme); Grid.SetColumn(backdrop, 1); themeAndBackdrop.Children.Add(backdrop);
-            var choices = Row(themeAndBackdrop, language); choices.Margin = new Thickness(0,0,0,4); appearance.Children.Insert(2, choices);
+            foreach (var choice in new[] { ColorThemeChoice, BackdropChoice, LanguageChoice }) choice.MinWidth = 0;
+            var choices = Row(theme, backdrop, language); choices.Margin = new Thickness(0,0,0,4); appearance.Children.Insert(2, choices);
         }
     }
 }
-
-
-

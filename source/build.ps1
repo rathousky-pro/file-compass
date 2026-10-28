@@ -1,5 +1,6 @@
 ﻿param([string]$OutputDirectory = '', [switch]$Release)
 $ErrorActionPreference = 'Stop'
+if(!(Test-Path -LiteralPath (Join-Path $PSScriptRoot 'ui\YamlDotNet.dll'))){throw 'Missing YAML editor dependency. Run source/prepare-editor.ps1 first.'}
 & (Join-Path $PSScriptRoot 'gen-plugin-hashes.ps1')
 $framework = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
 $compiler = Join-Path $PSScriptRoot 'downloads\media\roslyn\tasks\net472\csc.exe'
@@ -42,6 +43,7 @@ $appIcon = Join-Path $PSScriptRoot 'assets\file-voyager\FileVoyager-FloppyOrbit.
 $compilerArgs += Join-Path $buildInfoDirectory 'BuildInfo.g.cs'
 $compilerArgs += '/resource:' + (Join-Path $PSScriptRoot 'assets\branding\rathousky-pro.png') + ',FileCompass.Branding.RathouskyPro.png'
 foreach ($catalog in @('cs-CZ','en')) { $compilerArgs += '/resource:' + (Join-Path $PSScriptRoot ('help\' + $catalog + '.json')) + ',FileCompass.Help.' + $catalog + '.json' }
+foreach ($illustration in @(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'help\images') -Filter '*.png' -File -ErrorAction SilentlyContinue)) { $compilerArgs += '/resource:' + $illustration.FullName + ',FileCompass.Help.Images.' + $illustration.Name }
 $compilerArgs += '/win32icon:' + $appIcon
 $compilerArgs += '/win32manifest:' + (Join-Path $PSScriptRoot 'FileVoyager.manifest')
 foreach ($library in Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'ui') -Filter '*.dll') { $compilerArgs += '/reference:' + $library.FullName }

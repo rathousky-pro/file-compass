@@ -33,15 +33,15 @@ namespace FileCompass
         {
             package = selected; use = usePath; configured = existingPath;
             CopyUi.Style(this, owner, L.Text("archivePlugin.title") + " — " + package.Name, 570);
-            var body = new StackPanel { Margin = new Thickness(16) }; Content = body;
+            StackPanel actions;var root=SettingsUx.Frame(this,L.Text("archivePlugin.title"),out actions);var body=new StackPanel{Margin=new Thickness(20,16,20,16)};root.Children.Add(body);
             body.Children.Add(new TextBlock { Text = package.Name, FontSize = 18, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 12) });
             body.Children.Add(new TextBlock { Text = L.Text(package.Installer ? "archivePlugin.winRarLicense" : package == ArchivePluginInstaller.Arj ? "archivePlugin.arjLicense" : "archivePlugin.lhaLicense"), TextWrapping = TextWrapping.Wrap });
             body.Children.Add(new TextBlock { Text = L.Text("archivePlugin.downloadHelp"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 10, 0, 4), Foreground = FluentTheme.Muted });
             var link = CopyUi.Button(L.Text("archivePlugin.publisherAndLicense"), delegate { try { Process.Start(new ProcessStartInfo(package.LicenseUrl) { UseShellExecute = true }); } catch (Exception ex) { status.Text = ex.Message; } }); body.Children.Add(link);
             body.Children.Add(status); body.Children.Add(progress);
-            var actions = FluentTheme.Actions(); body.Children.Add(actions);
-            start = CopyUi.Button(L.Text("archivePlugin.download"), Start); start.IsDefault = true; actions.Children.Add(start);
-            close = CopyUi.Button(L.Text("action.close"), CloseOrCancel); actions.Children.Add(close);
+
+            start = CopyUi.Button(L.Text("archivePlugin.download"), Start); start.IsDefault = true;FluentTheme.Primary(start); actions.Children.Add(start);
+            close = CopyUi.Button(L.Text("action.close"), CloseOrCancel); actions.Children.Add(close);actions.Children.Remove(start);actions.Children.Add(start);
             status.Text = L.Text("archivePlugin.onlyMissing");
             Closing += delegate(object sender, System.ComponentModel.CancelEventArgs e) { if (running) { e.Cancel = true; CloseOrCancel(); } };
             Closed += delegate { OpenWindows.Remove(package.Id); if (cancellation != null) cancellation.Dispose(); };
@@ -103,4 +103,3 @@ namespace FileCompass
         }
     }
 }
-

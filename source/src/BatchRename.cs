@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -13,8 +13,10 @@ namespace FileCompass
         public bool Regex, CaseSensitive, IncludeExtension = true;
         public int Start = 1, Step = 1, Digits = 1, LetterCase;
     }
-    public sealed class RenameRow
+    public sealed class RenameRow : System.ComponentModel.INotifyPropertyChanged
     {
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+        internal void Update(RenameRow row) { NewName=row.NewName; Warning=row.Warning; var changed=PropertyChanged; if(changed!=null)foreach(string key in new[]{"NewName","Warning","Changed","Status","NewPath"})changed(this,new System.ComponentModel.PropertyChangedEventArgs(key)); }
         public string Path { get; set; }
         public string OldName { get; set; }
         public string NewName { get; set; }
@@ -111,4 +113,3 @@ namespace FileCompass
         }
     }
 }
-

@@ -22,11 +22,8 @@ namespace FileCompass {
         internal ArchivePreparationReporter(Action<string> report, string root = null) { this.report = report; this.root = root; }
         internal void Visit(string path) { string prefix = root == null ? null : root.TrimEnd(System.IO.Path.DirectorySeparatorChar) + System.IO.Path.DirectorySeparatorChar; state.Path = prefix != null && path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ? path.Substring(prefix.Length) : path; state.Items++; Send(); }
         internal void Copied(long bytes) { state.Bytes += bytes; Send(); }
+        internal void Discard(long bytes){state.Bytes=Math.Max(0,state.Bytes-bytes);state.Items=Math.Max(0,state.Items-1);Send();}
         internal void Complete() { if (report != null) report(state.Encode()); }
         void Send() { if (report != null && (!sent || clock.ElapsedMilliseconds >= 150)) { sent = true; clock.Restart(); report(state.Encode()); } }
     }
 }
-
-
-
-

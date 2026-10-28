@@ -1,0 +1,11 @@
+﻿using System;using System.IO;using System.Linq;using System.Collections.Generic;using System.Windows;using System.Windows.Controls;using System.Windows.Controls.Primitives;
+namespace FileCompass {
+ public sealed class RenameHistoryData {public string[] Names=new string[0],Find=new string[0],Replace=new string[0];}
+ internal static class RenameHistory {
+  const string FileName="rename-history.xml";
+  internal static RenameHistoryData Load(){try{return WorkflowStore.Load<RenameHistoryData>(FileName);}catch(IOException){return new RenameHistoryData();}catch(UnauthorizedAccessException){return new RenameHistoryData();}catch(InvalidOperationException){return new RenameHistoryData();}}
+  internal static string[] Push(string[] old,string value){return new[]{value??""}.Concat(old??new string[0]).Distinct(StringComparer.Ordinal).Take(10).ToArray();}
+  internal static void Remember(string name,string find,string replace){try{WorkflowStore.Edit<RenameHistoryData>(FileName,data=>{data.Names=Push(data.Names,name);data.Find=Push(data.Find,find);data.Replace=Push(data.Replace,replace);});}catch(IOException){}catch(UnauthorizedAccessException){}catch(InvalidOperationException){}}
+  internal static void Attach(Panel parent,TextBox input,Func<string[]> values){int index=parent.Children.IndexOf(input);var margin=input.Margin;parent.Children.Remove(input);input.Margin=new Thickness(0);var host=new DockPanel{Margin=margin,LastChildFill=true};var button=new Button{Content="▾",Width=24,Padding=new Thickness(0),ToolTip=L.Text("rename.recentValues")};DockPanel.SetDock(button,Dock.Right);host.Children.Add(button);host.Children.Add(input);parent.Children.Insert(index,host);var menu=new ContextMenu{PlacementTarget=host,Placement=PlacementMode.Bottom,MinWidth=220,MaxHeight=320};button.Click+=delegate{menu.Items.Clear();foreach(string value in (values()??new string[0]).Distinct().Take(10)){string chosen=value;var item=new MenuItem{Header=String.IsNullOrEmpty(value)?L.Text("rename.emptyValue"):value};item.Click+=delegate{input.Text=chosen;input.Focus();input.CaretIndex=input.Text.Length;};menu.Items.Add(item);}if(menu.Items.Count==0)menu.Items.Add(new MenuItem{Header=L.Text("rename.noRecentValues"),IsEnabled=false});menu.IsOpen=true;};input.Unloaded+=delegate{menu.IsOpen=false;};}
+ }
+}

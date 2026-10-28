@@ -1,0 +1,26 @@
+#if APP_TESTS
+using System;using System.IO;using System.Linq;using System.Collections.Generic;using System.Windows;using System.Windows.Controls;using System.Windows.Threading;using ImageMagick;
+namespace FileCompass {
+ internal static class OpenMpMediaTests {
+  internal static int Run(string root){Directory.CreateDirectory(root);var checks=new List<string>();Window window=null;UpdatesView view=null;Action<bool,string> check=(ok,text)=>{if(!ok)throw new Exception(text);checks.Add(text);};
+   try{
+    check(MediaCpuBudget.ImageThreads(4,8,"JPEG")==1&&MediaCpuBudget.AudioThreads(4,8)==1,"eight whole-file workers on four CPU threads receive one internal thread each");
+    check(MediaCpuBudget.ImageThreads(16,4,"JPEG")==2&&MediaCpuBudget.ImageThreads(16,1,"JPEG")==4&&MediaCpuBudget.ImageThreads(16,1,"WebP")==8,"single image and batches receive measured format-aware OpenMP budgets");
+    bool bounded=true;foreach(int cpu in new[]{1,2,4,8,16,32,64})foreach(int files in new[]{1,2,3,4,6,8}){int budget=Math.Max(1,cpu/files);bounded&=MediaCpuBudget.ImageThreads(cpu,files,"WebP")<=budget&&MediaCpuBudget.AudioThreads(cpu,files)<=budget;}check(bounded,"internal thread budgets respect CPU share across all supported file concurrency choices");
+    check(PluginHashes.Expected.ContainsKey("media\\Magick.Native-Q8-OpenMP-x64.dll")&&PluginHashes.Expected.ContainsKey("media\\vcomp140.dll")&&PluginHashes.Expected.ContainsKey("libraries\\Magick.NET-Q8-OpenMP-x64.dll")&&!PluginHashes.Expected.ContainsKey("media\\Magick.Native-Q8-x64.dll"),"integrity pins include the matching OpenMP managed/native/runtime set and exclude the old native engine");
+    using(PluginIntegrity.Acquire("media\\Magick.Native-Q8-OpenMP-x64.dll","media\\vcomp140.dll")){
+     MagickNET.SetNativeLibraryDirectory(Path.Combine(PluginIntegrity.PluginRoot,"media"));check(MagickNET.Features.Contains("OpenMP"),"bundled image runtime actually reports OpenMP support");ResourceLimits.Thread=4;check(ResourceLimits.Thread==4,"bundled image runtime accepts four internal OpenMP threads");
+     bool locked=false;try{using(var file=new FileStream(Path.Combine(PluginIntegrity.PluginRoot,"media","vcomp140.dll"),FileMode.Open,FileAccess.Write,FileShare.Read)){} }catch(IOException){locked=true;}check(locked,"OpenMP runtime remains locked against replacement while leased");
+    }
+    check(!VendorUpdates.Ids.Contains("imagemagick")&&VendorUpdates.Files("ffmpeg").SequenceEqual(new[]{"media\\ffmpeg.exe","media\\ffprobe.exe"}),"FFmpeg independent updates cannot replace OpenMP or its runtime");
+    System.Threading.SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));L.ChangeLanguage("cs-CZ");FluentTheme.Ensure();view=new UpdatesView(null);window=new Window();CopyUi.Style(window,null,L.Text("updates.title"),900);window.Content=view;window.Left=-18000;window.Top=-18000;window.WindowStartupLocation=WindowStartupLocation.Manual;window.ShowActivated=false;window.Show();window.UpdateLayout();
+    var row=view.Items.Items.Cast<UpdateRow>().Single(x=>x.Id=="imagemagick");view.Items.SelectedItem=row;check(row.Installed=="15.0.0"&&row.Status==L.Text("updates.withApp"),"settings show installed OpenMP version as an application-bound component");check(!FluentUiTests.Children<Button>(view).Single(x=>Convert.ToString(x.Content)==L.Text("updates.download")).IsEnabled&&FluentUiTests.Children<TextBlock>(view).Any(x=>x.Text==L.Text("updates.imageMagickHelp")),"settings explain compatible runtime updates and prohibit a mismatched standalone download");NextStageTests.Draw(window,Path.Combine(root,"openmp-updates.png"));
+    string inputs=Directory.CreateDirectory(Path.Combine(root,"inputs")).FullName,outputs=Directory.CreateDirectory(Path.Combine(root,"outputs")).FullName;var imagePaths=new List<string>();
+    for(int i=0;i<8;i++){string path=Path.Combine(inputs,"image-"+i+".png");var encoder=new System.Windows.Media.Imaging.PngBitmapEncoder();encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(System.Windows.Media.Imaging.BitmapSource.Create(2,2,96,96,System.Windows.Media.PixelFormats.Bgr24,null,new byte[12],6)));using(var stream=File.Create(path))encoder.Save(stream);imagePaths.Add(path);}
+    var batch=new MediaConverterWindow(null,imagePaths.ToArray(),outputs,true,delegate{},delegate{}){Left=-18000,Top=-18000,ShowActivated=false,WindowStartupLocation=WindowStartupLocation.Manual};try{batch.Show();NavigationTests.Wait(batch.AnalysisTask);batch.Parallelism.SelectedItem="8";NavigationTests.Wait(batch.ConvertRows());check(batch.PeakActive==8,"choosing eight simultaneous files still starts eight whole-file workers");check(batch.Rows.All(x=>!x.Included&&File.Exists(x.Target))&&Directory.GetFiles(outputs,"*.png").Length==8,"eight independent complete image outputs pass verification with OpenMP enabled");}finally{batch.Close();}
+    File.WriteAllLines(Path.Combine(root,"result.txt"),checks.Concat(new[]{"PASS: "+checks.Count+" checks"}));return 0;
+   }catch(Exception ex){File.WriteAllLines(Path.Combine(root,"result.txt"),checks.Concat(new[]{"FAIL: "+ex}));return 1;}finally{if(view!=null)view.Dispose();if(window!=null)window.Close();}
+  }
+ }
+}
+#endif

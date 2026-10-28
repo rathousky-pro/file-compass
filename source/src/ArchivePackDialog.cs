@@ -15,6 +15,7 @@ namespace FileCompass
         public long VolumeBytes;
         public bool? NewestFileDate;
         public bool Paths = true, Recursive = true, Separate, ExcludeBase;
+        internal ArchiveInputPolicy Inputs;
     }
     public sealed class ArchivePackDialog : Window
     {
@@ -23,45 +24,50 @@ namespace FileCompass
         public ArchivePackOptions Options { get; private set; }
         public ArchivePackDialog(Window owner, int count, string initial)
         {
-            CopyUi.Style(this, owner, L.Text("archive.packDialogTitle"), 730);
-            var body = new DockPanel { Margin = new Thickness(8) }; Content = body;
-            var buttons = FluentTheme.Actions(); DockPanel.SetDock(buttons, Dock.Bottom); body.Children.Add(buttons);
-            var right = new StackPanel { Width = 216, Margin = new Thickness(12, 0, 0, 4) }; DockPanel.SetDock(right, Dock.Right); body.Children.Add(right);
-            var compression = new DockPanel(); right.Children.Add(compression);
-            var level = new ComboBox { Width = 60, MinWidth = 0 }; for (int i = 0; i <= 9; i++) level.Items.Add(i); level.SelectedIndex = 6;
-            level.ToolTip = L.Text("archive.memoryPolicy");
-            DockPanel.SetDock(level, Dock.Right); compression.Children.Add(level); compression.Children.Add(CopyUi.Label(L.Text("archive.compressionLevelLabel")));
-            var group = new GroupBox { Header = L.Text("archive.archiverLabel"), Padding = new Thickness(10), Margin = new Thickness(0, 8, 0, 0) }; right.Children.Add(group);
-            var choices = new StackPanel(); group.Content = choices;
-            var radios = new UniformGrid { Columns = 2 }; choices.Children.Add(radios);
-            foreach (string name in new[] { "ZIP", "RAR*", "7-ZIP", "TAR", "GZ", "ARJ*", "LHA*" })
-            {
-                string extension = name == "7-ZIP" ? "7z" : name == "LHA*" ? "lzh" : name.TrimEnd('*').ToLowerInvariant();
-                var radio = new RadioButton { Content = name, GroupName = "ArchiveFormat", Margin = new Thickness(1, 3, 1, 3), IsEnabled = true };
-                if (!radio.IsEnabled) radio.ToolTip = L.Text("archive.createFormatUnsupported");
-                ToolTipService.SetShowOnDisabled(radio, true);
-                radio.Checked += delegate { level.IsEnabled = extension != "tar" && extension != "arj" && extension != "lzh"; format = extension; target.Text = ChangeFormat(target.Text, extension); };
-                radios.Children.Add(radio); if (extension == "zip") radio.IsChecked = true;
-            }
-            choices.Children.Add(new TextBlock { Text = L.Text("archive.formatCreationHelp"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 4) }); choices.Children.Add(CopyUi.Button(L.Text("action.settings"), delegate { new ConfigurationDialog(this, L.Text("settings.archivesSection")).ShowDialog(); }));
-            var left = new StackPanel(); body.Children.Add(new GroupBox { Header = L.Text("archive.filesAndOptionsGroup"), Content = left, Margin = new Thickness(0) });
-            left.Children.Add(CopyUi.Label(L.Text("archive.totalFilesPrefix") + count + L.Text("archive.targetQuestionSuffix"))); target.Text = initial; left.Children.Add(target);
-            Func<string, bool, CheckBox> add = delegate(string text, bool value) { var check = new CheckBox { Content = text, IsChecked = value, Margin = new Thickness(2, 3, 0, 3) }; left.Children.Add(check); return check; };
-            var paths = add(L.Text("archive.preservePaths"), true);
-            var recursive = add(L.Text("archive.includeSubfolders"), true);
-            var volumes = add(L.Text("archive.multiVolume"), false);
-            var volumeSize = new ComboBox { IsEditable = true, ItemsSource = new[] { "100 MB", "700 MB", "4 GB" }, Text = "100 MB", IsEnabled = false, Margin = new Thickness(18,1,5,4) }; left.Children.Add(volumeSize);
-            volumes.Checked += delegate { volumeSize.IsEnabled = true; }; volumes.Unchecked += delegate { volumeSize.IsEnabled = false; };
-            var move = add(L.Text("archive.moveInto"), false); move.ToolTip = L.Text("archive.moveVerificationHelp");
-            foreach (string label in new[] { L.Text("archive.selfExtracting") })
-            { var check = add(label, false); check.IsEnabled = false; check.ToolTip = L.Text("common.optionNotSupported"); ToolTipService.SetShowOnDisabled(check, true); }
-            var separate = add(L.Text("archive.separatePerSelection"), false);
-            var exclude = add(L.Text("archive.omitBaseFolder"), false); exclude.Margin = new Thickness(18, 3, 0, 3); exclude.IsEnabled = false;
-            separate.Checked += delegate { exclude.IsEnabled = true; }; separate.Unchecked += delegate { exclude.IsEnabled = false; exclude.IsChecked = false; };
-            var password = add(L.Text("archive.setPassword"), false);
-            var secret = new PasswordBox { Margin = new Thickness(18, 1, 5, 4), Visibility = Visibility.Collapsed }; left.Children.Add(secret);
-            password.Checked += delegate { secret.Visibility = Visibility.Visible; secret.Focus(); }; password.Unchecked += delegate { secret.Visibility = Visibility.Collapsed; secret.Clear(); };
-            var ok = CopyUi.Button("OK", delegate
+            CopyUi.Style(this, owner, L.Text("archive.packDialogTitle"), 780);
+            var layout=new OperationDialogLayout(this,L.Text("archive.packDialogTitle"),L.Text("archive.totalFilesPrefix")+count+L.Text("archive.targetQuestionSuffix"));
+            var body=layout.AddPage(L.Text("operation.basic"));var buttons=layout.Actions;
+            var volumesPage=layout.AddPage(L.Text("operation.volumes"));
+            var filesPage=layout.AddPage(L.Text("operation.files"));
+            var passwordPage=layout.AddPage(L.Text("operation.security"));
+            var toolsPage=layout.AddPage(L.Text("operation.tools"));
+            var destinationGroup=OperationDialogLayout.Group(body,L.Text("copy.designDestination"));target.Text=initial;
+            var targetRow=new DockPanel();destinationGroup.Children.Add(targetRow);targetRow.Children.Add(target);
+            var compressionGroup=OperationDialogLayout.Group(body,L.Text("operation.format"));
+            var settingsRow=new Grid();settingsRow.ColumnDefinitions.Add(new ColumnDefinition());settingsRow.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(140)});compressionGroup.Children.Add(settingsRow);
+            var formatPanel=new StackPanel{Margin=new Thickness(0,0,12,0)};settingsRow.Children.Add(formatPanel);OperationDialogLayout.Label(formatPanel,L.Text("archive.archiverLabel"));
+            var formats=new ComboBox{ItemsSource=new[]{"ZIP","7-ZIP","RAR*","TAR","GZ","ARJ*","LHA*"},SelectedIndex=0};formatPanel.Children.Add(formats);
+            var levelPanel=new StackPanel();Grid.SetColumn(levelPanel,1);settingsRow.Children.Add(levelPanel);OperationDialogLayout.Label(levelPanel,L.Text("archive.compressionLevelLabel"));
+            var level=new ComboBox();for(int i=0;i<=9;i++)level.Items.Add(i);level.SelectedIndex=6;level.ToolTip=L.Text("archive.memoryPolicy");levelPanel.Children.Add(level);
+            var contents=OperationDialogLayout.Group(body,L.Text("operation.contents"));
+            Func<Panel,string,bool,CheckBox> add=delegate(Panel panel,string text,bool value){var check=new CheckBox{Content=text,IsChecked=value,Margin=new Thickness(0,4,0,4)};panel.Children.Add(check);return check;};
+            var paths=add(contents,L.Text("archive.preservePaths"),true);var recursive=add(contents,L.Text("archive.includeSubfolders"),true);
+            var volumesGroup=OperationDialogLayout.Group(volumesPage,L.Text("operation.volumes"));
+            var volumes=add(volumesGroup,L.Text("archive.multiVolume"),false);
+            var volumeSize=new ComboBox{IsEditable=true,ItemsSource=new[]{"100 MB","700 MB","4 GB"},Text="100 MB",IsEnabled=false,Margin=new Thickness(0,8,0,0)};volumesGroup.Children.Add(volumeSize);
+            volumes.Checked+=delegate{volumeSize.IsEnabled=true;};volumes.Unchecked+=delegate{volumeSize.IsEnabled=false;};
+            var filesGroup=OperationDialogLayout.Group(filesPage,L.Text("operation.files"));
+            var move=add(filesGroup,L.Text("archive.moveInto"),false);move.ToolTip=L.Text("archive.moveVerificationHelp");
+            var separate=add(filesGroup,L.Text("archive.separatePerSelection"),false);
+            var exclude=add(filesGroup,L.Text("archive.omitBaseFolder"),false);exclude.IsEnabled=false;exclude.Margin=new Thickness(18,4,0,4);
+            separate.Checked+=delegate{exclude.IsEnabled=true;};separate.Unchecked+=delegate{exclude.IsEnabled=false;exclude.IsChecked=false;};
+            var passwordGroup=OperationDialogLayout.Group(passwordPage,L.Text("operation.security"));
+            var password=add(passwordGroup,L.Text("archive.setPassword"),false);
+            var secret=new PasswordBox{Margin=new Thickness(0,8,0,0),IsEnabled=false};passwordGroup.Children.Add(secret);
+            password.Checked+=delegate{secret.IsEnabled=true;secret.Focus();};password.Unchecked+=delegate{secret.IsEnabled=false;secret.Clear();};
+            var toolsGroup=OperationDialogLayout.Group(toolsPage,L.Text("operation.tools"));
+            toolsGroup.Children.Add(new TextBlock{Text=L.Text("archive.formatCreationHelp"),TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,0,0,10)});
+            toolsGroup.Children.Add(CopyUi.Button(L.Text("action.settings"),delegate{new ConfigurationDialog(this,L.Text("settings.archivesSection")).ShowDialog();}));
+            var sfx=add(toolsGroup,L.Text("archive.selfExtracting"),false);sfx.IsEnabled=false;sfx.ToolTip=L.Text("common.optionNotSupported");ToolTipService.SetShowOnDisabled(sfx,true);
+            toolsGroup.Children.Add(CopyUi.Button(L.Text("action.help"),delegate{HelpService.Open(this,"archives");}));
+            Action applyFormat=delegate{
+                string name=(string)formats.SelectedItem;format=name=="7-ZIP"?"7z":name=="LHA*"?"lzh":name.TrimEnd('*').ToLowerInvariant();
+                level.IsEnabled=format!="tar"&&format!="lzh";
+                level.ToolTip=L.Text(level.IsEnabled?"archive.compressionQualityHelp":"archive.fixedCompressionHelp");ToolTipService.SetShowOnDisabled(level,true);target.Text=ChangeFormat(target.Text,format);
+                bool supported=format=="zip"||format=="7z";volumes.IsEnabled=password.IsEnabled=supported;
+                if(!supported){volumes.IsChecked=false;password.IsChecked=false;}
+            };formats.SelectionChanged+=delegate{applyFormat();};applyFormat();
+            var ok = CopyUi.Button(L.Text("action.compressArchive"), delegate
             {
                 try
                 {
@@ -81,14 +87,15 @@ namespace FileCompass
                 }
                 catch (ArchiveToolMissingException ex) { new ConfigurationDialog(this, L.Text("settings.archivesSection"), ex.Message).ShowDialog(); }
                 catch (Exception ex) { MessageBox.Show(this, ex.Message, L.Text("action.compressArchive")); }
-            }); ok.IsDefault = true; buttons.Children.Add(ok);
-            buttons.Children.Add(CopyUi.Button(L.Text("panel.treeLabel"), delegate
+            }); ok.IsDefault = true; FluentTheme.Primary(ok);
+            var browse=CopyUi.Button(L.Text("action.browse"), delegate
             {
                 using (var picker = new System.Windows.Forms.FolderBrowserDialog { SelectedPath = Path.GetDirectoryName(target.Text) })
                     if (picker.ShowDialog() == System.Windows.Forms.DialogResult.OK) target.Text = Path.Combine(picker.SelectedPath, Path.GetFileName(target.Text));
-            }));
-            var cancel = CopyUi.Button(L.Text("action.cancel"), delegate { DialogResult = false; }); cancel.IsCancel = true; buttons.Children.Add(cancel);
-            buttons.Children.Add(CopyUi.Button(L.Text("action.help"), delegate { HelpService.Open(this,"archives"); }));
+            });
+            DockPanel.SetDock(browse,Dock.Right);targetRow.Children.Remove(target);targetRow.Children.Add(browse);targetRow.Children.Add(target);
+            var cancel = CopyUi.Button(L.Text("action.cancel"), delegate { DialogResult = false; }); cancel.IsCancel = true; buttons.Children.Add(cancel); buttons.Children.Add(ok);
+
             Loaded += delegate { target.Focus(); target.SelectAll(); };
         }
         internal static string ChangeFormat(string path, string format)
@@ -98,4 +105,3 @@ namespace FileCompass
         }
     }
 }
-

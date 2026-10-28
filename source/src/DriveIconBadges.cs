@@ -1,0 +1,18 @@
+using System;using System.IO;using System.Globalization;using System.Runtime.InteropServices;using System.Collections.Concurrent;using System.Windows;using System.Windows.Controls;using System.Windows.Data;using System.Windows.Media;using Microsoft.Win32.SafeHandles;
+namespace FileCompass {
+ public static partial class DesktopIcons {
+  static readonly ConcurrentDictionary<Tuple<ImageSource,bool,bool>,ImageSource> badges=new ConcurrentDictionary<Tuple<ImageSource,bool,bool>,ImageSource>();
+  public static ImageSource DriveBadge(ImageSource original,bool external,bool ext){if(!external&&!ext)return original;return badges.GetOrAdd(Tuple.Create(original,external,ext),key=>{var group=new DrawingGroup();using(var dc=group.Open()){dc.DrawImage(original,new Rect(0,0,32,32));if(external){double x=ext?1:19;dc.DrawRoundedRectangle(Brushes.DodgerBlue,new Pen(Brushes.White,1),new Rect(x,20,12,12),2,2);var g=Geometry.Parse("M "+(x+2)+",27 L "+(x+6)+",22 L "+(x+10)+",27 Z");dc.DrawGeometry(Brushes.White,null,g);dc.DrawRectangle(Brushes.White,null,new Rect(x+2,29,8,1));}if(ext){dc.DrawRoundedRectangle(Brushes.DarkSlateBlue,new Pen(Brushes.White,1),new Rect(15,22,17,10),2,2);var text=new FormattedText("EXT",CultureInfo.InvariantCulture,FlowDirection.LeftToRight,new Typeface("Segoe UI"),7,Brushes.White,1);dc.DrawText(text,new Point(16,22));}}group.Freeze();var image=new DrawingImage(group);image.Freeze();return image;});}
+ }
+ internal static class DriveMedia {
+  [DllImport("kernel32.dll",CharSet=CharSet.Unicode)]static extern SafeFileHandle CreateFileW(string path,uint access,uint sharing,IntPtr security,uint mode,uint flags,IntPtr template);
+  [DllImport("kernel32.dll")]static extern bool DeviceIoControl(SafeFileHandle h,uint code,byte[] input,int inputSize,byte[] output,int outputSize,out int returned,IntPtr overlapped);
+  internal static bool External(string root){try{var drive=new DriveInfo(root);if(drive.DriveType==DriveType.Removable)return true;if(drive.DriveType!=DriveType.Fixed)return false;using(var h=CreateFileW(@"\\.\"+root.Substring(0,2),0,3,IntPtr.Zero,3,0,IntPtr.Zero)){if(h.IsInvalid)return false;var data=new byte[1024];int got;if(!DeviceIoControl(h,0x2d1400,new byte[12],12,data,data.Length,out got,IntPtr.Zero)||got<36)return false;uint bus=BitConverter.ToUInt32(data,28);return bus==7||bus==4||bus==12||bus==13;}}catch{return false;}}
+ }
+ internal sealed class ExtDriveIconConverter:IValueConverter {
+  readonly bool external;internal ExtDriveIconConverter(bool removable){external=removable;}
+  public object Convert(object value,Type type,object parameter,CultureInfo culture){var source=value as ExtSource;return DesktopIcons.DriveBadge(DesktopIcons.StockIcon(source!=null&&source.Physical?7:8),source!=null?source.Physical:external,value is ExtVolume);}
+  public object ConvertBack(object value,Type type,object parameter,CultureInfo culture){throw new NotSupportedException();}
+  internal static DataTemplate Template(bool external){var row=new FrameworkElementFactory(typeof(StackPanel));row.SetValue(StackPanel.OrientationProperty,Orientation.Horizontal);var image=new FrameworkElementFactory(typeof(Image));image.SetValue(FrameworkElement.WidthProperty,20.0);image.SetValue(FrameworkElement.HeightProperty,20.0);image.SetValue(FrameworkElement.MarginProperty,new Thickness(0,0,6,0));image.SetBinding(Image.SourceProperty,new Binding{Converter=new ExtDriveIconConverter(external)});row.AppendChild(image);var label=new FrameworkElementFactory(typeof(TextBlock));label.SetValue(FrameworkElement.VerticalAlignmentProperty,VerticalAlignment.Center);label.SetBinding(TextBlock.TextProperty,new Binding());row.AppendChild(label);return new DataTemplate{VisualTree=row};}
+ }
+}

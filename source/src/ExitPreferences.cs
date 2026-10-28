@@ -25,7 +25,7 @@ namespace FileCompass
             if (stored.SaveTabsOnExit) { stored.LeftTabIndex = current.LeftTabIndex; stored.RightTabIndex = current.RightTabIndex; }
         }
         static SavedTab Copy(SavedTab tab)
-        { return new SavedTab { Projection = tab.Projection, Filter = tab.Filter, Path = tab.Path, Home = tab.Home, Label = tab.Label, Caption = tab.Caption, ProfileId = tab.ProfileId, ArchiveFile = tab.ArchiveFile, ArchivePrefix = tab.ArchivePrefix, Locked = tab.Locked, View = tab.View }; }
+        { return new SavedTab { ExtSource=tab.ExtSource,ExtVolume=tab.ExtVolume,Projection = tab.Projection, Filter = tab.Filter, Path = tab.Path, Home = tab.Home, Label = tab.Label, Caption = tab.Caption, ProfileId = tab.ProfileId, ArchiveFile = tab.ArchiveFile, ArchivePrefix = tab.ArchivePrefix, Locked = tab.Locked, View = tab.View }; }
         static SavedTab[] MergeTabs(SavedTab[] previous, SavedTab[] current, int selected, PanelView fallback, bool saveTabs, bool saveView)
         {
             previous = previous ?? new SavedTab[0]; current = current ?? new SavedTab[0];
@@ -78,4 +78,3 @@ namespace FileCompass
         [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr window, int command);
     }
 }
-

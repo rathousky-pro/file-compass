@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
@@ -37,19 +37,19 @@ namespace FileCompass {
                 string junction=Path.Combine(scope,"external-link");var link=System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("cmd.exe","/c mklink /J \""+junction+"\" \""+fixture+"\""){UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true});link.WaitForExit();
                 check(link.ExitCode==0,"Recursive junction fixture can be created");
                 var linked=DiskAnalysis.Scan(scope,CancellationToken.None,null,clock);check(linked.Root.Bytes==result.Root.Bytes&&linked.Skipped==1&&linked.Issues.Any(x=>x.Contains(junction)),"Junctions are skipped, reported, and cannot escape the root or form cycles");
-                AppearanceTheme.Apply("Light");window=new DiskAnalyzerWindow(null,scope,null){Left=-18000,Top=-18000,ShowActivated=false,WindowStartupLocation=WindowStartupLocation.Manual};window.Show();NavigationTests.Wait(window.ScanTask);window.UpdateLayout();
+                AppearanceTheme.Apply("Light");window=new DiskAnalyzerWindow(null,scope,null,true){Left=-18000,Top=-18000,ShowActivated=false,WindowStartupLocation=WindowStartupLocation.Manual};window.Show();NavigationTests.Wait(window.ScanTask);window.UpdateLayout();
                 check(window.Result!=null&&window.Result.Root.Files==4,"Analyzer window starts scanning the supplied current folder automatically");
                 for(int group=0;group<4;group++)for(int metric=0;metric<2;metric++) {window.GroupChoice.SelectedIndex=group;window.MetricChoice.SelectedIndex=metric;window.UpdateChart();check(Math.Abs(window.Chart.Rows.Sum(x=>x.Value)-(metric==0?result.Root.Bytes:result.Root.Files))<.01,"Chart totals match recursive scope: group "+group+", metric "+metric);}
                 window.GroupChoice.SelectedIndex=2;window.MetricChoice.SelectedIndex=0;window.ChartChoice.SelectedIndex=0;window.UpdateLayout();NextStageTests.Draw(window,Path.Combine(root,"age-pie.png"));
                 window.ChartChoice.SelectedIndex=1;check(!window.Chart.Pie,"Bar and pie chart switch shares the same data");window.UpdateLayout();NextStageTests.Draw(window,Path.Combine(root,"age-bars.png"));
-                var treeRoot=(TreeViewItem)window.Folders.Items[0];var childItem=treeRoot.Items.Cast<TreeViewItem>().Single(x=>((DiskFolder)x.Tag).Path==child);window.GroupChoice.SelectedIndex=0;childItem.IsSelected=true;
+                var treeRoot=(TreeViewItem)window.Folders.Items[0];window.UpdateLayout();var childModel=treeRoot.Items.Cast<DiskFolder>().Single(x=>x.Path==child);var childItem=(TreeViewItem)treeRoot.ItemContainerGenerator.ContainerFromItem(childModel);window.GroupChoice.SelectedIndex=0;childItem.IsSelected=true;
                 check(window.Chart.Rows.Sum(x=>x.Bytes)==3002000,"Selecting a nested tree folder drills the folder chart into that folder");
                 var originalResult=window.Result;var synthetic=new DiskAnalysis{Root=new DiskFolder{Path=scope,Bytes=140,Files=14}};for(int i=0;i<14;i++)synthetic.Extensions[".type"+i]=new DiskBucket{Name=".type"+i,Bytes=10,Files=1};
                 window.Result=synthetic;window.GroupChoice.SelectedIndex=1;window.UpdateChart();check(window.Chart.Rows.Count==10&&window.Chart.Rows.Sum(x=>x.Bytes)==140&&window.Chart.Rows.Last().Files==5,"Small categories are grouped into Other without losing totals");
                 window.Result=new DiskAnalysis{Root=new DiskFolder{Path=scope}};window.UpdateChart();window.UpdateLayout();NextStageTests.Draw(window,Path.Combine(root,"empty.png"));check(window.Chart.Rows.Count==0,"Empty folders produce an empty chart without invalid percentages");
                 window.Result=originalResult;window.GroupChoice.SelectedIndex=0;window.UpdateChart();AppearanceTheme.Apply("Dark");window.UpdateLayout();NextStageTests.Draw(window,Path.Combine(root,"dark.png"));window.Close();window=null;
                 L.LoadForTests(languageFolder,"en");check(L.Text("analyzer.title")=="Disk space analyzer"&&L.Text("analyzer.byAge")=="By age","Analyzer labels are available in English");
-                window=new DiskAnalyzerWindow(null,scope,null){Left=-18000,Top=-18000,ShowActivated=false,WindowStartupLocation=WindowStartupLocation.Manual,Width=800,Height=560};window.Show();NavigationTests.Wait(window.ScanTask);window.UpdateLayout();NextStageTests.Draw(window,Path.Combine(root,"english-small.png"));
+                window=new DiskAnalyzerWindow(null,scope,null,true){Left=-18000,Top=-18000,ShowActivated=false,WindowStartupLocation=WindowStartupLocation.Manual,Width=800,Height=560};window.Show();NavigationTests.Wait(window.ScanTask);window.UpdateLayout();NextStageTests.Draw(window,Path.Combine(root,"english-small.png"));
                 check(window.Chart.ActualWidth>200&&window.Chart.ActualHeight>=100,"Compact window retains a usable chart");
                 File.WriteAllLines(Path.Combine(root,"result.txt"),checks.Concat(new[]{"PASS: "+checks.Count+" checks"}));return 0;
             } catch(Exception ex){File.WriteAllText(Path.Combine(root,"result.txt"),"FAIL: "+ex);return 1;}
@@ -57,14 +57,14 @@ namespace FileCompass {
         }
         internal static void CheckFolderAlignment(DiskAnalyzerWindow window,string root,Action<bool,string> check) {
             var treeRoot=(TreeViewItem)window.Folders.Items[0];
-            foreach(TreeViewItem child in treeRoot.Items)if(child.Tag!=null)child.IsExpanded=true;
+            window.UpdateLayout();foreach(var model in treeRoot.Items){var child=treeRoot.ItemContainerGenerator.ContainerFromItem(model) as TreeViewItem;if(child!=null)child.IsExpanded=true;}
             NavigationTests.Wait(System.Threading.Tasks.Task.Delay(50));window.UpdateLayout();
                 var folderRows=AdvancedToolsTests.Visual<System.Windows.Controls.Grid>(window.Folders).Where(x=>Convert.ToString(x.Tag)=="analyzer.folderRow").ToArray();
                 check(folderRows.Length>=4,"Folder rows retain lazy expansion and display nested folders");
                 Func<int,double[]> rightEdges=column=>folderRows.Select(row=>((TextBlock)row.Children[column]).TranslatePoint(new Point(((TextBlock)row.Children[column]).ActualWidth,0),window.Folders).X).ToArray();
                 var sizeEdges=rightEdges(1);var countEdges=rightEdges(2);
                 check(sizeEdges.Max()-sizeEdges.Min()<1&&countEdges.Max()-countEdges.Min()<1,"Size and file-count columns align across parent, child and grandchild rows");
-                check(folderRows.All(row=>row.ColumnDefinitions.Count==3)&&ScrollViewer.GetHorizontalScrollBarVisibility(window.Folders)==ScrollBarVisibility.Disabled,"Folder names use a separate flexible column without horizontal overflow");
+                check(folderRows.All(row=>row.ColumnDefinitions.Count==4)&&ScrollViewer.GetHorizontalScrollBarVisibility(window.Folders)==ScrollBarVisibility.Disabled,"Folder names use a separate flexible column without horizontal overflow");
                 NextStageTests.Draw(window,Path.Combine(root,"aligned-folders.png"));
 
         }

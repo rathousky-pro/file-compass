@@ -19,6 +19,7 @@ namespace FileCompass
             internal SavedTab Saved = new SavedTab();
             internal RemoteConnection Remote;
             internal bool Pending;
+            internal string Error;
             internal ArchiveDocument Archive;
             internal string ReturnPath, Cursor;
             internal Tuple<ArchiveDocument, string>[] Parents;
@@ -30,6 +31,8 @@ namespace FileCompass
         readonly StackPanel tabStrip = new StackPanel { Orientation = Orientation.Horizontal };
         readonly DockPanel tabRow = new DockPanel { LastChildFill = true, Background = CompactTheme.PanelSurface, Height = 34 };
         DockPanel panelPathRow;
+        Border activeTabFace;
+        internal Action<FilePanel> BookmarksRequested;
         readonly StackPanel crumbs = new StackPanel { Orientation = Orientation.Horizontal };
         readonly ScrollViewer crumbScroll = new ScrollViewer { HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, ClipToBounds = true };
         readonly TextBox quickText = new TextBox { Width = 220, MinHeight = 24, VerticalContentAlignment = VerticalAlignment.Center };
@@ -40,18 +43,20 @@ namespace FileCompass
         int tabIndex, completing;
         bool switchingTabs, completingAddress;
         bool addressLookupRunning;
+        public event EventHandler TabsChanged;
+        void NotifyTabsChanged(){if(TabsChanged!=null)TabsChanged(this,EventArgs.Empty);}
         internal int CurrentTabIndex { get { return tabIndex; } }
         internal int TabCount { get { return tabs.Count; } }
-        internal string SavedLocalFolder { get { if (!IsRemote && !IsArchive) return CurrentPath; return IsArchive ? archiveReturnPath : localReturnPath; } }
+        internal string SavedLocalFolder { get { if(HasUnavailableTab)return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile); if(IsExt)return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile); if (!IsRemote && !IsArchive) return CurrentPath; return IsArchive ? archiveReturnPath : localReturnPath; } }
         internal void InitializeNavigation(Grid grid)
         {
             tabs.Add(new PanelTab());
             var wrapper = new DockPanel(); Child = wrapper;
             var row = tabRow;
-            DockPanel.SetDock(row, Dock.Top); wrapper.Children.Add(row);
+
             var add = CompactTheme.Button("+", L.Text("tabs.newShortcutTooltip"), delegate { NewTab(); });
             DockPanel.SetDock(add, Dock.Right); row.Children.Add(add);
-            row.Children.Add(new ScrollViewer { Content = tabStrip, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });
+            var tabScroller=new ScrollViewer { Content = tabStrip, HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled };tabScroller.PreviewMouseWheel+=delegate(object sender,MouseWheelEventArgs e){tabScroller.ScrollToHorizontalOffset(tabScroller.HorizontalOffset-e.Delta/3.0);e.Handled=true;};row.Children.Add(tabScroller);row.SizeChanged+=delegate(object sender,SizeChangedEventArgs e){if(e.WidthChanged)RenderTabs();};
             DockPanel.SetDock(quickBar, Dock.Bottom); wrapper.Children.Add(quickBar);
             quickMode.Items.Add(L.Text("action.filter")); quickMode.Items.Add(L.Text("action.find")); quickMode.SelectedIndex = 0;
             quickBar.Children.Add(new TextBlock { Text = L.Text("navigation.quickPrefix"), VerticalAlignment = VerticalAlignment.Center });
@@ -65,15 +70,16 @@ namespace FileCompass
             };
             wrapper.Children.Add(grid);
             PathChanged += delegate { NavigationChanged(); };
-            RenderTabs();
+            InitializeTabNotice(grid);RenderTabs();
         }
         internal void InitializeAddress(DockPanel row)
         {
-            var host = new Grid(); host.Children.Add(address); crumbScroll.Content = crumbs; host.Children.Add(crumbScroll); row.Children.Add(host);
+            var bookmarks=CompactTheme.Button("★",L.Text("favorites.title"),delegate{if(BookmarksRequested!=null)BookmarksRequested(this);});DockPanel.SetDock(bookmarks,Dock.Right);row.Children.Add(bookmarks);
+            var host = new Grid();host.Children.Add(tabRow);host.Children.Add(address);address.Visibility=Visibility.Collapsed;crumbScroll.Content=crumbs;row.Children.Add(host);
             crumbs.Background = CompactTheme.InactivePath;
             crumbScroll.PreviewMouseWheel += delegate(object s, MouseWheelEventArgs e) { crumbScroll.ScrollToHorizontalOffset(crumbScroll.HorizontalOffset - e.Delta / 3.0); e.Handled = true; };
-            address.GotKeyboardFocus += delegate { crumbScroll.Visibility = Visibility.Collapsed; };
-            address.LostKeyboardFocus += delegate { crumbScroll.Visibility = Visibility.Visible; completions.IsOpen = false; };
+            address.GotKeyboardFocus += delegate { tabRow.Visibility = Visibility.Collapsed; };
+            address.LostKeyboardFocus += delegate { address.Visibility=Visibility.Collapsed;tabRow.Visibility=Visibility.Visible;completions.IsOpen = false; };
             completions.PlacementTarget = address;
             completions.Child = new Border { Background = CompactTheme.WhiteSurface, BorderBrush = CompactTheme.Line, BorderThickness = new Thickness(1), Child = completionList };
             completionList.PreviewMouseLeftButtonDown += delegate(object s, MouseButtonEventArgs e) { var element = e.OriginalSource as DependencyObject; while (element != null && !(element is ListBoxItem)) element = VisualTreeHelper.GetParent(element); if (element is ListBoxItem) { completionList.SelectedItem = ((ListBoxItem)element).Content; AcceptCompletion(); e.Handled = true; } };
@@ -94,7 +100,7 @@ namespace FileCompass
         async void CompleteAddress()
         {
             int request = ++completing; string input = address.Text;
-            if (IsRemote || IsArchive || String.IsNullOrWhiteSpace(input)) return;
+            if (IsRemote || IsArchive || IsExt || String.IsNullOrWhiteSpace(input)) return;
             await Task.Delay(180); if (request != completing || !address.IsKeyboardFocusWithin || addressLookupRunning) return;
             addressLookupRunning = true;
             string[] matches = null;
@@ -114,9 +120,10 @@ namespace FileCompass
         {
             if (tabs.Count == 0 || CurrentPath == null || switchingTabs) return;
             var tab = tabs[tabIndex];
-            if (tab.Pending && ((!String.IsNullOrEmpty(tab.Saved.ProfileId) && (!IsRemote || Remote.Profile.Id != tab.Saved.ProfileId)) || (!String.IsNullOrEmpty(tab.Saved.ArchiveFile) && (!IsArchive || Archive.FilePath != tab.Saved.ArchiveFile)))) return;
+            if (tab.Pending) return;
             string newProfile = IsRemote ? Remote.Profile.Id : "", newArchive = IsArchive ? Archive.FilePath : "";
             if (tab.Saved.ProfileId != newProfile || tab.Saved.ArchiveFile != newArchive) { tab.Saved.Home = CurrentPath; tab.Saved.Locked = false; }
+            tab.Saved.ExtSource=IsExt?ExtLocations.Get(CurrentPath).Source:null;tab.Saved.ExtVolume=IsExt?ExtLocations.Get(CurrentPath).Volume:null;
             tab.Pending = false; tab.Saved.Projection = projection; tab.Saved.Filter = quickText.Text; tab.Saved.Path = CurrentPath; tab.Saved.ProfileId = newProfile;
             tab.Saved.ArchiveFile = IsArchive ? Archive.FilePath : ""; tab.Saved.ArchivePrefix = IsArchive ? ArchivePrefix : "";
             tab.Saved.Caption = IsRemote ? Remote.Profile.DisplayLabel : IsArchive ? Path.GetFileName(Archive.FilePath) : "";
@@ -130,7 +137,7 @@ namespace FileCompass
         static SavedTab CloneSavedTab(SavedTab item)
         {
             var view = item.View ?? new PanelView();
-            return new SavedTab { Path = item.Path, Home = item.Home, Label = item.Label, Caption = item.Caption, ProfileId = item.ProfileId, ArchiveFile = item.ArchiveFile, ArchivePrefix = item.ArchivePrefix, Locked = item.Locked, Filter = item.Filter,
+            return new SavedTab { ExtSource=item.ExtSource,ExtVolume=item.ExtVolume,Path = item.Path, Home = item.Home, Label = item.Label, Caption = item.Caption, ProfileId = item.ProfileId, ArchiveFile = item.ArchiveFile, ArchivePrefix = item.ArchivePrefix, Locked = item.Locked, Filter = item.Filter,
                 Projection = item.Projection == null ? null : new ProjectionSpec { Kind = item.Projection.Kind, Root = item.Projection.Root, Query = item.Projection.Query, Paths = item.Projection.Paths == null ? null : (string[])item.Projection.Paths.Clone() },
                 View = new PanelView { MetadataColumns = view.MetadataColumns == null ? new string[0] : (string[])view.MetadataColumns.Clone(), Sort = view.Sort, Descending = view.Descending, Widths = view.Widths == null ? new double[0] : (double[])view.Widths.Clone(), Display = view.Display, Tree = view.Tree, ThumbnailSize = view.ThumbnailSize, DetailExpanded = view.DetailExpanded, DetailConfigured = view.DetailConfigured, DetailRatio = view.DetailRatio, TreeWidth = view.TreeWidth } };
         }
@@ -138,18 +145,19 @@ namespace FileCompass
         internal void RestoreTabs(SavedTab[] saved, int selected, bool restoreActiveFolder = true)
         {
             if (saved == null || saved.Length == 0) return;
-            tabs.Clear(); foreach (var item in saved.Take(50)) if (item != null && !String.IsNullOrWhiteSpace(item.Path)) { var copy = CloneSavedTab(item); tabs.Add(new PanelTab { Saved = copy, View = copy.View, Pending = !String.IsNullOrEmpty(item.ProfileId) || !String.IsNullOrEmpty(item.ArchiveFile) }); }
+            tabs.Clear(); foreach (var item in saved.Take(50)) if (item != null && !String.IsNullOrWhiteSpace(item.Path)) { var copy = CloneSavedTab(item);if(copy.ExtSource!=null&&copy.ExtVolume!=null)ExtLocations.Register(copy.ExtSource,copy.ExtVolume); tabs.Add(new PanelTab { Saved = copy, View = copy.View, Pending = true }); }
             if (tabs.Count == 0) tabs.Add(new PanelTab());
             tabIndex = Math.Max(0, Math.Min(selected, tabs.Count - 1)); RenderTabs();
             var tab = tabs[tabIndex];
             if (tab.Saved.View != null) RestorePanelView(tab.View);
+            if(!restoreActiveFolder&&!tab.Saved.Locked&&String.IsNullOrEmpty(tab.Saved.ProfileId)&&String.IsNullOrEmpty(tab.Saved.ArchiveFile)){tab.Pending=false;return;}
             // Connections are reopened only on an explicit click; startup never asks for credentials.
             if ((restoreActiveFolder || tab.Saved.Locked) && String.IsNullOrEmpty(tab.Saved.ProfileId) && String.IsNullOrEmpty(tab.Saved.ArchiveFile))
             {
                 string filter = tab.Saved.Filter;
-                if (tab.Saved.Projection != null) ShowProjection(tab.Saved.Projection, false); else Navigate(tab.Saved.Path, false);
+                if (tab.Saved.Projection != null) ShowProjection(tab.Saved.Projection, false); else Navigate(tab.Saved.Locked?tab.Saved.Home:tab.Saved.Path, false);
                 NavigationTask = RestoreTabFilter(NavigationTask, tab, filter, navigationVersion);
-            }
+            }else {CancelNavigation();ShowTabUnavailable(tab,L.Text("tabs.disconnected"));}
         }
         async Task RestoreTabFilter(Task loaded, PanelTab tab, string filter, int request)
         {
@@ -159,10 +167,11 @@ namespace FileCompass
         internal void NewTab()
         {
             if (IsLoading || LocalLoading) return;
+            if(HasUnavailableTab){tabs.Add(new PanelTab());tabIndex=tabs.Count-1;Navigate(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),false);RenderTabs();NotifyTabsChanged();return;}
             CaptureTab(); var current = tabs[tabIndex];
-            var fresh = new PanelTab { Saved = new SavedTab { Projection = projection, Path = CurrentPath, Home = CurrentPath, ProfileId = IsRemote ? Remote.Profile.Id : "", ArchiveFile = IsArchive ? Archive.FilePath : "", ArchivePrefix = IsArchive ? ArchivePrefix : "", Caption = IsRemote ? Remote.Profile.DisplayLabel : IsArchive ? Path.GetFileName(Archive.FilePath) : "" }, Remote = Remote, Archive = Archive, ReturnPath = current.ReturnPath, Parents = current.Parents };
+            var fresh = new PanelTab { Saved = new SavedTab { ExtSource=current.Saved.ExtSource,ExtVolume=current.Saved.ExtVolume,Projection = projection, Path = CurrentPath, Home = CurrentPath, ProfileId = IsRemote ? Remote.Profile.Id : "", ArchiveFile = IsArchive ? Archive.FilePath : "", ArchivePrefix = IsArchive ? ArchivePrefix : "", Caption = IsRemote ? Remote.Profile.DisplayLabel : IsArchive ? Path.GetFileName(Archive.FilePath) : "" }, Remote = Remote, Archive = Archive, ReturnPath = current.ReturnPath, Parents = current.Parents };
             SavePanelView(fresh.View); fresh.Saved.View = fresh.View;
-            tabs.Add(fresh); tabIndex = tabs.Count - 1; RenderTabs(); activate(this); List.Focus();
+            tabs.Add(fresh); tabIndex = tabs.Count - 1; RenderTabs();NotifyTabsChanged(); activate(this); List.Focus();
         }
         internal Task TabNavigationTask { get; private set; }
         internal void SwitchTab(int index) { TabNavigationTask = SwitchTabCore(index); }
@@ -181,7 +190,7 @@ namespace FileCompass
                     ApplyRemoteRows(rows, tab.Cursor);
                 } else if (!String.IsNullOrEmpty(tab.Saved.ProfileId)) {
                     var main = Window.GetWindow(this) as MainWindow;
-                    if (main != null) main.ReopenTab(this, tab.Saved);
+                    if (main != null) { await main.ReopenTabTask(this, tab.Saved); if(!IsRemote||Remote.Profile.Id!=tab.Saved.ProfileId)ShowTabUnavailable(tab,L.Text("tabs.disconnected")); }else ShowTabUnavailable(tab,L.Text("tabs.disconnected"));
                 } else if (tab.Archive != null) {
                     Archive = tab.Archive; ArchivePrefix = tab.Saved.Locked ? tab.Saved.Home.TrimStart('/') : tab.Saved.ArchivePrefix; archiveReturnPath = tab.ReturnPath;
                     if (tab.Parents != null) foreach (var parent in tab.Parents.Reverse()) archiveParents.Push(parent); ApplyArchiveRows();
@@ -193,7 +202,7 @@ namespace FileCompass
                     var cursor = List.Items.Cast<Entry>().FirstOrDefault(x => x.FullPath == tab.Cursor); if (cursor != null) List.SelectedItem = cursor;
                 }
                 SetQuickFilter(tab.Saved.Filter); history.Clear(); forwardHistory.Clear(); foreach (var path in tab.History.Reverse()) history.Push(path); foreach (var path in tab.Forward.Reverse()) forwardHistory.Push(path);
-            } catch (Exception ex) { status.Text = L.Text("tabs.openFailedPrefix") + ex.Message; }
+            } catch (Exception ex) { ShowTabUnavailable(tab,L.Text("tabs.openFailedPrefix")+ex.Message); }
             finally { Loading(false); switchingTabs = false; RenderTabs(); ConfigureWatcher(); activate(this); List.Focus(); }
         }
         internal void CloseTab(int index)
@@ -201,44 +210,62 @@ namespace FileCompass
             if (tabs.Count <= 1 || IsLoading || LocalLoading || index < 0 || index >= tabs.Count) return;
             CaptureTab(); bool selected = index == tabIndex; tabs.RemoveAt(index);
             if (index < tabIndex) tabIndex--; else if (tabIndex >= tabs.Count) tabIndex = tabs.Count - 1;
-            RenderTabs(); if (selected) { switchingTabs = true; SwitchTabWithoutCapture(tabIndex); }
+            if(selected)switchingTabs=true;RenderTabs();NotifyTabsChanged(); if (selected) { SwitchTabWithoutCapture(tabIndex); }
         }
         void SwitchTabWithoutCapture(int index) { SwitchTab(index); }
         internal void MoveTab(int index, int direction)
         {
             int next = index + direction; if (index < 0 || index >= tabs.Count || next < 0 || next >= tabs.Count) return;
-            CaptureTab(); var selected = tabs[tabIndex]; var moving = tabs[index]; tabs.RemoveAt(index); tabs.Insert(next, moving); tabIndex = tabs.IndexOf(selected); RenderTabs();
+            CaptureTab(); var selected = tabs[tabIndex]; var moving = tabs[index]; tabs.RemoveAt(index); tabs.Insert(next, moving); tabIndex = tabs.IndexOf(selected); RenderTabs();NotifyTabsChanged();
         }
-        internal void LockTab(int index) { CaptureTab(); var tab = tabs[index]; tab.Saved.Locked = !tab.Saved.Locked; tab.Saved.Home = tab.Saved.Path; RenderTabs(); }
+        internal void LockTab(int index) { CaptureTab(); var tab = tabs[index]; tab.Saved.Locked = !tab.Saved.Locked; tab.Saved.Home = tab.Saved.Path; RenderTabs();NotifyTabsChanged(); }
         void RenderTabs()
         {
-            tabRow.Visibility = tabs.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
+            tabRow.Visibility = Visibility.Visible;
+            if(activeTabFace!=null){activeTabFace.Child=null;activeTabFace=null;}
+            var widths=TabWidths();
             tabStrip.Children.Clear(); for (int i = 0; i < tabs.Count; i++) {
                 int index = i; var saved = tabs[i].Saved;
                 string name = saved.Label;
                 if (String.IsNullOrEmpty(name) && saved.Projection != null) name = ProjectionFiles.Title(saved.Projection);
-                if (String.IsNullOrEmpty(name)) { name = String.IsNullOrEmpty(saved.Path) ? L.Text("common.folder") : Path.GetFileName(saved.Path.TrimEnd('\\', '/')); if (String.IsNullOrEmpty(name)) name = saved.Path; }
-                if (tabs[i].Pending) name = (String.IsNullOrEmpty(saved.Caption) ? name : saved.Caption) + L.Text("tabs.openContextSuffix");
+                if (String.IsNullOrEmpty(name)) { name = String.IsNullOrEmpty(saved.Path) ? L.Text("common.folder") : Path.GetFileName((saved.Locked&&!String.IsNullOrEmpty(saved.Home)?saved.Home:saved.Path).TrimEnd('\\', '/')); if (String.IsNullOrEmpty(name)) name = saved.Path; }
+                if (tabs[i].Pending&&!String.IsNullOrEmpty(saved.ProfileId)) name += " · "+L.Text("tabs.disconnected");
+                if(!String.IsNullOrEmpty(tabs[i].Error))name="⚠ "+name;
                 var button = CompactTheme.Button((saved.Locked ? "🔒 " : "") + name, (String.IsNullOrEmpty(saved.Caption) ? "" : saved.Caption + "\n") + saved.Path, delegate { SwitchTab(index); });
-                button.MaxWidth = 180; button.Height = 30; button.Padding = new Thickness(10, 1, 10, 1);
-                button.Margin = new Thickness(3, 4, 0, 0); button.Background = i == tabIndex ? Brushes.White : Brushes.Transparent;
-                button.Foreground = i == tabIndex ? FluentTheme.Accent : FluentTheme.Muted;
+                button.Width = widths[i]; button.MaxWidth = widths[i]; button.Height = 30; button.Padding = new Thickness(10, 1, 10, 1);
+                button.Margin = new Thickness(3, 4, 0, 0); button.Background = i == tabIndex ? CompactTheme.WhiteSurface : Brushes.Transparent;
+                button.Foreground = i == tabIndex ? FluentTheme.Accent : FluentTheme.Text;button.BorderBrush=CompactTheme.ThemeBrush("#A9BCD3");
                 var menu = new ContextMenu();
                 AddTabAction(menu, L.Text("tabs.new"), NewTab); AddTabAction(menu, L.Text("action.close"), delegate { CloseTab(index); });
                 AddTabAction(menu, saved.Locked ? L.Text("action.unlock") : L.Text("tabs.lockHomeFolder"), delegate { LockTab(index); });
                 AddTabAction(menu, L.Text("tabs.moveLeft"), delegate { MoveTab(index, -1); }); AddTabAction(menu, L.Text("tabs.moveRight"), delegate { MoveTab(index, 1); });
-                AddTabAction(menu, L.Text("tabs.renameMenu"), delegate { string label = NavigationPrompt(L.Text("tabs.title"), L.Text("tabs.nameLabel"), saved.Label); if (label != null) { saved.Label = label; RenderTabs(); } });
-                button.ContextMenu = menu; tabStrip.Children.Add(button);
+                AddTabAction(menu, L.Text("tabs.renameMenu"), delegate { string label = NavigationPrompt(L.Text("tabs.title"), L.Text("tabs.nameLabel"), saved.Label); if (label != null) { saved.Label = label; RenderTabs();NotifyTabsChanged(); } });
+                var tabPath=new PathTextBlock{FullPath=TabPath(i),Prefix=TabPrefix(i),Width=Math.Max(20,widths[i]-24),Foreground=button.Foreground};button.Content=tabPath;
+                button.ContextMenu = menu;
+                if(i==tabIndex){
+                    var fullCaption=new TextBlock{Text=TabPrefix(i)+TabPath(i),FontFamily=System.Windows.Documents.TextElement.GetFontFamily(this),FontSize=System.Windows.Documents.TextElement.GetFontSize(this)};fullCaption.Measure(new Size(Double.PositiveInfinity,30));
+                    if(fullCaption.DesiredSize.Width+TabPath(i).Count(c=>c=='\\'||c=='/')*12+40>widths[i]){var compact=new DockPanel{Width=Math.Max(20,widths[i]-2)};var edit=CompactTheme.Button("✎",L.Text("navigation.editPathShortcutTooltip"),delegate{FocusAddress();});DockPanel.SetDock(edit,Dock.Right);compact.Children.Add(edit);compact.Children.Add(new PathTextBlock{FullPath=TabPath(i),Prefix=TabPrefix(i),Foreground=FluentTheme.Accent,Margin=new Thickness(5,0,2,0)});crumbScroll.Content=compact;}else crumbScroll.Content=crumbs;
+                    crumbScroll.ScrollToHorizontalOffset(0);activeTabFace=new Border{Child=crumbScroll,Width=widths[i],Height=30,Margin=new Thickness(2,1,2,1),Background=CompactTheme.ActivePath,BorderBrush=FluentTheme.Accent,BorderThickness=new Thickness(2),CornerRadius=new CornerRadius(4),ToolTip=button.ToolTip,ContextMenu=menu};activeTabFace.MouseLeftButtonDown+=delegate{activate(this);};tabStrip.Children.Add(activeTabFace);}else tabStrip.Children.Add(button);
             }
+        }
+        string TabPath(int index){return index==tabIndex&&CurrentPath!=null?CurrentPath:tabs[index].Saved.Path??"";}
+        string TabPrefix(int index){var tab=tabs[index];return (!String.IsNullOrEmpty(tab.Error)?"⚠ ":tab.Saved.Locked?"🔒 ":"")+(!String.IsNullOrEmpty(tab.Saved.ProfileId)?tab.Saved.Caption+" · ":"");}
+        double[] TabWidths(){
+            var natural=new double[tabs.Count];
+            for(int i=0;i<tabs.Count;i++){var text=new TextBlock{Text=TabPrefix(i)+TabPath(i),FontFamily=System.Windows.Documents.TextElement.GetFontFamily(this),FontSize=System.Windows.Documents.TextElement.GetFontSize(this)};text.Measure(new Size(Double.PositiveInfinity,30));natural[i]=Math.Max(100,Math.Min(320,text.DesiredSize.Width+(i==tabIndex?48:24)));}
+            double available=Math.Max(100,tabRow.ActualWidth-36-tabs.Count*4);if(natural.Sum()<=available)return natural;
+            double lo=100,hi=320;for(int n=0;n<20;n++){double mid=(lo+hi)/2;if(natural.Sum(x=>Math.Min(x,mid))>available)hi=mid;else lo=mid;}return natural.Select(x=>Math.Min(x,lo)).ToArray();
         }
         static void AddTabAction(ContextMenu menu, string title, Action action) { var item = new MenuItem { Header = title }; item.Click += delegate { action(); }; menu.Items.Add(item); }
         void NavigationChanged()
         {
-            if (!switchingTabs) CaptureTab(); RenderTabs(); RenderCrumbs(); ConfigureWatcher();
+            if(CurrentPath!=null){tabs[tabIndex].Pending=false;tabs[tabIndex].Error=null;tabNotice.Visibility=Visibility.Collapsed;}
+            if (!switchingTabs) CaptureTab(); RenderCrumbs(); RenderTabs(); ConfigureWatcher();
         }
         void RenderCrumbs()
         {
-            crumbs.Children.Clear(); if (CurrentPath == null) return;
+            crumbs.Children.Clear(); if (CurrentPath == null) {if(HasUnavailableTab)crumbs.Children.Add(new TextBlock{Text=tabs[tabIndex].Saved.Path,Margin=new Thickness(6),Foreground=FluentTheme.Muted});return;}
+            if(IsExt){var location=ExtLocations.Get(CurrentPath);AddCrumb(location.Root,"EXT");string currentExt=location.Root;foreach(string part in ExtLocations.Relative(CurrentPath).Split(new[]{'/'},StringSplitOptions.RemoveEmptyEntries)){currentExt=currentExt.TrimEnd('/')+"/"+part;AddCrumb(currentExt,part);}return;}
             if (IsShellBrowser) { AddCrumb(CurrentPath, ShellLocationName ?? L.Text("tree.systemLocation")); return; }
             if (IsNetworkBrowser) { AddCrumb(NetworkBrowser.Root, L.Text("network.shortTitle")); if (CurrentPath != NetworkBrowser.Root) AddCrumb(CurrentPath, CurrentPath.Trim('\\')); return; }
             string path = CurrentPath; bool virtualPath = IsRemote || IsArchive;
@@ -250,10 +277,10 @@ namespace FileCompass
             }
             var edit = CompactTheme.Button("✎", L.Text("navigation.editPathShortcutTooltip"), delegate { FocusAddress(); });
             edit.Background = Brushes.Transparent; edit.BorderBrush = Brushes.Transparent; crumbs.Children.Add(edit);
-            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(delegate { crumbScroll.ScrollToRightEnd(); }));
+
         }
         void AddCrumb(string path, string label) { var button = CompactTheme.Button(label + " ›", path, delegate { Navigate(path, true); }); button.Height = 28; button.MinWidth = 0; button.Padding = new Thickness(4, 0, 4, 0); button.Background = Brushes.Transparent; button.BorderBrush = Brushes.Transparent; button.Foreground = IsActivePanel ? FluentTheme.Accent : FluentTheme.Text; crumbs.Children.Add(button); }
-        internal void FocusAddress() { crumbScroll.Visibility = Visibility.Collapsed; address.Focus(); address.SelectAll(); }
+        internal void FocusAddress() { address.Visibility=Visibility.Visible;tabRow.Visibility=Visibility.Collapsed;address.Focus(); address.SelectAll(); }
         internal static string EntryName(Entry entry) { return entry.IsDirectory ? entry.Name != null && entry.Name.StartsWith("[", StringComparison.Ordinal) && entry.Name.EndsWith("]", StringComparison.Ordinal) ? entry.Name.Substring(1, entry.Name.Length - 2) : entry.Name : entry.Name + (String.IsNullOrEmpty(entry.Extension) ? "" : "." + entry.Extension); }
         internal bool MatchesFilter(object value)
         {
@@ -283,5 +310,3 @@ namespace FileCompass
         }
     }
 }
-
-

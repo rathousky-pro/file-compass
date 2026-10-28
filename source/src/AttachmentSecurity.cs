@@ -20,7 +20,7 @@ namespace FileCompass
             {
                 int error = Marshal.GetLastWin32Error(); handle.Dispose();
                 if (!write && (error == 2 || error == 3)) return null;
-                throw new IOException("Cannot access attachment zone information.", new Win32Exception(error));
+                throw new IOException(L.Text("security.zoneAccess"), new Win32Exception(error));
             }
             try { return new FileStream(handle, write ? FileAccess.Write : FileAccess.Read); }
             catch { handle.Dispose(); throw; }
@@ -37,7 +37,7 @@ namespace FileCompass
                 using (var input = OpenZone(path, false))
                 {
                     if (input == null) return null;
-                    if (input.Length > 65536) throw new IOException("Invalid attachment zone information.");
+                    if (input.Length > 65536) throw new IOException(L.Text("security.zoneInvalid"));
                     using (var reader = new StreamReader(input, Encoding.UTF8, true)) return reader.ReadToEnd();
                 }
             }

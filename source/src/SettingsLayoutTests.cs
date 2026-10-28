@@ -11,7 +11,8 @@ namespace FileCompass {
             Directory.CreateDirectory(root); var checks = new List<string>(); ConfigurationDialog dialog = null;
             Action<bool, string> check = (valid, text) => { if (!valid) throw new Exception(text); checks.Add(text); };
             try {
-                FluentTheme.Ensure();
+                FluentTheme.Ensure();L.ChangeLanguage("cs-CZ");
+                foreach(string motif in new[]{"Original","Balanced"}){AppearanceTheme.SetMotif(motif);
                 foreach (var size in new[] { new Size(1920, 1040), new Size(1280, 760), new Size(1024, 720) }) {
                     dialog = new ConfigurationDialog(null) { LayoutWorkArea = new Rect(-18000, -18000, size.Width, size.Height), Left = -17984, Top = -17984, Width = Math.Min(1080, size.Width - 32), ShowActivated = false, ShowInTaskbar = false, WindowStartupLocation = WindowStartupLocation.Manual };
                     dialog.Show();
@@ -20,7 +21,9 @@ namespace FileCompass {
                         var scroll = AdvancedToolsTests.Visual<ScrollViewer>(dialog).Single(x => x.Content is StackPanel && ((StackPanel)x.Content).Children.OfType<TextBlock>().Any(t => t.FontSize == 18));
                         string label = size.Width + ": " + dialog.Sections.Items[index];
                         check(dialog.Width <= 1080 && dialog.Height <= size.Height - 32, label + " stays within the monitor");
-                        check(scroll.ExtentHeight <= scroll.ViewportHeight + 1, label + " fits without scrolling (" + scroll.ExtentHeight + "/" + scroll.ViewportHeight + ")");
+                        check(scroll.ViewportHeight>=160,label+": page has usable content area");
+                        if(size.Height>=800)check(scroll.ExtentHeight<=scroll.ViewportHeight+1,label+": fits large desktop without scrolling");
+                        var save=AdvancedToolsTests.Visual<Button>(dialog).Single(x=>Convert.ToString(x.Content)==L.Text("action.save"));var frame=(FrameworkElement)dialog.Content;var bottom=save.TransformToAncestor(frame).Transform(new Point(0,save.ActualHeight));check(bottom.Y<=frame.ActualHeight,label+": Save stays reachable while page may scroll");check(AdvancedToolsTests.Visual<TextBlock>(dialog).Any(x=>x.FontSize==20&&x.Text==L.Text("menu.configuration")),label+": shared clean settings header");
                         foreach (var grid in AdvancedToolsTests.Visual<Grid>(scroll)) {
                             var cards = grid.Children.OfType<GroupBox>().ToArray();
                             if (cards.Length < 2) continue;
@@ -40,9 +43,10 @@ namespace FileCompass {
                             check(right.Select((item, i) => Math.Abs(item.TranslatePoint(new Point(0, item.ActualHeight / 2), scroll).Y - left[i].TranslatePoint(new Point(0, left[i].ActualHeight / 2), scroll).Y) < 1).All(x => x), label + " checkbox centers remain aligned when labels wrap");
                         }
                         if (index == 5) check(dialog.Connections.Tabs.Items.Count == 2 && scroll.ViewportHeight - scroll.ExtentHeight < 32, label + " accommodates both management tabs without excess empty space");
-                        NextStageTests.Draw(dialog, Path.Combine(root, "settings-" + size.Width + "-" + index + ".png"));
+                        NextStageTests.Draw(dialog, Path.Combine(root, motif+"-settings-" + size.Width + "-" + index + ".png"));
                     }
                     dialog.Close(); dialog = null;
+                }
                 }
                 // On a very small usable desktop, scrolling is the fallback; controls stay accessible.
                 dialog = new ConfigurationDialog(null) { LayoutWorkArea = new Rect(-18000, -18000, 900, 540), Left = -17984, Top = -17984, Width = 868, ShowActivated = false, ShowInTaskbar = false, WindowStartupLocation = WindowStartupLocation.Manual };

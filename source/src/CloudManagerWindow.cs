@@ -54,7 +54,7 @@ namespace FileCompass {
             });signInAgain=signIn;buttons.Children.Add(signIn);selectionButtons.Add(signIn);
             var rename=CopyUi.Button(L.Text("action.rename"),delegate{
                 var a=list.SelectedItem as CloudAccount;if(a==null)return;
-                string name=CopyUi.Prompt(UiOwner,L.Text("action.rename"),a.Name);
+                string name=SettingsUx.Prompt(UiOwner,L.Text("action.rename"),a.Name);
                 if(name==null||String.IsNullOrWhiteSpace(name))return;
                 name=name.Trim();if(name.Length>120){MessageBox.Show(UiOwner,L.Text("cloud.nameTooLong"),L.Text("action.rename"));return;}
                 string previous=a.Name;try{a.Name=name;CloudStore.Save(accounts);Reload(a.Id);}catch(Exception ex){a.Name=previous;status.Text=ex.Message;}
@@ -93,17 +93,17 @@ namespace FileCompass {
         }
         CloudAccount NewAccount(){
             var window=new Window();CopyUi.Style(window,UiOwner,L.Text("cloud.add"),450);
-            var body=new StackPanel();window.Content=new Border{Child=body,Margin=new Thickness(12),Padding=new Thickness(14),Background=CompactTheme.PanelSurface,BorderBrush=CompactTheme.ChromeLine,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(8)};
+            StackPanel actions;var root=SettingsUx.Frame(window,L.Text("cloud.add"),out actions);var body=new StackPanel{Margin=new Thickness(20,16,20,16)};root.Children.Add(body);
             body.Children.Add(CopyUi.Label(L.Text("cloud.service")));var providers=new ComboBox{ItemsSource=new[]{"Google Drive","OneDrive","Dropbox","iCloud Drive"},SelectedIndex=0};body.Children.Add(providers);
             body.Children.Add(CopyUi.Label(L.Text("common.nameLabel")));var name=new TextBox{Text="Google Drive",Margin=new Thickness(0,5,0,12)};body.Children.Add(name);
             providers.SelectionChanged+=delegate{name.Text=Convert.ToString(providers.SelectedItem);};
             var loginHelp=new TextBlock{Text=L.Text("cloud.browserHelp"),TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,0,0,12)};body.Children.Add(loginHelp);
             var availability=new TextBlock{TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,0,0,10)};body.Children.Add(availability);
-            var actions=FluentTheme.Actions();body.Children.Add(actions);
-            var signInButton=CopyUi.Button(L.Text("cloud.signIn"),delegate{if(!String.IsNullOrWhiteSpace(name.Text)&&name.Text.Trim().Length<=120)window.DialogResult=true;});actions.Children.Add(signInButton);
+
+            var signInButton=CopyUi.Button(L.Text("cloud.signIn"),delegate{if(!String.IsNullOrWhiteSpace(name.Text)&&name.Text.Trim().Length<=120)window.DialogResult=true;});FluentTheme.Primary(signInButton);actions.Children.Add(signInButton);
             Action updateAvailability=delegate{string provider=new[]{"drive","onedrive","dropbox",CloudICloud.Provider}[providers.SelectedIndex];string error=CloudApplicationOAuth.AvailabilityError(provider);availability.Text=error??"";signInButton.Content=L.Text(provider==CloudICloud.Provider?"cloud.icloudSignIn":"cloud.signIn");loginHelp.Text=L.Text(provider==CloudICloud.Provider?"cloud.icloudHelp":"cloud.browserHelp");signInButton.IsEnabled=error==null;};
             providers.SelectionChanged+=delegate{updateAvailability();};updateAvailability();
-            var cancel=CopyUi.Button(L.Text("action.cancel"),delegate{window.DialogResult=false;});cancel.IsCancel=true;actions.Children.Add(cancel);
+            var cancel=CopyUi.Button(L.Text("action.cancel"),delegate{window.DialogResult=false;});cancel.IsCancel=true;actions.Children.Add(cancel);actions.Children.Remove(signInButton);actions.Children.Add(signInButton);
             if(window.ShowDialog()!=true)return null;
             return new CloudAccount{Name=name.Text.Trim(),Provider=new[]{"drive","onedrive","dropbox",CloudICloud.Provider}[providers.SelectedIndex]};
         }

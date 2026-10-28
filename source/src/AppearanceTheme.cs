@@ -10,6 +10,7 @@ namespace FileCompass {
     internal static class AppearanceTheme {
         static readonly Dictionary<string, ThemeColor> brushes = new Dictionary<string, ThemeColor>(StringComparer.OrdinalIgnoreCase);
         static readonly Dictionary<string, string> dark = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
+            {"#216EA8", "#95CBF5"}, {"#167C78", "#86D8CF"}, {"#6553B0", "#C5B8FF"}, {"#657080", "#B4BFCD"},
             {"#FFFFFF", "#202327"}, {"#20242A", "#E8ECF1"}, {"#596572", "#AEBAC8"}, {"#0067C0", "#78B9FF"},
             {"#D5D9DF", "#181B20"}, {"#E4E7EB", "#252A31"}, {"#F0F2F5", "#2C323B"},
             {"#98A5B5", "#69788C"}, {"#BCC3CD", "#495563"}, {"#F3F4F7", "#242930"}, {"#DDDFE5", "#424B57"},
@@ -25,6 +26,34 @@ namespace FileCompass {
             {"#FFF0C2", "#5A4516"}, {"#704600", "#FFE08B"}, {"#FFE0E0", "#5B202B"}, {"#9E2031", "#FFB6C0"}
         };
         static string mode = "System";
+        internal static string Motif { get; private set; } = "Balanced";
+        internal static bool IsBalanced { get { return true; } }
+        // Retained only to migrate old settings and callers to the sole supported appearance.
+        internal static string NormalizeMotif(string value) { return "Balanced"; }
+        internal static void SetMotif(string value) { Motif = NormalizeMotif(value); Apply(Mode); }
+        static readonly Dictionary<string, string> balanced = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
+            {"#FFFFFF", "#FFFFFF"}, {"#20242A", "#292C31"}, {"#596572", "#68717C"}, {"#0067C0", "#086BC9"},
+            {"#D5D9DF", "#ECEEF1"}, {"#E4E7EB", "#F8F9FA"}, {"#F0F2F5", "#F3F4F6"},
+            {"#98A5B5", "#CCD3DC"}, {"#BCC3CD", "#D8DDE3"}, {"#F3F4F7", "#F5F6F8"}, {"#DDDFE5", "#D8DDE3"},
+            {"#C4D9EE", "#F1F5FA"}, {"#E3EEF9", "#EEF3FA"}, {"#E9EDF4", "#F1F3F6"},
+            {"#E5F1FF", "#EDF4FC"}, {"#F0F5FA", "#F5F7FA"}, {"#DDEDFC", "#EFF3F8"},
+            {"#E4F0FF", "#F2F4F7"}, {"#D0E7FA", "#EFF4FA"}, {"#DCEBFF", "#DAE9FC"},
+            {"#89BFE5", "#79A9DF"}, {"#79A9DF", "#79A9DF"}, {"#EEEEEE", "#E5EAF0"},
+            {"#1457A2", "#086BC9"}, {"#85C5F4", "#79B5ED"}
+        };
+        static readonly Dictionary<string, string> balancedDark = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
+            {"#FFFFFF", "#20252B"}, {"#20242A", "#E7ECF2"}, {"#596572", "#A7AFB9"}, {"#0067C0", "#87BCF4"},
+            {"#D5D9DF", "#25292F"}, {"#E4E7EB", "#272E36"}, {"#F0F2F5", "#2C333C"},
+            {"#98A5B5", "#4B5868"}, {"#BCC3CD", "#414952"}, {"#F3F4F7", "#292F37"}, {"#DDDFE5", "#414952"},
+            {"#C4D9EE", "#2A3543"}, {"#E3EEF9", "#303C4D"}, {"#DDEDFC", "#2A3747"}, {"#E4F0FF", "#2C3846"},
+            {"#79A9DF", "#6094C9"}, {"#EEEEEE", "#3C4858"}, {"#1457A2", "#5EA5F0"}, {"#85C5F4", "#9ACAFA"}
+        };
+        static Color Resolve(string value) {
+            string mapped;
+            if (IsBalanced && (IsDark ? balancedDark : balanced).TryGetValue(value, out mapped)) value = mapped;
+            else if (IsDark && dark.TryGetValue(value, out mapped)) value = mapped;
+            return (Color)ColorConverter.ConvertFromString(value);
+        }
         internal static string Backdrop = "None";
         static readonly List<WeakReference> shells = new List<WeakReference>();
         internal static string NormalizeBackdrop(string value) { return value == "Mica" || value == "MicaAlt" ? value : "None"; }
@@ -44,7 +73,7 @@ namespace FileCompass {
                 if (DwmSetWindowAttribute(handle, 38, ref kind, sizeof(int)) != 0) enabled = false;
                 var margins = new FrameMargins { Left = enabled ? -1 : 0 };
                 DwmExtendFrameIntoClientArea(handle, ref margins);
-                var target = HwndSource.FromHwnd(handle); if (target != null && target.CompositionTarget != null) target.CompositionTarget.BackgroundColor = enabled ? Colors.Transparent : (IsDark ? Color.FromRgb(24,27,32) : Color.FromRgb(213,217,223));
+                var target = HwndSource.FromHwnd(handle); if (target != null && target.CompositionTarget != null) target.CompositionTarget.BackgroundColor = enabled ? Colors.Transparent : Resolve("#D5D9DF");
             } catch (DllNotFoundException) { enabled = false; } catch (EntryPointNotFoundException) { enabled = false; }
             UpdateShellLayers(window, enabled); window.Background = enabled ? Brushes.Transparent : CompactTheme.Chrome;
             var root = window.Content as System.Windows.Controls.Panel;
@@ -80,10 +109,10 @@ namespace FileCompass {
             catch { return false; }
         }
         internal static Brush Brush(string value) {
-            if (!dark.ContainsKey(value)) return CompactTheme.ColorBrush(value);
+            if (!dark.ContainsKey(value) && !balanced.ContainsKey(value) && !balancedDark.ContainsKey(value)) return CompactTheme.ColorBrush(value);
             ThemeColor brush;
             if (!brushes.TryGetValue(value, out brush)) {
-                brush = new ThemeColor((Color)ColorConverter.ConvertFromString(IsDark ? dark[value] : value)); brushes[value] = brush;
+                brush = new ThemeColor(Resolve(value)); brushes[value] = brush;
             }
             return brush.Brush;
         }
@@ -92,7 +121,7 @@ namespace FileCompass {
                 listening = true; SystemEvents.UserPreferenceChanged += OnSystemChanged;
                 Application.Current.Exit += delegate { SystemEvents.UserPreferenceChanged -= OnSystemChanged; listening = false; };
             }
-            var settings = ProgramSettings.Load(); Backdrop = NormalizeBackdrop(settings.WindowBackdrop); Apply(settings.ColorTheme);
+            var settings = ProgramSettings.Load(); Motif = NormalizeMotif(settings.InterfaceMotif); Backdrop = NormalizeBackdrop(settings.WindowBackdrop); Apply(settings.ColorTheme);
         }
         static void OnSystemChanged(object sender, UserPreferenceChangedEventArgs args) {
             var app = Application.Current;
@@ -105,9 +134,10 @@ namespace FileCompass {
             if (app == null) return;
             var theme = IsDark ? Wpf.Ui.Appearance.ApplicationTheme.Dark : Wpf.Ui.Appearance.ApplicationTheme.Light;
             Wpf.Ui.Appearance.ApplicationThemeManager.Apply(theme, Wpf.Ui.Controls.WindowBackdropType.None, false);
-            Wpf.Ui.Appearance.ApplicationAccentColorManager.Apply(IsDark ? Color.FromRgb(120,185,255) : Color.FromRgb(0,103,192), theme, false, false);
-            foreach (var item in brushes) item.Value.Value = (Color)ColorConverter.ConvertFromString(IsDark ? dark[item.Key] : item.Key);
+            Wpf.Ui.Appearance.ApplicationAccentColorManager.Apply(IsBalanced ? Color.FromRgb(8,107,201) : IsDark ? Color.FromRgb(120,185,255) : Color.FromRgb(0,103,192), theme, false, false);
+            foreach (var item in brushes) item.Value.Value = Resolve(item.Key);
             foreach (Window window in app.Windows) TitleBar(window); for (int i = shells.Count - 1; i >= 0; i--) { var shell = shells[i].Target as Window; if (shell == null) shells.RemoveAt(i); else UpdateBackdrop(shell); }
+            InterfaceTheme.Refresh();
         }
         internal static void TitleBar(Window window) {
             var handle = new WindowInteropHelper(window).Handle; if (handle == IntPtr.Zero) return;

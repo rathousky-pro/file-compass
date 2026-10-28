@@ -7,12 +7,13 @@ namespace FileCompass
         internal string CurrentFile;
         internal double Percent; internal long Original, Packed; internal bool Complete;
         internal long Processed = -1;
-        internal string Encode() { return "@archive-compression|" + Percent.ToString("R", CultureInfo.InvariantCulture) + "|" + Original + "|" + Packed + "|" + (Complete ? "1" : "0") + "|" + Processed + (String.IsNullOrEmpty(CurrentFile) ? "" : "|" + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(CurrentFile))); }
+        internal long FileDone, FileTotal = -1;
+        internal string Encode() { return "@archive-compression|" + Percent.ToString("R", CultureInfo.InvariantCulture) + "|" + Original + "|" + Packed + "|" + (Complete ? "1" : "0") + "|" + Processed + (String.IsNullOrEmpty(CurrentFile) && FileTotal < 0 ? "" : "|" + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(CurrentFile??""))) + (FileTotal < 0 ? "" : "|" + FileDone + "|" + FileTotal); }
         internal static bool TryParse(string text, out ArchiveCompressionProgress value)
         {
             value = null; if (!text.StartsWith("@archive-compression|", StringComparison.Ordinal)) return false; var parts = text.Split('|'); double percent; long original, packed;
-            if ((parts.Length != 5 && parts.Length != 6 && parts.Length != 7) || !Double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out percent) || Double.IsNaN(percent) || Double.IsInfinity(percent) || !Int64.TryParse(parts[2], out original) || !Int64.TryParse(parts[3], out packed) || original < 0 || packed < 0) return false;
-            value = new ArchiveCompressionProgress { Percent = Math.Max(0, Math.Min(100, percent)), Original = original, Packed = packed, Complete = parts[4] == "1" }; long processed; if (parts.Length >= 6 && Int64.TryParse(parts[5], out processed) && processed >= 0) value.Processed = Math.Min(original, processed); if (parts.Length == 7) { try { value.CurrentFile = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(parts[6])); } catch (FormatException) { value = null; return false; } } return true;
+            if ((parts.Length != 5 && parts.Length != 6 && parts.Length != 7 && parts.Length != 9) || !Double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out percent) || Double.IsNaN(percent) || Double.IsInfinity(percent) || !Int64.TryParse(parts[2], out original) || !Int64.TryParse(parts[3], out packed) || original < 0 || packed < 0) return false;
+            value = new ArchiveCompressionProgress { Percent = Math.Max(0, Math.Min(100, percent)), Original = original, Packed = packed, Complete = parts[4] == "1" }; long processed; if (parts.Length >= 6 && Int64.TryParse(parts[5], out processed) && processed >= 0) value.Processed = Math.Min(original, processed); if (parts.Length >= 7) { try { value.CurrentFile = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(parts[6])); } catch (FormatException) { value = null; return false; } } if(parts.Length==9){long done,total;if(!Int64.TryParse(parts[7],out done)||!Int64.TryParse(parts[8],out total)||done<0||total<0){value=null;return false;}value.FileTotal=total;value.FileDone=Math.Min(done,total);} return true;
         }
         internal string Summary()
         {
@@ -24,5 +25,3 @@ namespace FileCompass
         }
     }
 }
-
-

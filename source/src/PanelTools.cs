@@ -23,7 +23,6 @@ namespace FileCompass
         string watchedPath;
         Point dragStart;
         bool leftDragReady;
-        DateTime rightPressed;
         Point rightStart;
         bool rightMoved;
         internal Action<FilePanel, string[], bool> FilesDropped;
@@ -37,7 +36,7 @@ namespace FileCompass
                 SetQuickFilter(quickText.Text + e.Text); e.Handled = true;
             };
             List.PreviewKeyDown += delegate(object s, KeyEventArgs e) {
-                if (e.Key == Key.Apps || (e.Key == Key.F10 && Keyboard.Modifiers == ModifierKeys.Shift)) { List.ContextMenu.PlacementTarget = List; List.ContextMenu.IsOpen = true; e.Handled = true; return; }
+                if (e.Key == Key.Apps || (e.Key == Key.F10 && Keyboard.Modifiers == ModifierKeys.Shift)) { ShowFileContextMenu(false); e.Handled = true; return; }
                 if (e.Key == Key.Escape && quickBar.Visibility == Visibility.Visible) { SetQuickFilter(""); e.Handled = true; }
                 if (e.Key == Key.Back && quickBar.Visibility == Visibility.Visible && quickText.Text.Length > 0) { SetQuickFilter(quickText.Text.Substring(0, quickText.Text.Length - 1)); e.Handled = true; }
                 if ((Keyboard.Modifiers & ModifierKeys.Shift) != 0 && (e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Home || e.Key == Key.End || e.Key == Key.PageUp || e.Key == Key.PageDown)) {
@@ -51,11 +50,9 @@ namespace FileCompass
             };
             // The existing click handler owns focus/marking. Observe handled clicks for drag detection.
             List.AddHandler(UIElement.PreviewMouseLeftButtonDownEvent, new MouseButtonEventHandler(delegate(object s, MouseButtonEventArgs e) { dragStart = e.GetPosition(List); leftDragReady = RowAt(dragStart) != null && e.ClickCount == 1; }), true);
-            List.AddHandler(UIElement.PreviewMouseRightButtonDownEvent, new MouseButtonEventHandler(delegate(object s, MouseButtonEventArgs e) { rightPressed = DateTime.UtcNow; rightStart = e.GetPosition(List); rightMoved = false; }), true);
-            List.AddHandler(UIElement.PreviewMouseRightButtonUpEvent, new MouseButtonEventHandler(delegate(object s, MouseButtonEventArgs e) { if (!rightMoved && (DateTime.UtcNow - rightPressed > TimeSpan.FromMilliseconds(450) || (!IsRemote && !IsArchive && NetworkBrowser.CanMap(List.SelectedItem as Entry))) && List.ContextMenu != null) { List.ContextMenu.PlacementTarget = List; List.ContextMenu.IsOpen = true; } }), true);
             List.PreviewMouseLeftButtonUp += delegate { leftDragReady = false; };
             List.PreviewMouseMove += delegate(object s, MouseEventArgs e) {
-                if (e.RightButton == MouseButtonState.Pressed && (e.GetPosition(List) - rightStart).Length > SystemParameters.MinimumHorizontalDragDistance) rightMoved = true;
+
                 if (!leftDragReady || e.LeftButton != MouseButtonState.Pressed || LocalLoading || IsLoading) return;
                 var position = e.GetPosition(List); if (Math.Abs(position.X - dragStart.X) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(position.Y - dragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
                 leftDragReady = false; var files = Selected().Select(x => x.FullPath).ToArray(); if (files.Length == 0) return;
@@ -83,7 +80,7 @@ namespace FileCompass
             AddTabAction(context, L.Text("action.openWith"), delegate { var main = Window.GetWindow(this) as MainWindow; if (main != null) main.OpenWith(); });
             AddTabAction(context, L.Text("attributes.changeMenu"), delegate { var main = Window.GetWindow(this) as MainWindow; if (main != null) main.ChangeAttributes(); });
             context.Items.Add(new Separator());
-            AddTabAction(context, L.Text("action.copy"), delegate { var main = Window.GetWindow(this) as MainWindow; if (main != null) main.CopyClipboard(false); });
+            AddTabAction(context, L.Text("action.copyToClipboard"), delegate { var main = Window.GetWindow(this) as MainWindow; if (main != null) main.CopyClipboard(false); });
             AddTabAction(context, L.Text("action.cut"), delegate { var main = Window.GetWindow(this) as MainWindow; if (main != null) main.CopyClipboard(true); });
             AddTabAction(context, L.Text("clipboardFile.title"), delegate { var main = Window.GetWindow(this) as MainWindow; if (main != null) main.PasteClipboardAsFile(); }); AddTabAction(context, L.Text("action.paste"), delegate { var main = Window.GetWindow(this) as MainWindow; if (main != null) main.PasteClipboard(); });
             AddTabAction(context, L.Text("clipboard.copyFullPaths"), delegate { var main = Window.GetWindow(this) as MainWindow; if (main != null) main.CopyNames(true); });
@@ -96,7 +93,9 @@ namespace FileCompass
             AddTabAction(context, L.Text("action.compareFiles"), delegate { var main = Window.GetWindow(this) as MainWindow; if (main != null) main.CompareFilesByContent(); });
             AddTabAction(context, L.Text("action.createChecksums"), delegate { var main = Window.GetWindow(this) as MainWindow; if (main != null) main.CreateChecksumsDialog(); });
             AddTabAction(context, L.Text("action.verifyChecksums"), delegate { var main = Window.GetWindow(this) as MainWindow; if (main != null) main.VerifyChecksumsDialog(); });
-            List.ContextMenu = context;
+            // Panels are constructed before they acquire a window owner. Populate once on load.
+            bool commandsAdded=false;Loaded+=delegate{if(commandsAdded)return;var owner=Window.GetWindow(this) as MainWindow;if(owner!=null){owner.AddFileContextCommands(context,this);commandsAdded=true;}};
+            List.ContextMenu = context;List.ContextMenuOpening+=delegate(object sender,ContextMenuEventArgs e){e.Handled=true;};
             watchTimer.Tick += delegate {
                 if (DeferAutomaticRefresh != null && DeferAutomaticRefresh()) return;
                 if (Interlocked.CompareExchange(ref watchDirty, 0, 0) == 0 || DateTime.UtcNow.Ticks - Interlocked.Read(ref lastWatchChange) < TimeSpan.FromMilliseconds(800).Ticks || LocalLoading || IsLoading || rightDragging || Mouse.LeftButton == MouseButtonState.Pressed) return;
@@ -111,28 +110,30 @@ namespace FileCompass
         internal void SelectMask(bool mark) { string mask = NavigationPrompt(mark ? L.Text("selection.markMaskTitle") : L.Text("selection.unmarkMaskTitle"), L.Text("selection.maskPrompt"), "*.*"); if (mask != null) MarkMask(mask, mark); }
         internal void SelectExtension() { var item = List.SelectedItem as Entry; if (item == null || item.IsDirectory) return; RememberSelection(); foreach (Entry other in List.Items) if (!other.IsDirectory && String.Equals(item.Extension, other.Extension, StringComparison.OrdinalIgnoreCase)) other.IsMarked = true; UpdateStatus(); }
         internal void SetRefreshPolicy(bool enabled, bool network) { autoRefresh = enabled; watchNetwork = network; watchedPath = null; ConfigureWatcher(); }
-        internal void DisposePanelTools() { watchVersion++; watchTimer.Stop(); var previous = folderWatcher; folderWatcher = null; watchedPath = null; if (previous != null) previous.Dispose(); completions.IsOpen = false; }
+        internal void DisposePanelTools() { watchVersion++; watchTimer.Stop(); var previous = folderWatcher; folderWatcher = null; watchedPath = null; ReleaseWatcher(previous); completions.IsOpen = false; }
+        static void ReleaseWatcher(FileSystemWatcher watcher){if(watcher==null)return;Task.Factory.StartNew(delegate{try{watcher.Dispose();}catch(IOException){}catch(ObjectDisposedException){}},CancellationToken.None,TaskCreationOptions.LongRunning,TaskScheduler.Default);}
         internal async void ConfigureWatcher()
         {
             if (watchedPath == CurrentPath && folderWatcher != null && !IsRemote && !IsArchive && autoRefresh) return;
-            int version = ++watchVersion; var old = folderWatcher; folderWatcher = null; if (old != null) old.Dispose(); watchedPath = null;
+            int version = ++watchVersion; var old = folderWatcher; folderWatcher = null; ReleaseWatcher(old); watchedPath = null;
             if (!autoRefresh || IsProjection || IsRemote || IsArchive || IsVirtualBrowser || CurrentPath == null) return;
             string path = CurrentPath; bool allowNetwork = watchNetwork; FileSystemWatcher candidate = null;
             try {
                 candidate = await Task.Run(delegate {
-                    bool network = path.StartsWith("\\\\", StringComparison.Ordinal) || new DriveInfo(Path.GetPathRoot(path)).DriveType == DriveType.Network;
+                    bool network = DesktopIcons.NetworkPath(path);
                     if (network && !allowNetwork) return null;
                     var watcher = new FileSystemWatcher(path) { IncludeSubdirectories = false, NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.Size | NotifyFilters.LastWrite | NotifyFilters.Attributes };
                     return watcher;
                 });
-                if (version != watchVersion || path != CurrentPath) { if (candidate != null) candidate.Dispose(); return; }
+                if (version != watchVersion || path != CurrentPath) { ReleaseWatcher(candidate); return; }
                 if (candidate == null) return;
                 FileSystemEventHandler changed = delegate { Interlocked.Exchange(ref lastWatchChange, DateTime.UtcNow.Ticks); Interlocked.Exchange(ref watchDirty, 1); };
                 candidate.Changed += changed; candidate.Created += changed; candidate.Deleted += changed; candidate.Renamed += delegate { changed(null, null); };
                 candidate.Error += delegate { changed(null, null); };
-                folderWatcher = candidate; watchedPath = path; candidate.EnableRaisingEvents = true; watchTimer.Start();
-            } catch (Exception ex) { if (candidate != null) candidate.Dispose(); if (!(ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException)) throw; }
+                await Task.Run(delegate{candidate.EnableRaisingEvents=true;});
+                if(version!=watchVersion||path!=CurrentPath){ReleaseWatcher(candidate);return;}
+                folderWatcher = candidate; watchedPath = path; watchTimer.Start();
+            } catch (Exception ex) { ReleaseWatcher(candidate); if (!(ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException)) throw; }
         }
     }
 }
-

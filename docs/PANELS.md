@@ -74,3 +74,22 @@ Action sets are `Actions.Fluent.fvicons` (Windows 11 color), `Actions.Flat.fvico
 Create shortcut with selected icon writes a `.lnk` referencing the shared library. For the taskbar, unpin the old item and pin the new shortcut; Windows can cache old pinned icons. Keep the library/application at a stable path. Shortcut Properties → Change icon can browse `FileCompass.Icons.dll`; an EXE's fixed embedded icon cannot be changed this way.
 
 File icons use Windows associations, including effective user registrations and registered icon resources, with recognizable fallbacks when needed. FVICONS are named-PNG data ZIPs, not executable assemblies. Icon DLLs are mapped as resources without executing code. Original app artwork is separate from third-party Fluent action icons; see `libraries/licenses/FLUENT-ICONS-LICENSE.txt`.
+
+
+## Common locations and right-click menus
+
+The drive selector includes Windows known folders below physical and network drives: Desktop, Downloads, Documents, Pictures, Music, Videos and the user profile. Their actual redirected paths are resolved through SHGetKnownFolderPath, and selecting one bypasses remembered per-drive directories.
+
+A short right-click toggles the item mark while preserving other marks. A stationary hold shows feedback after 250 ms and opens the File Compass command menu at 600 ms. Its final Windows menu command opens the classic native shell menu for supported local selections, using IContextMenu with IContextMenu2/3 message forwarding. Right-button dragging marks files. Remote/archive items retain application commands; unsupported commands are disabled. Holding on a marked item preserves its group; holding on an unmarked item targets that item.
+
+The Preview context command and F3 always use the internal QuickPreviewPane in the opposite panel, including XLS and other supported document formats. Previewing an archive member or a downloaded remote file also stays inside the application. Associated opening and explicit editing remain separate commands.
+
+
+## Right-button selection and menus
+
+Short right-click toggles the target mark without clearing other marks, including Windows selection mode. Right-drag marks/unmarks a range. Holding without dragging shows delayed feedback after 250 ms, labelled File Compass menu, then opens the application menu at 600 ms. Release after opening does not toggle selection. Escape/capture loss cancels. The native Windows menu is available as the final application-menu item for supported local selections; it is not opened by the hold gesture itself. Shift+F10 and the menu key still open the application menu directly.
+
+
+## Open tabs and saved bookmarks
+
+Open tabs occupy the breadcrumb/path row itself; there is no additional tab row. Tabs use bounded widths based on their path lengths; short drive roots stay compact. When paths do not fit, both active and inactive tabs reuse the copy dialog middle-compaction rule, keeping the drive/root and path ending visible with the full path in a tooltip. The active tab retains breadcrumb navigation when its full path fits. Ctrl+L or the pencil edits the active path. The + button/Ctrl+T opens another tab and Ctrl+W closes one; each panel has its own open-tab set. Saved bookmarks are a separate list under the star button. Adding a bookmark saves a location without opening a tab; choosing one from the panel star menu opens a new tab in that panel. The list supports groups and bookmark management. Closing a tab does not remove a saved bookmark. Open tabs and bookmarks are saved separately, and startup restores only the open-tab set. Locked home tabs remain a separate optional tab behavior. Missing folders, disconnected drives and remote tabs retain their saved targets and show an explicit unavailable state with Retry/connect; remote login occurs only on explicit opening.

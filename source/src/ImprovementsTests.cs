@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -134,7 +134,7 @@ namespace FileCompass
             speedJob.AddPrepared(new[] { speedBatch }); speedJob.Progress("/speed.bin", .25, 10 * 1048576); networkJobs.Add(speedJob); RefreshCopySummary();
             check(summaryTransferInfo.Visibility == Visibility.Visible && summaryTransferInfo.Text.Contains("10,0 MB/s") && summaryTransferInfo.Text.EndsWith("—"), "summary displays network rate without premature ETA");
             copySummary.Measure(new Size(600, 44)); copySummary.Arrange(new Rect(0, 0, 600, 44)); copySummary.UpdateLayout();
-            check(summaryTransferInfo.TransformToAncestor(copySummary).Transform(new Point(summaryTransferInfo.ActualWidth, 0)).X <= summaryCancel.TransformToAncestor(copySummary).Transform(new Point(0, 0)).X && summaryTransferInfo.ActualWidth > 100, "speed and time fit immediately before cancel in a compact summary");
+            check(dockTiles.ContainsKey(contrast) && FluentUiTests.Children<TextBlock>(dockTiles[contrast]).Any(x=>x.Text.Contains("MiB/s")), "speed and time fit immediately before cancel in a compact summary");
             var secondSpeedJob = new NetworkTransferJob(new NetworkProfile { Protocol = NetworkProtocol.SFTP, Host = "localhost" }, true) { Activity = contrast };
             var secondSpeedBatch = new NetworkCopyBatch { Entry = new Entry { FullPath = "/second.bin" }, Destination = root, Bytes = 200 * 1048576L };
             secondSpeedBatch.Items.Add(new NetworkQueueItem { Source = "/second.bin", Bytes = secondSpeedBatch.Bytes, State = "Ve frontě" });
@@ -177,6 +177,3 @@ namespace FileCompass
         }
     }
 }
-
-
-

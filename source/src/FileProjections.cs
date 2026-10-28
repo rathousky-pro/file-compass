@@ -145,9 +145,8 @@ namespace FileCompass
         }
         void ShowTaggedFiles()
         {
-            string query = Ask(L.Text("tags.results"), L.Text("tags.globalPrompt"), ""); if (query == null) return;
+            string query = SettingsUx.Prompt(this,L.Text("tags.results"),"",L.Text("tags.searchHelp")+"\n\n"+L.Text("tags.globalPrompt"),"action.search"); if (query == null) return;
             active.ShowProjection(new ProjectionSpec { Kind = "Tags", Query = query.Trim().TrimStart('#'), Root = active.SavedLocalFolder ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) });
         }
     }
 }
-

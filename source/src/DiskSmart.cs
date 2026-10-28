@@ -25,7 +25,7 @@ namespace FileCompass {
         public string DisplayName { get { return String.IsNullOrEmpty(State)?Name:Name+" · "+State; } }
         public string Normalized { get { return Current+" / "+Worst+" / "+Threshold; } }
     }
-    internal sealed class SmartDisk {
+    internal sealed partial class SmartDisk {
         internal string Device, Type, RawJson, Error, Letters="", Health="unknown";
         internal DateTime CollectedUtc=DateTime.UtcNow;
         internal Dictionary<string,object> Data;
@@ -39,7 +39,7 @@ namespace FileCompass {
         public string TileHealth { get { return L.Text("smart."+Health)+(Remaining.HasValue?" · "+Remaining.Value.ToString("N0")+" %":""); } }
         public System.Windows.Media.Brush TileHealthBrush { get { return CompactTheme.ThemeBrush(Health=="good"?"#12623C":Health=="caution"?"#704600":Health=="bad"?"#9E2031":"#596572"); } }
         public System.Windows.Media.Brush TileTemperatureBrush { get { return Temperature.HasValue?FluentTheme.Accent:FluentTheme.Muted; } }
-        public string TileHint { get { return Model+Environment.NewLine+TileVolumes+" · "+Device+Environment.NewLine+TileHealth+" · "+TileTemperature+Environment.NewLine+SmartData.Capacity(SmartData.Get(Data,"user_capacity","bytes"))+(String.IsNullOrWhiteSpace(Error)?"":Environment.NewLine+Error); } }
+        public string TileHint { get { return Model+Environment.NewLine+KindLabel+" · "+TileVolumes+" · "+Device+Environment.NewLine+TileHealth+" · "+TileTemperature+Environment.NewLine+SmartData.Capacity(SmartData.Get(Data,"user_capacity","bytes"))+(String.IsNullOrWhiteSpace(Error)?"":Environment.NewLine+Error); } }
 
         internal static SmartDisk Parse(string device,string type,string json) {
             var disk=new SmartDisk{Device=device,Type=type,RawJson=json,Data=SmartData.Parse(json)};var data=disk.Data;
@@ -80,7 +80,7 @@ namespace FileCompass {
         internal static string Metric(object value,string unit="") { decimal? number=Number(value);return number.HasValue?number.Value.ToString("N0")+unit:L.Text("smart.unavailable"); }
         internal static string Capacity(object value) { decimal? bytes=Number(value);return bytes.HasValue?(bytes.Value/1000000000m).ToString("N1")+" GB":L.Text("smart.unavailable"); }
         internal static bool Administrator { get { using(var identity=WindowsIdentity.GetCurrent())return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator); } }
-        internal static string ToolPath { get { return Path.Combine(AppPaths.Resource("plugins"),"smart","smartctl.exe"); } }
+        internal static string ToolPath { get { return UpdateRegistry.Resolve("smart\\smartctl.exe"); } }
         const string ToolHash="B5DB94E5082C042BE44994B7A4FA8F7B5C8E713B2AB1C9A560D8F7A7995EA27D";
         internal static void ValidateTool() { using(var file=File.OpenRead(ToolPath))using(var hash=SHA256.Create())if(BitConverter.ToString(hash.ComputeHash(file)).Replace("-","")!=ToolHash)throw new IOException(L.Text("smart.toolInvalid")); }
         internal static string Run(string arguments,CancellationToken token) {

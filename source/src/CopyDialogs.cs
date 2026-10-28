@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -113,23 +113,26 @@ namespace FileCompass
         readonly bool moving, single;
         public CopySetupDialog(Window owner, IList<Entry> entries, string target, IEnumerable<string> recent, bool move = false, ProgramSettings defaults = null)
         {
-            CopyUi.Style(this, owner, move ? L.Text("copy.moveDialogTitle") : L.Text("copy.copyDialogTitle"), 690);
+            CopyUi.Style(this, owner, move ? L.Text("copy.moveDialogTitle") : L.Text("copy.copyDialogTitle"), 780);
             defaults = defaults ?? ProgramSettings.Load();
             verify.IsChecked = defaults.DefaultCopyVerify; permissions.IsChecked = defaults.DefaultCopyPermissions; times.IsChecked = defaults.DefaultCopyTimes;
             attributes.IsChecked = defaults.DefaultCopyAttributes; empty.IsChecked = defaults.DefaultCopyEmptyFolders; hidden.IsChecked = defaults.DefaultCopySkipHidden;
             moving = move; single = entries.Count == 1; sourceDirectory = move && single ? Path.GetDirectoryName(entries[0].FullPath.TrimEnd('\\')) : target;
             verify.ToolTip = L.Text("copy.verificationCostHelp");
-            var panel = new DockPanel(); CopyUi.SectionedSurface(this, panel);
-            var buttons = QueuePresentation.Actions(); DockPanel.SetDock(buttons, Dock.Bottom); panel.Children.Add(buttons);
+            var summary=L.Format("copy.designSummary",entries.Count(x=>!x.IsDirectory),entries.Count(x=>x.IsDirectory))+(entries.Any(x=>!x.IsDirectory)?" · "+CopyUi.Bytes(entries.Where(x=>!x.IsDirectory).Sum(x=>x.Bytes)):"");
+            var layout=new OperationDialogLayout(this,L.Text(move?"copy.designMove":"copy.designCopy"),summary);
+            var buttons=layout.Actions;
             var cancel = CopyUi.Button(L.Text("action.cancel"), delegate { DialogResult = false; }); cancel.IsCancel = true; buttons.Children.Add(cancel);
             buttons.Children.Add(CopyUi.Button(L.Text("functionKey.enqueue"), delegate { Accept(true); }));
             var ok = CopyUi.Button(L.Text(move ? "copy.designMove" : "copy.designCopy"), delegate { Accept(false); }); ok.IsDefault = true; FluentTheme.Primary(ok); ok.Background = FluentTheme.Accent; ok.Foreground = Brushes.White; ok.BorderBrush = FluentTheme.Accent; buttons.Children.Add(ok);
             CopyUi.EnterDefault(this, ok);
-            var body = new StackPanel(); AddPresets(body);
-            var scroll = new ScrollViewer { Content = body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, MaxHeight = Math.Max(160, MaxHeight - 130) }; panel.Children.Add(scroll);
-            var destinationSection = FluentTheme.Section(body, L.Text(move ? "copy.designMove" : "copy.designCopy"));
-            destinationSection.Children.Add(new TextBlock { Text = L.Format("copy.designSummary", entries.Count(x => !x.IsDirectory), entries.Count(x => x.IsDirectory)) + (entries.Any(x => !x.IsDirectory) ? " · " + CopyUi.Bytes(entries.Where(x => !x.IsDirectory).Sum(x => x.Bytes)) : ""), Foreground = FluentTheme.Muted, Margin = new Thickness(2,0,2,18) });
-            destinationSection.Children.Add(new TextBlock { Text = L.Text("copy.designDestination"), FontWeight = FontWeights.SemiBold, Margin = new Thickness(2,0,2,5) });
+            var body=layout.AddPage(L.Text("operation.basic"));
+            var selection=layout.AddPage(L.Text("operation.selection"));
+            var properties=layout.AddPage(L.Text("operation.properties"));
+            var security=layout.AddPage(L.Text("operation.verification"));
+            var presets=layout.AddPage(L.Text("tools1.presets"));
+            var destinationSection=OperationDialogLayout.Group(body,L.Text("copy.designDestination"));
+
             destination.Text = target.TrimEnd('\\') + "\\*.*"; foreach (string path in recent) destination.Items.Add(path);
             destination.Height = filter.Height = 32;
             destinationSection.Children.Add(destination);
@@ -137,24 +140,24 @@ namespace FileCompass
             pathActions.Children.Add(CopyUi.Button(L.Text("copy.designBrowse"), Browse));
             pathActions.Children.Add(CopyUi.Button(L.Text("copy.designNewFolder"), NewFolder)); destinationSection.Children.Add(pathActions);
             if (moving && single) destinationSection.Children.Add(new TextBlock { Text = L.Text("copy.destinationRenameHelp"), Foreground = FluentTheme.Muted, Margin = new Thickness(2,0,2,10), TextWrapping = TextWrapping.Wrap });
-            var filterSection = FluentTheme.Section(body, L.Text("copy.designFilterOptions"));
+            var filterSection = OperationDialogLayout.Group(selection,L.Text("copy.designFilterOptions"));
             filterSection.Children.Add(new TextBlock { Text = L.Text("copy.fileMaskLabel"), FontWeight = FontWeights.SemiBold, Margin = new Thickness(2,0,2,5) });
             foreach (string mask in new[] { "*.*", "*.txt;*.md", "*.jpg;*.jpeg;*.png;*.webp", "*.pdf;*.docx;*.xlsx", "*.mp4;*.mkv;*.avi", "*.* | *.tmp;*.bak" }) filter.Items.Add(mask);
             filter.ToolTip = L.Text("copy.maskSyntaxHelp"); filterSection.Children.Add(filter);
-            var basic = new StackPanel { Margin = new Thickness(0,10,0,4) }; verify.Margin = new Thickness(2,4,2,4); basic.Children.Add(verify); filterSection.Children.Add(basic);
-            var options = new StackPanel { Margin = new Thickness(2,10,2,4) };
-            options.Children.Add(CopyUi.Label(L.Text("copy.existingDestinationLabel")));
+            var verification=OperationDialogLayout.Group(security,L.Text("operation.verification"));verification.Children.Add(verify);verification.Children.Add(permissions);verification.Children.Add(readOnly);
+            var collisions=OperationDialogLayout.Group(body,L.Text("copy.existingDestinationLabel"));
             foreach (string text in new[] { L.Text("conflict.ask"), L.Text("conflict.overwriteAll"), L.Text("conflict.overwriteOlderTargets"), L.Text("conflict.skipAll"), L.Text("conflict.overwriteDifferent"), L.Text("conflict.overwriteIfSourceLarger"), L.Text("conflict.overwriteIfSourceSmaller"), L.Text("conflict.autoRenameCopies") }) rule.Items.Add(text);
-            rule.SelectedIndex = 0; options.Children.Add(rule);
-            foreach (CheckBox check in new[] { times, attributes, empty, hidden, readOnly, permissions, fileTarget }) options.Children.Add(check);
-            fileTarget.IsEnabled = single;
-            filterSection.Children.Add(new Expander { Header = L.Text("copy.designAdvanced"), Content = options, Margin = new Thickness(2,8,2,4) });
+            rule.SelectedIndex = 0; collisions.Children.Add(rule);
+            var fileSelection=OperationDialogLayout.Group(selection,L.Text("operation.selection"));fileSelection.Children.Add(hidden);fileSelection.Children.Add(empty);
+            var metadata=OperationDialogLayout.Group(properties,L.Text("operation.properties"));metadata.Children.Add(times);metadata.Children.Add(attributes);
+            destinationSection.Children.Add(fileTarget);fileTarget.IsEnabled=single;
+            AddPresets(presets);
             Loaded += delegate { destination.Focus(); var textBox = destination.Template.FindName("PART_EditableTextBox", destination) as TextBox; if (textBox != null) textBox.SelectAll(); };
             PreviewKeyDown += delegate(object sender, System.Windows.Input.KeyEventArgs e)
             {
                 if (e.Key == System.Windows.Input.Key.F2) { Accept(true); e.Handled = true; }
-                if (e.Key == System.Windows.Input.Key.F7) { NewFolder(); e.Handled = true; }
-                if (e.Key == System.Windows.Input.Key.F8) { filter.IsDropDownOpen = true; e.Handled = true; }
+                if (e.Key == System.Windows.Input.Key.F7) { layout.Navigation.SelectedIndex=0; NewFolder(); e.Handled = true; }
+                if (e.Key == System.Windows.Input.Key.F8) { layout.Navigation.SelectedIndex=1; UpdateLayout(); filter.IsDropDownOpen = true; e.Handled = true; }
             };
         }
         string Target()
@@ -203,57 +206,42 @@ namespace FileCompass
         public CopyDecision Decision = new CopyDecision(CopyChoice.Cancel);
         readonly CheckBox readOnly = new CheckBox { Content = L.Text("conflict.allowReadOnlyOverwriteForJob"), Margin = new Thickness(3, 5, 3, 6) };
         readonly CopyConflict conflict;
+        internal readonly CheckBox ApplyToAll = new CheckBox { Content=L.Text("conflict.applyToAllInTask"),Margin=new Thickness(0,12,0,4) };
         public CopyConflictDialog(Window owner, CopyConflict conflict)
         {
-            this.conflict = conflict; CopyUi.Style(this, owner, L.Text("conflict.fileExistsTitle"), 590);
-            var panel = new StackPanel { Margin = new Thickness(9) }; Content = panel;
-            var thumbs = new List<Image>();
-            panel.Children.Add(Info(L.Text("conflict.overwriteLabel"), conflict.Target, conflict.TargetDirectory, conflict.TargetSize, conflict.TargetTime, thumbs));
-            panel.Children.Add(new TextBlock { Text = "↑", Foreground = Brushes.OrangeRed, FontSize = 24, HorizontalAlignment = HorizontalAlignment.Center });
-            panel.Children.Add(Info("Souborem:", conflict.Source, conflict.SourceDirectory, conflict.SourceSize, conflict.SourceTime, thumbs));
-            var previews = new CheckBox { Content = L.Text("action.preview"), Margin = new Thickness(3, 5, 3, 5) };
-            previews.Checked += delegate { foreach (Image image in thumbs) { image.Source = Thumbnail((string)image.Tag); image.Visibility = image.Source == null ? Visibility.Collapsed : Visibility.Visible; } };
-            previews.Unchecked += delegate { foreach (Image image in thumbs) image.Visibility = Visibility.Collapsed; }; panel.Children.Add(previews);
-            if (conflict.IsReadOnly) panel.Children.Add(readOnly);
-            bool compatible = !conflict.SourceDirectory && !conflict.TargetDirectory;
-            if (!compatible) panel.Children.Add(CopyUi.Label(L.Text("conflict.fileFolderHelp")));
-            var buttons = new UniformGrid { Columns = 3 };
-            Add(buttons, L.Code("action.overwrite"), CopyChoice.Overwrite, compatible); Add(buttons, L.Text("conflict.overwriteAll"), CopyChoice.OverwriteAll, compatible); Add(buttons, L.Code("action.skip"), CopyChoice.Skip, true);
-            Add(buttons, L.Text("action.cancel"), CopyChoice.Cancel, true); Add(buttons, L.Text("conflict.overwriteOlder"), CopyChoice.Older, compatible); Add(buttons, L.Text("conflict.skipAll"), CopyChoice.SkipAll, true);
-            buttons.Children.Add(CopyUi.Button(L.Text("action.rename"), delegate
-            {
-                string name = CopyUi.Prompt(this, L.Text("conflict.newCopyNameTitle"), Path.GetFileName(conflict.Target)); if (name == null) return;
-                try
-                {
-                    FileOperations.ValidateName(name); if (String.Equals(name, Path.GetFileName(conflict.Target), StringComparison.OrdinalIgnoreCase)) throw new IOException(L.Text("conflict.differentNameRequired"));
-                    Decision = new CopyDecision(CopyChoice.Rename, name); DialogResult = true;
-                }
-                catch (Exception ex) { MessageBox.Show(this, ex.Message); }
+            this.conflict = conflict; CopyUi.Style(this, owner, L.Text("conflict.fileExistsTitle"), 900);
+            var layout=new OperationDialogLayout(this,L.Text("conflict.compareTitle"),Path.GetFileName(conflict.Target));var panel=layout.AddPage(L.Text("operation.basic"));var extras=layout.AddPage(L.Text("conflict.rulesTab"));
+            var thumbs=new List<Image>();var comparison=new Grid();comparison.ColumnDefinitions.Add(new ColumnDefinition());comparison.ColumnDefinitions.Add(new ColumnDefinition());
+            var existing=Info(L.Text("conflict.existingVersion"),conflict.Target,conflict.TargetDirectory,conflict.TargetSize,conflict.TargetTime,thumbs);existing.Margin=new Thickness(0,0,6,0);comparison.Children.Add(existing);
+            var incoming=Info(L.Text("conflict.incomingVersion"),conflict.Source,conflict.SourceDirectory,conflict.SourceSize,conflict.SourceTime,thumbs);incoming.Margin=new Thickness(6,0,0,0);Grid.SetColumn(incoming,1);comparison.Children.Add(incoming);panel.Children.Add(comparison);
+            bool compatible=!conflict.SourceDirectory&&!conflict.TargetDirectory;
+            string note=!compatible?L.Text("conflict.fileFolderHelp"):conflict.SourceTime>conflict.TargetTime?L.Text("conflict.incomingNewer"):conflict.SourceTime<conflict.TargetTime?L.Text("conflict.incomingOlder"):conflict.SourceSize==conflict.TargetSize?L.Text("conflict.sameMetadata"):L.Text("conflict.sameTimeDifferentSize");
+            panel.Children.Add(new TextBlock{Text=note,TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,12,0,0)});
+            panel.Children.Add(ApplyToAll);if(conflict.IsReadOnly)panel.Children.Add(readOnly);
+            var extraActions=new WrapPanel{Margin=new Thickness(0,8,0,0)};panel.Children.Add(extraActions);
+            extraActions.Children.Add(CopyUi.Button(L.Text("action.rename"),delegate{
+                string name=CopyUi.Prompt(this,L.Text("conflict.newCopyNameTitle"),Path.GetFileName(conflict.Target));if(name==null)return;
+                try{FileOperations.ValidateName(name);if(String.Equals(name,Path.GetFileName(conflict.Target),StringComparison.OrdinalIgnoreCase))throw new IOException(L.Text("conflict.differentNameRequired"));Decision=new CopyDecision(CopyChoice.Rename,name){AllowReadOnly=readOnly.IsChecked==true};DialogResult=true;}catch(Exception ex){MessageBox.Show(this,ex.Message);}
             }));
-            var append = CopyUi.Button(L.Text("action.append"), delegate
-            {
-                if (MessageBox.Show(this, L.Text("conflict.confirmAppendBytes"), L.Text("conflict.appendTitle"), MessageBoxButton.OKCancel, MessageBoxImage.Question) == MessageBoxResult.OK) Choose(CopyChoice.Append);
-            }); append.IsEnabled = compatible; buttons.Children.Add(append);
-            var extras = new StackPanel { Visibility = Visibility.Collapsed };
-            Button more = null; more = CopyUi.Button(L.Text("conflict.showMoreOptions"), delegate { extras.Visibility = extras.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible; more.Content = extras.Visibility == Visibility.Visible ? L.Text("conflict.showFewerOptions") : L.Text("conflict.showMoreOptions"); }); buttons.Children.Add(more);
-            panel.Children.Add(buttons);
-            foreach (var pair in new[] { Tuple.Create(L.Text("conflict.overwriteDifferentSizeOrTime"), CopyChoice.Different), Tuple.Create(L.Text("conflict.overwriteIfSourceLarger"), CopyChoice.Larger), Tuple.Create(L.Text("conflict.overwriteIfSourceSmaller"), CopyChoice.Smaller), Tuple.Create(L.Text("conflict.autoRenameAll"), CopyChoice.RenameAll) })
-                Add(extras, pair.Item1, pair.Item2, compatible || pair.Item2 == CopyChoice.RenameAll);
-            extras.Children.Add(CopyUi.Label(L.Text("conflict.applyRulesHelp"))); panel.Children.Add(extras);
+            var append=CopyUi.Button(L.Text("action.append"),delegate{if(MessageBox.Show(this,L.Text("conflict.confirmAppendBytes"),L.Text("conflict.appendTitle"),MessageBoxButton.OKCancel,MessageBoxImage.Question)==MessageBoxResult.OK)Choose(CopyChoice.Append);});append.IsEnabled=compatible;extraActions.Children.Add(append);
+            var previews=new CheckBox{Content=L.Text("action.preview"),Margin=new Thickness(0,8,0,8)};previews.Checked+=delegate{foreach(Image image in thumbs){image.Source=Thumbnail((string)image.Tag);image.Visibility=image.Source==null?Visibility.Collapsed:Visibility.Visible;}};previews.Unchecked+=delegate{foreach(Image image in thumbs)image.Visibility=Visibility.Collapsed;};panel.Children.Add(previews);
+            extras.Children.Add(new TextBlock{Text=L.Text("conflict.applyRulesHelp"),TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,8,0,6)});
+            var rules=new WrapPanel();extras.Children.Add(rules);
+            foreach(var pair in new[]{Tuple.Create(L.Text("conflict.overwriteAll"),CopyChoice.OverwriteAll),Tuple.Create(L.Text("conflict.skipAll"),CopyChoice.SkipAll),Tuple.Create(L.Text("conflict.overwriteOlder"),CopyChoice.Older),Tuple.Create(L.Text("conflict.overwriteDifferentSizeOrTime"),CopyChoice.Different),Tuple.Create(L.Text("conflict.overwriteIfSourceLarger"),CopyChoice.Larger),Tuple.Create(L.Text("conflict.overwriteIfSourceSmaller"),CopyChoice.Smaller),Tuple.Create(L.Text("conflict.autoRenameAll"),CopyChoice.RenameAll)})Add(rules,pair.Item1,pair.Item2,compatible||pair.Item2==CopyChoice.SkipAll||pair.Item2==CopyChoice.RenameAll);
+            var cancel=CopyUi.Button(L.Text("conflict.stopTask"),delegate{Choose(CopyChoice.Cancel);});cancel.IsCancel=true;layout.Actions.Children.Add(cancel);
+            var skip=CopyUi.Button(L.Text("action.skip"),delegate{Choose(ApplyToAll.IsChecked==true?CopyChoice.SkipAll:CopyChoice.Skip);});layout.Actions.Children.Add(skip);
+            var overwrite=CopyUi.Button(L.Text("action.overwrite"),delegate{Choose(ApplyToAll.IsChecked==true?CopyChoice.OverwriteAll:CopyChoice.Overwrite);});overwrite.IsEnabled=compatible;FluentTheme.Primary(overwrite);layout.Actions.Children.Add(overwrite);
+            ApplyToAll.Checked+=delegate{skip.Content=L.Text("conflict.skipAll");overwrite.Content=L.Text("conflict.overwriteAll");};ApplyToAll.Unchecked+=delegate{skip.Content=L.Text("action.skip");overwrite.Content=L.Text("action.overwrite");};
         }
-        void Choose(CopyChoice choice) { Decision = new CopyDecision(choice) { AllowReadOnly = readOnly.IsChecked == true }; DialogResult = true; }
-        void Add(Panel panel, string text, CopyChoice choice, bool enabled)
-        {
-            var b = CopyUi.Button(text, delegate { Choose(choice); }); b.IsEnabled = enabled;
-            if (choice == CopyChoice.Overwrite) FluentTheme.Primary(b);
-            panel.Children.Add(b);
-        }
-        UIElement Info(string title, string path, bool directory, long bytes, DateTime time, List<Image> thumbs)
-        {
-            var group = new GroupBox { Header = title, Margin = new Thickness(1, 0, 1, 0), Padding = new Thickness(8, 2, 8, 6) };
-            var inner = new DockPanel(); var image = new Image { Tag = path, Width = 64, Height = 56, Margin = new Thickness(6), Visibility = Visibility.Collapsed }; thumbs.Add(image); DockPanel.SetDock(image, Dock.Right); inner.Children.Add(image);
-            var text = new StackPanel(); text.Children.Add(new PathTextBlock{FullPath=path,Margin=new Thickness(2,4,2,7)}); text.Children.Add(new TextBlock { Text = (directory ? L.Text("common.folder") : bytes.ToString("N0") + L.Text("common.bytesSuffix")) + ", " + time.ToString("dd.MM.yyyy HH:mm:ss"), Margin = new Thickness(12, 0, 0, 0) });
-            inner.Children.Add(text); group.Content = inner; return group;
+        void Choose(CopyChoice choice){Decision=new CopyDecision(choice){AllowReadOnly=readOnly.IsChecked==true};DialogResult=true;}
+        void Add(Panel panel,string text,CopyChoice choice,bool enabled){var button=CopyUi.Button(text,delegate{Choose(choice);});button.IsEnabled=enabled;panel.Children.Add(button);}
+        GroupBox Info(string title,string path,bool directory,long bytes,DateTime time,List<Image> thumbs){
+            var group=new GroupBox{Header=title,Padding=new Thickness(12)};
+            var inner=new DockPanel();var image=new Image{Tag=path,Width=64,Height=56,Margin=new Thickness(6),Visibility=Visibility.Collapsed};thumbs.Add(image);DockPanel.SetDock(image,Dock.Right);inner.Children.Add(image);
+            var text=new StackPanel();text.Children.Add(new TextBlock{Text=Path.GetFileName(path),FontWeight=FontWeights.SemiBold,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,0,0,8)});
+            text.Children.Add(new TextBlock{Text=directory?L.Text("common.folder"):CopyUi.Bytes(bytes),ToolTip=bytes.ToString("N0")+L.Text("common.bytesSuffix"),Margin=new Thickness(0,0,0,3)});
+            text.Children.Add(new TextBlock{Text=time.ToString("dd.MM.yyyy HH:mm:ss"),Foreground=FluentTheme.Muted,Margin=new Thickness(0,0,0,9)});
+            text.Children.Add(new PathTextBlock{FullPath=path,Foreground=FluentTheme.Muted});inner.Children.Add(text);group.Content=inner;return group;
         }
         static ImageSource Thumbnail(string path)
         {
@@ -271,13 +259,14 @@ namespace FileCompass
         readonly CompressionRatioTrend speedTrend = new CompressionRatioTrend { SpeedMode=true,Height=60 };
         Button pauseButton;
         internal void TogglePause() { control.Pause(!control.Paused); pauseButton.Content = control.Paused ? L.Text("action.resume") : L.Text("action.pause"); UpdateMetrics(); }
-        readonly TextBlock phase = Line(L.Text("copy.loadingFiles")), count = Line(""), totals = Line("");
+        readonly TextBlock phase, count, totals;
         readonly PathTextBlock source = new PathTextBlock(), target = new PathTextBlock();
-        readonly TextBlock filePercent = Line("0 %"), totalPercent = Line("0 %"), speed = Line(L.Text("transfer.unknownRate"));
-        readonly LocalCopyProgressBar fileProgress = new LocalCopyProgressBar(false) { Height = 3, ToolTip = L.Text("progress.currentFileLabel") };
-        readonly LocalCopyProgressBar totalProgress = new LocalCopyProgressBar(true) { Height = 3, ToolTip = L.Text("progress.wholeJobLabel") };
+        readonly TextBlock filePercent, totalPercent, speed = Line(L.Text("transfer.unknownRate"));
+        readonly LocalCopyProgressBar fileProgress, totalProgress;
+        readonly TransferProgressLayout presentation;
         readonly System.Windows.Threading.DispatcherTimer metricsTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         CopyUpdate latest;
+        internal string FileCountSummary { get { return count.Text+L.Text("copy.filesAndBytesSeparator"); } }
         internal string QueueStatus { get { return phase.Text + " · " + count.Text + " · " + totals.Text; } }
         internal double QueueFraction { get { return latest == null ? 0 : latest.TotalBytes > 0 ? (double)latest.TotalDone / latest.TotalBytes : latest.TotalFiles > 0 ? (double)latest.Completed / latest.TotalFiles : 0; } }
         DateTime lastUpdate;
@@ -297,7 +286,7 @@ namespace FileCompass
                 : state + L.Text("transfer.remainingPrefix") + MainWindow.TransferTime(metrics.RemainingSeconds);
             fileProgress.Preparing = totalProgress.Preparing = latest == null || latest.Phase == L.Code("copy.loadingFiles") || latest.Phase == L.Code("copy.savingPlan");
             if (!complete) speedTrend.Add(metrics.BytesPerSecond / 1048576.0, QueueFraction);
-            speed.Text = (metrics.BytesPerSecond / 1048576.0).ToString("F1") + " MB/s";
+            speed.Text = (metrics.BytesPerSecond / 1048576.0).ToString("F1") + " MiB/s";
             if (MetricsChanged != null) MetricsChanged();
         }
         public CopyProgressDialog(Window owner, CopyControl control)
@@ -305,40 +294,34 @@ namespace FileCompass
             this.control = control; CopyUi.Style(this, owner, L.Text("copy.progressWindowTitle"), 580);
             ResizeMode = ResizeMode.NoResize; SizeToContent = SizeToContent.Height;
             placement = new TransferWindowState(this,delegate { if (BecameBackground != null) BecameBackground(); },delegate { if (BecameForeground != null) BecameForeground(); });
-            var body = new StackPanel(); CopyUi.SectionedSurface(this, body);
-            var route = FluentTheme.Section(body, L.Text("copy.designTransfer"));
-            phase.FontWeight = FontWeights.SemiBold; phase.Margin = new Thickness(0,0,0,10); route.Children.Add(phase);
-            source.Margin = target.Margin = new Thickness(0,3,0,3); route.Children.Add(source); route.Children.Add(target);
-            var progressSection = FluentTheme.Section(body, L.Text("copy.designProgress"));
-            Action<TextBlock,LocalCopyProgressBar,TextBlock> track = delegate(TextBlock label, LocalCopyProgressBar bar, TextBlock percent) {
-                progressSection.Children.Add(label);
-                var row = new DockPanel { Margin = new Thickness(0,6,0,12) };
-                percent.Width = 64; percent.TextAlignment = TextAlignment.Right; DockPanel.SetDock(percent,Dock.Right); row.Children.Add(percent);
-                bar.VerticalAlignment = VerticalAlignment.Center; row.Children.Add(bar); progressSection.Children.Add(row);
-            };
-            track(Line(L.Text("progress.currentFileLabel")),fileProgress,filePercent);
-            track(Line(L.Text("progress.wholeJobLabel")),totalProgress,totalPercent);
-            var stats = new DockPanel(); speed.HorizontalAlignment=HorizontalAlignment.Right; DockPanel.SetDock(speed,Dock.Right);stats.Children.Add(speed);stats.Children.Add(count);progressSection.Children.Add(stats);
-            totals.Margin=new Thickness(0,5,0,0);progressSection.Children.Add(totals);
-            var speedSection=FluentTheme.Section(body,L.Text("transfer.speedHistory"));speedSection.Children.Add(speedTrend);
-            var buttons=QueuePresentation.Actions();body.Children.Add(buttons);
+            presentation = new TransferProgressLayout(this,L.Text("copy.progressWindowTitle"));
+            phase=presentation.Remaining;count=presentation.Count;totals=presentation.Totals;
+            filePercent=presentation.FilePercent;totalPercent=presentation.Percent;fileProgress=presentation.File;totalProgress=presentation.Overall;
+            source.Margin = target.Margin = new Thickness(0,3,0,3);presentation.DetailBody.Children.Add(source);presentation.DetailBody.Children.Add(target);
+            speed.Margin=new Thickness(0,10,0,6);presentation.DetailBody.Children.Add(speed);
+            presentation.DetailBody.Children.Add(new TextBlock{Text=L.Text("transfer.speedHistory"),Foreground=FluentTheme.Muted,Margin=new Thickness(0,4,0,4)});presentation.DetailBody.Children.Add(speedTrend);
+            var buttons=presentation.Actions;
             pauseButton=CopyUi.Button(L.Text("action.pause"),delegate{TogglePause();});buttons.Children.Add(pauseButton);
             buttons.Children.Add(CopyUi.Button(L.Text("action.cancel"),delegate{control.Cancel();UpdateMetrics();}));
-            buttons.Children.Add(CopyUi.Button(L.Text("copy.backgroundAction"),placement.Background));
+            var background=CopyUi.Button(L.Text("copy.backgroundAction"),placement.Background);FluentTheme.Primary(background);buttons.Children.Add(background);
             metricsTimer.Tick += delegate { UpdateMetrics(); }; Loaded += delegate { if (!complete) metricsTimer.Start(); }; Closed += delegate { metricsTimer.Stop(); };
             Closing += delegate(object sender, System.ComponentModel.CancelEventArgs e) { if (!complete) { e.Cancel = true; control.Cancel(); UpdateMetrics(); } };
         }
         public void Update(CopyUpdate update)
         {
             latest = update; lastUpdate = DateTime.UtcNow; UpdateMetrics();
+            if(!String.IsNullOrWhiteSpace(update.Phase))presentation.Heading.Text=update.Phase;
             source.SetPath(L.Text("transfer.sourceLabel"),update.Source);target.SetPath(L.Text("transfer.targetLabel"),update.Target);
+            if(!String.IsNullOrEmpty(update.Source)&&!String.IsNullOrEmpty(update.Target)){
+                presentation.Route.SetPath("",TransferProgressLayout.ParentPath(update.Source)+" → "+TransferProgressLayout.ParentPath(update.Target));presentation.Route.Visibility=Visibility.Visible;
+            }
             double file = update.FileTotal == 0 ? 0 : (double)update.FileDone / update.FileTotal;
             double total = update.TotalBytes == 0 ? (update.TotalFiles == 0 ? 0 : (double)update.Completed / update.TotalFiles) : (double)update.TotalDone / update.TotalBytes;
             fileProgress.Update(file); totalProgress.Update(total); filePercent.Text = (Math.Max(0,Math.Min(1,file)) * 100).ToString("F0") + " %"; totalPercent.Text = (Math.Max(0,Math.Min(1,total)) * 100).ToString("F0") + " %";
             count.Text = update.Completed + " / " + update.TotalFiles;
             totals.Text = CopyUi.Bytes(update.TotalDone) + " / " + CopyUi.Bytes(update.TotalBytes);
+            presentation.Current(update.Source,update.FileTotal>0?(double?)file:null);
         }
         public void Finish() { complete = true; metricsTimer.Stop(); placement.Finish(); }
     }
 }
-

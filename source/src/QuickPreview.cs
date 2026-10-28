@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Globalization;
@@ -234,6 +234,7 @@ namespace FileCompass
         PreviewData lastData;
         long currentOffset;
         readonly Grid content = new Grid();
+        WrapPanel previewModeRow;DockPanel previewTools;bool compactPreview;
         readonly ListView archiveContents = new ListView { Visibility = Visibility.Collapsed };
         CancellationTokenSource cancellation;
         string current;
@@ -246,31 +247,33 @@ namespace FileCompass
 
         internal QuickPreviewPane(Action close, bool compact = false)
         {
-            Background = CompactTheme.Surface; BorderBrush = CompactTheme.Line; BorderThickness = new Thickness(1);
-            var body = new DockPanel { Margin = new Thickness(compact ? 4 : 8) }; Child = body;
+            Background = CompactTheme.WhiteSurface; BorderBrush = CompactTheme.Line; BorderThickness = new Thickness(1);CornerRadius=new CornerRadius(6);
+            compactPreview=compact;var body = new DockPanel { Margin = new Thickness(compact ? 4 : 8) }; Child = body;
             var heading = new DockPanel(); DockPanel.SetDock(heading, Dock.Top); body.Children.Add(heading);
             var exit = CopyUi.Button(L.Text("preview.closeShortcut"), close); DockPanel.SetDock(exit, Dock.Right); heading.Children.Add(exit);
             title.TextTrimming = TextTrimming.CharacterEllipsis; heading.Children.Add(title);
+            title.FontSize=compact?12:16;title.FontWeight=FontWeights.SemiBold;heading.Background=CompactTheme.PanelSurface;heading.Margin=new Thickness(0,0,0,6);
             if (compact) heading.Visibility = Visibility.Collapsed;
+            InitializeSelectionStrip(body,compact);
             DockPanel.SetDock(status, Dock.Bottom); body.Children.Add(status); InitializeDetails(body, compact);
 
-            var tools = new DockPanel { Margin = new Thickness(0, 0, 0, 6) }; DockPanel.SetDock(tools, Dock.Top); body.Children.Add(tools);
+            var tools = previewTools = new DockPanel { Margin = new Thickness(0, 0, 0, 6) }; DockPanel.SetDock(tools, Dock.Top); body.Children.Add(tools);
             DockPanel.SetDock(encoding, Dock.Right); tools.Children.Add(encoding);
             var next = CopyUi.Button(L.Text("action.find"), async delegate { await SearchNext(find.Text); });
             DockPanel.SetDock(next, Dock.Right); tools.Children.Add(next); tools.Children.Add(find);
 
-            var modeRow = new WrapPanel { Margin = new Thickness(0, 0, 0, 2) }; DockPanel.SetDock(modeRow, Dock.Top); body.Children.Add(modeRow);
+            var modeRow = previewModeRow = new WrapPanel { Margin = new Thickness(0, 0, 0, 2) }; DockPanel.SetDock(modeRow, Dock.Top); body.Children.Add(modeRow);
             string groupName = "PreviewMode_" + Guid.NewGuid().ToString("N");
             foreach (var rb in new[] { modeAuto, modeText, modeBinary, modeHex }) { rb.GroupName = groupName; modeRow.Children.Add(rb); }
             modeRow.Children.Add(wrap);
             modeRow.Children.Add(formatted);
-            if (compact) {
-                tools.Visibility = Visibility.Collapsed;
+            {
+                if(compact)tools.Visibility = Visibility.Collapsed;
                 modeRow.Children.Clear();
                 var modes = new ComboBox { Width = 115, MinWidth = 0, ItemsSource = new[] { L.Text("preview.modeAuto"), L.Text("preview.modeText"), L.Text("preview.modeBinary"), L.Text("preview.modeHex") }, SelectedIndex = 0, Margin = new Thickness(0, 0, 8, 0) };
                 modes.SelectionChanged += delegate { if (modes.SelectedIndex >= 0) SetViewMode((PreviewMode)modes.SelectedIndex); };
                 modeAuto.Checked += delegate { modes.SelectedIndex = 0; }; modeText.Checked += delegate { modes.SelectedIndex = 1; }; modeBinary.Checked += delegate { modes.SelectedIndex = 2; }; modeHex.Checked += delegate { modes.SelectedIndex = 3; };
-                formatted.Content = L.Text("layout.formatted"); modeRow.Children.Add(modes); modeRow.Children.Add(formatted); modeRow.Children.Add(wrap);
+                if(compact)formatted.Content = L.Text("layout.formatted");else{var label=new FrameworkElementFactory(typeof(TextBlock));label.SetValue(TextBlock.TextProperty,L.Text("layout.formatted"));formatted.ContentTemplate=new DataTemplate{VisualTree=label};} modeRow.Children.Add(modes); modeRow.Children.Add(formatted); modeRow.Children.Add(wrap);
                 modeRow.Children.Add(CompactTheme.Button(L.Text("action.find"), L.Text("preview.findInLoadedText"), delegate { tools.Visibility = tools.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible; if (tools.Visibility == Visibility.Visible) find.Focus(); }));
             }
 
@@ -306,7 +309,7 @@ namespace FileCompass
             };
 
             var archiveColumns = new GridView(); archiveColumns.Columns.Add(new GridViewColumn { Header = L.Text("column.name"), DisplayMemberBinding = new System.Windows.Data.Binding("Path"), Width = 380 }); archiveColumns.Columns.Add(new GridViewColumn { Header = L.Text("column.size"), DisplayMemberBinding = new System.Windows.Data.Binding("Bytes"), Width = 100 }); archiveColumns.Columns.Add(new GridViewColumn { Header = L.Text("column.date"), DisplayMemberBinding = new System.Windows.Data.Binding("Modified") { StringFormat = "dd.MM.yyyy HH:mm" }, Width = 150 }); archiveContents.View = archiveColumns;
-            InitializeDocumentPreview(body);InitializeCsvPreview(body); content.Children.Add(archiveContents); content.Children.Add(text); content.Children.Add(picture); content.Children.Add(rich); rich.Visibility = Visibility.Collapsed; body.Children.Add(content);
+            InitializeDocumentPreview(body);InitializeCsvPreview(body);InitializeVideoPreview(body,compact); content.Children.Add(archiveContents); content.Children.Add(text); content.Children.Add(picture); content.Children.Add(rich); rich.Visibility = Visibility.Collapsed; body.Children.Add(new Border{Child=content,Background=CompactTheme.WhiteSurface,BorderBrush=CompactTheme.Line,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(6),Padding=new Thickness(compact?4:10)});
             encoding.SelectionChanged += delegate { if (current != null) LoadingTask = Load(current, currentOffset); };
         }
 
@@ -317,6 +320,7 @@ namespace FileCompass
         {
             if (updatingMode || currentMode == selected) return;
             currentMode = selected;
+            if(current!=null&&remoteTemplate!=null&&selected==PreviewMode.Auto&&FileViewers.IsVideo(current)){ShowRemoteVideo(current,remoteTemplate,"");return;}
             if (current != null && remoteTemplate == null) LoadingTask = Load(current, currentOffset);
             else ApplyDataToControls();
         }
@@ -330,6 +334,7 @@ namespace FileCompass
             modeBinary.IsChecked = mode == PreviewMode.Binary;
             modeHex.IsChecked = mode == PreviewMode.Hex;
             updatingMode = false;
+            if(current!=null&&remoteTemplate!=null&&mode==PreviewMode.Auto&&FileViewers.IsVideo(current)){ShowRemoteVideo(current,remoteTemplate,"");return;}
             if (current != null && remoteTemplate == null) LoadingTask = Load(current, currentOffset);
             else ApplyDataToControls();
         }
@@ -414,6 +419,7 @@ namespace FileCompass
 
         void UpdateFormat()
         {
+            UpdateVideoVisibility();
             bool showCsv=UpdateCsvPreview();
             UpdateHtmlControls();
             bool archive = lastData != null && lastData.ArchiveItems != null;
@@ -459,6 +465,7 @@ namespace FileCompass
         internal void ShowMessage(string message)
         {
             Stop(); if (remoteTemplate != null) remoteTemplate.Dispose(); remoteTemplate = null;
+            ResetVideoOrigin();
             current = null; lastData = null; currentOffset = 0; text.Text = ""; picture.Source = null; rich.Clear(); richAvailable = false; navigationBar.Visibility = Visibility.Collapsed;
             UpdateFormat(); status.Text = message;
         }
@@ -466,6 +473,8 @@ namespace FileCompass
         internal void ShowFile(string path, bool preserveUnchanged = false)
         {
             if (preserveUnchanged && IsCurrentLocalFile(path)) return;
+            if(currentMode==PreviewMode.Auto&&FileViewers.IsVideo(path)&&NetworkVideoPath(path)){try{var info=new FileInfo(path);VideoConsent(path,"network:"+path+"|"+info.Length+"|"+info.LastWriteTimeUtc.Ticks,L.Text("video.networkConsent"),delegate{if(remoteTemplate!=null)remoteTemplate.Dispose();remoteTemplate=null;LoadingTask=Load(path,0);});}catch(Exception ex){ShowMessage(L.Text("preview.loadFailedPrefix")+ex.Message);}return;}
+            ResetVideoOrigin();
             if (remoteTemplate != null) remoteTemplate.Dispose(); remoteTemplate = null;
             currentOffset = 0;
             LoadingTask = Load(path, 0);
@@ -478,8 +487,10 @@ namespace FileCompass
             catch (IOException) { return false; } catch (UnauthorizedAccessException) { return false; }
         }
 
-        internal void ShowRemoteFile(string path, RemoteConnection remote)
+        internal void ShowRemoteFile(string path, RemoteConnection remote,string revision="")
         {
+            if(currentMode==PreviewMode.Auto&&FileViewers.IsVideo(path)){ShowRemoteVideo(path,remote,revision);return;}
+            ResetVideoOrigin();
             if(DocumentPreview.Supports(path)||FileViewers.Kind(path)=="system"||FileViewers.Kind(path)=="image") {ShowDownloadedPreview(path,remote);return;}
             if (remoteTemplate != null) remoteTemplate.Dispose(); remoteTemplate = remote.TransferConnection();
             currentOffset = 0;
@@ -505,6 +516,7 @@ namespace FileCompass
             var remote = remoteTemplate == null ? null : remoteTemplate.TransferConnection();
             try
             {
+                if(remote==null&&modeSnapshot==PreviewMode.Auto&&FileViewers.IsVideo(path)){await LoadVideoPreview(path,token,request);return;}
                 var data = await Task.Run(delegate
                 {
                     using (remote)
@@ -523,8 +535,8 @@ namespace FileCompass
             catch (Exception ex) { if (request == version) status.Text = L.Text("preview.loadFailedPrefix") + ex.Message; }
         }
 
-        internal void Stop() { localPreviewPath = null; ClearDocumentPreview(); ClearDetails(); version++; if (cancellation != null) { cancellation.Cancel(); cancellation.Dispose(); } cancellation = new CancellationTokenSource(); ClearPreparedPreview(); }
-        internal void DisposePreview() { Stop(); cancellation.Dispose(); cancellation = null; if (remoteTemplate != null) remoteTemplate.Dispose(); remoteTemplate = null; }
+        internal void Stop() { localPreviewPath = null; ClearDocumentPreview(); ClearDetails(); version++;ClearVideoPreview(); if (cancellation != null) { cancellation.Cancel(); cancellation.Dispose(); } cancellation = new CancellationTokenSource(); ClearPreparedPreview(); }
+        internal void DisposePreview() { ReleaseSelection();Stop(); cancellation.Dispose(); cancellation = null; if (remoteTemplate != null) remoteTemplate.Dispose(); remoteTemplate = null; }
     }
 
     public partial class MainWindow
@@ -549,6 +561,7 @@ namespace FileCompass
             first.DetailExpandedChanged += UpdateViewToolbarControls;
             second.DetailExpandedChanged += UpdateViewToolbarControls;
             first.List.SelectionChanged += delegate { if (previewSource == first) UpdateQuickPreview(); };
+            first.PreviewSelectionChanged+=delegate{if(previewSource==first)UpdateQuickPreview();};second.PreviewSelectionChanged+=delegate{if(previewSource==second)UpdateQuickPreview();};
             second.List.SelectionChanged += delegate { if (previewSource == second) UpdateQuickPreview(); };
             first.LocalNavigationCompleted += delegate { if (previewSource == first) UpdateQuickPreview(); };
             second.LocalNavigationCompleted += delegate { if (previewSource == second) UpdateQuickPreview(); };
@@ -562,6 +575,12 @@ namespace FileCompass
             if (quickPreview != null) { CloseQuickPreview(); return; }
             OpenQuickPreview();
         }
+        internal QuickPreviewPane PreviewInOtherPanel(FilePanel source)
+        {
+            if(panelLayout=="Single")SetPanelLayout(lastDualLayout);
+            if(quickPreview!=null && previewSource==source){UpdateQuickPreview();return quickPreview;}
+            CloseQuickPreview();SetActive(source);OpenQuickPreview();return quickPreview;
+        }
         void OpenQuickPreview()
         {
             previewSource = active; previewTarget = active == left ? right : left; previewTargetPath = previewTarget.CurrentPath;
@@ -574,12 +593,9 @@ namespace FileCompass
         void UpdateQuickPreview()
         {
             if (quickPreview == null || previewSource.LocalLoading) return;
-            var entry = previewSource.List.SelectedItem as Entry;
-            if (entry == null || entry.IsDirectory) quickPreview.ShowMessage(L.Text("preview.selectOtherPanelFile"));
-            else if (previewSource.IsRemote && (previewSource.Remote.Profile.Protocol == NetworkProtocol.FTP || previewSource.Remote.Profile.Protocol == NetworkProtocol.SFTP)) quickPreview.ShowRemoteFile(entry.FullPath, previewSource.Remote);
-            else if (previewSource.IsArchive) quickPreview.ShowArchiveFile(previewSource.Archive,entry.FullPath);
-            else if (previewSource.IsRemote) quickPreview.ShowMessage(L.Text("preview.scpArchiveUseF3"));
-            else quickPreview.ShowFile(entry.FullPath, true);
+            var entries=previewSource.PreviewEntries();
+            quickPreview.SetSelection(entries,previewSource.PreviewContext,entry=>previewSource.PreviewEntry(quickPreview,entry),!previewSource.IsRemote&&!previewSource.IsArchive&&!previewSource.IsExt);
+            if(entries.Length==0)quickPreview.ShowMessage(L.Text("preview.selectOtherPanelFile"));
         }
         internal void CloseQuickPreview()
         {
@@ -592,5 +608,3 @@ namespace FileCompass
         }
     }
 }
-
-

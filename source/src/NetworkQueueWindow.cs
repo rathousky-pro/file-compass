@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -13,19 +13,18 @@ namespace FileCompass
         readonly Func<NetworkTransferJob[]> getJobs;
         readonly ListBox jobs = new ListBox { Height = 95 };
         readonly ListView files = new ListView();
-        readonly TextBlock status = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(2, 5, 2, 5) };
-        readonly DualCopyProgress progress = new DualCopyProgress { Height = 12, Margin = new Thickness(2, 6, 2, 9), ToolTip = L.Text("progress.fileAndTotalTracksHelp") };
+        readonly ComboBox speedLimit;
+        readonly TransferProgressLayout presentation;
+        readonly PathTextBlock sourcePath=new PathTextBlock(), targetPath=new PathTextBlock();
+        readonly TextBlock rate=new TextBlock{Foreground=FluentTheme.Muted,Margin=new Thickness(0,8,0,6)};
         readonly DispatcherTimer timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
         readonly Button cancel;
         readonly Button pauseControl;
         readonly StackPanel empty;
         readonly WrapPanel controls;
         readonly Button cancelAll;
-        readonly TextBlock heading;
-        readonly TextBlock help;
-        readonly GroupBox transferCard, filesCard;
+        readonly GroupBox filesCard;
         readonly CompressionRatioTrend speedTrend = new CompressionRatioTrend { SpeedMode=true,Height=60 };
-        readonly GroupBox speedCard;
         NetworkTransferJob speedJob;
         bool hadRunningJobs;
         bool completing;
@@ -39,26 +38,22 @@ namespace FileCompass
             SizeToContent = SizeToContent.Manual; ResizeMode = ResizeMode.CanResize;
             placement = new TransferWindowState(this,delegate { var main = Owner as MainWindow; if (main != null) main.NetworkWindowBackground(true); },delegate { var main = Owner as MainWindow; if (main != null) main.NetworkWindowBackground(false); });
             Closing += delegate(object s,System.ComponentModel.CancelEventArgs e) { if (!completing && getJobs().Any(x => !x.Finished)) { e.Cancel = true; placement.DeferBackground(); } };
-            var panel = new DockPanel { Margin = new Thickness(8) }; CopyUi.SectionedSurface(this, panel); SizeToContent = SizeToContent.Height; files.MaxHeight = Math.Max(80, Math.Min(150, MaxHeight - 550));
-            var top = new StackPanel();
-            transferCard = new GroupBox { Header=L.Text("queue.designRunning"), Margin=new Thickness(0,0,0,10) };
-            var transferBody = new StackPanel(); transferCard.Content=transferBody;
-            empty = QueuePresentation.Empty(L.Text("queue.designEmpty"), L.Text("queue.designNetworkHelp")); top.Children.Add(empty); top.Children.Add(transferCard);
-            heading = QueuePresentation.Heading(L.Text("queue.networkCopyTitle"));
-            help = CopyUi.Label(L.Text("queue.selectTransferHelp")); help.Foreground = FluentTheme.Muted;
-            transferBody.Children.Add(jobs); transferBody.Children.Add(status);
-            transferBody.Children.Add(progress); DockPanel.SetDock(top, Dock.Top); panel.Children.Add(top);
-            speedCard = new GroupBox { Header=L.Text("transfer.speedHistory"), Content=speedTrend, Margin=new Thickness(0,0,0,10) };DockPanel.SetDock(speedCard,Dock.Top);panel.Children.Add(speedCard);
-            var buttons = QueuePresentation.Actions();
+            presentation=new TransferProgressLayout(this,L.Text("queue.networkCopyTitle"));SizeToContent=SizeToContent.Height;
+            files.MaxHeight=Math.Max(80,Math.Min(150,MaxHeight-550));
+            empty=QueuePresentation.Empty(L.Text("queue.designEmpty"),L.Text("queue.designNetworkHelp"));presentation.Supplement.Children.Add(empty);
+            sourcePath.Margin=targetPath.Margin=new Thickness(0,3,0,3);presentation.DetailBody.Children.Add(sourcePath);presentation.DetailBody.Children.Add(targetPath);
+            presentation.DetailBody.Children.Add(rate);
+            presentation.DetailBody.Children.Add(new TextBlock{Text=L.Text("transfer.speedHistory"),Foreground=FluentTheme.Muted,Margin=new Thickness(0,4,0,4)});presentation.DetailBody.Children.Add(speedTrend);
+            var buttons=presentation.Actions;
             cancel = CopyUi.Button(L.Text("queue.cancelSelectedTransfer"), delegate { var job = jobs.SelectedItem as NetworkTransferJob; if (job == null) return; var main = Owner as MainWindow; if (main != null) main.StopNetworkJobs(new[] { job }); else job.Cancel(); }); buttons.Children.Add(cancel);
             cancelAll = CopyUi.Button(L.Text("queue.cancelAllTransfers"), delegate { var main = Owner as MainWindow; if (main != null) main.StopNetworkJobs(getJobs()); else foreach (var job in getJobs()) job.Cancel(); }); buttons.Children.Add(cancelAll);
-            buttons.Children.Add(CopyUi.Button(L.Text("copy.backgroundAction"), placement.Background)); DockPanel.SetDock(buttons, Dock.Bottom); panel.Children.Add(buttons);
+            var background=CopyUi.Button(L.Text("copy.backgroundAction"),placement.Background);FluentTheme.Primary(background);buttons.Children.Add(background);
             controls = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0,6,0,6) };
-            pauseControl = CopyUi.Button(L.Text("action.pause"),delegate { var job = jobs.SelectedItem as NetworkTransferJob; if (job != null) job.Pause(!job.Paused); RefreshFiles(); }); controls.Children.Add(pauseControl);
+            pauseControl = CopyUi.Button(L.Text("action.pause"),delegate { var job = jobs.SelectedItem as NetworkTransferJob; if (job != null) job.Pause(!job.Paused); RefreshFiles(); }); buttons.Children.Insert(0,pauseControl);
             controls.Children.Add(CopyUi.Button(L.Text("queue.cancelItem"),delegate { var job = jobs.SelectedItem as NetworkTransferJob; var file = files.SelectedItem as NetworkQueueItem; if (job != null && file != null) job.CancelItem(file); }));
             controls.Children.Add(CopyUi.Button(L.Text("action.moveUp"),delegate { var job = jobs.SelectedItem as NetworkTransferJob; var file = files.SelectedItem as NetworkQueueItem; if (job != null && file != null) job.Reorder(file,-1); }));
             controls.Children.Add(CopyUi.Button(L.Text("action.moveDown"),delegate { var job = jobs.SelectedItem as NetworkTransferJob; var file = files.SelectedItem as NetworkQueueItem; if (job != null && file != null) job.Reorder(file,1); }));
-            var limit = new ComboBox { IsEditable=true, Width=150, Height=30, Text="0", VerticalContentAlignment=VerticalAlignment.Center, ToolTip=L.Text("transfer.speedLimitHelp"), Margin=new Thickness(6,3,3,3) };
+            var limit = speedLimit = new ComboBox { IsEditable=true, Width=150, Height=30, Text="0", VerticalContentAlignment=VerticalAlignment.Center, ToolTip=L.Text("transfer.speedLimitHelp"), Margin=new Thickness(6,3,3,3) };
             foreach (string preset in new[] { "0", "512", "1024", "5120", "10240", "25600", "51200", "102400" }) limit.Items.Add(preset);
             controls.Children.Add(new TextBlock { Text=L.Text("queue.designSpeedTitle")+" (KiB/s):", VerticalAlignment=VerticalAlignment.Center, Margin=new Thickness(12,0,0,0) }); controls.Children.Add(limit);
             Action applyLimit=delegate { long value; var job=jobs.SelectedItem as NetworkTransferJob; if(job==null)return;
@@ -66,9 +61,9 @@ namespace FileCompass
             controls.Children.Add(CopyUi.Button(L.Text("action.set"),applyLimit));
             limit.PreviewKeyDown+=delegate(object sender,System.Windows.Input.KeyEventArgs e){if(e.Key==System.Windows.Input.Key.Enter&&!limit.IsDropDownOpen){e.Handled=true;applyLimit();}};
             var fileBody = new DockPanel();
-            DockPanel.SetDock(controls,Dock.Top); fileBody.Children.Add(controls);
-            filesCard = new GroupBox { Header=L.Text("queue.designFiles"), Content=fileBody }; panel.Children.Add(filesCard);
-            buttons.Children.Insert(2, CopyUi.Button(L.Text("history.openDialog"), delegate { var main = Owner as MainWindow; if (main != null) main.ShowOperationHistory(); }));
+            var selection=new StackPanel();selection.Children.Add(jobs);selection.Children.Add(controls);DockPanel.SetDock(selection,Dock.Top);fileBody.Children.Add(selection);
+            filesCard = new GroupBox { Header=L.Text("queue.designFiles"), Content=fileBody,Margin=new Thickness(0,12,0,0) };presentation.Supplement.Children.Add(filesCard);
+            buttons.Children.Insert(buttons.Children.Count-1, CopyUi.Button(L.Text("history.openDialog"), delegate { var main = Owner as MainWindow; if (main != null) main.ShowOperationHistory(); }));
             var columns = new GridView(); AddColumn(columns, L.Text("queue.sourceItemColumn"), "Source", 265); AddColumn(columns, L.Text("column.target"), "Destination", 265); AddColumn(columns, L.Text("column.size"), "Size", 80); AddColumn(columns, L.Text("queue.existingFilePolicyColumn"), "Policy", 75); AddColumn(columns, L.Text("column.state"), "State", 200); files.View = columns; fileBody.Children.Add(files);
             files.SizeChanged += delegate {
                 double width=Math.Max(200,files.ActualWidth-30);
@@ -100,21 +95,32 @@ namespace FileCompass
             var selectedFile = files.SelectedItem as NetworkQueueItem;
             files.ItemsSource = job == null ? new NetworkQueueItem[0] : job.SnapshotItems();
             bool any = job != null;
-            speedCard.Visibility=any?Visibility.Visible:Visibility.Collapsed;
-            if(speedJob!=job){speedJob=job;speedTrend.Clear();}
+            if(speedJob!=job){speedJob=job;speedTrend.Clear();speedLimit.Text=job==null?"0":(job.SpeedLimit/1024).ToString();}
             if(job!=null)speedTrend.Add(job.Metrics().BytesPerSecond/1048576.0,job.Update().Total);
-            if (populatedLayout != any) { Width = Math.Min(MaxWidth, any ? 950 : 650); populatedLayout = any; }
+            if (populatedLayout != any) { Width = Math.Min(MaxWidth, any ? 900 : 650); populatedLayout = any; }
             empty.Visibility = any ? Visibility.Collapsed : Visibility.Visible;
-            transferCard.Visibility = filesCard.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
-            heading.Visibility = help.Visibility = status.Visibility = controls.Visibility = cancel.Visibility = cancelAll.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
+            filesCard.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
+            controls.Visibility = cancel.Visibility = cancelAll.Visibility = pauseControl.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
             jobs.Height = Math.Min(64, Math.Max(32, jobs.Items.Count * 32));
-            jobs.Visibility = job == null ? Visibility.Collapsed : Visibility.Visible;
+            jobs.Visibility = jobs.Items.Count>1 ? Visibility.Visible : Visibility.Collapsed;
             files.Visibility = job == null ? Visibility.Collapsed : Visibility.Visible;
             files.Height = Math.Min(files.MaxHeight, Math.Max(64, 32 + Math.Min(4, files.Items.Count) * 28));
-            progress.Visibility = job == null ? Visibility.Collapsed : Visibility.Visible;
             if (selectedFile != null) files.SelectedItem = files.Items.Cast<NetworkQueueItem>().FirstOrDefault(x => x.Source == selectedFile.Source && x.Destination == selectedFile.Destination);
-            status.Text = job == null ? L.Text("queue.emptyTransfersHelp") : job.Update().Text; status.ToolTip = status.Text;
-            if (job != null) { var update = job.Update(); progress.Update(update.File, update.Total, update.Preparing); } else progress.Update(0, 0, false);
+            presentation.ShowProgress(any);presentation.Details.Visibility=any?Visibility.Visible:Visibility.Collapsed;presentation.CurrentFile.Visibility=any?Visibility.Visible:Visibility.Collapsed;
+            if(job!=null){
+                var update=job.Update();var metrics=job.Metrics();
+                presentation.Heading.Text=job.Move?L.Text("transfer.moveStatusPrefix"):L.Text("copy.title");
+                presentation.Route.SetPath("",job.Caption);presentation.Route.Visibility=Visibility.Visible;
+                presentation.Percent.Text=(Math.Max(0,Math.Min(1,update.Total))*100).ToString("F0")+" %";
+                presentation.Overall.Preparing=update.Preparing;presentation.Overall.Update(update.Total);
+                presentation.Remaining.Text=update.Phase+L.Text("transfer.remainingPrefix")+MainWindow.TransferTime(metrics.RemainingSeconds);
+                presentation.Totals.Text=CopyUi.Bytes(update.BytesDone)+" / "+CopyUi.Bytes(update.TotalBytes);
+                presentation.Count.Text=update.FilesDone+" / "+update.TotalFiles;
+                presentation.Current(update.CurrentSource,update.Preparing?(double?)null:update.File);
+                sourcePath.SetPath(L.Text("transfer.sourceLabel"),update.CurrentSource);targetPath.SetPath(L.Text("transfer.targetLabel"),update.CurrentDestination);
+                rate.Text=(metrics.BytesPerSecond/1048576.0).ToString("F1")+" MiB/s";
+            }else{presentation.Heading.Text=L.Text("queue.networkCopyTitle");presentation.Route.Visibility=Visibility.Collapsed;presentation.Remaining.Text="";}
+
             cancel.IsEnabled = job != null && !job.Finished;
             pauseControl.IsEnabled = job != null && !job.Finished; pauseControl.Content = job != null && job.Paused ? L.Text("action.resume") : L.Text("action.pause");
         }
@@ -136,4 +142,3 @@ namespace FileCompass
         }
     }
 }
-

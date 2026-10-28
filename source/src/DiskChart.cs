@@ -6,7 +6,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 namespace FileCompass {
-    internal sealed class DiskChart : FrameworkElement {
+    internal sealed partial class DiskChart : FrameworkElement {
         internal List<DiskChartRow> Rows=new List<DiskChartRow>();internal bool Pie=true;internal string CenterText="",Subtitle="";
         internal event Action<DiskChartRow> SliceClicked;
         readonly List<Tuple<DiskChartRow,Geometry>> hits=new List<Tuple<DiskChartRow,Geometry>>();DiskChartRow hovered;
@@ -14,7 +14,7 @@ namespace FileCompass {
         internal static int ColorIndex(string key){uint hash=2166136261;foreach(char c in key.ToLowerInvariant())hash=(hash^c)*16777619;return (int)(hash%(Colors.Length-1));}
         internal static Brush ColorFor(string key){return CompactTheme.ColorBrush(Colors[ColorIndex(key)]);}
         protected override void OnRender(DrawingContext dc){
-            base.OnRender(dc);hits.Clear();var rows=Rows.Where(x=>x.Value>0).ToArray();double total=rows.Sum(x=>x.Value);if(total<=0){Text(dc,L.Text("analyzer.empty"),new Point(12,20),FluentTheme.Muted,ActualWidth-24,12,false);return;}
+            base.OnRender(dc);hits.Clear();if(Treemap){DrawMap(dc);return;}var rows=Rows.Where(x=>x.Value>0).ToArray();double total=rows.Sum(x=>x.Value);if(total<=0){Text(dc,L.Text("analyzer.empty"),new Point(12,20),FluentTheme.Muted,ActualWidth-24,12,false);return;}
             if(Pie){
                 double radius=Math.Max(1,Math.Min(ActualWidth,ActualHeight)/2-12),inner=radius*.55;var center=new Point(ActualWidth/2,ActualHeight/2);double angle=-Math.PI/2;
                 foreach(var row in rows){double sweep=row.Value/total*Math.PI*2,gap=rows.Length==1?0:Math.Min(.012,sweep*.12);Geometry outer;

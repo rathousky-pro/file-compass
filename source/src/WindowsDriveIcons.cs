@@ -33,12 +33,14 @@ namespace FileCompass
                 finally { DestroyIcon(info.Icon); }
             });
         }
+        public static ImageSource FlashDriveIcon { get { return StockIcon(7); } }
         public static ImageSource WindowsDriveIcon(string root, bool network, bool connected, bool actual = false)
         {
             if (network) return StockIcon(connected ? 9 : 10);
-            ImageSource cached; if (driveIcons.TryGetValue(root, out cached)) return cached;
             int type = 8;
             try { var drive = new DriveInfo(root); if (drive.DriveType == DriveType.CDRom) type = 11; else if (drive.DriveType == DriveType.Removable) type = 7; else if (drive.DriveType == DriveType.Ram) type = 12; } catch (IOException) { }
+            if(type==7&&!actual)return FlashDriveIcon;
+            ImageSource cached;if(driveIcons.TryGetValue(root,out cached))return cached;
             if (!actual) return StockIcon(type);
             ShellInfo info; SHGetFileInfo(root, 0, out info, (uint)Marshal.SizeOf(typeof(ShellInfo)), 0x100 | 0x1 | 0x20);
             if (info.Icon == IntPtr.Zero) return StockIcon(type);
@@ -50,4 +52,3 @@ namespace FileCompass
         }
     }
 }
-

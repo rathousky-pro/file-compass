@@ -126,7 +126,8 @@ namespace FileCompass {
         void Blocks(XmlNode parent,BlockCollection blocks) {
             foreach(XmlNode node in parent.ChildNodes) {
                 if(node.NodeType==XmlNodeType.Whitespace||node.NodeType==XmlNodeType.Text&&String.IsNullOrWhiteSpace(node.Value))continue;
-                if(node.Name=="ul"||node.Name=="ol"){
+                if(node.Name=="figure"){blocks.Add(HelpIllustrations.Figure(node.Attributes["src"].Value,Article,this));Blocks(node,blocks);}
+                else if(node.Name=="ul"||node.Name=="ol"){
                     var list=new System.Windows.Documents.List{MarkerStyle=node.Name=="ol"?TextMarkerStyle.Decimal:TextMarkerStyle.Disc,Margin=new Thickness(0,4,0,12),Padding=new Thickness(22,0,0,0)};
                     foreach(XmlNode li in node.ChildNodes){if(li.Name!="li")continue;var p=new Paragraph{Margin=new Thickness(0,3,0,5)};Inlines(li,p.Inlines);list.ListItems.Add(new ListItem(p));}blocks.Add(list);
                 }else if(node.Name=="div"||node.Name=="section"){var section=new Section{Margin=new Thickness(0,10,0,10)};if(node.Attributes!=null&&node.Attributes["class"]!=null&&node.Attributes["class"].Value.Contains("note")){section.Background=CompactTheme.PanelSurface;section.Padding=new Thickness(12);section.BorderBrush=FluentTheme.Accent;section.BorderThickness=new Thickness(3,0,0,0);}if(node.ChildNodes.Cast<XmlNode>().Any(child=>new[]{"p","h1","h2","h3","ul","ol","div","section"}.Contains(child.Name)))Blocks(node,section.Blocks);else{var p=new Paragraph{Margin=new Thickness(0)};Inlines(node,p.Inlines);section.Blocks.Add(p);}blocks.Add(section);
@@ -157,4 +158,3 @@ namespace FileCompass {
         }
     }
 }
-

@@ -43,10 +43,12 @@ namespace FileCompass {
         internal static string SearchText(HelpTopic topic) { return Normalize(topic.Title+" "+topic.Summary+" "+Regex.Replace(topic.Body,"<[^>]*>"," ")); }
         internal static string ContextTopic(Type type) {
             string name=type==null?"":type.Name;
-            if(name=="MediaConverterWindow")return "preview";
-            if(name=="ImageToolsDialog")return "preview";
-            if(name=="MediaNamesWindow")return "rename";
-            if(name=="UndoTransactionsWindow")return "copy";
+            if(name=="CodeEditorWindow")return "editor";
+            if(name=="ExtBrowserWindow")return "ext";
+            if(name=="MediaConverterWindow")return "media";
+            if(name=="ImageToolsDialog")return "media-images";
+            if(name=="MediaNamesWindow")return "metadata";
+            if(name=="UndoTransactionsWindow")return "undo";
             if(name.Contains("Conflict"))return "conflicts";
             if(name.Contains("Copy")||name.Contains("Transfer"))return "copy";
             if(name.Contains("Archive"))return "archives";
@@ -90,4 +92,3 @@ namespace FileCompass {
         }
     }
 }
-

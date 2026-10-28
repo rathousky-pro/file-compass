@@ -18,7 +18,7 @@ namespace FileCompass {
             timer.Tick += delegate {
                 var child = host.OwnedWindows.Cast<Window>().FirstOrDefault(x => x.IsVisible); if (child == null) return;
                 timer.Stop(); opened = true;
-                try { if (child.Owner != host) throw new Exception("Editor has the wrong owner"); edit(child); }
+                try { if (child.Owner != host) throw new Exception("Editor has the wrong owner");if(!AdvancedToolsTests.Visual<TextBlock>(child).Any(x=>x.FontSize==20))throw new Exception("Settings child is missing shared clean header"); edit(child); }
                 catch (Exception ex) { error = ex; child.DialogResult = false; }
             };
             timer.Start(); try { open(); } finally { timer.Stop(); }
@@ -65,7 +65,7 @@ namespace FileCompass {
                 check(cloudList.Items.Count == 2, "Cloud settings lists saved accounts");
                 check(new[] { "cloud.add", "cloud.signInAgain", "action.rename", "cloud.remove" }.All(key => Find(view, key) != null), "Cloud settings offers add, reauthorize, rename and remove");
                 NextStageTests.Draw(dialog, Path.Combine(root, "settings-cloud.png"));
-                Editor(dialog, () => Find(view, "cloud.add").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)), child => { check(AdvancedToolsTests.Visual<ComboBox>(child).Single().Items.Count == 3, "Cloud wizard retains all three providers"); child.DialogResult = false; });
+                Editor(dialog, () => Find(view, "cloud.add").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)), child => { check(AdvancedToolsTests.Visual<ComboBox>(child).Single().Items.Count == 4, "Cloud wizard retains all four providers");NextStageTests.Draw(child,Path.Combine(root,"cloud-add.png")); child.DialogResult = false; });
                 Editor(dialog, () => Find(view, "action.rename").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)), child => { AdvancedToolsTests.Visual<TextBox>(child).Single().Text = "Přejmenovaný disk"; child.DialogResult = true; });
                 check(CloudStore.Find(account.Id).Name == "Přejmenovaný disk", "Renaming an account persists through the shared cloud manager");
                 cloudList.SelectedIndex = -1;

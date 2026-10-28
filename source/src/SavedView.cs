@@ -29,10 +29,9 @@ namespace FileCompass
         {
             await Task.WhenAll(left.NavigationTask, right.NavigationTask);
             await Dispatcher.InvokeAsync(delegate {
-            if (left.CurrentPath == null && !left.IsRemote && !left.LocalLoading) left.Navigate(home, false);
-            if (right.CurrentPath == null && !right.IsRemote && !right.LocalLoading) right.Navigate(home, false);
+            if (left.CurrentPath == null && !left.HasUnavailableTab && !left.IsRemote && !left.LocalLoading) left.Navigate(home, false);
+            if (right.CurrentPath == null && !right.HasUnavailableTab && !right.IsRemote && !right.LocalLoading) right.Navigate(home, false);
             });
         }
     }
 }
-

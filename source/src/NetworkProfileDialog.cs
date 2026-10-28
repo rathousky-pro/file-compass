@@ -30,12 +30,11 @@ namespace FileCompass
         {
             Profile = source.Clone(); CopyUi.Style(this, owner, L.Text("network.connectionDetailsTitlePrefix") + Profile.Protocol, 510);
             DialogGeometry.Bound(this, 960, 630, 820, 350); ResizeMode = ResizeMode.CanResize;
-            var root = new DockPanel { Margin = new Thickness(7) }; Content = root;
-            var buttons = FluentTheme.Actions();
+            StackPanel buttons;var root=SettingsUx.Frame(this,L.Text("network.connectionDetailsTitlePrefix")+Profile.Protocol,out buttons);
             var ok = CopyUi.Button("OK", Accept); ok.IsDefault = true; ok.Width = 110; buttons.Children.Add(ok);
             var cancel = CopyUi.Button(L.Text("action.cancel"), delegate { DialogResult = false; }); cancel.IsCancel = true; cancel.Width = 110; buttons.Children.Add(cancel);
             var help = CopyUi.Button(L.Text("action.help"), Help); help.Width = 110; buttons.Children.Add(help);
-            DockPanel.SetDock(buttons, Dock.Bottom); root.Children.Add(buttons);
+            buttons.Children.Remove(ok);buttons.Children.Add(ok);FluentTheme.Primary(ok);Tabs.Margin=new Thickness(16);
             Tabs.Items.Add(new TabItem { Header = L.Text("tab.general"), Content = Page(general) });
             Tabs.Items.Add(new TabItem { Header = L.Text("tab.details"), Content = Page(advanced) }); root.Children.Add(Tabs);
             name.Text = Profile.Name; host.Text = HostText(Profile);
@@ -264,5 +263,3 @@ namespace FileCompass
         internal static string Choose(Window owner, string initial) { var dialog = new FolderPickerWindow(owner, initial); return dialog.ShowDialog() == true ? dialog.path.Text : null; }
     }
 }
-
-

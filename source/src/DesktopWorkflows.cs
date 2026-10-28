@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -24,6 +24,7 @@ namespace FileCompass
         internal void InitializeWorkflows(ProgramSettings preferences)
         {
             favorites = preferences.Favorites ?? new List<FavoriteLocation>();
+            left.BookmarksRequested=right.BookmarksRequested=delegate(FilePanel panel){SetActive(panel);ShowFavorites(true);};
             ApplyRefreshSettings(preferences.AutoRefresh, preferences.WatchNetworkFolders);
             ApplyDisplaySettings(preferences);
             left.FilesDropped = right.FilesDropped = QueueDroppedFiles;
@@ -61,7 +62,7 @@ namespace FileCompass
             action(); e.Handled = true; return true;
         }
         internal async void ReopenTab(FilePanel panel, SavedTab saved) { await ReopenTabTask(panel, saved); }
-        async Task ReopenTabTask(FilePanel panel, SavedTab saved)
+        internal async Task ReopenTabTask(FilePanel panel, SavedTab saved)
         {
             if (networkStore == null) networkStore = new NetworkSettingsStore(NetworkSettingsStore.DefaultPath);
             var profile = saved.ProfileId!=null&&saved.ProfileId.StartsWith("cloud-")?CloudRuntime.SavedProfile(saved.ProfileId.Substring(6)):networkStore.Settings.Connections.FirstOrDefault(x => x.Id == saved.ProfileId);
@@ -90,20 +91,29 @@ namespace FileCompass
             if (favorite.RightLocation != null || !String.IsNullOrEmpty(favorite.Right)) { await OpenFavoriteLocation(left, favorite.LeftLocation, favorite.Left); await OpenFavoriteLocation(right, favorite.RightLocation, favorite.Right); }
             else await OpenFavoriteLocation(active, favorite.LeftLocation, favorite.Left);
         }
+        internal int BookmarkCount {get{return favorites.Count;}}
+        internal void StoreFolderBookmark(string name,string group,FilePanel panel){favorites.Add(new FavoriteLocation{Name=name,Group=group,Left=panel.DisplayPath,LeftLocation=CurrentLocation(panel)});SaveFavorites();}
+        internal async Task OpenBookmarkTab(FavoriteLocation favorite){
+            if(favorite.RightLocation!=null||!String.IsNullOrEmpty(favorite.Right)){await left.OpenLocationTab(favorite.LeftLocation??new SavedTab{Path=favorite.Left});await right.OpenLocationTab(favorite.RightLocation??new SavedTab{Path=favorite.Right});}
+            else await active.OpenLocationTab(favorite.LeftLocation??new SavedTab{Path=favorite.Left});
+        }
         void AddFavorite(bool pair)
         {
             string name = Ask(L.Text("favorites.title"), L.Text("favorites.itemNameLabel"), pair ? L.Text("favorites.panelPairTitle") : active.CurrentPath); if (String.IsNullOrWhiteSpace(name)) return;
             string group = Ask(L.Text("favorites.title"), L.Text("favorites.groupLabel"), ""); if (group == null) return;
+            if(!pair){StoreFolderBookmark(name.Trim(),group.Trim(),active);return;}
             favorites.Add(new FavoriteLocation { Name = name.Trim(), Group = group.Trim(), Left = (pair ? left : active).DisplayPath, Right = pair ? right.DisplayPath : "", LeftLocation = CurrentLocation(pair ? left : active), RightLocation = pair ? CurrentLocation(right) : null }); SaveFavorites();
         }
         void SaveFavorites() { var settings = ProgramSettings.Load(); settings.Favorites = favorites; settings.Save(); }
-        void ShowFavorites()
+        void ShowFavorites(){ShowFavorites(false);}
+        void ShowFavorites(bool newTab)
         {
             var menu = new ContextMenu();
+            if(newTab)menu.Items.Add(new MenuItem{Header=L.Text("favorites.openInNewTab"),IsEnabled=false});
             foreach (var group in favorites.GroupBy(x => x.Group).OrderBy(x => x.Key)) {
                 ItemsControl parent = menu;
                 if (!String.IsNullOrEmpty(group.Key)) { var folder = new MenuItem { Header = group.Key }; menu.Items.Add(folder); parent = folder; }
-                foreach (var favorite in group) { var captured = favorite; var item = new MenuItem { Header = favorite.Name, ToolTip = favorite.Left + (String.IsNullOrEmpty(favorite.Right) ? "" : " ↔ " + favorite.Right) }; item.Click += delegate { OpenFavorite(captured); }; parent.Items.Add(item); }
+                foreach (var favorite in group) { var captured = favorite; var item = new MenuItem { Header = favorite.Name, ToolTip = favorite.Left + (String.IsNullOrEmpty(favorite.Right) ? "" : " ↔ " + favorite.Right) }; item.Click += async delegate {if(newTab)await OpenBookmarkTab(captured);else OpenFavorite(captured);}; parent.Items.Add(item); }
             }
             if (menu.Items.Count > 0) menu.Items.Add(new Separator());
             FavoriteMenuAction(menu, L.Text("favorites.addCurrentFolder"), delegate { AddFavorite(false); }); FavoriteMenuAction(menu, L.Text("favorites.savePanelPair"), delegate { AddFavorite(true); }); FavoriteMenuAction(menu, L.Text("favorites.manage"), ManageFavorites);
@@ -131,6 +141,7 @@ namespace FileCompass
         }
         internal void CopyClipboard(bool cut)
         {
+            if(active.IsExt){MessageBox.Show(this,L.Text("ext.copy" )+" (F5)",L.Text("ext.title"));return;}
             if (active.IsRemote || active.IsArchive) {
                 if (cut) { MessageBox.Show(this, L.Text("clipboard.remoteMoveUnsupportedHelp"), L.Text("clipboard.title")); return; }
                 var entries = active.Selected().ToArray(); if (entries.Length == 0) return;
@@ -151,6 +162,7 @@ namespace FileCompass
         }
         internal void PasteClipboard()
         {
+            if(RejectExtWrite())return;
             if (active.IsProjection) { MessageBox.Show(this, L.Text("projection.destinationRejected"), ApplicationBrand.Name); return; }
             try { var data = Clipboard.GetDataObject(); if (data == null) return;
                 if (data.GetDataPresent(VirtualClipboardFormat)) { if ((string)data.GetData(VirtualClipboardFormat) != virtualClipboardId || virtualClipboardEntries == null) { MessageBox.Show(this, L.Text("clipboard.sourceInstanceUnavailable"), L.Text("clipboard.title")); return; } PasteVirtualClipboard(active); return; }
@@ -160,6 +172,7 @@ namespace FileCompass
         }
         async void PasteVirtualClipboard(FilePanel target)
         {
+            if(target.IsExt){MessageBox.Show(this,L.Text("ext.readOnly"),L.Text("ext.title"));return;}
             if (target.LocalLoading || target.IsLoading || target.CurrentPath == null) return;
             var entries = virtualClipboardEntries; var sourceRemote = virtualClipboardRemote; var sourceArchive = virtualClipboardArchive; string sourceDisplay = virtualClipboardDisplay;
             var targetRemote = target.Remote; var targetArchive = target.Archive; string destination = target.CurrentPath, prefix = target.ArchivePrefix;
@@ -179,6 +192,7 @@ namespace FileCompass
         }
         internal async void QueueDroppedFiles(FilePanel target, string[] paths, bool move)
         {
+            if(target.IsExt){MessageBox.Show(this,L.Text("ext.readOnly"),L.Text("ext.title"));return;}
             if (target.IsProjection) { MessageBox.Show(this, L.Text("projection.destinationRejected"), ApplicationBrand.Name); return; }
             if (target.LocalLoading || target.IsLoading || target.CurrentPath == null) return;
             string destination = target.CurrentPath; List<Entry> entries = null; Exception failure = null;
@@ -210,6 +224,7 @@ namespace FileCompass
         }
         async void QueuePanelDrop(FilePanel source, FilePanel target, Entry[] entries, bool move)
         {
+            if(source.IsExt||target.IsExt){MessageBox.Show(this,L.Text("ext.copy")+" (F5)",L.Text("ext.title"));return;}
             if (target.IsProjection) { MessageBox.Show(this, L.Text("projection.destinationRejected"), ApplicationBrand.Name); return; }
             if (source == target || source.IsLoading || target.IsLoading || source.LocalLoading || target.LocalLoading) return;
             if (source.IsArchive || target.IsArchive) { if (move) { MessageBox.Show(this, L.Text("archive.moveUnsupportedClipboardHelp"), L.Text("archive.shortTitle")); return; } await TransferArchiveEntries(source, target, entries); }
@@ -230,7 +245,7 @@ namespace FileCompass
         [DllImport("shell32.dll", CharSet = CharSet.Unicode)] static extern int SHOpenWithDialog(IntPtr owner, ref OpenAsInfo info);
         internal static void ShellAction(IntPtr owner, string path, string verb)
         {
-            if (verb == "openas") { var open = new OpenAsInfo { File = path, Flags = 4 }; int result = SHOpenWithDialog(owner, ref open); if (result < 0 && result != unchecked((int)0x80004004) && result != unchecked((int)0x800704C7)) Marshal.ThrowExceptionForHR(result); return; }
+            if (verb == "openas") { var open = new OpenAsInfo { File = path, Flags = 5 }; int result = SHOpenWithDialog(owner, ref open); if (result < 0 && result != unchecked((int)0x80004004) && result != unchecked((int)0x800704C7)) Marshal.ThrowExceptionForHR(result); return; }
             var info = new ShellExecution { Size = Marshal.SizeOf(typeof(ShellExecution)), Mask = 0x0000000C, Window = owner, Verb = verb, File = path, Show = 1 };
             if (!ShellExecuteEx(ref info)) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());
         }
@@ -265,4 +280,3 @@ namespace FileCompass
         }
     }
 }
-

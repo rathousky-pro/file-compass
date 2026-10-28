@@ -20,6 +20,8 @@ namespace FileCompass
                     ArchiveEngine.Create(target, selected, settings, CancellationToken.None, delegate(string text) { ArchiveCompressionProgress update; if (ArchiveCompressionProgress.TryParse(text, out update)) { reports.Add(update); if (firstReport < 0) { firstReport = clock.ElapsedMilliseconds; try { using (File.Open(input, FileMode.Open, FileAccess.Write, FileShare.None)) { } } catch (IOException) { locked = true; } } } });
                     if (!reports.Any(x => !x.Complete && x.Percent > 0 && x.Percent < 99)) throw new Exception("No real intermediate compression progress for " + extension);
                     if (extension != ".rar" && !reports.Any(x => x.Processed > 0 && x.Processed <= x.Original)) throw new Exception("Direct compressor did not report actual bytes read.");
+                    if(extension!=".rar"&&!reports.Any(x=>x.FileTotal>0&&x.FileDone>0&&x.FileDone<x.FileTotal))throw new Exception("Missing real per-file byte progress for "+extension);
+                    if(reports.Any(x=>x.FileTotal>=0&&(x.FileDone<0||x.FileDone>x.FileTotal)))throw new Exception("Per-file progress exceeds the source length.");
                     var final = reports.Last(); if (!final.Complete || final.Original != selected.Sum(x => new FileInfo(x).Length) || final.Packed != new FileInfo(target).Length || final.Percent != 100) throw new Exception("Final compression sizes incorrect: " + extension);
                     var document = ArchiveEngine.Open(target); if (document.Items.Sum(x => x.Bytes) != final.Original || document.Items.Count(x => !x.Directory) != 3 || document.Items.Any(x => x.Path.Contains("unselected"))) throw new Exception("Archive contents mismatch.");
                     if (!locked) throw new Exception("Direct sources were not protected against changes.");
@@ -36,4 +38,3 @@ namespace FileCompass
         }
     }
 }
-

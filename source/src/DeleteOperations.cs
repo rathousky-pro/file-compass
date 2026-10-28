@@ -53,6 +53,7 @@ namespace FileCompass
         int deletions;
         async void DeleteSelected()
         {
+            if(RejectExtWrite())return;
             if (busy || PanelsLoading || deletions > 0) return;
             if (active.IsArchive) { ArchiveDelete(); return; }
             if (active.Projection != null && active.Projection.Kind == "Basket") { RemoveFromBasket(); return; }
@@ -121,4 +122,3 @@ namespace FileCompass
         }
     }
 }
-

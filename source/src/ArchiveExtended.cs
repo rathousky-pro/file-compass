@@ -34,7 +34,7 @@ namespace FileCompass
         internal static ArchivePackOptions PlainOptions(ArchivePackOptions options)
         {
             return new ArchivePackOptions { Paths = options.Paths, Recursive = options.Recursive, ExcludeBase = options.ExcludeBase,
-                Password = options.Password, Level = options.Level, NewestFileDate = options.NewestFileDate };
+                Password = options.Password, Level = options.Level, NewestFileDate = options.NewestFileDate,Inputs=options.Inputs };
         }
         static List<ArchiveSourceVersion> Snapshot(string[] sources, ArchivePackOptions options, CancellationToken token)
         {
@@ -45,7 +45,8 @@ namespace FileCompass
         static void Capture(string path, string member, ArchivePackOptions options, CancellationToken token, List<ArchiveSourceVersion> result)
         {
             token.ThrowIfCancellationRequested(); var stamp = SyncStamp.Read(path); if (stamp == null) throw new IOException(L.Text("parts.sourceChanged"));
-            result.Add(new ArchiveSourceVersion { Path = path, Member = stamp.Directory ? member : options.Paths ? member : Path.GetFileName(path), Directory = stamp.Directory, Stamp = stamp, Hash = stamp.Directory ? "" : FileParts.Hash(path,token) });
+            string hash="";if(!stamp.Directory){hash=ArchiveInputPolicy.Hash(path,options,token);if(hash==null)return;}
+            result.Add(new ArchiveSourceVersion { Path = path, Member = stamp.Directory ? member : options.Paths ? member : Path.GetFileName(path), Directory = stamp.Directory, Stamp = stamp, Hash = hash });
             if (stamp.Directory) foreach (string child in Directory.EnumerateFileSystemEntries(path)) Capture(child, options.Paths && member.Length > 0 ? member + "/" + Path.GetFileName(child) : Path.GetFileName(child), options, token, result);
         }
         static void VerifyMembers(ArchiveDocument archive, List<ArchiveSourceVersion> versions, bool preservePaths, CancellationToken token, Action<string> progress)
@@ -90,7 +91,10 @@ namespace FileCompass
                     ArchiveEngine.Create(complete,sources,settings,token,progress,PlainOptions(options));
                     var document = ArchiveEngine.Open(complete,options.Password,token);
                     ArchiveEngine.Test(document,token,progress);
-                    if (options.Move) VerifyMembers(document,snapshot,options.Paths,token,progress);
+                    if (options.Move) {
+                        if(options.Inputs!=null)snapshot.RemoveAll(x=>!x.Directory&&options.Inputs.Skipped.Contains(Path.GetFullPath(x.Path)));
+                        VerifyMembers(document,snapshot,options.Paths,token,progress);
+                    }
                     token.ThrowIfCancellationRequested();
                     if (options.VolumeBytes > 0) outputs.AddRange(FileParts.Split(complete,target,options.VolumeBytes,token,progress));
                     else { File.Move(complete,target); outputs.Add(target); }
@@ -107,7 +111,7 @@ namespace FileCompass
                                 DeleteVerifiedSource(file,token);
                             }
                             // Empty-only deletes preserve anything created concurrently after the snapshot.
-                            foreach (var folder in snapshot.Where(x => x.Directory).OrderByDescending(x => x.Path.Length)) { token.ThrowIfCancellationRequested(); Directory.Delete(folder.Path,false); }
+                            foreach (var folder in snapshot.Where(x => x.Directory).OrderByDescending(x => x.Path.Length)) { token.ThrowIfCancellationRequested();if(!Directory.EnumerateFileSystemEntries(folder.Path).Any())Directory.Delete(folder.Path,false); }
                         }
                     } finally { foreach (var stream in locks) stream.Dispose(); }
                 } catch {

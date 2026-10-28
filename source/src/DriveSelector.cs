@@ -10,16 +10,21 @@ namespace FileCompass
     public sealed class DriveChoice : INotifyPropertyChanged
     {
         public string Root { get; private set; }
-        public string Letter { get { return Root.Substring(0, 1).ToLowerInvariant(); } }
+        public string LocationKey { get; private set; }
+        public bool IsLocation { get { return LocationKey!=null; } }
+        public bool GroupStart { get; set; }
+        public string Letter { get { return IsLocation?"":ExtLocations.IsPath(Root)?"EXT":Root.Substring(0,1).ToLowerInvariant(); } }
+        public string SelectionLabel { get { return IsLocation?L.Text(LocationKey):Letter; } }
         public string Description { get; private set; }
         public string Tooltip { get; private set; }
         public ImageSource Icon { get; private set; }
         public DriveChoice(string root) { Root = root; }
+        public DriveChoice(string root,string key) {Root=root;LocationKey=key;Description=L.Text(key);Tooltip=Description+"\n"+root;Icon=WindowsShell.Icon(root);}
         public void Update(string name, string address, bool network, bool ready, ImageSource icon)
         {
             Description = !String.IsNullOrEmpty(address) ? address : !String.IsNullOrWhiteSpace(name) ? name : Root;
             if (!ready) Description = L.Text("drive.disconnectedLabelPrefix") + Description;
-            Tooltip = FilePanel.DriveTooltip(Root, name, address, network, ready);
+            Tooltip = ExtLocations.IsPath(Root)?Description+"\n"+L.Text("ext.readOnly"):FilePanel.DriveTooltip(Root, name, address, network, ready);
             Icon = icon ?? DesktopIcons.WindowsDriveIcon(Root, network, ready);
             if (PropertyChanged != null) foreach (string property in new[] { "Description", "Tooltip", "Icon" }) PropertyChanged(this, new PropertyChangedEventArgs(property));
         }
@@ -31,10 +36,10 @@ namespace FileCompass
     {
         internal static void Configure(ComboBox combo)
         {
-            combo.Width = 72;
+            combo.Width = 125;combo.SetBinding(FrameworkElement.ToolTipProperty,new System.Windows.Data.Binding("SelectedItem.Tooltip"){Source=combo});
             combo.ItemTemplate = (DataTemplate)XamlReader.Parse(@"<DataTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'>
                 <StackPanel Orientation='Horizontal'><Image Source='{Binding Icon}' Width='16' Height='16' Margin='0,0,4,0'/>
-                <TextBlock Text='{Binding Letter}' VerticalAlignment='Center'/></StackPanel></DataTemplate>");
+                <TextBlock Text='{Binding SelectionLabel}' TextTrimming='CharacterEllipsis' VerticalAlignment='Center'/></StackPanel></DataTemplate>");
             combo.ItemContainerStyle = (Style)XamlReader.Parse(@"<Style xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' TargetType='ComboBoxItem'>
                 <Setter Property='MinHeight' Value='25'/><Setter Property='Padding' Value='5,3'/>
                 <Setter Property='HorizontalContentAlignment' Value='Stretch'/><Setter Property='Background' Value='{StaticResource CompassSurface}'/>
@@ -48,7 +53,7 @@ namespace FileCompass
                 <TextBlock Grid.Column='2' Text='{Binding Description}' VerticalAlignment='Center' TextTrimming='CharacterEllipsis'/>
                 </Grid></Border>
                 </ControlTemplate></Setter.Value></Setter>
-                <Style.Triggers><Trigger Property='IsMouseOver' Value='True'><Setter Property='Background' Value='{StaticResource CompassHover}'/></Trigger>
+                <Style.Triggers><DataTrigger Binding='{Binding GroupStart}' Value='True'><Setter Property='Margin' Value='0,6,0,0'/></DataTrigger><Trigger Property='IsMouseOver' Value='True'><Setter Property='Background' Value='{StaticResource CompassHover}'/></Trigger>
                 <Trigger Property='IsHighlighted' Value='True'><Setter Property='Background' Value='{StaticResource CompassAccent}'/><Setter Property='Foreground' Value='{StaticResource CompassSurface}'/></Trigger>
                 <Trigger Property='IsSelected' Value='True'><Setter Property='Background' Value='{StaticResource CompassAccent}'/><Setter Property='Foreground' Value='{StaticResource CompassSurface}'/></Trigger>
                 </Style.Triggers></Style>");
@@ -67,4 +72,3 @@ namespace FileCompass
         }
     }
 }
-

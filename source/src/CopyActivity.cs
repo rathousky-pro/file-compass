@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -82,25 +82,24 @@ namespace FileCompass
         readonly StackPanel copyActivities = new StackPanel();
         readonly Border copySummary = new Border { Margin = new Thickness(8, 0, 8, 6), Padding = new Thickness(8), CornerRadius = new CornerRadius(6), Background = CompactTheme.WhiteSurface, BorderBrush = CompactTheme.Line, BorderThickness = new Thickness(1), Visibility = Visibility.Collapsed, Cursor = System.Windows.Input.Cursors.Hand };
         readonly DualCopyProgress summaryProgress = new DualCopyProgress();
-        readonly ProgressBar summaryTrack = new ProgressBar { Height = 3, Minimum = 0, Maximum = 1, BorderThickness = new Thickness(0), Foreground = FluentTheme.Accent, Background = CompactTheme.ThemeBrush("#E7ECF3"), Margin = new Thickness(0, 6, 0, 0) };
+        readonly ProgressBar summaryTrack = new ProgressBar { Height = 6, Minimum = 0, Maximum = 1, BorderThickness = new Thickness(0), Foreground = FluentTheme.Accent, Background = CompactTheme.ThemeBrush("#E7ECF3"), Margin = new Thickness(0, 6, 0, 0) };
         readonly TextBlock summaryLabel = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Foreground = FluentTheme.Text, TextTrimming = TextTrimming.CharacterEllipsis };
         readonly TextBlock summaryPercent = new TextBlock { Foreground = FluentTheme.Accent, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 8, 0) };
         readonly TextBlock summaryRoute = new TextBlock { FontSize = 11, Margin = new Thickness(0, 2, 4, 0), Foreground = FluentTheme.Muted, TextTrimming = TextTrimming.CharacterEllipsis };
         readonly Button summaryPause = CompactTheme.Button("Ⅱ", L.Text("transfer.pauseTooltip"), null);
         readonly Button summaryCancel = new Wpf.Ui.Controls.Button { Content = "×", MinHeight = 0, Height = 28, Padding = new Thickness(0), MinWidth = 28, Width = 28, Margin = new Thickness(3, 0, 0, 0), Cursor = System.Windows.Input.Cursors.Arrow, Visibility = Visibility.Collapsed };
         readonly TextBlock summaryTransferInfo = new TextBlock { FontSize = 11, Margin = new Thickness(0, 2, 0, 0), Foreground = FluentTheme.Muted, TextTrimming = TextTrimming.CharacterEllipsis, Visibility = Visibility.Collapsed };
+        readonly Button summaryDetails=CompactTheme.Button("⌃ "+L.Text("transfer.compactDetails"),L.Text("transfer.openDetailsTooltip"),null);
         Window activityDetails;
         void InitializeCopySummary()
         {
-            var dock = new DockPanel(); copySummary.Child = dock;
-            DockPanel.SetDock(summaryCancel, Dock.Right); dock.Children.Add(summaryCancel);
-            summaryPause.Width = 28; summaryPause.Height = 28;
-            DockPanel.SetDock(summaryPause, Dock.Right); dock.Children.Add(summaryPause);
-            DockPanel.SetDock(summaryPercent, Dock.Right); dock.Children.Add(summaryPercent);
-            var icon = DesktopIcons.Toolbar("refresh", 20); icon.Margin = new Thickness(3, 0, 12, 0); DockPanel.SetDock(icon, Dock.Left); dock.Children.Add(icon);
-            var body = new StackPanel(); body.Children.Add(summaryLabel);
-            var details = new DockPanel(); DockPanel.SetDock(summaryTransferInfo, Dock.Right); details.Children.Add(summaryTransferInfo); details.Children.Add(summaryRoute);
-            body.Children.Add(details); body.Children.Add(summaryTrack); dock.Children.Add(body);
+            var dock=new DockPanel();copySummary.Child=dock;copySummary.Padding=new Thickness(12,10,12,10);copySummary.BorderBrush=CompactTheme.ThemeBrush("#79A9DF");copySummary.Background=CompactTheme.PanelSurface;
+            DockPanel.SetDock(summaryCancel,Dock.Right);dock.Children.Add(summaryCancel);
+            summaryDetails.Height=30;summaryDetails.Background=Brushes.Transparent;summaryDetails.BorderThickness=new Thickness(0);summaryDetails.Foreground=FluentTheme.Accent;summaryDetails.Padding=new Thickness(9,0,9,0);summaryDetails.Margin=new Thickness(8,0,0,0);DockPanel.SetDock(summaryDetails,Dock.Right);dock.Children.Add(summaryDetails);summaryDetails.Click+=delegate{ShowSummaryDetails();};
+            summaryPause.Width=Double.NaN;summaryPause.MinWidth=110;summaryPause.Height=30;summaryPause.Background=Brushes.Transparent;summaryPause.BorderThickness=new Thickness(0);summaryPause.Foreground=FluentTheme.Accent;summaryPause.Padding=new Thickness(9,0,9,0);summaryPause.Margin=new Thickness(12,0,0,0);DockPanel.SetDock(summaryPause,Dock.Right);dock.Children.Add(summaryPause);
+            var icon=new TextBlock{Text="⇄",FontFamily=new FontFamily("Segoe UI Symbol"),FontSize=24,Foreground=FluentTheme.Accent,VerticalAlignment=VerticalAlignment.Center,Margin=new Thickness(3,0,14,0)};DockPanel.SetDock(icon,Dock.Left);dock.Children.Add(icon);
+            var body=new StackPanel();var title=new DockPanel();DockPanel.SetDock(summaryPercent,Dock.Right);title.Children.Add(summaryPercent);summaryLabel.MaxWidth=280;DockPanel.SetDock(summaryLabel,Dock.Left);title.Children.Add(summaryLabel);summaryRoute.Margin=new Thickness(6,0,4,0);summaryRoute.FontSize=12;summaryRoute.VerticalAlignment=VerticalAlignment.Center;title.Children.Add(summaryRoute);body.Children.Add(title);
+            summaryTrack.Margin=new Thickness(0,6,0,0);body.Children.Add(summaryTrack);summaryTransferInfo.Margin=new Thickness(0,6,0,0);body.Children.Add(summaryTransferInfo);dock.Children.Add(body);
             copySummary.ToolTip = L.Text("transfer.openDetailsTooltip");
             body.MouseLeftButtonUp += delegate { ShowSummaryDetails(); };
             icon.MouseLeftButtonUp += delegate { ShowSummaryDetails(); };
@@ -113,6 +112,7 @@ namespace FileCompass
                 foreach (var job in remote) job.Pause(pause);
                 RefreshCopySummary();
             };
+            InitializeTaskDock();
             summaryCancel.Click += delegate
             {
                 if (!ConfirmNetworkCancellation(networkJobs.Where(x => !x.Finished && x.Activity != null && x.Activity.Backgrounded).ToArray())) return;
@@ -152,9 +152,9 @@ namespace FileCompass
             var remoteJobs = networkJobs.Where(x => !x.Finished && x.Activity != null && x.Activity.Backgrounded).ToArray();
             bool paused = (localPaused || remoteJobs.Any(x => x.Paused)) && !(copyControl != null && running.Any(x => x.LocalMetrics != null) && !copyControl.Paused) && !remoteJobs.Any(x => !x.Paused);
             summaryPause.IsEnabled = (copyControl != null && running.Any(x => x.LocalMetrics != null)) || remoteJobs.Length > 0;
-            summaryPause.Content = paused ? "▶" : "Ⅱ"; summaryPause.ToolTip = paused ? L.Text("transfer.resumeTooltip") : L.Text("transfer.pauseTooltip");
+            summaryPause.Content = paused ? "▶ "+L.Text("action.resume") : "Ⅱ "+L.Text("action.pause"); summaryPause.ToolTip = paused ? L.Text("transfer.resumeTooltip") : L.Text("transfer.pauseTooltip");
             summaryRoute.Text = running.Length == 1 ? primary.TransferRoute ?? "" : ""; summaryRoute.ToolTip = summaryRoute.Text;
-            summaryTransferInfo.Text = (paused ? L.Text("transfer.pausedPrefix") : "") + (rate / 1048576.0).ToString("F1") + L.Text("transfer.rateAndRemainingSuffix") + TransferTime(remaining);
+            summaryTransferInfo.Text = (running.Length==1&&primary.LocalMetrics!=null&&copyProgress!=null?copyProgress.FileCountSummary:"")+(paused ? L.Text("transfer.pausedPrefix") : "") + (rate / 1048576.0).ToString("F1") + L.Text("transfer.rateAndRemainingSuffix") + TransferTime(remaining);
             summaryTransferInfo.ToolTip = L.Text("transfer.summaryMetricsHelp");
             var visible = running.Length == 0 ? all : running;
             if (visible.Length > 0) {
@@ -163,6 +163,7 @@ namespace FileCompass
                 summaryPercent.Text = summaryProgress.Preparing ? L.Text("state.loading") : (100 * summaryProgress.TotalFraction).ToString("F0") + " %";
             }
             if (running.Length == 0 && activityDetails != null) activityDetails.Close();
+            RefreshTaskDock();
         }
         internal static string TransferTime(double? seconds)
         {
@@ -191,4 +192,3 @@ namespace FileCompass
         }
     }
 }
-

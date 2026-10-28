@@ -14,12 +14,15 @@ namespace FileCompass
 
         void AddViewToolbarControls(Panel tools)
         {
-            toolbarLayoutButton = Tool(tools, "details", L.Text("toolbar.panelLayoutHelp"), CycleToolbarLayout, L.Text("toolbar.panelsSideBySide"));
-            toolbarAllFilesButton = Tool(tools, "document", L.Text("toolbar.allFilesHelp"), ToggleToolbarAllFiles, L.Text("toolbar.allFilesYes"));
+            toolbarLayoutButton=Tool(tools,"panels-SideBySide",L.Text("toolbar.panelLayoutHelp"),delegate{
+                SetPanelLayout(panelLayout=="SideBySide"?"Stacked":panelLayout=="Stacked"?"Single":"SideBySide");
+            });
+            Tool(tools,"refresh",L.Text("toolbar.refreshShortcut"),RefreshPanels,allowDuringLoading:true);
+            toolbarAllFilesButton = Tool(tools, "hidden-files", L.Text("toolbar.allFilesHelp"), ToggleToolbarAllFiles);
             UpdateViewToolbarControls();
         }
 
-        void CycleToolbarLayout() { SetPanelLayout(panelLayout == "SideBySide" ? "Stacked" : panelLayout == "Stacked" ? "Single" : "SideBySide"); }
+
 
         void ToggleToolbarAllFiles()
         {
@@ -33,7 +36,12 @@ namespace FileCompass
         void UpdateViewToolbarControls()
         {
             if (updateDirectionTools != null) updateDirectionTools();
-            SetToolbarLabel(toolbarLayoutButton, L.Text(panelLayout == "Single" ? "toolbar.panelsSingle" : panelLayout == "Stacked" ? "toolbar.panelsStacked" : "toolbar.panelsSideBySide"));
+            if(toolbarLayoutButton!=null){
+                var image=toolbarLayoutButton.Content as Image;
+                if(image!=null){image.Tag="panels-"+panelLayout;image.Source=DesktopIcons.ToolbarDrawing((string)image.Tag,ToolbarThemeSettings.Current);}
+                string caption=L.Text(panelLayout=="Single"?"toolbar.panelsSingle":panelLayout=="Stacked"?"toolbar.panelsStacked":"toolbar.panelsSideBySide");
+                SetToolbarLabel(toolbarLayoutButton,caption);toolbarLayoutButton.ToolTip=caption+"\n"+L.Text("toolbar.panelLayoutHelp");
+            }
             SetToolbarLabel(toolbarAllFilesButton, L.Text(toolbarAllFiles ? "toolbar.allFilesYes" : "toolbar.allFilesNo"));
 
             SetToolbarState(toolbarAllFilesButton, toolbarAllFiles);
@@ -63,8 +71,3 @@ namespace FileCompass
         }
     }
 }
-
-
-
-
-

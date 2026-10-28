@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -20,6 +20,9 @@ namespace FileCompass
         CancellationTokenSource navigationCancellation;
         int navigationVersion;
         public bool LocalLoading { get; private set; }
+#if APP_TESTS
+        internal Func<string,CancellationToken,List<Entry>> LocalRowsForTests;
+#endif
         internal event Action LocalNavigationCompleted;
         public Task NavigationTask { get; private set; }
         internal void CancelNavigation() { navigationVersion++; var previous = navigationCancellation; navigationCancellation = null; if (previous != null) previous.Cancel(); LocalLoading = false; List.IsEnabled = true; }
@@ -57,7 +60,7 @@ namespace FileCompass
         readonly Action<FilePanel> activate;
         string sortProperty = "Name";
         bool descending, selectingDrive, preserveColumnWidths, resizingColumns;
-        bool rightDragging, dragMark;
+        bool rightDragging, dragMark;Entry rightDragLast;
         readonly HashSet<Entry> dragVisited = new HashSet<Entry>();
         public static readonly DependencyProperty IsActivePanelProperty = DependencyProperty.Register("IsActivePanel", typeof(bool), typeof(FilePanel), new PropertyMetadata(false));
         public bool IsActivePanel { get { return (bool)GetValue(IsActivePanelProperty); } set { SetValue(IsActivePanelProperty, value); } }
@@ -72,7 +75,7 @@ namespace FileCompass
             var grid = new Grid();
             grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(31) });
             grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(39) });
-            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(34) });
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             grid.RowDefinitions.Add(new RowDefinition());
             grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(24) });
             InitializeNavigation(grid);
@@ -97,12 +100,12 @@ namespace FileCompass
             var diskRow = new DockPanel { LastChildFill = true };
             driveSelector.SelectionChanged += delegate
             {
-                if (!selectingDrive && driveSelector.SelectedItem != null) SelectDrive(driveSelector.SelectedItem.ToString());
+                if(!selectingDrive && driveSelector.SelectedItem is DriveChoice){var choice=(DriveChoice)driveSelector.SelectedItem;if(choice.IsLocation){activate(this);FocusFiles();Navigate(choice.Root,true);}else SelectDrive(choice.Root);}
             };
             DriveSelector.Configure(driveSelector);
             DockPanel.SetDock(driveSelector, Dock.Left); diskRow.Children.Add(driveSelector);
             var parent = CompactTheme.Button("..", L.Text("navigation.parentShortcutTooltip"), delegate { Up(); }); DockPanel.SetDock(parent, Dock.Right); diskRow.Children.Add(parent);
-            var rootButton = CompactTheme.Button("\\", L.Text("navigation.driveRootTooltip"), delegate { if (CurrentPath != null) Navigate(IsShellBrowser ? WindowsShell.Computer : IsNetworkBrowser ? NetworkBrowser.Root : IsRemote || IsArchive ? "/" : Path.GetPathRoot(CurrentPath), true); });
+            var rootButton = CompactTheme.Button("\\", L.Text("navigation.driveRootTooltip"), delegate { if (CurrentPath != null) Navigate(IsShellBrowser ? WindowsShell.Computer : IsNetworkBrowser ? NetworkBrowser.Root : IsExt ? ExtLocations.Root(CurrentPath) : IsRemote || IsArchive ? "/" : Path.GetPathRoot(CurrentPath), true); });
             DockPanel.SetDock(rootButton, Dock.Right); diskRow.Children.Add(rootButton);
             diskRow.Children.Add(capacity); Grid.SetRow(diskRow, 1); driveGrid.Children.Add(diskRow);
 
@@ -130,7 +133,7 @@ namespace FileCompass
                 if (e.Key == Key.Enter) { Navigate(address.Text, true); List.Focus(); e.Handled = true; }
                 else if (e.Key == Key.Escape) { address.Text = CurrentPath ?? ""; List.Focus(); e.Handled = true; }
             };
-            InitializeAddress(pathRow); Grid.SetRow(pathRow, 2); grid.Children.Add(pathRow);
+            InitializeAddress(pathRow);pathRow.Height=34;Grid.SetRow(pathRow,2);grid.Children.Add(pathRow);
 
             AddColumn(L.Text("column.name"), "Name", 230); AddColumn(L.Text("column.extension"), "Extension", 80);
             AddColumn(L.Text("column.size"), "Size", 90); AddColumn(L.Text("column.date"), "Modified", 130); AddColumn(L.Text("attributes.title"), "Attributes", 70);
@@ -151,24 +154,10 @@ namespace FileCompass
                 List.SelectedItem = entry; row.Focus(); e.Handled = true;
                 if (e.ClickCount == 2) OpenSelected();
             };
-            List.PreviewMouseRightButtonDown += delegate(object sender, MouseButtonEventArgs e)
-            {
-                var row = RowAt(e.GetPosition(List)); if (row == null) return;
-                var entry = (Entry)row.Content;
-                if (windowsSelection) { if (!List.SelectedItems.Contains(entry)) List.SelectedItem = entry; row.Focus(); return; }
-                BeginRightMark(entry); row.Focus(); Mouse.Capture(List, CaptureMode.SubTree); e.Handled = true;
-            };
-            List.PreviewMouseMove += delegate(object sender, MouseEventArgs e)
-            {
-                if (!rightDragging || e.RightButton != MouseButtonState.Pressed) return;
-                var row = RowAt(e.GetPosition(List)); if (row != null) ContinueRightMark((Entry)row.Content);
-            };
-            List.PreviewMouseRightButtonUp += delegate(object sender, MouseButtonEventArgs e)
-            {
-                if (!rightDragging) return;
-                EndRightMark(); Mouse.Capture(null); e.Handled = true;
-            };
-            List.LostMouseCapture += delegate { EndRightMark(); };
+            List.PreviewMouseRightButtonDown+=delegate(object sender,MouseButtonEventArgs e){BeginFileContextGesture(e);};
+            List.PreviewMouseMove+=delegate(object sender,MouseEventArgs e){ContinueFileContextGesture(e);};
+            List.PreviewMouseRightButtonUp+=delegate(object sender,MouseButtonEventArgs e){EndFileContextGesture(e);};
+            List.LostMouseCapture+=delegate{CancelFileContextGesture();};
             // ListViewItem handles Space before a bubbling KeyDown reaches the list.
             // Handle file-manager commands on the tunnelling route instead.
             List.PreviewKeyDown += delegate(object sender, KeyEventArgs e)
@@ -240,21 +229,21 @@ namespace FileCompass
         void MarkDragged(Entry entry)
         {
             if (dragVisited.Add(entry) && !entry.IsParent) entry.IsMarked = dragMark;
-            List.SelectedItem = entry; UpdateStatus();
+            rightDragLast=entry;FocusRightEntry(entry);SyncWindowsSelection(); UpdateStatus();
         }
         internal void BeginRightMark(Entry entry)
         {
-            rightDragging = true; dragMark = !entry.IsMarked; dragVisited.Clear(); MarkDragged(entry);
+            RememberSelection();rightDragging = true; dragMark = !entry.IsMarked; dragVisited.Clear(); MarkDragged(entry);
         }
         internal void ContinueRightMark(Entry entry)
         {
             if (!rightDragging) return;
-            int from = List.Items.IndexOf(List.SelectedItem), to = List.Items.IndexOf(entry);
+            int from = List.Items.IndexOf(rightDragLast), to = List.Items.IndexOf(entry);
             if (from >= 0 && to >= 0)
                 for (int i = Math.Min(from, to); i <= Math.Max(from, to); i++) MarkDragged((Entry)List.Items[i]);
             MarkDragged(entry);
         }
-        internal void EndRightMark() { rightDragging = false; dragVisited.Clear(); }
+        internal void EndRightMark() { rightDragging = false; rightDragLast=null;dragVisited.Clear(); }
         public void ToggleMark(Entry entry) { RememberSelection(); if (entry != null && !entry.IsParent) entry.IsMarked = !entry.IsMarked; SyncWindowsSelection(); UpdateStatus(); }
         public void MarkAll(bool marked) { RememberSelection(); foreach (Entry entry in List.Items) entry.IsMarked = marked; SyncWindowsSelection(); UpdateStatus(); }
         public void InvertMarks() { RememberSelection(); foreach (Entry entry in List.Items) if (!entry.IsParent) entry.IsMarked = !entry.IsMarked; SyncWindowsSelection(); UpdateStatus(); }
@@ -346,12 +335,13 @@ namespace FileCompass
             }
         }
 
-        public void Highlight(bool active) { IsActivePanel = active; BorderBrush = active ? FluentTheme.Accent : CompactTheme.ChromeLine; address.Background = active ? CompactTheme.ActivePath : CompactTheme.InactivePath; crumbs.Background = address.Background; if (panelPathRow != null) panelPathRow.Background = address.Background; foreach (GridViewColumn column in view.Columns) { var header = column.Header as GridViewColumnHeader; if (header != null) header.Background = active && (string)header.Tag == sortProperty ? CompactTheme.SortedHeader : CompactTheme.WhiteSurface; } address.Foreground = active ? FluentTheme.Accent : FluentTheme.Text; crumbs.SetValue(TextBlock.ForegroundProperty, active ? FluentTheme.Accent : FluentTheme.Text); }
-        void ShowPath() { address.Text = CurrentPath == null ? "" : IsRemote || IsArchive ? DisplayPath : CurrentPath.TrimEnd('\\') + "\\*.*"; }
+        public void Highlight(bool active) { IsActivePanel = active; BorderBrush = active ? (AppearanceTheme.IsBalanced ? CompactTheme.ThemeBrush("#79A9DF") : FluentTheme.Accent) : CompactTheme.ChromeLine; address.Background = active ? CompactTheme.ActivePath : CompactTheme.InactivePath; crumbs.Background = address.Background; if (panelPathRow != null) panelPathRow.Background = address.Background; foreach (GridViewColumn column in view.Columns) { var header = column.Header as GridViewColumnHeader; if (header != null) header.Background = active && (string)header.Tag == sortProperty ? CompactTheme.SortedHeader : CompactTheme.WhiteSurface; } address.Foreground = active ? FluentTheme.Accent : FluentTheme.Text; crumbs.SetValue(TextBlock.ForegroundProperty, active ? FluentTheme.Accent : FluentTheme.Text); }
+        void ShowPath() { address.Text = CurrentPath == null ? "" : IsRemote || IsArchive || IsExt ? DisplayPath : CurrentPath.TrimEnd('\\') + "\\*.*"; }
         public void Navigate(string path, bool remember)
         {
             if (IsLoading) return;
             projection = null;
+            if(ExtLocations.IsPath(path)){NavigationTask=NavigateExt(path,remember);return;}
             if (WindowsShell.IsLocation(path)) { NavigationTask = NavigateShell(path, remember); return; }
             if (NetworkBrowser.IsLocation(path)) { NavigationTask = NavigateNetwork(path, remember); return; }
             if (IsLoading) return;
@@ -386,8 +376,11 @@ namespace FileCompass
                     foreach (Entry old in List.Items) if (old.IsMarked) keepMarks.Add(old.FullPath);
                     var cursor = List.SelectedItem as Entry; if (cursor != null) keepCursor = cursor.FullPath;
                 }
-                var load = Task.Run(delegate
+                var load = Task.Factory.StartNew(delegate
                 {
+#if APP_TESTS
+                if(LocalRowsForTests!=null)return LocalRowsForTests(path,token);
+#endif
                 var folder = new DirectoryInfo(path);
                 var rows = new List<Entry>();
                 if (folder.Parent != null) rows.Add(new Entry { Name = "[..]", FullPath = folder.Parent.FullName, IsDirectory = true, IsParent = true, Icon = DesktopIcons.FileIcon("", true) });
@@ -405,7 +398,7 @@ namespace FileCompass
                         Modified = child.LastWriteTime.ToString("dd.MM.yyyy HH:mm"), Attributes = AttributeText(child.Attributes) });
                 }
                 token.ThrowIfCancellationRequested(); FileTagStore.Apply(rows); return rows;
-                }, token);
+                }, token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
                 pendingLoad = load;
                 if (await Task.WhenAny(load, Task.Delay(TimeSpan.FromSeconds(15), token)).ConfigureAwait(false) != load)
                 { cancellation.Cancel(); throw new IOException(L.Text("panel.folderNotResponding")); }
@@ -432,7 +425,7 @@ namespace FileCompass
             await Dispatcher.InvokeAsync(delegate
             {
                 if (version != navigationVersion) return;
-                if (loadError != null) { address.Text = CurrentPath ?? ""; status.Text = L.Text("panel.openFolderFailedPrefix") + loadError.Message; status.ToolTip = status.Text; }
+                if (loadError != null) { address.Text = CurrentPath ?? ""; status.Text = L.Text("panel.openFolderFailedPrefix") + loadError.Message; status.ToolTip = status.Text; if(tabs.Count>0&&(switchingTabs||tabs[tabIndex].Pending||String.Equals(path,CurrentPath,StringComparison.OrdinalIgnoreCase)))ShowTabUnavailable(tabs[tabIndex],LocalTabError(path,loadError)); }
                 LocalLoading = false; List.IsEnabled = true; navigationCancellation = null;
                 if (loadError == null && LocalNavigationCompleted != null) LocalNavigationCompleted();
                 var owner = Window.GetWindow(this);
@@ -469,8 +462,9 @@ namespace FileCompass
         }
         void UpdateDriveSelection()
         {
+            if(IsExt){selectingDrive=true;DriveChoice ext;driveSelector.SelectedItem=extChoices.TryGetValue(ExtLocations.Root(CurrentPath),out ext)?ext:null;selectingDrive=false;return;}
             string root = Path.GetPathRoot(CurrentPath);
-            selectingDrive = true; driveSelector.SelectedItem = driveSelector.Items.Cast<DriveChoice>().FirstOrDefault(x => String.Equals(x.Root, root, StringComparison.OrdinalIgnoreCase)); selectingDrive = false;
+            selectingDrive = true; driveSelector.SelectedItem = CommonLocations.Match(driveSelector.Items.Cast<DriveChoice>(),CurrentPath); selectingDrive = false;
             foreach (var pair in driveButtons)
             {
                 bool selected = String.Equals(pair.Key, root, StringComparison.OrdinalIgnoreCase);
@@ -481,6 +475,7 @@ namespace FileCompass
         void UpdateDiskInfo()
         {
             UpdateDriveSelection();
+            if(IsExt){selectingDrive=true;DriveChoice ext;driveSelector.SelectedItem=extChoices.TryGetValue(ExtLocations.Root(CurrentPath),out ext)?ext:null;selectingDrive=false;return;}
             string root = Path.GetPathRoot(CurrentPath);
             capacity.Text = root + L.Text("drive.loadingCapacity"); string location = CurrentPath;
             Task.Run(delegate
@@ -505,7 +500,7 @@ namespace FileCompass
             if (navigation != null) await navigation.ConfigureAwait(false);
             await Dispatcher.InvokeAsync(delegate { if (CurrentPath == expected && CurrentPath != previous && from.Count > 0 && from.Peek() == expected) { from.Pop(); to.Push(previous); } });
         }
-        public void Up() { if (IsShellBrowser) { if (CurrentPath != WindowsShell.Computer) Navigate(WindowsShell.Computer, true); return; } if (IsNetworkBrowser) { if (CurrentPath != NetworkBrowser.Root) Navigate(NetworkBrowser.Root, true); return; } if (IsArchive) { Navigate(ArchivePrefix.Length == 0 ? "archive-exit:" : "/" + (ArchivePrefix.Contains("/") ? ArchivePrefix.Substring(0, ArchivePrefix.LastIndexOf('/')) : ""), true); return; } if (IsRemote) { Navigate(RemoteConnection.Parent(CurrentPath), true); return; } if (CurrentPath != null) { var parent = Directory.GetParent(CurrentPath); if (parent != null) Navigate(parent.FullName, true); else if (CurrentPath.StartsWith("\\\\")) Navigate("\\\\" + CurrentPath.Trim('\\').Split('\\')[0], true); } }
+        public void Up() { if(IsExt){string relative=ExtLocations.Relative(CurrentPath);if(relative!="/")Navigate(ExtLocations.Root(CurrentPath)+relative.Substring(0,relative.LastIndexOf('/')).TrimStart('/'),true);return;} if (IsShellBrowser) { if (CurrentPath != WindowsShell.Computer) Navigate(WindowsShell.Computer, true); return; } if (IsNetworkBrowser) { if (CurrentPath != NetworkBrowser.Root) Navigate(NetworkBrowser.Root, true); return; } if (IsArchive) { Navigate(ArchivePrefix.Length == 0 ? "archive-exit:" : "/" + (ArchivePrefix.Contains("/") ? ArchivePrefix.Substring(0, ArchivePrefix.LastIndexOf('/')) : ""), true); return; } if (IsRemote) { Navigate(RemoteConnection.Parent(CurrentPath), true); return; } if (CurrentPath != null) { var parent = Directory.GetParent(CurrentPath); if (parent != null) Navigate(parent.FullName, true); else if (CurrentPath.StartsWith("\\\\")) Navigate("\\\\" + CurrentPath.Trim('\\').Split('\\')[0], true); } }
         public List<Entry> Selected()
         {
             if (LocalLoading || IsShellBrowser) return new List<Entry>();
@@ -520,6 +515,7 @@ namespace FileCompass
             var marked = all.Where(x => x.IsMarked).ToList();
             status.Text = L.Text("panel.selectionSizePrefix") + (marked.Sum(x => (decimal)x.Bytes) / 1024).ToString("N0") + " kB / " + (all.Sum(x => (decimal)x.Bytes) / 1024).ToString("N0") +
                 L.Text("panel.fileCountSeparator") + marked.Count(x => !x.IsDirectory) + " / " + all.Count(x => !x.IsDirectory) + L.Text("panel.folderCountSeparator") + marked.Count(x => x.IsDirectory) + " / " + all.Count(x => x.IsDirectory);
+            if(PreviewSelectionChanged!=null)PreviewSelectionChanged();
         }
         public void OpenSelected()
         {
@@ -528,6 +524,7 @@ namespace FileCompass
             if(entry.NetworkDeviceTarget!=null){try{Process.Start(new ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows),"explorer.exe"),SshTerminal.QuoteWindowsArgument("shell:"+entry.NetworkDeviceTarget)){UseShellExecute=true});}catch(Exception ex){MessageBox.Show(ex.Message,L.Text("error.cannotOpenFile"));}return;}
             if (entry.IsDirectory) Navigate(entry.FullPath, true);
             else if (IsArchive) { if (ArchiveFileRequested != null) ArchiveFileRequested(this, entry, false, false); }
+            else if(IsExt)ViewSelected();
             else if (IsRemote) OpenRemoteFile(entry);
             else if (ArchiveEngine.Recognized(entry.FullPath)) { var opening = OpenArchive(entry.FullPath); }
             else if (FileChecksums.IsChecksumFile(entry.FullPath)) { var main = Window.GetWindow(this) as MainWindow; if (main != null) main.VerifyChecksumsDialog(entry.FullPath); }
@@ -535,11 +532,13 @@ namespace FileCompass
         }
         public void ViewSelected()
         {
+
             var entry = List.SelectedItem as Entry; if (entry == null) return;
             if (entry.IsDirectory) { OpenSelected(); return; }
+            var host=Window.GetWindow(this) as MainWindow;if(host!=null){host.PreviewInOtherPanel(this);return;}
             if (IsArchive) { if (ArchiveFileRequested != null) ArchiveFileRequested(this, entry, false, true); return; }
             if (IsRemote) { OpenRemoteFile(entry, true); return; }
-            try { FileViewers.Open(Window.GetWindow(this), entry.FullPath); }
+            try { MainWindow.ShowRichPreviewWindow(Window.GetWindow(this), entry.FullPath); }
             catch (Exception ex) { MessageBox.Show(Window.GetWindow(this), ex.Message, L.Text("viewer.displayFailedTitle")); }
         }
 
@@ -561,9 +560,3 @@ namespace FileCompass
         }
     }
 }
-
-
-
-
-
-

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -116,6 +116,7 @@ namespace FileCompass
             right.Navigate(initialDirectory != null ? home : ProgramSettings.StartupFolder(preferences.RightFolder, home), false); SetActive(left);
             if (initialDirectory == null) { left.RestoreTabs(preferences.LeftTabs, preferences.LeftTabIndex, !preferences.SaveFoldersOnExit || preferences.SaveTabsOnExit); right.RestoreTabs(preferences.RightTabs, preferences.RightTabIndex, !preferences.SaveFoldersOnExit || preferences.SaveTabsOnExit); }
             InitializeWorkflows(preferences);
+            if(initialDirectory==null){left.TabsChanged+=PersistPanelTabs;right.TabsChanged+=PersistPanelTabs;}
             InitializeReleaseTools();
             InitializeQuickPreview();
             InitializePanelLayout(initialDirectory == null ? preferences : new ProgramSettings());
@@ -124,6 +125,7 @@ namespace FileCompass
             if (initialDirectory == null) Loaded += delegate { if (durableQueue.Pending().Length > 0 || durableQueue.LastError != null) ShowDurableQueue(); };
             if (initialDirectory == null) Loaded += async delegate { await StartupRestoration; await RestoreSshfsConnections(preferences); };
             PreviewKeyDown += HandleKeys;
+            Closed += delegate { if(updateManager!=null)updateManager.Dispose(); };
             Closing += delegate(object sender, System.ComponentModel.CancelEventArgs e)
             {
                 if (fileToolsRunning > 0 || archiveOperations > 0 || deletions > 0 || busy || PanelsLoading || copyRunning || networkCopies > 0 || networkJobs.Any(x => x.Planning > 0) || copyJobs.Count > 0) { e.Cancel = true; MessageBox.Show(L.Text("app.fileOperationBusy"), ApplicationBrand.Name); }
@@ -134,9 +136,10 @@ namespace FileCompass
             Closed += delegate { CloudRuntime.StopAll(); durableQueue.Dispose(); windowClosed = true; left.CancelNavigation(); right.CancelNavigation(); left.DisposeArchives(); right.DisposeArchives(); left.DisposeConnections(); right.DisposeConnections(); SshfsMount.CloseTemporaryMounts(); foreach (var job in networkJobs) { job.Changed = null; job.Cancellation.Dispose(); } };
         }
         void SetActive(FilePanel panel) { if (panel.Visibility == Visibility.Collapsed || (quickPreview != null && panel == previewTarget)) return; active = panel; if (left != null) left.Highlight(panel == left); if (right != null) right.Highlight(panel == right); UpdatePrompt(); UpdateViewToolbarControls(); }
-        void AddAction(Panel panel, string label, Action action)
+        void AddAction(Panel panel, string label, Action action,string icon)
         {
             var button = CompactTheme.Button(label, label, delegate { if (!busy && !PanelsLoading) action(); });
+            button.ContentTemplate=FunctionKeyIcons.Caption(icon);
             button.Height = 30; button.Padding = new Thickness(6, 2, 6, 2);
             button.Background = CompactTheme.WhiteSurface; button.BorderBrush = CompactTheme.Line;
             panel.Children.Add(button); actions.Add(button);
@@ -151,7 +154,9 @@ namespace FileCompass
 
             if (quickPreview != null && quickPreview.IsKeyboardFocusWithin) return;
             if (HandleWorkflowKeys(e)) return;
+            if(e.Key==Key.R&&Keyboard.Modifiers==ModifierKeys.Control&&!busy){RefreshPanels();e.Handled=true;return;}
             if (busy || PanelsLoading || e.OriginalSource is TextBox) return;
+            if(e.Key==Key.N&&Keyboard.Modifiers==ModifierKeys.Control){NewTextFile();e.Handled=true;return;}
             Key key = e.Key == Key.System ? e.SystemKey : e.Key;
             if (key == Key.Enter && Keyboard.Modifiers == (ModifierKeys.Alt | ModifierKeys.Shift)) { active.ToggleDiskUsage(); e.Handled = true; return; }
             if (key == Key.P && Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Alt)) { OpenPowerShell(); e.Handled = true; return; }
@@ -164,14 +169,16 @@ namespace FileCompass
             else if (e.Key == Key.F6) { if (Keyboard.Modifiers == ModifierKeys.Shift) Rename(); else Transfer(true); e.Handled = true; }
             else if (e.Key == Key.F7) { NewFolder(); e.Handled = true; }
             else if ((e.Key == Key.F8 || (e.Key == Key.Delete && active.List.IsKeyboardFocusWithin)) && (Keyboard.Modifiers == ModifierKeys.None || Keyboard.Modifiers == ModifierKeys.Shift)) { DeleteSelected(); e.Handled = true; }
-            else if (e.Key == Key.F2) { Rename(); e.Handled = true; }
+            else if (e.Key == Key.F2 && Keyboard.Modifiers == ModifierKeys.None) { NewTextFile(); e.Handled = true; }
             else if (e.Key == Key.F3) { active.ViewSelected(); e.Handled = true; }
+            else if (e.Key == Key.F4 && Keyboard.Modifiers == ModifierKeys.Shift) { HandleExternalEditorShortcut(e.Key,Keyboard.Modifiers); e.Handled = true; }
             else if (e.Key == Key.F4 && Keyboard.Modifiers == ModifierKeys.None) { EditSelected(); e.Handled = true; }
             else if (e.Key == Key.Tab && Keyboard.Modifiers == ModifierKeys.None && panelLayout != "Single") { (active == left ? right : left).List.Focus(); e.Handled = true; }
             else if (e.Key == Key.R && Keyboard.Modifiers == ModifierKeys.Control) { left.Refresh(); right.Refresh(); e.Handled = true; }
         }
         void Transfer(bool move)
         {
+            if(active.IsExt){ExportExtToOther(move);return;}if((active==left?right:left).IsExt){MessageBox.Show(this,L.Text("ext.readOnly"),L.Text("ext.title"));return;}
             if (active.IsShellBrowser || (active == left ? right : left).IsShellBrowser) { MessageBox.Show(this, L.Text("tree.openFolderFirst"), ApplicationBrand.Name); return; }
             if ((active == left ? right : left).IsProjection) { MessageBox.Show(this, L.Text("projection.destinationRejected"), ApplicationBrand.Name); return; }
             if (active.IsArchive || (active == left ? right : left).IsArchive) { if (move) MessageBox.Show(this, L.Text("archive.navigationShortcuts"), L.Text("archive.shortTitle")); else ArchiveTransfer(); return; }
@@ -183,19 +190,24 @@ namespace FileCompass
             return !other.IsRemote && !other.IsArchive && other.CurrentPath != null && String.Equals(Path.GetPathRoot(other.CurrentPath), disk, StringComparison.OrdinalIgnoreCase) ? other.CurrentPath : disk;
         }
 
-        void NewFolder()
+        async void NewFolder()
         {
+            if(RejectExtWrite())return;
             if (active.IsShellBrowser) { MessageBox.Show(this, L.Text("tree.openFolderFirst"), ApplicationBrand.Name); return; }
             if (active.IsProjection) { MessageBox.Show(this, L.Text("projection.destinationRejected"), ApplicationBrand.Name); return; }
             if (active.IsArchive) { ArchiveNewFolder(); return; }
             if (active.IsRemote) { RemoteNewFolder(); return; }
             if (active.CurrentPath == null) return;
             string name = Ask(L.Text("action.newFolder"), L.Text("folder.nameLabel"), ""); if (name == null) return;
-            try { FileOperations.ValidateName(name); string path = Path.Combine(active.CurrentPath, name); if (File.Exists(path) || Directory.Exists(path)) throw new IOException(L.Text("error.itemAlreadyExists")); Directory.CreateDirectory(path); RecordUndoTransaction(L.Text("action.newFolder"),new[]{UndoReceipt.Capture(path,null,false)}); active.Refresh(); }
+            var targetPanel=active; string parent=targetPanel.CurrentPath;
+            try { FileOperations.ValidateName(name); string path=Path.Combine(parent,name);var create=Task.Factory.StartNew(delegate{if(File.Exists(path)||Directory.Exists(path))throw new IOException(L.Text("error.itemAlreadyExists"));Directory.CreateDirectory(path);return UndoReceipt.Capture(path,null,false);},System.Threading.CancellationToken.None,TaskCreationOptions.LongRunning,TaskScheduler.Default);
+                if(await Task.WhenAny(create,Task.Delay(TimeSpan.FromSeconds(15)))!=create){var observe=create.ContinueWith(t=>{var error=t.Exception;},TaskScheduler.Default);MessageBox.Show(this,L.Text("folder.networkPending"),L.Text("folder.createFailed"));return;}
+                var receipt=await create;RecordUndoTransaction(L.Text("action.newFolder"),new[]{receipt});if(targetPanel.CurrentPath==parent)targetPanel.Refresh(); }
             catch (Exception ex) { MessageBox.Show(ex.Message, L.Text("folder.createFailed")); }
         }
         async void Rename()
         {
+            if(RejectExtWrite())return;
             if (active.IsArchive) { ArchiveRename(); return; }
             if (active.IsRemote) { RemoteRename(); return; }
             var entries = active.Selected(); if (entries.Count != 1) { MessageBox.Show(L.Text("selection.exactlyOneRequired"), L.Text("action.rename")); return; }
@@ -240,7 +252,8 @@ namespace FileCompass
         static int RunVerified(string[] args)
         {
 #if APP_TESTS
-            if(args.Length==2&&(args[0]=="--live-language-test"||args[0]=="--help-window-test"||args[0]=="--disk-smart-test"||args[0]=="--disk-analyzer-test"||args[0]=="--disk-analyzer-upgrade-test"||args[0]=="--local-copy-ui-test"||args[0]=="--navigation-focus-test"||args[0]=="--icloud-test"||args[0]=="--release-tools-test"||args[0]=="--media-names-test"||args[0]=="--undo-history-test"||args[0]=="--image-batch-test"||args[0]=="--media-converter-test"||args[0]=="--csv-preview-test"||args[0]=="--media-layout-test"))AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");
+            if(args.Length==2&&args[0]=="--archive-worker"&&!String.IsNullOrEmpty(Environment.GetEnvironmentVariable("FILECOMPASS_TEST_PROFILE")))AppPaths.TestProfileDirectory=Path.GetFullPath(Environment.GetEnvironmentVariable("FILECOMPASS_TEST_PROFILE"));
+            if(args.Length==2&&(args[0]=="--media-progress-eta-test"||args[0]=="--openmp-media-test"||args[0]=="--media-context-test"||args[0]=="--new-text-editor-test"||args[0]=="--copy-error-flow-test"||args[0]=="--analyzer-start-smart-kind-test"||args[0]=="--archive-test"||args[0]=="--archive-upgrade-test"||args[0]=="--archive-interaction-test"||args[0]=="--archive-formats-test"||args[0]=="--compression-progress-test"||args[0]=="--archive-memory-test"||args[0]=="--panel-layout-test"||args[0]=="--preview-refresh-test"||args[0]=="--prepared-preview-test"||args[0]=="--video-filmstrip-test"||args[0]=="--vendor-updates-test"||args[0]=="--vendor-updates-live-test"||args[0]=="--task-dock-test"||args[0]=="--preview-selection-test"||args[0]=="--search-media-ux-test"||args[0]=="--disk-tools-ux-test"||args[0]=="--settings-surfaces-test"||args[0]=="--settings-layout-test"||args[0]=="--settings-connections-test"||args[0]=="--cloud-question-language-test"||args[0]=="--inline-tabs-test"||args[0]=="--pinned-tabs-test"||args[0]=="--network-progress-ux-test"||args[0]=="--conflict-ux-test"||args[0]=="--operation-dialog-test"||args[0]=="--transfer-progress-layout-test"||args[0]=="--interface-theme-test"||args[0]=="--dispatch-units-test"||args[0]=="--editor-tempo-test"||args[0]=="--editor-analyzer-test"||args[0]=="--editor-analyzer-screens-test"||args[0]=="--live-language-test"||args[0]=="--help-window-test"||args[0]=="--disk-smart-test"||args[0]=="--disk-analyzer-test"||args[0]=="--disk-analyzer-upgrade-test"||args[0]=="--local-copy-ui-test"||args[0]=="--navigation-focus-test"||args[0]=="--icloud-test"||args[0]=="--release-tools-test"||args[0]=="--media-names-test"||args[0]=="--undo-history-test"||args[0]=="--image-batch-test"||args[0]=="--media-converter-test"||args[0]=="--csv-preview-test"||args[0]=="--media-layout-test"||args[0]=="--help-screenshots-test"||args[0]=="--internal-preview-test"||args[0]=="--file-context-test"||args[0]=="--usb-drive-test"||args[0]=="--ext-reader-test"))AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");
 #endif
 #if !APP_TESTS
             if(args.Any(x=>x.StartsWith("--",StringComparison.Ordinal)&&x.EndsWith("-test",StringComparison.Ordinal))) { Console.Error.WriteLine("Test commands are only available in development builds."); return 2; }
@@ -253,6 +266,9 @@ namespace FileCompass
                 else MessageBox.Show(error, ApplicationBrand.Name, MessageBoxButton.OK, MessageBoxImage.Error);
                 return 2;
             }
+            if(args.Length==1&&(args[0]=="--ext-window"||args[0]=="--ext-window-left"||args[0]=="--ext-window-right")){var extApp=new Application();FluentTheme.Ensure();HelpService.Ensure();return extApp.Run(new ExtBrowserWindow(null));}
+            if(args.Length==3&&args[0]=="--shell-menu-worker"){int result=ShellMenuWorker.Serve(args[1],args[2]);Environment.Exit(result);return result;}
+            if(args.Length==3&&args[0]=="--ext-worker")return ExtReader.Worker(args[1],args[2]);
             if (args.Length == 1 && args[0] == "--smart-window") { var smartApp = new Application(); FluentTheme.Ensure(); return smartApp.Run(new DiskSmartWindow(null)); }
             if (args.Length > 0 && args[0] == "--sshfs-install-helper") return SshfsSetup.Helper(args);
             if (args.Length == 1 && args[0] == "--everything-worker") return EverythingSearch.Worker();
@@ -263,6 +279,27 @@ namespace FileCompass
             if (args.Length == 2 && args[0] == "--archive-worker")
             { try { return ArchiveWorker.Serve(args[1]); } catch (Exception ex) { Console.Error.WriteLine(ex); return 1; } }
 #if APP_TESTS
+            if (args.Length == 2 && args[0] == "--conflict-ux-test") return ConflictUxTests.Run(args[1]);
+            if(args.Length==2&&args[0]=="--media-progress-eta-test")return MediaProgressEtaTests.Run(args[1]);
+            if(args.Length==2&&args[0]=="--openmp-media-test")return OpenMpMediaTests.Run(args[1]);
+            if(args.Length==2&&args[0]=="--media-context-test")return MediaContextTests.Run(args[1]);
+            if(args.Length==2&&args[0]=="--new-text-editor-test")return NewTextEditorTests.Run(args[1]);
+            if(args.Length==2&&args[0]=="--copy-error-flow-test")return CopyErrorFlowTests.Run(args[1]);
+            if(args.Length==2&&args[0]=="--analyzer-start-smart-kind-test")return AnalyzerStartSmartKindTests.Run(args[1]);
+            if(args.Length==2&&args[0]=="--archive-interaction-test")return ArchiveInteractionTests.Run(args[1]);
+            if(args.Length==2&&args[0]=="--video-filmstrip-test")return VideoPreviewTests.Run(args[1]);
+            if(args.Length==2&&(args[0]=="--vendor-updates-test"||args[0]=="--vendor-updates-live-test"))return VendorUpdatesTests.Run(args[1],args[0]=="--vendor-updates-live-test");
+            if(args.Length==2&&args[0]=="--task-dock-test")return TaskDockTests.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--preview-selection-test") return PreviewSelectionTests.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--search-media-ux-test") return SearchMediaUxTests.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--disk-tools-ux-test") return DiskToolsUxTests.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--settings-surfaces-test") return SettingsSurfacesTests.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--inline-tabs-test") return InlineTabsTests.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--pinned-tabs-test") return PinnedTabsTests.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--network-progress-ux-test") return NetworkProgressUxTests.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--operation-dialog-test") return OperationDialogTests.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--transfer-progress-layout-test") return TransferProgressLayoutTests.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--interface-theme-test") return InterfaceThemeTests.Run(args[1]);
             if (args.Length == 2 && args[0] == "--media-converter-test") return MediaConverterTests.Run(args[1]);
             if (args.Length == 2 && args[0] == "--image-batch-test") return ImageBatchTests.Run(args[1]);
             if (args.Length == 2 && args[0] == "--undo-history-test") return UndoHistoryTests.Run(args[1]);
@@ -311,6 +348,8 @@ namespace FileCompass
             if (args.Contains("--html-preview-test")) return HtmlPreviewTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--prepared-preview-test")) return PreparedPreviewTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--associated-editing-test")) return AssociatedEditingTests.Run(Path.GetFullPath(args[1]));
+            if(args.Length==2&&args[0]=="--ext-reader-test")return ExtReaderTests.Run(Path.GetFullPath(args[1]));
+            if(args.Length==2&&args[0]=="--help-screenshots-test")return HelpScreenshotTests.Run(Path.GetFullPath(args[1]));
             if(args.Length==2&&args[0]=="--media-layout-test")return MediaLayoutTests.Run(Path.GetFullPath(args[1]));
             if(args.Length==2&&args[0]=="--csv-preview-test")return CsvPreviewTests.Run(Path.GetFullPath(args[1]));
             if(args.Length==2&&args[0]=="--preview-library-test")return PreviewLibraryTests.Run(Path.GetFullPath(args[1]));
@@ -329,6 +368,10 @@ namespace FileCompass
             if (args.Contains("--disk-smart-test")) return DiskSmartTests.Run(Path.GetFullPath(args[1]),args.Contains("--live"));
             if (args.Contains("--preview-refresh-test")) return PreviewRefreshTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--disk-analyzer-upgrade-test")) return DiskAnalyzerUpgradeTests.Run(Path.GetFullPath(args[1]));
+            if(args.Length==2&&args[0]=="--editor-analyzer-screens-test")return EditorAnalyzerScreenshotTests.Run(Path.GetFullPath(args[1]));
+            if(args.Length==2&&args[0]=="--dispatch-units-test")return DispatchUnitsTests.Run(Path.GetFullPath(args[1]));
+            if(args.Length==2&&args[0]=="--editor-tempo-test")return EditorTempoTests.Run(Path.GetFullPath(args[1]));
+            if(args.Length==2&&args[0]=="--editor-analyzer-test")return EditorAnalyzerFeatureTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--disk-analyzer-test")) return DiskAnalyzerTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--appearance-language-test")) return AppearanceLanguageTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--media-workflow-test")) return MediaWorkflowTests.Run(Path.GetFullPath(args[1]));
@@ -345,6 +388,9 @@ namespace FileCompass
             if (args.Contains("--sync-preview-test")) return SyncPreviewTests.Run(args[1]);
             if (args.Contains("--relay-test")) return RelayTests.Run(args[1],Int32.Parse(args[2]),Int32.Parse(args[3]),Int32.Parse(args[4]),args.Length > 5 ? Int32.Parse(args[5]) : 0);
             if (args.Contains("--file-tools-test")) return FileToolsTests.Run(args.Length > 1 ? args[1] : Path.GetTempPath());
+            if(args.Length==2&&args[0]=="--internal-preview-test")return InternalPreviewTests.Run(Path.GetFullPath(args[1]));
+            if(args.Length==2&&args[0]=="--file-context-test")return FileContextTests.Run(Path.GetFullPath(args[1]));
+            if(args.Length==2&&args[0]=="--usb-drive-test")return UsbDriveTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--drive-test")) return DriveUiTests.Run(args.Length > 1 ? args[1] : Path.GetTempPath());
             if (args.Contains("--media-preview-test")) return MediaPreviewTests.Run(args[1]);
             if (args.Contains("--compression-progress-test")) return CompressionProgressTests.Run(args[1]);
@@ -378,8 +424,10 @@ namespace FileCompass
                     var app = new Application(); FluentTheme.Ensure();
                     app.DispatcherUnhandledException += delegate(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
                     { MessageBox.Show(e.Exception.Message, L.Text("app.errorTitle"), MessageBoxButton.OK, MessageBoxImage.Error); e.Handled = true; };
+                    UpdateRegistry.Startup();
                     var window = new MainWindow(null, preferences);
                     window.Loaded += delegate { window.AcceptLaunch(""); };
+                    window.Loaded += async delegate { await System.Threading.Tasks.Task.Delay(2500); if(!window.UpdateHostClosed)await window.Updates.StartAutomatic(); };
                     if (folder.Length > 0) window.AcceptLaunch(folder);
                     if (instance != null) instance.Attach(delegate(string path) { if (!window.Dispatcher.HasShutdownStarted) window.Dispatcher.BeginInvoke(new Action(delegate { if(path.Length>0&&DeleteOperations.IsNetwork(path)&&MessageBox.Show(window,L.Text("security.forwardedNetworkFolder")+"\n\n"+path,ApplicationBrand.Name,MessageBoxButton.YesNo,MessageBoxImage.Question,MessageBoxResult.No)!=MessageBoxResult.Yes)return;window.AcceptLaunch(path); })); });
                     return app.Run(window);
@@ -388,16 +436,3 @@ namespace FileCompass
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -34,14 +34,14 @@ namespace FileCompass
                 var dialog = new DeleteConfirmationDialog(main, selected, true, false, root); windows.Add(dialog); dialog.Show(); dialog.UpdateLayout();
                 check(!dialog.Permanent && dialog.Recycle.IsEnabled && dialog.Recycle.IsDefault, "local deletion defaults to the recycle action");
                 check(!FluentUiTests.Children<CheckBox>(dialog).Any(), "deletion choice has no checkbox");
-                check(FluentUiTests.Children<Button>(dialog).Count(x => new[] { L.Text("action.delete"), L.Text("action.no"), L.Text("delete.moveToRecycleBin") }.Contains(x.Content as string)) == 3, "confirmation offers Delete No and Recycle");
+                check(FluentUiTests.Children<Button>(dialog).Count(x => new[] { L.Text("delete.permanentTitle"), L.Text("action.cancel"), L.Text("delete.moveToRecycleBin") }.Contains(x.Content as string)) == 3, "confirmation offers Delete No and Recycle");
                 NextStageTests.Draw(dialog, Path.Combine(root, "delete-permanent.png")); dialog.Close();
                 var unavailable = new DeleteConfirmationDialog(main, selected, false, true, "\\\\server\\share"); windows.Add(unavailable); unavailable.Show(); check(unavailable.Permanent && !unavailable.Recycle.IsEnabled, "network deletion cannot select unavailable recycle mode"); NextStageTests.Draw(unavailable, Path.Combine(root, "delete-network.png")); unavailable.Close();
-                foreach (string answer in new[] { "action.no", "action.delete", "delete.moveToRecycleBin" }) {
+                foreach (string answer in new[] { "action.cancel", "delete.permanentTitle", "delete.moveToRecycleBin" }) {
                     var modal = new DeleteConfirmationDialog(main, selected, true, false, root); windows.Add(modal);
                     modal.Loaded += delegate { modal.Dispatcher.BeginInvoke(new Action(delegate { FluentUiTests.Children<Button>(modal).Single(x => (x.Content as string) == L.Text(answer)).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); })); };
-                    check(modal.ShowDialog() == (answer != "action.no"), "modal answer handled correctly: " + answer);
-                    if (answer != "action.no") check(modal.Permanent == (answer == "action.delete"), "button selects the correct deletion mode: " + answer);
+                    check(modal.ShowDialog() == (answer != "action.cancel"), "modal answer handled correctly: " + answer);
+                    if (answer != "action.cancel") check(modal.Permanent == (answer == "delete.permanentTitle"), "button selects the correct deletion mode: " + answer);
                 }
                 check(File.Exists(normal) && File.Exists(hidden) && File.Exists(system), "confirmation tests never delete fixture files");
                 var config = new ConfigurationDialog(main); windows.Add(config); config.Show(); config.UpdateLayout(); NextStageTests.Draw(config, Path.Combine(root, "appearance-settings.png")); config.Close();
@@ -51,4 +51,3 @@ namespace FileCompass
         }
     }
 }
-

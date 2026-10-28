@@ -9,6 +9,9 @@ namespace FileCompass
     public sealed class NetworkCopyUpdate
     {
         public string Text;
+        public string CurrentSource, CurrentDestination, Phase;
+        public long BytesDone, TotalBytes;
+        public int FilesDone, TotalFiles;
         public double File, Total;
         public bool Preparing;
     }
@@ -118,5 +121,3 @@ namespace FileCompass
         }
     }
 }
-
-

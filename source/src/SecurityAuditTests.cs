@@ -89,7 +89,7 @@ namespace FileCompass
                 foreach (string extension in new[] { ".EXE", ".scr", ".lnk", ".bat", ".ps1", ".vbs", ".chm", ".docm", ".url", ".msi" })
                     check(AttachmentSecurity.RequiresLaunchConfirmation("attachment" + extension), "archive launch confirmation covers " + extension);
                 check(!AttachmentSecurity.RequiresLaunchConfirmation("photo.png"), "ordinary image does not require executable confirmation");
-                rejects(delegate { SshTerminal.CreateLaunch(new NetworkProfile { Protocol = NetworkProtocol.SSH, Host = "127.0.0.1", Name = "test" }); }, "terminal refuses missing pin before contacting server");
+                rejects(delegate { SshTerminal.CreateLaunch(new NetworkProfile { Protocol = NetworkProtocol.SSH, Host = "127.0.0.1", Name = "test",UserName="tester" }); }, "terminal refuses missing pin before contacting server");
                 byte[] publicKey = Convert.FromBase64String("AAAAC3NzaC1lZDI1NTE5AAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
                 var pinned = new NetworkProfile { Protocol = NetworkProtocol.SSH, Name = "pinned", Host = "server.example" };
                 using (var sha = SHA256.Create()) pinned.HostKeyFingerprint = "ssh-ed25519 " + Convert.ToBase64String(sha.ComputeHash(publicKey)).TrimEnd('=');
@@ -105,6 +105,7 @@ namespace FileCompass
                 finally { Environment.SetEnvironmentVariable("PATH", oldPath); }
 
                 string pipeName = "FileCompass-sshfs-" + Guid.NewGuid().ToString("N"); var security = new PipeSecurity();
+                security.SetAccessRuleProtection(true,false);security.AddAccessRule(new PipeAccessRule(System.Security.Principal.WindowsIdentity.GetCurrent().User,PipeAccessRights.FullControl,AccessControlType.Allow));
                 using (var server = SshfsSetup.CreateInstallerPipe(pipeName, security))
                 {
                     bool collision = false; try { using (SshfsSetup.CreateInstallerPipe(pipeName, security)) { } } catch (System.ComponentModel.Win32Exception) { collision = true; }
@@ -127,8 +128,9 @@ namespace FileCompass
                 if (loopback)
                 {
                     var events = new List<SshfsSetupProgress>(); bool failedPackage = false;
+                    File.WriteAllText(Path.Combine(root,SshfsSetup.Packages.Single(x=>x.Flag==1).FileName),"Test-only invalid MSI fixture; never install.");
                     try { SshfsSetup.Install(root, 1, CancellationToken.None, events.Add, true).GetAwaiter().GetResult(); } catch (IOException) { failedPackage = true; }
-                    check(failedPackage && events.Any(x => x.Stage == "verify") && events.Any(x => x.Stage == "result"), "actual helper authenticates both peers before rejecting absent package without installing");
+                    check(failedPackage && events.Any(x => x.Stage == "verify") && events.Any(x => x.Stage == "result"), "actual helper authenticates both peers before rejecting an invalid fixture package without installing");
                 }
                 else checks.Add("SKIP: child-process named-pipe isolation prevents installer helper integration");
                 File.WriteAllLines(Path.Combine(root, "security-audit-result.txt"), checks.Concat(new[] { "PASS: " + checks.Count(x => !x.StartsWith("SKIP:")) + " checks; skipped: " + checks.Count(x => x.StartsWith("SKIP:")) })); return 0;
@@ -145,7 +147,7 @@ namespace FileCompass
         sealed class ListingServer : IDisposable
         {
             readonly TcpListener listener = new TcpListener(IPAddress.Loopback, 0); readonly Task worker;
-            TcpClient control; TcpListener data;
+            TcpClient control; TcpListener data; volatile bool disposed;
             internal readonly int Port; internal int Deletes;
             internal ListingServer(string mode, string name)
             {
@@ -188,10 +190,10 @@ namespace FileCompass
                         }
                         }
                     }
-                    catch (IOException) { } catch (SocketException) { } catch (ObjectDisposedException) { }
+                    catch (IOException) { } catch (SocketException) { } catch (ObjectDisposedException) { } catch(InvalidOperationException)when(disposed) { }
                 });
             }
-            public void Dispose() { listener.Stop(); if (control != null) control.Close(); if (data != null) data.Stop(); if (!worker.Wait(5000)) throw new IOException("FTP fixture did not stop."); }
+            public void Dispose() { disposed=true;listener.Stop(); if (control != null) control.Close(); if (data != null) data.Stop(); if (!worker.Wait(5000)) throw new IOException("FTP fixture did not stop."); }
         }
     }
 }

@@ -1,0 +1,10 @@
+{
+  "name": "YamlDotNet",
+  "version": "16.3.0",
+  "license": "MIT",
+  "source": "https://github.com/aaubry/YamlDotNet/tree/v16.3.0",
+  "package": "https://api.nuget.org/v3-flatcontainer/yamldotnet/16.3.0/yamldotnet.16.3.0.nupkg",
+  "package_sha256": "e068bcc1243c46c8bfdfe2f27a026bfff03cde7c67d9f37c2cdd70bd24a9dfd4",
+  "assembly": "lib/net47/YamlDotNet.dll",
+  "assembly_sha256": "9172f0758ed76963e0ede3b5ca9a1fb5b82f64c7e7a92cb3a6de39efa933a668"
+}

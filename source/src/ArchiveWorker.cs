@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -38,7 +38,7 @@ namespace FileCompass
             using (var scratch = new ArchiveTemp())
             using (var pipe = new NamedPipeServerStream(name, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 4096, 4096, acl))
             using (var job = new ArchiveProcessJob(settings.MaximumMemoryMiB))
-            using (var child = Process.Start(new ProcessStartInfo(Process.GetCurrentProcess().MainModule.FileName, "--archive-worker " + name) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true }))
+            using (var child = Process.Start(WorkerStart(name)))
             {
                 var errors = Task.Run(delegate { return DrainErrors(child.StandardError); });
                 try
@@ -77,8 +77,21 @@ namespace FileCompass
                 }
                 catch (AggregateException ex)
                 { var cause = ex.Flatten().InnerExceptions[0]; if (cause is IOException && !(cause is EndOfStreamException)) throw cause; throw new IOException(L.Text("archive.workerFailedOrMemoryExceeded"), cause); }
-                finally { if (!child.HasExited) { child.Kill(); child.WaitForExit(); } errors.GetAwaiter().GetResult(); }
+                finally {
+                    // The result can arrive just before normal process teardown. Give it
+                    // time to exit instead of racing TerminateProcess against teardown.
+                    try { if (!child.WaitForExit(500)) { child.Kill(); child.WaitForExit(); } }
+                    catch (System.ComponentModel.Win32Exception) { if (!child.WaitForExit(1000)) throw; }
+                    errors.GetAwaiter().GetResult();
+                }
             }
+        }
+        static ProcessStartInfo WorkerStart(string name){
+            var start=new ProcessStartInfo(Process.GetCurrentProcess().MainModule.FileName,"--archive-worker "+name){UseShellExecute=false,CreateNoWindow=true,RedirectStandardError=true};
+#if APP_TESTS
+            if(AppPaths.TestProfileDirectory!=null)start.EnvironmentVariables["FILECOMPASS_TEST_PROFILE"]=AppPaths.TestProfileDirectory;
+#endif
+            return start;
         }
         static string DrainErrors(StreamReader reader)
         {
@@ -255,10 +268,10 @@ namespace FileCompass
                 bool streamFormat = new[] { ".gz", ".tgz", ".bz2", ".tbz2", ".xz", ".txz" }.Contains(extension);
                 OutArchiveFormat outputFormat = extension == ".zip" ? OutArchiveFormat.Zip : extension == ".tar" ? OutArchiveFormat.Tar : extension == ".gz" || extension == ".tgz" ? OutArchiveFormat.GZip : extension == ".bz2" || extension == ".tbz2" ? OutArchiveFormat.BZip2 : extension == ".xz" || extension == ".txz" ? OutArchiveFormat.XZ : OutArchiveFormat.SevenZip;
                 if (streamFormat && (directFiles == null || directFiles.Length != 1)) throw new IOException(L.Text("archive.singleStreamRequired"));
-                if (outputFormat == OutArchiveFormat.Zip && String.IsNullOrEmpty(password)) { WritePlainZip(archive, staging.Path, directFiles, args, budget, progress); return; }
                 var compressor = new SharpSevenZipCompressor { ArchiveFormat = outputFormat, PreserveDirectoryRoot = false, DirectoryStructure = true, IncludeEmptyDirectories = true, EncryptHeaders = extension != ".zip" && password != null, ZipEncryptionMethod = ZipEncryptionMethod.Aes256 };
                 string level = args.FirstOrDefault(x => x.StartsWith("-mx=", StringComparison.Ordinal)); int value = level == null ? 6 : Int32.Parse(level.Substring(4));
-                compressor.CompressionLevel = value <= 0 ? CompressionLevel.None : value <= 1 ? CompressionLevel.Fast : value <= 3 ? CompressionLevel.Low : value <= 5 ? CompressionLevel.Normal : value <= 7 ? CompressionLevel.High : CompressionLevel.Ultra;
+                compressor.CompressionLevel = ArchiveCompressionQuality.Native(value);
+                if(outputFormat==OutArchiveFormat.Zip){compressor.CompressionMethod=value==0?CompressionMethod.Copy:CompressionMethod.Deflate;compressor.CustomParameters["mt"]="1";}
                 if ((extension == ".7z" || outputFormat == OutArchiveFormat.XZ) && value > 0) {
                     var plan = ArchiveMemoryPlan.Choose(budget.Settings.MaximumMemoryMiB, ArchiveMemoryPlan.AvailableBytes(), itemCount, value, args.Contains("-filecompass-low-memory"));
                     compressor.CompressionMethod = CompressionMethod.Lzma2;
@@ -268,16 +281,28 @@ namespace FileCompass
                 if (outputFormat == OutArchiveFormat.BZip2) compressor.CustomParameters["mt"] = "2";
                 compressor.EventSynchronization = EventSynchronizationStrategy.AlwaysSynchronous;
                 string[] streamFiles = directFiles;
+                long currentFileDone=0,currentFileTotal=-1;
                 long readBytes = 0, directBytes = streamFiles == null ? 0 : streamFiles.Sum(x => new FileInfo(x).Length); FileStream activeOutput = null;
                 var notifications = Stopwatch.StartNew(); int lastPercent = -1; string currentMember = null;
-                compressor.Compressing += delegate(object sender, ProgressEventArgs e) { budget.Check(); if (e.PercentDone != lastPercent && (lastPercent < 0 || e.PercentDone == 100 || notifications.ElapsedMilliseconds >= 80)) { lastPercent = e.PercentDone; notifications.Restart(); progress(streamFiles != null && activeOutput != null ? new ArchiveCompressionProgress { Percent = directBytes == 0 ? Math.Min(99, (int)e.PercentDone) : Math.Min(99, 100.0 * Interlocked.Read(ref readBytes) / directBytes), Original = directBytes, Processed = Interlocked.Read(ref readBytes), Packed = activeOutput.Length, CurrentFile = currentMember }.Encode() : L.Text("archive.compressingStatus") + e.PercentDone + "%"); } };
+                long stagedBytes=streamFiles==null?Directory.EnumerateFiles(staging.Path,"*",SearchOption.AllDirectories).Sum(x=>new FileInfo(x).Length):directBytes;
+                string currentDisk=null;
+                compressor.FileCompressionStarted+=delegate(object sender,FileNameEventArgs e){
+                    if(streamFiles!=null)return;string disk=Path.IsPathRooted(e.FileName)?e.FileName:Path.Combine(staging.Path,e.FileName);
+                    if(!File.Exists(disk))return;currentDisk=disk;currentMember=disk.Substring(staging.Path.TrimEnd(Path.DirectorySeparatorChar).Length+1).Replace('\\','/');
+                    progress(new ArchiveCompressionProgress{Percent=Math.Max(0,lastPercent),Original=stagedBytes,Packed=activeOutput==null?0:activeOutput.Length,CurrentFile=currentMember}.Encode());
+                };
+                compressor.FileCompressionFinished+=delegate{
+                    if(streamFiles!=null||currentDisk==null)return;long length=new FileInfo(currentDisk).Length;
+                    progress(new ArchiveCompressionProgress{Percent=Math.Max(0,lastPercent),Original=stagedBytes,Packed=activeOutput==null?0:activeOutput.Length,CurrentFile=currentMember,FileDone=length,FileTotal=length}.Encode());currentDisk=null;
+                };
+                compressor.Compressing += delegate(object sender, ProgressEventArgs e) { budget.Check(); if (e.PercentDone != lastPercent && (lastPercent < 0 || e.PercentDone == 100 || notifications.ElapsedMilliseconds >= 80)) { lastPercent = e.PercentDone; notifications.Restart(); progress(streamFiles != null && activeOutput != null ? new ArchiveCompressionProgress { Percent = directBytes == 0 ? Math.Min(99, (int)e.PercentDone) : Math.Min(99, 100.0 * Interlocked.Read(ref readBytes) / directBytes), Original = directBytes, Processed = Interlocked.Read(ref readBytes), Packed = activeOutput.Length, CurrentFile = currentMember, FileDone=Interlocked.Read(ref currentFileDone), FileTotal=Interlocked.Read(ref currentFileTotal) }.Encode() : new ArchiveCompressionProgress{Percent=Math.Min(99,(int)e.PercentDone),Original=stagedBytes,Packed=activeOutput==null?0:activeOutput.Length,CurrentFile=currentMember}.Encode()); } };
                 progress(L.Text("archive.compressingStatus") + "0%");
                 using (var output = new FileStream(archive, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
                 using (var bounded = new ArchiveOutputStream(output, budget, archive, false))
-                    if (streamFiles == null) compressor.CompressDirectory(staging.Path, bounded, password ?? "", "*", true);
+                    if (streamFiles == null) {activeOutput=output;compressor.CompressDirectory(staging.Path, bounded, password ?? "", "*", true);activeOutput=null;}
                     else {
                         activeOutput = output; var streams = new Dictionary<string, StreamWithAttributes>(); var opened = new List<Stream>(); bool readReported = false;
-                        try { foreach (string file in streamFiles) { string memberName = directFiles != null ? Path.GetFileName(file) : file.Substring(staging.Path.TrimEnd(Path.DirectorySeparatorChar).Length + 1).Replace('\\', '/'); var stream = new ArchiveReadProgressStream(new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read), delegate(long count) { currentMember = memberName; long processed = Interlocked.Add(ref readBytes, count); budget.Check(); if (!readReported || notifications.ElapsedMilliseconds >= 100) { readReported = true; notifications.Restart(); progress(new ArchiveCompressionProgress { Percent = directBytes == 0 ? 0 : Math.Min(99, 100.0 * processed / directBytes), Original = directBytes, Processed = processed, Packed = output.Length, CurrentFile = memberName }.Encode()); } }); opened.Add(stream); var metadata = new FileInfo(file); streams.Add(memberName, new StreamWithAttributes(stream, metadata.CreationTime, metadata.LastWriteTime, metadata.LastAccessTime)); } compressor.CompressStreamDictionary(streams, bounded, password ?? ""); }
+                        try { foreach (string file in streamFiles) { string memberName = directFiles != null ? Path.GetFileName(file) : file.Substring(staging.Path.TrimEnd(Path.DirectorySeparatorChar).Length + 1).Replace('\\', '/'); long memberRead=0,memberLength=new FileInfo(file).Length; var stream = new ArchiveReadProgressStream(new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read), delegate(long count) { currentMember = memberName; memberRead+=count; Interlocked.Exchange(ref currentFileDone,memberRead); Interlocked.Exchange(ref currentFileTotal,memberLength); long processed = Interlocked.Add(ref readBytes, count); budget.Check(); if (!readReported || notifications.ElapsedMilliseconds >= 100) { readReported = true; notifications.Restart(); progress(new ArchiveCompressionProgress { Percent = directBytes == 0 ? 0 : Math.Min(99, 100.0 * processed / directBytes), Original = directBytes, Processed = processed, Packed = output.Length, CurrentFile = memberName, FileDone=memberRead, FileTotal=memberLength }.Encode()); } }); opened.Add(stream); var metadata = new FileInfo(file); streams.Add(memberName, new StreamWithAttributes(stream, metadata.CreationTime, metadata.LastWriteTime, metadata.LastAccessTime)); } compressor.CompressStreamDictionary(streams, bounded, password ?? ""); }
                         finally { activeOutput = null; foreach (var stream in opened) stream.Dispose(); }
                     }
                 progress(L.Text("archive.compressingStatus") + "100%");
@@ -351,11 +376,3 @@ namespace FileCompass
         [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr handle);
     }
 }
-
-
-
-
-
-
-
-

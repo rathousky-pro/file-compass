@@ -14,10 +14,11 @@ namespace FileCompass {
     }
     internal sealed class DiskFolder {
         public string Path { get; set; }
-        public string Name { get { return System.IO.Path.GetFileName(Path.TrimEnd('\\')); } }
+        public string Name { get { return Virtual?L.Text("analyzer.multiRoots"):Parent!=null&&Parent.Virtual?Path:System.IO.Path.GetFileName(Path.TrimEnd('\\')); } }
         public long Bytes { get; set; }
         public long Files { get; set; }
         public string Size { get { return DiskAnalysis.FormatSize(Bytes); } }
+        internal bool Virtual,SawEntries,ScanComplete;
         internal long DirectBytes, DirectFiles;
         internal DiskFolder Parent;
         internal readonly List<DiskFolder> Children = new List<DiskFolder>();
@@ -31,7 +32,7 @@ namespace FileCompass {
         public string RelativePath {get{return !String.IsNullOrEmpty(RootPath)&&DiskFileIndex.Within(Path,RootPath)?Path.Substring(RootPath.TrimEnd('\\').Length).TrimStart('\\'):Path;}}
         public string Category { get { return L.Text("analyzer.category."+DiskScanOptions.FileCategory(Path)); } }
     }
-    internal sealed class DiskAnalysis {
+    internal sealed partial class DiskAnalysis {
         internal DiskFolder Root;
         internal readonly Dictionary<string, DiskBucket> Extensions = new Dictionary<string, DiskBucket>(StringComparer.OrdinalIgnoreCase);
         internal readonly DiskBucket[] Ages = Enumerable.Range(0,6).Select(i => new DiskBucket { Name = "analyzer.age" + i }).ToArray();
@@ -48,8 +49,9 @@ namespace FileCompass {
             while (value >= 1024 && unit < units.Length-1) { value /= 1024; unit++; }
             return value.ToString(unit == 0 ? "N0" : "N2") + " " + units[unit];
         }
-        internal static DiskAnalysis Scan(string path, CancellationToken token, Action<long,long,string> progress, DateTime? now = null, DiskScanOptions options=null, Action<DiskAnalysis> update=null) {
+        internal static DiskAnalysis Scan(string path, CancellationToken token, Action<long,long,string> progress, DateTime? now = null, DiskScanOptions options=null, Action<DiskAnalysis> update=null,DiskScanActivity activity=null) {
             var result = new DiskAnalysis { Root = new DiskFolder { Path = System.IO.Path.GetFullPath(path) } };
+            if(activity!=null)activity.Begin(result.Root.Path,"analyzer.enumerating");
             if (!Directory.Exists(result.Root.Path)) throw new DirectoryNotFoundException(path);
             options=options??new DiskScanOptions();result.FilterSignature=options.Signature;result.FilterDescription=options.Description;result.ScannedUtc=now??DateTime.UtcNow;
             BinaryWriter index=null;
@@ -58,10 +60,11 @@ namespace FileCompass {
             var stack = new Stack<DiskFolder>(); var visited = new List<DiskFolder>(); stack.Push(result.Root);
             DateTime clock = result.ScannedUtc; var timer = System.Diagnostics.Stopwatch.StartNew();
             while (stack.Count > 0 && !token.IsCancellationRequested) {
-                var folder = stack.Pop(); visited.Add(folder); result.Folders++;
+                var folder = stack.Pop(); visited.Add(folder); result.Folders++;bool failed=false;if(activity!=null)activity.Begin(folder.Path,"analyzer.enumerating");
                 try {
                     foreach (string entry in Directory.EnumerateFileSystemEntries(folder.Path)) {
                         if (token.IsCancellationRequested) break;
+                        folder.SawEntries=true;if(activity!=null){activity.Progress();activity.Begin(entry,"analyzer.metadata");}
                         if(String.Equals(entry,result.IndexPath,StringComparison.OrdinalIgnoreCase))continue;
                         try {
                             var attributes = File.GetAttributes(entry);
@@ -86,10 +89,11 @@ namespace FileCompass {
                                     result.Largest.Sort((a,b) => b.Bytes.CompareTo(a.Bytes)); if (result.Largest.Count > 100) result.Largest.RemoveAt(100);
                                 }
                             }
-                        } catch (UnauthorizedAccessException ex) { result.Issue(entry, ex.Message); } catch (IOException ex) { result.Issue(entry, ex.Message); }
-                        if(timer.ElapsedMilliseconds>=options.SnapshotIntervalMilliseconds){if(index!=null)index.Flush();if(progress!=null)progress(result.Root.Files,result.Root.Bytes,folder.Path);if(update!=null)update(result.Snapshot());timer.Restart();}
+                        } catch (UnauthorizedAccessException ex) { if(activity!=null)activity.LastError=entry+": "+ex.Message;result.Issue(entry, ex.Message); } catch (IOException ex) { if(activity!=null)activity.LastError=entry+": "+ex.Message;result.Issue(entry, ex.Message); }
+                        if(activity!=null){activity.Progress();activity.Begin(folder.Path,"analyzer.enumerating");}if(timer.ElapsedMilliseconds>=options.SnapshotIntervalMilliseconds){if(index!=null)index.Flush();if(progress!=null)progress(result.Root.Files,result.Root.Bytes,folder.Path);if(update!=null)update(result.Snapshot());timer.Restart();}
                     }
-                } catch (UnauthorizedAccessException ex) { result.Issue(folder.Path, ex.Message); } catch (IOException ex) { result.Issue(folder.Path, ex.Message); }
+                } catch (UnauthorizedAccessException ex) { failed=true;if(activity!=null)activity.LastError=ex.Message;result.Issue(folder.Path, ex.Message); } catch (IOException ex) { failed=true;if(activity!=null)activity.LastError=ex.Message;result.Issue(folder.Path, ex.Message); }
+                folder.ScanComplete=!failed&&!token.IsCancellationRequested;if(activity!=null)activity.Progress();
             }
             result.Cancelled = token.IsCancellationRequested;result.IsPartial=result.Cancelled;if(index!=null)index.Flush();
             return result;
@@ -99,13 +103,13 @@ namespace FileCompass {
         internal static int SizeBucket(long bytes){return bytes<1024?0:bytes<1048576?1:bytes<104857600?2:bytes<1073741824L?3:bytes<10737418240L?4:5;}
         internal DiskAnalysis Snapshot(){
             var copy=new DiskAnalysis{Root=CloneFolder(Root),Skipped=Skipped,Folders=Folders,IndexPath=IndexPath,FilterSignature=FilterSignature,FilterDescription=FilterDescription,ScannedUtc=ScannedUtc,IsPartial=true};
-            foreach(var child in Root.Children)copy.Root.Children.Add(CloneFolder(child));
+            foreach(var child in Root.Children){var cloned=CloneFolder(child);cloned.Parent=copy.Root;copy.Root.Children.Add(cloned);}
             foreach(var item in Extensions)copy.Extensions[item.Key]=new DiskBucket{Name=item.Value.Name,Bytes=item.Value.Bytes,Files=item.Value.Files};
             foreach(var item in Categories)copy.Categories[item.Key]=new DiskBucket{Name=item.Value.Name,Bytes=item.Value.Bytes,Files=item.Value.Files};
             for(int i=0;i<6;i++){copy.Ages[i].Bytes=Ages[i].Bytes;copy.Ages[i].Files=Ages[i].Files;copy.Sizes[i].Bytes=Sizes[i].Bytes;copy.Sizes[i].Files=Sizes[i].Files;}
             copy.Largest.AddRange(Largest);copy.Issues.AddRange(Issues);return copy;
         }
-        static DiskFolder CloneFolder(DiskFolder f){return new DiskFolder{Path=f.Path,Bytes=f.Bytes,Files=f.Files,DirectBytes=f.DirectBytes,DirectFiles=f.DirectFiles};}
+        static DiskFolder CloneFolder(DiskFolder f){return new DiskFolder{Path=f.Path,Bytes=f.Bytes,Files=f.Files,DirectBytes=f.DirectBytes,DirectFiles=f.DirectFiles,Virtual=f.Virtual,SawEntries=f.SawEntries,ScanComplete=f.ScanComplete};}
         void Issue(string path, string reason) { Skipped++; if (Issues.Count < 500) Issues.Add(path + " — " + reason); }
     }
 }

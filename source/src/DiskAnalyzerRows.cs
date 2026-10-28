@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -40,12 +40,12 @@ namespace FileCompass {
             var row=new System.Windows.Controls.Grid{Tag="analyzer.folderRow"};
             row.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star),MinWidth=24});
             row.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto,SharedSizeGroup="AnalyzerFolderSize"});
-            row.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto,SharedSizeGroup="AnalyzerFolderCount"});
+            row.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto,SharedSizeGroup="AnalyzerFolderCount"});row.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(56)});
             var name=new TextBlock{Text=String.IsNullOrEmpty(folder.Name)?folder.Path:folder.Name,TextTrimming=TextTrimming.CharacterEllipsis,TextWrapping=TextWrapping.NoWrap,VerticalAlignment=VerticalAlignment.Center,ToolTip=folder.Path};
             var size=new TextBlock{Text=folder.Size,TextWrapping=TextWrapping.NoWrap,TextAlignment=TextAlignment.Right,VerticalAlignment=VerticalAlignment.Center,Margin=new Thickness(8,0,10,0)};
-            var files=new TextBlock{Text=folder.Files.ToString("N0"),TextWrapping=TextWrapping.NoWrap,TextAlignment=TextAlignment.Right,VerticalAlignment=VerticalAlignment.Center,Foreground=FluentTheme.Muted};
+            var files=new TextBlock{Text=folder.Files.ToString("N0"),TextWrapping=TextWrapping.NoWrap,TextAlignment=TextAlignment.Right,VerticalAlignment=VerticalAlignment.Center,Foreground=FluentTheme.Muted,Margin=new Thickness(0,0,8,0)};
             size.ToolTip=L.Text("analyzer.bytes")+": "+folder.Size;files.ToolTip=L.Text("analyzer.files")+": "+files.Text;
-            row.Children.Add(name);System.Windows.Controls.Grid.SetColumn(size,1);row.Children.Add(size);System.Windows.Controls.Grid.SetColumn(files,2);row.Children.Add(files);
+            var share=new TextBlock{TextAlignment=TextAlignment.Right,VerticalAlignment=VerticalAlignment.Center,Foreground=FluentTheme.Muted};BindShare(share,TextBlock.TextProperty,folder,true);var bar=new ProgressBar{Minimum=0,Maximum=100,Height=3,VerticalAlignment=VerticalAlignment.Bottom,Opacity=.5,Foreground=FluentTheme.Accent,Margin=new Thickness(0,0,8,0)};BindShare(bar,ProgressBar.ValueProperty,folder,false);row.Children.Add(name);System.Windows.Controls.Grid.SetColumn(size,1);row.Children.Add(size);System.Windows.Controls.Grid.SetColumn(files,2);row.Children.Add(files);System.Windows.Controls.Grid.SetColumn(share,3);row.Children.Add(share);row.Children.Add(bar);
             return row;
         }
     }

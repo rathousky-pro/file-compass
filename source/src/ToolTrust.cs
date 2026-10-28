@@ -13,6 +13,7 @@ namespace FileCompass {
         internal static IDisposable Acquire(string path){
             path=Path.GetFullPath(path);PathSafety.RejectLinks(path);var file=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read);
             try{
+                string updateHash;if(UpdateRegistry.Expected(path,out updateHash)){if(!String.Equals(Hash(file),updateHash,StringComparison.OrdinalIgnoreCase))throw new IOException("Updated executable integrity check failed: "+path);return file;}
                 string plugins=Path.GetFullPath(AppPaths.Resource("plugins")).TrimEnd('\\')+"\\";
                 string expected;if(path.StartsWith(plugins,StringComparison.OrdinalIgnoreCase)&&PluginHashes.Expected.TryGetValue(path.Substring(plugins.Length),out expected)){if(!String.Equals(Hash(file),expected,StringComparison.OrdinalIgnoreCase))throw new IOException("Bundled executable integrity check failed: "+path);return file;}
                 try{SshfsSignature.Verify(path);return file;}catch(IOException){}

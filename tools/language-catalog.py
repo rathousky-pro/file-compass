@@ -6,7 +6,8 @@ import re
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CATALOG = ROOT / 'source/languages/cs-CZ.lng'
-KEY = re.compile(r'[a-z][A-Za-z0-9]*(?:\.[a-z][A-Za-z0-9]*)+')
+# SMART attribute segments retain their standard numeric IDs / snake_case names.
+KEY = re.compile(r'[a-z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+')
 
 def unique_object(pairs):
     result = {}
@@ -45,12 +46,26 @@ def check():
     for source in (ROOT / 'source/src').glob('*.cs'):
         if source.name.endswith('Tests.cs'):
             continue
-        for key in re.findall(r'\bL\.(?:Text|Code|Format)\("([^"]+)"', source.read_text(encoding='utf-8-sig')):
+        for key in re.findall(r'\bL\.(?:Text|Code|Format)\("([^"]+)"(?=\s*[,\)])', source.read_text(encoding='utf-8-sig')):
             if key not in base:
                 raise ValueError(f'{source.name}: missing key {key}')
             references += 1
     for locale in CATALOG.parent.glob('*.lng'):
         values = read(locale)
+        missing = set(base) - set(values)
+        if missing:
+            raise ValueError(f'{locale.name}: missing keys: {sorted(missing)}')
+        for key, value in values.items():
+            if not value:
+                raise ValueError(f'{locale.name}: empty translation: {key}')
+            if key in base:
+                fields = lambda text: sorted(re.findall(r'\{(\d+)(?:,[^{}:]+)?(?::[^{}]+)?\}', text))
+                if fields(value) != fields(base[key]):
+                    raise ValueError(f'{locale.name}: format arguments differ: {key}')
+                if key.endswith('Filter') and '|' in base[key]:
+                    # Translate labels, never the extension patterns used by the picker.
+                    if value.split('|')[1::2] != base[key].split('|')[1::2]:
+                        raise ValueError(f'{locale.name}: file filter patterns differ: {key}')
         for key in values:
             if key not in base and not key.startswith('_'):
                 raise ValueError(f'{locale.name}: unknown key {key}; convert older packs first')

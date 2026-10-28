@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
@@ -11,6 +11,7 @@ namespace FileCompass {
   public override string ToString(){return L.Text("media.profile."+Id);}
  }
  public sealed class MediaAudioOptions {
+  public double Speed=1,TargetDurationSeconds;public bool PreservePitch=true;
   public string RateMode;public double? VbrQuality;public string Profile="aac";public int Bitrate=192,Channels=2,SampleRate=48000,Depth=16,Track;public bool Vbr,Normalize,Upmix,Copy,KeepVideo,KeepMetadata=true;
  }
  public sealed class MediaImageOptions {
@@ -25,7 +26,8 @@ namespace FileCompass {
   public string Path{get;set;}public string Name{get{return System.IO.Path.GetFileName(Path);}}public bool Image{get;set;}public MediaInfo Info;
   bool included=true;string summary="",status="",target="";double progress;
   public bool Included{get{return included;}set{included=value;Changed("Included");}}public string Summary{get{return summary;}set{summary=value;Changed("Summary");}}public string Status{get{return status;}set{status=value;Changed("Status");}}public string Target{get{return target;}set{target=value;Changed("Target");}}public double Progress{get{return progress;}set{progress=value;Changed("Progress");}}
-  public event PropertyChangedEventHandler PropertyChanged;void Changed(string name){if(PropertyChanged!=null)PropertyChanged(this,new PropertyChangedEventArgs(name));}
+  bool hasProgress;public string ProgressText{get{return hasProgress?progress.ToString("F0",CultureInfo.CurrentCulture)+" %":"";}}
+  public event PropertyChangedEventHandler PropertyChanged;void Changed(string name){if(name=="Progress"){hasProgress=true;if(PropertyChanged!=null)PropertyChanged(this,new PropertyChangedEventArgs("ProgressText"));}if(PropertyChanged!=null)PropertyChanged(this,new PropertyChangedEventArgs(name));}
  }
  internal static class MediaCatalog {
   internal static readonly MediaProfile[] Audio={new MediaProfile("mp3",".mp3","libmp3lame","mp3",2,false,true),new MediaProfile("aac",".m4a","aac","ipod",8,false,true,true),new MediaProfile("adts",".aac","aac","adts",8,false,true),new MediaProfile("ac3",".ac3","ac3","ac3",6),new MediaProfile("eac3",".eac3","eac3","eac3",6),new MediaProfile("flac",".flac","flac","flac",8,true),new MediaProfile("wav",".wav","pcm_s16le","wav",8,true),new MediaProfile("opus",".opus","libopus","opus",8,false,true),new MediaProfile("vorbis",".ogg","libvorbis","ogg",8,false,true),new MediaProfile("alac",".m4a","alac","ipod",8,true,false,true)};

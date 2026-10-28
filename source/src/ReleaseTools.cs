@@ -50,7 +50,7 @@ namespace FileCompass {
     try{var g=ParseGesture(value);if(g!=null&&g.Key==key&&g.Modifiers==modifiers)return true;}catch{}
    }return false;
   }
-  bool DefaultMatches(ReleaseCommand c,Key key,ModifierKeys modifiers){return (c.Id=="action.delete"&&(key==Key.F8||key==Key.Delete)&&modifiers==ModifierKeys.Shift)||ShortcutMatches(key,modifiers,c.Default)||(c.Id=="action.rename"&&key==Key.F2&&modifiers==ModifierKeys.None);}
+  bool DefaultMatches(ReleaseCommand c,Key key,ModifierKeys modifiers){return (c.Id=="action.delete"&&(key==Key.F8||key==Key.Delete)&&modifiers==ModifierKeys.Shift)||ShortcutMatches(key,modifiers,c.Default);}
   bool MatchesCommand(ReleaseCommand c,Key key,ModifierKeys modifiers){var custom=customShortcuts.Items.FirstOrDefault(x=>x.Id==c.Id);return custom==null?DefaultMatches(c,key,modifiers):ShortcutMatches(key,modifiers,custom.Gesture);}
   internal static bool CommandMatches(string title,string query){return System.Globalization.CultureInfo.CurrentCulture.CompareInfo.IndexOf(title,query,System.Globalization.CompareOptions.IgnoreCase|System.Globalization.CompareOptions.IgnoreNonSpace)>=0;}
   void ShowCommandPalette() {

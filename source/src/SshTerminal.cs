@@ -11,6 +11,8 @@ namespace FileCompass
     {
         public static ProcessStartInfo CreateLaunch(NetworkProfile profile)
         {
+            if(String.IsNullOrWhiteSpace(profile.UserName))throw new ArgumentException(L.Text("network.usernameRequired"));
+            if(!String.IsNullOrWhiteSpace(profile.Path))RemoteFolderCommand(profile.Path);
             if (String.IsNullOrWhiteSpace(profile.HostKeyFingerprint)) throw new IOException(L.Text("ssh.explicitHostKeyRequired"));
             var key = ProbeKey(profile);
             VerifyHostKey(profile, key.Item2);
@@ -74,6 +76,7 @@ namespace FileCompass
         }
         internal static string BuildCommand(NetworkProfile profile, string executable, string knownHosts)
         {
+            if(String.IsNullOrWhiteSpace(profile.UserName)||profile.UserName.IndexOfAny(new[]{'\r','\n','\0'})>=0)throw new ArgumentException(L.Text("network.usernameRequired"));
             if (String.IsNullOrWhiteSpace(knownHosts)) throw new IOException(L.Text("ssh.explicitHostKeyRequired"));
             var arguments = new List<string> { "-p", profile.Port.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 "-F", "NUL", "-o", "StrictHostKeyChecking=yes", "-o", "UserKnownHostsFile=" + "\"" + Path.GetFullPath(knownHosts).Replace('\\', '/') + "\"",
@@ -87,7 +90,11 @@ namespace FileCompass
             if (profile.SshCompression) arguments.Add("-C");
             if (profile.SshKeepAliveSeconds > 0) { arguments.Add("-o"); arguments.Add("ServerAliveInterval=" + profile.SshKeepAliveSeconds); }
             if (!profile.SshAgent) { arguments.Add("-o"); arguments.Add("IdentityAgent=none"); }
+            if(profile.SshPasswordOnly){arguments.AddRange(new[]{"-o","PreferredAuthentications=keyboard-interactive,password","-o","PubkeyAuthentication=no","-o","GSSAPIAuthentication=no"});}
+            bool folder=!String.IsNullOrWhiteSpace(profile.Path);
+            if(folder)arguments.Add("-t");
             arguments.Add("--"); arguments.Add(profile.Host);
+            if(folder)arguments.Add(RemoteFolderCommand(profile.Path));
             return "$Host.UI.RawUI.WindowTitle = " + QuotePowerShell(L.Text("ssh.windowTitlePrefix") + profile.Name) + "\r\n" +
                 "$sshInfo = New-Object System.Diagnostics.ProcessStartInfo\r\n" +
                 "$sshInfo.FileName = " + QuotePowerShell(executable) + "\r\n" +
@@ -95,9 +102,13 @@ namespace FileCompass
                 "$sshInfo.UseShellExecute = $false\r\n$sshProcess = $null\r\n" +
                 "try { $sshProcess = [System.Diagnostics.Process]::Start($sshInfo); $sshProcess.WaitForExit(); $global:LASTEXITCODE = $sshProcess.ExitCode\r\n" +
                 "} finally { if ($null -ne $sshProcess) { $sshProcess.Dispose() }; [System.IO.File]::Delete(" + QuotePowerShell(knownHosts) + ") }\r\n" +
-                L.Code("internal.sshExitStatusScript");
+                "if ($LASTEXITCODE -ne 0) { Write-Host (" + QuotePowerShell(L.Text("ssh.exitStatusPrefix")) + " + $LASTEXITCODE) -ForegroundColor Yellow }\r\n";
         }
         internal static string EncodeCommand(string command) { return Convert.ToBase64String(Encoding.Unicode.GetBytes(command)); }
+        internal static string RemoteFolderCommand(string path) {
+            if(path==null||!path.StartsWith("/",StringComparison.Ordinal)||path.IndexOfAny(new[]{'\0','\r','\n'})>=0)throw new ArgumentException(L.Text("network.invalidRemotePath"));
+            return "cd "+"'"+path.Replace("'","'\"'\"'")+"'"+" && exec \"${SHELL:-/bin/sh}\" -l";
+        }
         static string QuotePowerShell(string value) { return "'" + (value ?? "").Replace("'", "''") + "'"; }
         // Executable paths cannot contain quotes and do not end in a directory separator.
         internal static string QuoteWindowsArgument(string value)
@@ -113,4 +124,3 @@ namespace FileCompass
         }
     }
 }
-

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -27,7 +27,7 @@ namespace FileCompass.NetworkTransport
         NativeNetwork.Progress progress;
         internal CurlClient(SessionOptions settings, Action cancellation, Action<int> charge = null)
         {
-            if(settings.Protocol!=Protocol.Ftp) throw new ArgumentException("Tento klient podporuje FTP/FTPS.");
+            if(settings.Protocol!=Protocol.Ftp) throw new ArgumentException(L.Text("network.ftpOnly"));
             options = settings; check = cancellation; traffic = charge; NativeNetwork.Ensure();
             easy = NativeNetwork.curl_easy_init(); multi = NativeNetwork.curl_multi_init();
             if (easy == IntPtr.Zero || multi == IntPtr.Zero) { Dispose(); throw new IOException(L.Text("network.sessionCreationFailed")); }
@@ -158,4 +158,3 @@ namespace FileCompass.NetworkTransport
         { IntPtr oldMulti; lock(gate) { oldMulti=multi; multi=IntPtr.Zero; } if(easy!=IntPtr.Zero) { Release(); NativeNetwork.curl_easy_cleanup(easy); easy=IntPtr.Zero; } if(oldMulti!=IntPtr.Zero) NativeNetwork.curl_multi_cleanup(oldMulti); }
     }
 }
-

@@ -17,6 +17,7 @@ namespace FileCompass
         public static readonly Brush Accent = CompactTheme.ThemeBrush("#0067C0");
         public static void Ensure()
         {
+            WindowEscape.Install();
             HelpService.Ensure();
             var app = Application.Current;
             if (app == null) app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
@@ -68,6 +69,7 @@ namespace FileCompass
             buttons.Setters.Add(new Setter(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Stretch));
             buttons.Setters.Add(new Setter(Control.BackgroundProperty, CompactTheme.WhiteSurface)); buttons.Setters.Add(new Setter(Control.BorderBrushProperty, CompactTheme.FieldLine));
             buttons.Setters.Add(new Setter(Control.ForegroundProperty, Text));
+            ReadableDisabled(buttons);
             resources[typeof(Button)] = buttons;
             var fluent = Add(typeof(Wpf.Ui.Controls.Button), "DefaultUiButtonStyle", Control.MinHeightProperty, 0.0, Control.PaddingProperty, new Thickness(8, 2, 8, 2));
             fluent.Setters.Add(new Setter(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Stretch));
@@ -84,6 +86,7 @@ namespace FileCompass
             fluent.Triggers.Add(primary);
             var primaryAppearance = new Trigger { Property = Wpf.Ui.Controls.Button.AppearanceProperty, Value = Wpf.Ui.Controls.ControlAppearance.Primary };
             primaryAppearance.Setters.Add(new Setter(Control.ForegroundProperty, Brushes.White)); fluent.Triggers.Add(primaryAppearance);
+            ReadableDisabled(fluent);
             resources[typeof(Wpf.Ui.Controls.Button)] = fluent;
             var text = new Style(typeof(TextBlock));
             text.Setters.Add(new Setter(TextBlock.FontFamilyProperty, new FontFamily("Segoe UI")));
@@ -123,6 +126,8 @@ namespace FileCompass
             selectedItem.Setters.Add(new Setter(Control.ForegroundProperty, Text)); listItems.Triggers.Add(selectedItem);
             resources[typeof(ListBoxItem)] = listItems;
             StartupTiming = "dictionaries=" + dictionariesMs + "ms, accent=" + (accentMs - dictionariesMs) + "ms, styles=" + (timing.ElapsedMilliseconds - accentMs) + "ms";
+            TabUx.Install(resources);
+            InterfaceTheme.Install(resources);
             initialized = app; AppearanceTheme.Initialize();
         }
         static Style Add(Type type, string basis, DependencyProperty first, object value, DependencyProperty second, object other)
@@ -156,6 +161,7 @@ namespace FileCompass
         }
         public static void Dialog(Window window)
         {
+            DialogOwnerActivation.Attach(window);
             Ensure(); window.FontFamily = window.Owner == null ? new FontFamily("Segoe UI") : window.Owner.FontFamily; window.FontSize = window.Owner == null ? 12 : window.Owner.FontSize;
             window.Foreground = Text; window.Background = CompactTheme.Chrome;
             window.SourceInitialized += delegate { AppearanceTheme.TitleBar(window); }; window.Loaded += delegate { Prepare(window); };
@@ -200,7 +206,11 @@ namespace FileCompass
             var fluent = button as Wpf.Ui.Controls.Button;
             if (fluent != null) fluent.Appearance = Wpf.Ui.Controls.ControlAppearance.Primary;
         }
+        static void ReadableDisabled(Style style) {
+            var trigger=new Trigger{Property=UIElement.IsEnabledProperty,Value=false};
+            trigger.Setters.Add(new Setter(UIElement.OpacityProperty,1.0));
+            trigger.Setters.Add(new Setter(Control.TemplateProperty,(ControlTemplate)XamlReader.Parse(@"<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' TargetType='Button'><Border CornerRadius='4' Background='{StaticResource CompassGroup}' BorderBrush='{StaticResource CompassLine}' BorderThickness='1' Padding='{TemplateBinding Padding}'><ContentPresenter ContentSource='Content' RecognizesAccessKey='True' HorizontalAlignment='Center' VerticalAlignment='Center' TextElement.Foreground='{StaticResource CompassMuted}' TextElement.FontWeight='Normal'/></Border></ControlTemplate>")));
+            style.Triggers.Add(trigger);
+        }
     }
 }
-
-

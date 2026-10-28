@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net48</TargetFramework>
@@ -21,7 +21,15 @@
     <EmbeddedResource Include="assets\branding\rathousky-pro.png" LogicalName="FileCompass.Branding.RathouskyPro.png" />
     <EmbeddedResource Include="help\cs-CZ.json" LogicalName="FileCompass.Help.cs-CZ.json" />
     <EmbeddedResource Include="help\en.json" LogicalName="FileCompass.Help.en.json" />
+    <EmbeddedResource Include="help\images\*.png" LogicalName="FileCompass.Help.Images.%(Filename)%(Extension)" />
     <Compile Include="src\*Tests.cs" Condition="'$(Configuration)' == 'Debug'" />
+    <Reference Include="DiscUtils.Ext"><HintPath>ui\DiscUtils.Ext.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="DiscUtils.Core"><HintPath>ui\DiscUtils.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="DiscUtils.Streams"><HintPath>ui\DiscUtils.Streams.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="LTRData.Extensions"><HintPath>ui\LTRData.Extensions.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System.Collections.Immutable"><HintPath>ui\System.Collections.Immutable.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System.Threading.Tasks.Extensions"><HintPath>ui\System.Threading.Tasks.Extensions.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System.Text.Encoding.CodePages"><HintPath>ui\System.Text.Encoding.CodePages.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Microsoft.Web.WebView2.Core"><HintPath>ui\Microsoft.Web.WebView2.Core.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Microsoft.Web.WebView2.Wpf"><HintPath>ui\Microsoft.Web.WebView2.Wpf.dll</HintPath><Private>false</Private></Reference>
     <Content Include="preview\*.dll;preview\*.txt" CopyToOutputDirectory="PreserveNewest" TargetPath="preview\%(Filename)%(Extension)" />
@@ -34,8 +42,11 @@
     <Reference Include="UglyToad.PdfPig.Package"><HintPath>ui\UglyToad.PdfPig.Package.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UglyToad.PdfPig.Tokenization"><HintPath>ui\UglyToad.PdfPig.Tokenization.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UglyToad.PdfPig.Tokens"><HintPath>ui\UglyToad.PdfPig.Tokens.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="Magick.NET-Q8-x64"><HintPath>ui\Magick.NET-Q8-x64.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Magick.NET-Q8-OpenMP-x64"><HintPath>ui\Magick.NET-Q8-OpenMP-x64.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Magick.NET.Core"><HintPath>ui\Magick.NET.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="ICSharpCode.AvalonEdit"><HintPath>ui\ICSharpCode.AvalonEdit.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Markdig"><HintPath>ui\Markdig.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="YamlDotNet"><HintPath>ui\YamlDotNet.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="netstandard" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="Microsoft.VisualBasic" />

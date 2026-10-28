@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>LTRData.DiscUtils.Ext</id>
+    <version>1.0.90</version>
+    <authors>Kenneth Bell,LordMike,Olof Lagerkvist</authors>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <readme>README.md</readme>
+    <projectUrl>https://github.com/LTRData/DiscUtils</projectUrl>
+    <description>Managed .NET support for reading Ext2, Ext3 and Ext4 filesystems, including file contents and filesystem metadata.</description>
+    <tags>DiscUtils Filesystem Ext2 Ext3 Ext4</tags>
+    <repository type="git" url="https://github.com/LTRData/DiscUtils.git" branch="refs/heads/LTRData.DiscUtils-initial" commit="414c7f7b2d82c42b07bc6fdfc18a763331334697" />
+    <dependencies>
+      <group targetFramework=".NETFramework4.6">
+        <dependency id="LTRData.DiscUtils.Core" version="1.0.90" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETFramework4.8">
+        <dependency id="LTRData.DiscUtils.Core" version="1.0.90" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework="net8.0">
+        <dependency id="LTRData.DiscUtils.Core" version="1.0.90" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework="net9.0">
+        <dependency id="LTRData.DiscUtils.Core" version="1.0.90" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework="net10.0">
+        <dependency id="LTRData.DiscUtils.Core" version="1.0.90" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="LTRData.DiscUtils.Core" version="1.0.90" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETStandard2.1">
+        <dependency id="LTRData.DiscUtils.Core" version="1.0.90" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>

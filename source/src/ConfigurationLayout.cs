@@ -78,7 +78,7 @@ namespace FileCompass {
             return new GroupBox { Header = title, Content = stack };
         }
         void ArrangeSettingsPages(StackPanel[] pages) {
-            foreach (var panel in pages) panel.Margin = new Thickness(0);
+            foreach (var panel in pages) panel.Margin = new Thickness(0,0,14,0);
             var appearance = pages[0]; var a = Take(appearance); appearance.Children.Add(a[0]); appearance.Children.Add(a[1]);
             var fonts = (StackPanel)((GroupBox)a[2]).Content; var choices = Take(fonts); fonts.Children.Add(Row(choices));
             automaticRefresh.Margin = new Thickness(0, 5, 0, 5);

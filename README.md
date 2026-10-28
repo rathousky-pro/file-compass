@@ -6,7 +6,7 @@ A Windows file manager by Rathousky.pro, currently in development. Two-panel fil
 
 Start **bin/File Compass.exe** and keep all supporting directories beside it (see the layout below). Press **F1** or choose **Help → Program help** for searchable offline help inside the application. Read the [user guide](docs/README.md); packaged reference guides are in `help`. **Help → About File Compass** shows the application logo, developer logo, version, build ID and build date; Copy information prepares diagnostic version information.
 
-Settings offer English, Czech, German, Spanish, Dutch, Polish, French and Portuguese, light/dark/system themes, Solid/Mica/Mica Alt backgrounds, fonts, icon sets and operation defaults. Appearance changes are previewed immediately; Cancel restores saved settings. Language changes apply immediately after saving, without restarting.
+Settings offer English, Czech, German, Spanish, Dutch, Polish, French and Portuguese, light/dark/system themes, Solid/Mica/Mica Alt backgrounds, fonts, icon sets and operation defaults. The interface uses the Balanced design with white and pale-grey surfaces, thin blue outlines and blue transfer indicators while retaining the original toolbars and file icons. Appearance changes are previewed immediately; Cancel restores saved settings. Language changes apply immediately after saving, without restarting.
 
 ## Build
 
@@ -16,7 +16,11 @@ On Windows with .NET Framework 4.8, run from the repository root:
 powershell -NoProfile -ExecutionPolicy Bypass -File source/build.ps1
 ```
 
-Use `-OutputDirectory ai-docs/artifacts/build` to build separately from an installed executable. Sources and bundled dependencies are in `source/`, supporting tools in `tools/`, maintained documentation in `docs/`. See [third-party notices](docs/THIRD-PARTY-NOTICES.md); original upstream licenses are retained unchanged.
+Restore the pinned Roslyn compiler first with `powershell -NoProfile -ExecutionPolicy Bypass -File source/prepare-media.ps1 -CompilerOnly`. Runtime dependencies are versioned in this repository; a clean checkout does not need to download a rotating FFmpeg archive merely to compile. For a deliberate full dependency restore, use `source/prepare-media.ps1`; it rejects changed hashes.
+
+If the YAML editor dependency is absent, run `powershell -NoProfile -ExecutionPolicy Bypass -File source/prepare-editor.ps1`; the restore verifies pinned package, assembly and MIT license hashes.
+
+Use `-OutputDirectory ai-docs/artifacts/build` to build separately from an installed executable. Sources and bundled dependencies are in `source/`, supporting tools in `tools/`, maintained documentation in `docs/`. See [third-party notices](docs/THIRD-PARTY-NOTICES.md) and the [distribution audit](docs/DISTRIBUTION-AUDIT.md); original upstream licenses are retained unchanged.
 
 Version and channel are maintained in `source/version.json`. The current release is pinned to `0.9.5 beta`; subsequent builds increment the build ID without automatically increasing the minor version. Both build entry points generate embedded assembly metadata, a UTC date/sequence build ID (for example `20261024.01`) and timestamp automatically; the daily sequence restarts when the application version changes. The local counter and generated files live under ignored `source/obj`; build dates are not inferred from file modification times.
 
@@ -28,10 +32,13 @@ The SDK project is `source/FileCompass.csproj`; application code uses the `FileC
 - Copy/move/delete with conflict policies, optional SHA-256 verification, background queues and recoverable network batches.
 - SMB, FTP/FTPS, SFTP/SCP, NFS, SSH/SSHFS; optional Google Drive, OneDrive and Dropbox.
 - Archives and split volumes, batch rename, metadata search, duplicates and file/folder comparison.
-- Image/document/HTML/Markdown previews and highlighted source code in Auto and Text modes.
-- Recursive analysis of the current folder with live interactive charts, filters, exports and saved-analysis comparisons; physical-disk SMART diagnostics.
+- Mixed-selection image/document previews, local video frame strips and highlighted source code.
+- Internal tabbed text editor: F2/Ctrl+N for an unnamed file, filename-only first save to the captured folder, selectable encoding and LF/CRLF.
+- Image and audio conversion, whole-file concurrency, OpenMP image processing, explicit percentages and weighted remaining-time estimates.
+- Vendor component updates with verified downloads, staged activation and rollback; application update URL remains unconfigured.
+- Disk analysis with explicit Start after scope/filter setup, live charts, exports and saved-analysis comparisons; HDD/SSD/NVMe SMART cards.
 
-Same-folder refresh updates changed rows without disabling or rebuilding the entire panel. Compact network queues show measured batch ETA, including between-file delays and excluding pauses. Transfer windows can run in the background without minimizing the main application.
+Same-folder refresh updates changed rows without disabling or rebuilding the entire panel. Compact network queues show measured batch ETA, including between-file delays and excluding pauses. Transfers and supported tools dock in the bottom activity area and can be restored through Detail.
 
 ## Google Drive
 

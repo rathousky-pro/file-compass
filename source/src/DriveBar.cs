@@ -17,6 +17,7 @@ namespace FileCompass
         internal void SelectDrive(string root)
         {
             if (IsLoading) return;
+            if(ExtLocations.IsPath(root)){activate(this);Navigate(root,true);return;}
             string path = driveAlwaysRoot || DriveFolderResolver == null ? root : DriveFolderResolver(root);
             activate(this); FocusFiles(); Navigate(path ?? root, true);
         }
@@ -97,6 +98,7 @@ namespace FileCompass
         }
         void InitializeDrives(StackPanel drives)
         {
+            foreach(var location in CommonLocations.Read())driveSelector.Items.Add(location);
             Action<DriveSnapshot> apply = delegate(DriveSnapshot snapshot)
             {
                 var remembered = snapshot.Remembered;
@@ -115,6 +117,7 @@ namespace FileCompass
                         ToolTipService.SetInitialShowDelay(button, 200); ToolTipService.SetBetweenShowDelay(button, 50); ToolTipService.SetShowDuration(button, 15000);
                         int position = DriveInsertionIndex(driveButtons.Keys, root);
                         drives.Children.Insert(position, button); driveButtons[root] = button;
+                        button.PreviewMouseRightButtonUp+=delegate(object sender,System.Windows.Input.MouseButtonEventArgs e){if(button.ContextMenu!=null)return;var main=System.Windows.Window.GetWindow(this) as MainWindow;if(main!=null){e.Handled=true;activate(this);main.OpenUsbDriveMenu(root,button);}};
                         var choice = new DriveChoice(root); choice.Update("", driveAddresses[root], network, connected, snapshot.Icons[root]);
                         driveChoices[root] = choice; driveSelector.Items.Insert(position, choice);
                     }
@@ -144,8 +147,9 @@ namespace FileCompass
                 catch (OperationCanceledException) { }
                 finally { driveDiscovery.TrySetResult(false); System.Threading.Interlocked.Exchange(ref refreshing, 0); }
             };
-            refreshDrives = refresh; driveTimer.Tick += delegate { refresh(); };
-            Loaded += delegate { Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, refresh); driveTimer.Start(); };
+            driveSelector.PreviewMouseRightButtonUp+=delegate(object sender,System.Windows.Input.MouseButtonEventArgs e){var selected=driveSelector.SelectedItem as DriveChoice;var item=System.Windows.Controls.ItemsControl.ContainerFromElement(driveSelector,e.OriginalSource as System.Windows.DependencyObject) as System.Windows.Controls.ComboBoxItem;if(item!=null)selected=item.Content as DriveChoice;else if(driveSelector.IsDropDownOpen)return;if(selected==null||selected.IsLocation)return;var main=System.Windows.Window.GetWindow(this) as MainWindow;if(main!=null){e.Handled=true;activate(this);driveSelector.IsDropDownOpen=false;main.OpenUsbDriveMenu(selected.Root,driveSelector);}};
+            refreshDrives = refresh; driveTimer.Tick += delegate { refresh(); RefreshExtChoices(); };
+            Loaded += delegate { Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, refresh); driveTimer.Start(); RefreshExtChoices(); };
             Unloaded += delegate { driveTimer.Stop(); };
         }
         internal static int DriveInsertionIndex(IEnumerable<string> roots, string root)
@@ -179,7 +183,7 @@ namespace FileCompass
                 {
                     var drive = new DriveInfo(root); ready = drive.IsReady;
                     if (ready) name = drive.VolumeLabel;
-                    icon = DesktopIcons.WindowsDriveIcon(root, network, ready, ready && !network);
+                    icon = DesktopIcons.WindowsDriveIcon(root, network, ready, ready && !network); if(!network)icon=DesktopIcons.DriveBadge(icon,DriveMedia.External(root),false);
                 }
                 catch (IOException) { }
                 catch (UnauthorizedAccessException) { }
@@ -203,4 +207,3 @@ namespace FileCompass
         }
     }
 }
-

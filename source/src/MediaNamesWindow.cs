@@ -30,6 +30,7 @@ namespace FileCompass {
    Action invalidate=delegate{generation++;Rows=null;WriteButton.IsEnabled=false;};Mask.TextChanged+=delegate{invalidate();};Overwrite.Checked+=delegate{invalidate();};Overwrite.Unchecked+=delegate{invalidate();};
    Closing+=delegate(object s,System.ComponentModel.CancelEventArgs e){if(running){cancellation.Cancel();e.Cancel=true;}else{closed=true;generation++;}};
    Loaded+=delegate{PreviewTask=Preview(paths,controls,activity);};
+   ToolDock.Attach(this,buttons,delegate{return new DockStatus{Title=Title,Icon="≡",Description=status.Text,Busy=running};});
   }
   async Task Preview(string[] paths,Panel controls,Action<bool> activity){if(running)return;int version=++generation;string mask=Mask.Text;bool overwrite=Overwrite.IsChecked==true;running=true;cancellation=new CancellationTokenSource();activity(true);controls.IsEnabled=false;PreviewButton.IsEnabled=WriteButton.IsEnabled=false;Rows=null;status.Text=L.Text("rename.preparingPreview");
    try{var rows=await Task.Run(()=>MediaNames.Preview(paths,mask,overwrite,cancellation.Token));if(closed||version!=generation)return;Rows=rows;list.ItemsSource=rows;WriteButton.IsEnabled=rows.Any(x=>x.Changes!=null&&x.Changes.Count>0);status.Text=L.Format("mediaNames.previewCount",rows.Count(x=>x.Changes!=null&&x.Changes.Count>0),rows.Length);}

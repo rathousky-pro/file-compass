@@ -1,0 +1,8 @@
+using System;using System.Collections.Generic;using System.IO;using System.Linq;using System.Runtime.InteropServices;
+namespace FileCompass {
+ internal static class CommonLocations {
+  [DllImport("shell32.dll")]static extern int SHGetKnownFolderPath(ref Guid id,uint flags,IntPtr token,out IntPtr path);
+  internal static DriveChoice[] Read(){var keys=new[]{"desktop","downloads","documents","pictures","music","videos","profile"};var ids=new[]{"B4BFCC3A-DB2C-424C-B029-7FE99A87C641","374DE290-123F-4565-9164-39C4925E467B","FDD39AD0-238F-46AF-ADB4-6C85480369C7","33E28130-4E1E-4676-835A-98395C3BC3BB","4BD8D571-6D19-48D3-BE97-422220080E43","18989B1D-99B5-455B-841C-AB7C74E4DDFC","5E6C858F-0E22-4760-9AFE-EA3317B67173"};var result=new List<DriveChoice>();for(int i=0;i<keys.Length;i++){Guid id=new Guid(ids[i]);IntPtr pointer;int status=SHGetKnownFolderPath(ref id,0x4000,IntPtr.Zero,out pointer);try{if(status<0||pointer==IntPtr.Zero)continue;string path=Marshal.PtrToStringUni(pointer);if(String.IsNullOrEmpty(path))continue;result.Add(new DriveChoice(path,"locations."+keys[i]){GroupStart=result.Count==0});}finally{if(pointer!=IntPtr.Zero)Marshal.FreeCoTaskMem(pointer);}}return result.ToArray();}
+  internal static DriveChoice Match(IEnumerable<DriveChoice> choices,string path){if(String.IsNullOrEmpty(path))return null;return choices.Where(x=>x.IsLocation&&(String.Equals(path.TrimEnd('\\'),x.Root.TrimEnd('\\'),StringComparison.OrdinalIgnoreCase)||path.StartsWith(x.Root.TrimEnd('\\')+"\\",StringComparison.OrdinalIgnoreCase))).OrderByDescending(x=>x.Root.Length).FirstOrDefault()??choices.FirstOrDefault(x=>!x.IsLocation&&String.Equals(x.Root,Path.GetPathRoot(path),StringComparison.OrdinalIgnoreCase));}
+ }
+}

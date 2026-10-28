@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -31,6 +31,14 @@ namespace FileCompass
 
     public partial class MainWindow
     {
+        async Task SettleDetailForTests(FilePanel panel){
+            for(int attempt=0;attempt<10;attempt++){
+                var pending=panel.DetailLoadingTask;if(pending!=null)await pending;
+                await Task.Delay(30);
+                if(Object.ReferenceEquals(pending,panel.DetailLoadingTask)){UpdateLayout();return;}
+            }
+            throw new Exception("Detail selection did not settle.");
+        }
         internal async Task CheckPanelLayouts(string root, Action<bool, string> check)
         {
             string source = Directory.CreateDirectory(Path.Combine(root, "Fotografie a kód")).FullName;
@@ -51,7 +59,7 @@ namespace FileCompass
             check(rightPosition.Y > leftPosition.Y + left.ActualHeight && Math.Abs(rightPosition.X - leftPosition.X) < 1, "stacked panels occupy full-width rows with a horizontal divider");
             check(left.TabCount == tabs && left.CurrentPath == source && right.CurrentPath == destination && selected.IsMarked, "layout changes preserve folders, tabs and file marks");
             NextStageTests.Draw(this, Path.Combine(root, "panely-pod-sebou.png"));
-            SetPanelLayout("Single"); if (!FilePreviewOpen) ToggleQuickPreview(); UpdateLayout(); if (left.TreeLoadingTask != null) await left.TreeLoadingTask; if (left.DetailLoadingTask != null) await left.DetailLoadingTask;
+            SetPanelLayout("Single"); if (!FilePreviewOpen) ToggleQuickPreview(); UpdateLayout(); if (left.TreeLoadingTask != null) await left.TreeLoadingTask; await SettleDetailForTests(left);
             check(left.IsVisible && !right.IsVisible && right.CurrentPath == destination, "single panel hides and retains the destination panel");
             var savedPanel = new PanelView(); left.SavePanelView(savedPanel);
             check(savedPanel.Tree && savedPanel.DetailExpanded && left.DetailExpanded, "single-panel explorer defaults to tree, folder contents and expanded detail");
@@ -60,15 +68,15 @@ namespace FileCompass
             check(FluentUiTests.Children<TreeView>(left).Single().SelectedItem is TreeViewItem && String.Equals((string)((TreeViewItem)FluentUiTests.Children<TreeView>(left).Single().SelectedItem).Tag, source, StringComparison.OrdinalIgnoreCase), "tree reveals and selects the current nested folder");
             NextStageTests.Draw(this, Path.Combine(root, "jeden-panel-kod.png"));
             left.List.SelectedItem = left.List.Items.Cast<Entry>().Single(x => x.FullPath == picture); left.List.SelectedItem = selected;
-            if (left.DetailLoadingTask != null) await left.DetailLoadingTask;
+            await SettleDetailForTests(left);
             check(FluentUiTests.Children<ICSharpCode.AvalonEdit.TextEditor>(left).Any(x => x.IsVisible && x.Text.Contains("class Ukazka")), "rapid cursor changes keep the final file preview instead of a stale image");
             SetActive(right); check(active == left, "a hidden panel cannot become the source of keyboard file operations");
             double before = left.List.ActualHeight;
             left.SetDetailExpanded(false); UpdateLayout(); check(!left.DetailExpanded && left.List.ActualHeight > before + 30, "collapsing details returns their space to the folder list");
             using (File.Open(code, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) { check(true, "collapsing the preview leaves the source file available for exclusive access"); }
             NextStageTests.Draw(this, Path.Combine(root, "jeden-panel-sbaleny-detail.png"));
-            left.List.SelectedItem = left.List.Items.Cast<Entry>().Single(x => x.FullPath == picture);
-            left.SetDetailExpanded(true); if (left.DetailLoadingTask != null) await left.DetailLoadingTask; UpdateLayout();
+            left.MarkAll(false);left.List.SelectedItem = left.List.Items.Cast<Entry>().Single(x => x.FullPath == picture);
+            left.SetDetailExpanded(true); await SettleDetailForTests(left); UpdateLayout();
             check(FluentUiTests.Children<Image>(left).Any(x => x.IsVisible && x.Source is BitmapSource && ((BitmapSource)x.Source).PixelWidth >= 320), "expanded detail shows the selected image");
             NextStageTests.Draw(this, Path.Combine(root, "jeden-panel-obrazek.png"));
             var grip = FluentUiTests.Children<Thumb>(left).Single(x => x.Cursor == System.Windows.Input.Cursors.SizeNS);
@@ -116,7 +124,7 @@ namespace FileCompass
             ToggleQuickPreview(); if (quickPreview.LoadingTask != null) await quickPreview.LoadingTask;
             check(right.List.Visibility == Visibility.Collapsed && quickPreview != null, "two-panel Ctrl+Q retains the existing opposite-panel preview");
             SetPanelLayout("Single"); check(quickPreview == null && right.List.Visibility == Visibility.Visible && left.DetailExpanded, "switching to one panel moves the open preview below the source list");
-            Width = 900; Height = 650; UpdateLayout(); left.SetDetailExpanded(true); if (left.DetailLoadingTask != null) await left.DetailLoadingTask;
+            Width = 900; Height = 650; UpdateLayout(); left.SetDetailExpanded(true); await SettleDetailForTests(left);
             check(left.List.ActualWidth > 250 && left.List.ActualHeight > 40, "single-panel layout remains usable in a compact window");
             NextStageTests.Draw(this, Path.Combine(root, "jeden-panel-900.png"));
             var previewSize = new PanelView(); left.SavePanelView(previewSize);
@@ -131,27 +139,34 @@ namespace FileCompass
             NextStageTests.Draw(this, Path.Combine(root, "nahled-vedle-sebe.png"));
             Action<Button> click = button => button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Func<Button, string> name = button => System.Windows.Automation.AutomationProperties.GetName(button);
-            var tools = (Panel)toolbarLayoutButton.Parent;
-            var buttons = tools.Children.OfType<Button>().ToArray();
-            int hiddenIndex = Array.IndexOf(buttons, toolbarAllFilesButton);
-            check(name(buttons[hiddenIndex + 1]) == L.Text("selection.invertMarks") + " (Num *)" && name(buttons[hiddenIndex + 2]) == "Náhled" && name(buttons[hiddenIndex + 3]) == "Editovat" && buttons[hiddenIndex + 4] == toolbarThumbnailsButton, "toolbar order is hidden files, invert, preview, edit, thumbnails");
-            check(toolbarLayoutButton.ContextMenu == null && !name(toolbarLayoutButton).Contains("▾"), "layout button has no dropdown");
+            check(toolbarLayoutButton.Content is Image&&((string)((Image)toolbarLayoutButton.Content).Tag)=="panels-SideBySide","one icon-only layout switch displays the current side-by-side layout");
+            check(toolbarAllFilesButton.Content is Image,"hidden files use an icon without a visible caption");
+            check(name(toolbarLayoutButton)==L.Text("toolbar.panelsSideBySide"),"layout switch exposes the current layout to accessibility");
+            var viewButtons=((Panel)toolbarAllFilesButton.Parent).Children.OfType<Button>().ToArray();int hiddenIndex=Array.IndexOf(viewButtons,toolbarAllFilesButton);
+            check(name(viewButtons[hiddenIndex+1])==L.Text("selection.invertMarks")+" (Num *)"&&name(viewButtons[hiddenIndex+2])==L.Text("undoHistory.title"),"selection and undo immediately follow hidden files");
+            var fileButtons=((Panel)toolbarPreviewButton.Parent).Children.OfType<Button>().ToArray();
+            check(fileButtons[0]==toolbarPreviewButton&&fileButtons[1]==toolbarThumbnailsButton&&name(fileButtons[2])==L.Text("toolbar.edit"),"preview and thumbnails stay together before edit");
+            var toolsButton=FluentUiTests.Children<Button>(this).Single(x=>x.Content is StackPanel&&((StackPanel)x.Content).Children.OfType<Image>().Any(i=>(string)i.Tag=="tools"));
+            check(toolsButton.ContextMenu.Items.OfType<MenuItem>().Select(x=>Convert.ToString(x.Header)).SequenceEqual(new[]{L.Text("analyzer.title"),L.Text("smart.title"),L.Text("media.convertImages"),L.Text("media.convertAudio")}),"tools menu offers analyzer, SMART, image and audio converters");
+            click(toolsButton);check(toolsButton.ContextMenu.IsOpen,"tools button opens its menu");toolsButton.ContextMenu.IsOpen=false;
+            var syncButton=FluentUiTests.Children<Button>(this).Single(x=>name(x)==L.Text("action.synchronize"));click(syncButton);
+            var sync=OwnedWindows.OfType<DirectorySyncWindow>().Single();check(sync.IsVisible&&sync.Title.Contains(L.Text("sync.title")),"synchronize opens the existing folder synchronization setup");sync.Close();
             var samePreview = quickPreview;
             click(toolbarThumbnailsButton); check(left.DisplayMode == "Thumbnails" && quickPreview == samePreview, "thumbnails change the file list without toggling file preview");
             click(toolbarThumbnailsButton); check(left.DisplayMode == "Details", "thumbnails toggle back to the details list");
             ApplyDisplaySettings(new ProgramSettings { ShowHiddenFiles = false, ShowSystemFiles = false });
-            check(name(toolbarAllFilesButton) == "Skryté soubory" && System.Windows.Automation.AutomationProperties.GetItemStatus(toolbarAllFilesButton) == L.Text("toolbar.disabled"), "hidden-files toolbar label shows the disabled state");
+            check(name(toolbarAllFilesButton) == L.Text("toolbar.allFilesYes") && System.Windows.Automation.AutomationProperties.GetItemStatus(toolbarAllFilesButton) == L.Text("toolbar.disabled"), "hidden-files toolbar label shows the disabled state");
             ApplyDisplaySettings(new ProgramSettings { ShowHiddenFiles = true, ShowSystemFiles = true });
-            check(name(toolbarAllFilesButton) == "Skryté soubory" && System.Windows.Automation.AutomationProperties.GetItemStatus(toolbarAllFilesButton) == L.Text("toolbar.enabled"), "hidden-files toolbar label shows the enabled state");
+            check(name(toolbarAllFilesButton) == L.Text("toolbar.allFilesYes") && System.Windows.Automation.AutomationProperties.GetItemStatus(toolbarAllFilesButton) == L.Text("toolbar.enabled"), "hidden-files toolbar label shows the enabled state");
             click(toolbarLayoutButton); UpdateLayout(); if (quickPreview.LoadingTask != null) await quickPreview.LoadingTask;
-            check(panelLayout == "Stacked" && name(toolbarLayoutButton) == L.Text("toolbar.panelsStacked"), "layout click switches to stacked and updates its name");
+            check((string)((Image)toolbarLayoutButton.Content).Tag=="panels-Stacked","layout icon changes to stacked panels");check(panelLayout == "Stacked" && name(toolbarLayoutButton) == L.Text("toolbar.panelsStacked"), "layout click switches to stacked and updates its name");
             check(Grid.GetRow(quickPreview) == 2 && Grid.GetColumn(quickPreview) == 0 && !right.IsVisible, "stacked preview occupies the opposite full-width row");
             check(FluentUiTests.Children<QuickPreviewPane>(this).Count(x => x.IsVisible) == 1, "only one preview is visible in stacked mode");
             NextStageTests.Draw(this, Path.Combine(root, "nahled-pod-sebou.png"));
             click(toolbarPreviewButton); check(!FilePreviewOpen && right.Visibility == Visibility.Visible, "toolbar closes the preview opened through Ctrl+Q");
             ToggleQuickPreview(); check(FilePreviewOpen, "Ctrl+Q reopens the same preview controlled by the toolbar");
-            click(toolbarLayoutButton); UpdateLayout(); if (left.DetailLoadingTask != null) await left.DetailLoadingTask;
-            check(panelLayout == "Single" && quickPreview == null && left.DetailExpanded && name(toolbarLayoutButton) == L.Text("toolbar.panelsSingle"), "layout click moves preview below the single list and updates its name");
+            click(toolbarLayoutButton); UpdateLayout(); await SettleDetailForTests(left);
+            check((string)((Image)toolbarLayoutButton.Content).Tag=="panels-Single","layout icon changes to a single panel");check(panelLayout == "Single" && quickPreview == null && left.DetailExpanded && name(toolbarLayoutButton) == L.Text("toolbar.panelsSingle"), "layout click moves preview below the single list and updates its name");
             check(FluentUiTests.Children<QuickPreviewPane>(this).Count(x => x.IsVisible) == 1, "only one preview is visible in single-panel mode");
             var restoredPreviewSize = new PanelView(); left.SavePanelView(restoredPreviewSize);
             check(Math.Abs(restoredPreviewSize.DetailRatio - previewSize.DetailRatio) < .04, "moving preview between layouts preserves its single-panel height");
@@ -170,5 +185,3 @@ namespace FileCompass
         }
     }
 }
-
-

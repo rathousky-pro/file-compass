@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
@@ -34,7 +34,7 @@ namespace FileCompass {
     }
     bool denied=false;try{FileViewers.StartAssociatedEdit(edit,info=>{throw new Win32Exception(5);});}catch(IOException ex){denied=ex.Message.StartsWith(L.Text("editor.associatedApplicationFailed"));}
     check(denied,"Other application launch failures remain readable");
-    foreach(string ext in new[]{".txt",".csv",".json",".xml",".md",".lng",".cs",".ps1",".cmd",".bat",".js",".html",".exe",".lnk",".unknown",".svg",".svgz"}) {
+    foreach(string ext in new[]{".txt",".json",".xml",".md",".lng",".cs",".ps1",".cmd",".bat",".js",".html",".exe",".lnk",".svg"}) {
      string file=Path.Combine(root,"data"+ext);
      check(!FileViewers.UsesAssociatedEditor(file),"Text/safe data editing stays in the text editor: "+ext);
      var start=FileViewers.LaunchInfo(file,settings,true);

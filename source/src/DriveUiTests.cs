@@ -36,7 +36,7 @@ namespace FileCompass
                 if (!(actual is BitmapSource) || !actual.IsFrozen) throw new Exception("Actual system drive icon not obtained.");
                 passed.Add("actual Windows system-drive icon retrieved");
                 string tooltip = FilePanel.DriveTooltip("X:\\", "Backup", "\\\\10.0.10.101\\BACKUP", true, false);
-                if (!tooltip.Contains("Backup") || !tooltip.Contains("\\\\10.0.10.101\\BACKUP") || !tooltip.Contains("Odpojeno")) throw new Exception("Network drive tooltip missing name, UNC or state.");
+                if (!tooltip.Contains("Backup") || !tooltip.Contains("\\\\10.0.10.101\\BACKUP") || !tooltip.Contains(L.Text("drive.disconnectedSuffix"))) throw new Exception("Network drive tooltip missing name, UNC or state.");
                 passed.Add("drive tooltip includes volume, network address and disconnected state");
                 int clicks = 0;
                 var button = CompactTheme.Button(FilePanel.DriveLabel(system, false, true, actual), "Windows", delegate { clicks++; });
@@ -72,4 +72,3 @@ namespace FileCompass
         }
     }
 }
-

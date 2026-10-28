@@ -18,8 +18,8 @@ namespace FileCompass
         public FileSearchWindow(Window owner, string root, bool local, bool selectedAvailable, Func<FileSearchOptions, CancellationToken, Action<SearchHit>, Action<string>, int> search, Action<SearchHit> open, Action<string[], string> feedToPanel = null, Action<string, string> compareTwo = null)
         {
             CopyUi.Style(this, owner, L.Text("search.filesTitle"), 880); Height = 720; MinWidth = 760; MinHeight = 660; SizeToContent = SizeToContent.Manual; ResizeMode = ResizeMode.CanResize;
-            var body = new DockPanel { Margin = new Thickness(8) }; Content = body;
-            var top = new DockPanel(); DockPanel.SetDock(top, Dock.Top); body.Children.Add(top);
+            StackPanel footerActions;var body=SettingsUx.Frame(this,L.Text("search.filesTitle"),out footerActions);
+            var top = new DockPanel{Margin=new Thickness(12,6,12,0)}; DockPanel.SetDock(top, Dock.Top); body.Children.Add(top);
             var controls = new StackPanel { Width = 120, Margin = new Thickness(8, 24, 0, 0) }; DockPanel.SetDock(controls, Dock.Right); top.Children.Add(controls);
             var tabs = new TabControl(); top.Children.Add(tabs); var commonPage = new StackPanel { Margin = new Thickness(8) }; var common = FluentTheme.Section(commonPage, L.Text("search.nameAndLocationsGroup")); tabs.Items.Add(new TabItem { Header = L.Text("tab.general"), Content = commonPage });
             common.Children.Add(CopyUi.Label(L.Text("search.fileMaskLabel"))); var mask = new TextBox { Text = "*.*" }; common.Children.Add(mask);
@@ -61,9 +61,13 @@ namespace FileCompass
             profiles.Children.Add(CopyUi.Button(L.Text("action.saveSettings"),delegate { try { if (String.IsNullOrWhiteSpace(profileName.Text)) throw new IOException(L.Text("search.profileNameRequired")); var values = SearchAdvanced.LoadProfiles(); values.RemoveAll(x => String.Equals(x.Name,profileName.Text,StringComparison.OrdinalIgnoreCase)); values.Add(new SearchProfile { Name = profileName.Text,Options = readOptions() }); SearchAdvanced.SaveProfiles(values); loadProfiles(); } catch (Exception ex) { MessageBox.Show(this,ex.Message,L.Text("search.profileTitle")); } }));
             profiles.Children.Add(CopyUi.Button(L.Text("search.loadProfile"),delegate { var item = profileList.SelectedItem as SearchProfile; if (item == null) return; var value = item.Options; if(!local&&MetadataSearch.Enabled(value)){MessageBox.Show(this,L.Text("metaSearch.localOnly"),L.Text("search.profileTitle"));return;} metadataEditor.Restore(value.MetadataConditions); profileName.Text = item.Name; path.Text = value.Root; mask.Text = value.Mask; regex.IsChecked = value.Regex; selected.IsChecked = selectedAvailable && value.SelectedOnly; depth.SelectedIndex = value.Depth == Int32.MaxValue ? 0 : Math.Min(3,value.Depth + 1); textCheck.IsChecked = local && !String.IsNullOrEmpty(value.Text); textInput.Text = value.Text ?? ""; textRegex.IsChecked = value.TextRegex; documentText.IsChecked=local&&value.DocumentText; sensitive.IsChecked = value.CaseSensitive; minimum.Text = value.Minimum.ToString(); maximum.Text = value.Maximum == Int64.MaxValue ? "" : value.Maximum.ToString(); dateFrom.Text = value.ModifiedFrom.HasValue ? value.ModifiedFrom.Value.ToString("dd.MM.yyyy HH:mm:ss") : ""; dateTo.Text = value.ModifiedTo.HasValue ? value.ModifiedTo.Value.ToString("dd.MM.yyyy HH:mm:ss") : ""; encoding.SelectedIndex = Math.Max(0,Array.IndexOf(new[] { 65001,1250,1200,1201 },value.EncodingCodePage)); textLimit.Text = (value.MaximumTextBytes / 1048576).ToString(); duplicates.IsChecked = local && value.Duplicates; foreach (var input in attributeControls) input.IsChecked = (value.RequiredAttributes & (FileAttributes)input.Tag) != 0 ? (bool?)true : (value.ExcludedAttributes & (FileAttributes)input.Tag) != 0 ? (bool?)false : null; tabs.SelectedIndex = 0; }));
             profiles.Children.Add(CopyUi.Button(L.Text("search.deleteProfile"),delegate { var item = profileList.SelectedItem as SearchProfile; if (item == null) return; try { var values = SearchAdvanced.LoadProfiles(); values.RemoveAll(x => x.Name == item.Name); SearchAdvanced.SaveProfiles(values); loadProfiles(); } catch (Exception ex) { MessageBox.Show(this,ex.Message,L.Text("search.profileTitle")); } }));
-            foreach (TabItem tab in tabs.Items) { var page = tab.Content; tab.Content = new ScrollViewer { Content = page,MaxHeight = 390,VerticalScrollBarVisibility = ScrollBarVisibility.Auto }; }
-            var status = CopyUi.Label(L.Text("state.ready")); DockPanel.SetDock(status, Dock.Bottom); body.Children.Add(status);
-            var list = new ListView { ItemsSource = hits, Margin = new Thickness(0, 8, 0, 0), SelectionMode = SelectionMode.Extended }; var columns = new GridView();
+            var captionFactory=new FrameworkElementFactory(typeof(TextBlock));captionFactory.SetBinding(TextBlock.TextProperty,new Binding());captionFactory.SetValue(TextBlock.TextWrappingProperty,TextWrapping.Wrap);var checkCaption=new DataTemplate{VisualTree=captionFactory};foreach(var option in new[]{regex,selected,textCheck,textRegex,sensitive,duplicates,documentText}.Concat(attributeControls)){option.ContentTemplate=checkCaption;option.HorizontalContentAlignment=HorizontalAlignment.Stretch;}
+            // Keep form pages compact in columns; do not hide controls behind a page scrollbar.
+            var commonBox=(GroupBox)common.Parent;var contentsBox=(GroupBox)contents.Parent;commonPage.Children.Clear();var commonGrid=new Grid();commonGrid.ColumnDefinitions.Add(new ColumnDefinition());commonGrid.ColumnDefinitions.Add(new ColumnDefinition());commonBox.Margin=new Thickness(0,0,6,0);contentsBox.Margin=new Thickness(6,0,0,0);commonGrid.Children.Add(commonBox);Grid.SetColumn(contentsBox,1);commonGrid.Children.Add(contentsBox);commonPage.Children.Add(commonGrid);
+            advancedPage.Children.Clear();var advancedGrid=new Grid();for(int col=0;col<3;col++)advancedGrid.ColumnDefinitions.Add(new ColumnDefinition());int columnIndex=0;foreach(var box in new[]{(GroupBox)advanced.Parent,(GroupBox)dates.Parent,(GroupBox)attributes.Parent}){box.Margin=new Thickness(columnIndex==0?0:5,0,columnIndex==2?0:5,0);Grid.SetColumn(box,columnIndex++);advancedGrid.Children.Add(box);}advancedPage.Children.Add(advancedGrid);advancedPage.Children.Add(CopyUi.Label(L.Text("search.resourceLimitsHelp")));
+
+            var status = CopyUi.Label(L.Text("state.ready"));status.Margin=new Thickness(16,4,16,8); DockPanel.SetDock(status, Dock.Bottom); body.Children.Add(status);
+            var list = new ListView { ItemsSource = hits, Margin = new Thickness(16,8,16,10), SelectionMode = SelectionMode.Extended }; var columns = new GridView();
             columns.Columns.Add(new GridViewColumn { Header = L.Text("column.name"), Width = 190, DisplayMemberBinding = new Binding("Name") }); columns.Columns.Add(new GridViewColumn { Header = L.Text("column.path"), Width = 410, DisplayMemberBinding = new Binding("Path") }); columns.Columns.Add(new GridViewColumn { Header = L.Text("column.size"), Width = 95, DisplayMemberBinding = new Binding("Size") }); list.View = columns; body.Children.Add(list); var metadataColumn = new GridViewColumn{Header=L.Text("metaSearch.tab"),Width=0,DisplayMemberBinding=new Binding("Metadata")}; columns.Columns.Insert(1,metadataColumn);
             columns.Columns.Add(new GridViewColumn { Header = L.Text("search.duplicatesTab"),Width = 100,DisplayMemberBinding = new Binding("DuplicateGroup") });
             columns.Columns.Add(new GridViewColumn{Header=L.Text("tools1.matchLocation"),Width=130,DisplayMemberBinding=new Binding("MatchLocation")});
@@ -130,6 +134,7 @@ namespace FileCompass
             }
             controls.Children.Add(CopyUi.Button(L.Text("action.cancel"), delegate { if (cancellation != null) cancellation.Cancel(); else Close(); }));
             controls.Children.Add(CopyUi.Button(L.Text("action.help"), delegate { HelpService.Open(this,"search"); }));
+            ToolDock.Attach(this,controls,delegate{return new DockStatus{Title=Title,Icon="⌕",Description=status.Text,Busy=cancellation!=null};});
             Closing += delegate { if (cancellation != null) cancellation.Cancel(); };
         }
     }
@@ -148,6 +153,7 @@ namespace FileCompass
             var inputs = new Grid(); foreach (double weight in new[] { 2.5, 1.2, 3.0, 1.9 }) inputs.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(weight, GridUnitType.Star) }); DockPanel.SetDock(inputs, Dock.Top); body.Children.Add(inputs);
             Func<int, string, StackPanel> group = delegate(int column, string title) { var panel = new StackPanel(); var box = new GroupBox { Header = title, Content = panel, Margin = new Thickness(0, 0, column == 3 ? 0 : 8, 0) }; Grid.SetColumn(box, column); inputs.Children.Add(box); return panel; };
             var names = group(0, L.Text("rename.fileNameLabel")); var name = new TextBox { Text = initialMask ?? "[N]", Margin = new Thickness(0, 0, 0, 6) }; names.Children.Add(name);TokenDropdown.Attach(name,new[]{"[N]","[E]","[C]","[RMD]","[hms]","[N1-5]"}.Concat(FileRenameFields.Tokens).Concat(RenameMetadata.Tokens));
+            RenameHistory.Attach(names,name,()=>RenameHistory.Load().Names);
             var insert = new UniformGrid { Columns = 2 }; names.Children.Add(insert);
             foreach (string token in new[] { L.Text("rename.tokenName"), L.Text("rename.tokenDate"), L.Text("rename.tokenSubstring"), L.Text("rename.tokenTime"), L.Text("rename.tokenCounter") }) { string value = token.Split(' ')[0]; var tokenButton = CopyUi.Button(token, delegate { name.SelectedText = value; name.CaretIndex += value.Length; name.Focus(); }); tokenButton.Height = 26; tokenButton.MinWidth = 0; tokenButton.Padding = new Thickness(4, 0, 4, 0); insert.Children.Add(tokenButton); }
             var metadataPreset = new ComboBox { ItemsSource = new[] { L.Text("rename.metadataPresets"), L.Text("rename.photoPreset"), L.Text("rename.musicPreset"), L.Text("fileFields.createdPreset"), L.Text("fileFields.modifiedPreset"), L.Text("fileFields.accessedPreset") }, SelectedIndex = 0, Margin = new Thickness(0, 5, 0, 0) };
@@ -155,6 +161,7 @@ namespace FileCompass
             names.Children.Add(new TextBlock { Text = L.Text("fileFields.help"), TextWrapping = TextWrapping.Wrap, FontSize = 11, Foreground = FluentTheme.Muted, Margin = new Thickness(0, 5, 0, 0) });
             var extensions = group(1, L.Text("column.extension")); var ext = new TextBox { Text = "[E]" }; extensions.Children.Add(ext); extensions.Children.Add(CopyUi.Button(L.Text("rename.tokenExtension"), delegate { ext.Text = "[E]"; })); extensions.Children.Add(CopyUi.Button(L.Text("rename.tokenCounter"), delegate { ext.Text = "[C]"; }));
             var replacements = group(2, L.Text("rename.findReplaceGroup")); replacements.Children.Add(CopyUi.Label(L.Text("rename.findLabel"))); var find = new TextBox(); replacements.Children.Add(find); replacements.Children.Add(CopyUi.Label(L.Text("rename.replaceWithLabel"))); var replace = new TextBox(); replacements.Children.Add(replace);
+            RenameHistory.Attach(replacements,find,()=>RenameHistory.Load().Find); RenameHistory.Attach(replacements,replace,()=>RenameHistory.Load().Replace);
             var switches = new StackPanel { Orientation = Orientation.Horizontal }; replacements.Children.Add(switches);
             var sensitive = new CheckBox { Content = "Aa", Margin = new Thickness(2) }; switches.Children.Add(sensitive); var includeExt = new CheckBox { Content = "[E]", IsChecked = true, Margin = new Thickness(3) }; switches.Children.Add(includeExt); var regex = new CheckBox { Content = L.Text("rename.regex"), Margin = new Thickness(3) }; switches.Children.Add(regex);
             var casing = new ComboBox { SelectedIndex = 0 }; foreach (string caption in new[] { L.Text("attributes.unchanged"), L.Text("rename.upperCase"), L.Text("rename.lowerCase"), L.Text("rename.titleCase") }) casing.Items.Add(caption); replacements.Children.Add(casing);
@@ -180,7 +187,7 @@ namespace FileCompass
                 if (previewCancellation != null) previewCancellation.Cancel();
                 var request = new CancellationTokenSource(); previewCancellation = request;
                 var token = request.Token; int generation = ++PreviewGeneration;
-                preview = null; list.ItemsSource = null; if (start != null) start.IsEnabled = false;
+                preview = null; if (start != null) start.IsEnabled = false;
                 status.Text = L.Text("rename.preparingPreview");
                 // Snapshot controls on UI; metadata and regex work belong to the worker.
                 var selectedPaths = (string[])paths.Clone();
@@ -194,12 +201,14 @@ namespace FileCompass
                     try { rows = await Task.Run(delegate { options.Start = Int32.Parse(firstValue); options.Step = Int32.Parse(stepValue); options.Digits = Int32.Parse(digitsValue); return BatchRenameEngine.Preview(selectedPaths, options, token); }, token); }
                     finally { previewGate.Release(); }
                     if (closed || generation != PreviewGeneration || token.IsCancellationRequested) return;
-                    preview = rows; list.ItemsSource = rows; int count = rows.Count(x => x.Changed);
+                    var shown=list.ItemsSource as RenameRow[];
+                    if(shown!=null&&shown.Length==rows.Length&&shown.Select(x=>x.Path).SequenceEqual(rows.Select(x=>x.Path),StringComparer.OrdinalIgnoreCase)){for(int i=0;i<rows.Length;i++)shown[i].Update(rows[i]);preview=shown;}
+                    else {preview=rows;list.ItemsSource=rows;} int count = rows.Count(x => x.Changed);
                     status.Text = rows.Length + L.Text("rename.itemCountSeparator") + count + L.Text("rename.changeCountSuffix"); status.Foreground = FluentTheme.Muted; status.ToolTip = null;
                     if (start != null) start.IsEnabled = count > 0;
                 }
                 catch (OperationCanceledException) { }
-                catch (Exception ex) { if (!closed && generation == PreviewGeneration) { preview = null; list.ItemsSource = null; status.Text = ex.Message; status.Foreground = System.Windows.Media.Brushes.Firebrick; status.ToolTip = ex.Message; if (start != null) start.IsEnabled = false; } }
+                catch (Exception ex) { if (!closed && generation == PreviewGeneration) { preview = null; status.Text = ex.Message; status.Foreground = System.Windows.Media.Brushes.Firebrick; status.ToolTip = ex.Message; if (start != null) start.IsEnabled = false; } }
                 finally { if (previewCancellation == request) previewCancellation = null; request.Dispose(); }
             };
             Action update = delegate
@@ -212,6 +221,7 @@ namespace FileCompass
             Func<RenameRow[], Task> apply = async delegate(RenameRow[] rows)
             {
                 PreviewGeneration++; if (previewCancellation != null) previewCancellation.Cancel(); preview = null;
+                RenameHistory.Remember(name.Text,find.Text,replace.Text);
                 running = true; if (activity != null) activity(true); inputs.IsEnabled = false; start.IsEnabled = false; back.IsEnabled = false; cancel = new CancellationTokenSource();
                 try { LastUndoReceipts=await Task.Run(delegate {var proofRows=rows.Where(x=>x.Changed).ToArray();var proofs=proofRows.Select(x=>UndoReceipt.Capture(x.Path,x.Path,true)).ToArray();BatchRenameEngine.Apply(rows,cancel.Token);return proofs.Select((proof,index)=>UndoReceipt.Committed(proof,proofRows[index].NewPath)).Where(x=>x!=null).ToArray();});if(committed!=null)committed(rows); undo = rows.Select(x => new RenameRow { Path = x.NewPath, OldName = x.NewName, NewName = x.OldName }).ToArray(); paths = rows.Select(x => x.NewPath).ToArray(); refresh(); status.Text = L.Text("rename.completedPrefix") + rows.Length + L.Text("common.itemCountSuffix"); list.ItemsSource = rows; }
                 catch (Exception ex) { status.Text = ex is OperationCanceledException ? L.Text("rename.cancelledRolledBack") : L.Code("error.messagePrefix") + ex.Message; MessageBox.Show(this, status.Text, L.Text("rename.operationTitle")); }
@@ -222,9 +232,8 @@ namespace FileCompass
             secondary.Children.Add(CopyUi.Button(L.Text("rename.refreshPreview"), update)); var close = CopyUi.Button(L.Text("action.close"), delegate { if (cancel != null) cancel.Cancel(); else Close(); }); close.IsCancel = true; buttons.Children.Add(close);
             foreach (TextBox input in new[] { name, ext, find, replace, first, step, digits }) input.TextChanged += delegate { update(); };
             foreach (CheckBox check in new[] { regex, sensitive, includeExt }) { check.Checked += delegate { update(); }; check.Unchecked += delegate { update(); }; } casing.SelectionChanged += delegate { update(); };
-            Closing += delegate(object sender, System.ComponentModel.CancelEventArgs e) { if (running) { cancel.Cancel(); e.Cancel = true; return; } closed = true; PreviewGeneration++; if (previewCancellation != null) previewCancellation.Cancel(); }; update();
+            Closing += delegate(object sender, System.ComponentModel.CancelEventArgs e) { if (running) { cancel.Cancel(); e.Cancel = true; return; } RenameHistory.Remember(name.Text,find.Text,replace.Text); closed = true; PreviewGeneration++; if (previewCancellation != null) previewCancellation.Cancel(); }; update();
             Loaded += delegate { name.Focus(); name.SelectAll(); };
         }
     }
 }
-

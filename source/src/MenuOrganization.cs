@@ -18,7 +18,7 @@ namespace FileCompass {
             GroupMenu(commands, "menuGroup.workspace", "favorites.openMenu", "workspace.title", "projection.addToBasket", "projection.basket", "projection.removeFromBasket");
             GroupMenu(commands, "menuGroup.operations", "queue.copyTitle", "queue.restoreSaved", "queue.saveAndExit", "queue.networkCopyTitle");
             GroupMenu(commands, "menuGroup.compare", "action.compareFiles", "action.compareFolders", "action.synchronizeFolders");
-            GroupMenu(commands, "analyzer.menuGroup", "analyzer.title", "smart.title", "diskUsage.title");
+            GroupMenu(commands, "analyzer.menuGroup", "analyzer.title", "smart.title", "diskUsage.title", "ext.title");
             var duplicate = commands.Items.OfType<MenuItem>().FirstOrDefault(x => Convert.ToString(x.Header) == L.Text("action.batchRename")); if (duplicate != null) commands.Items.Remove(duplicate);
             GroupMenu(network, "menuGroup.networkDrives", "network.mapDriveMenu", "network.browseDevices");
             GroupMenu(network, "menuGroup.networkSession", "network.openActiveSshTerminal", "network.disconnectActivePanel");
@@ -30,7 +30,7 @@ namespace FileCompass {
         }
         static void OrderFileMenu(MenuItem file) {
             var remaining = file.Items.OfType<MenuItem>().ToList(); file.Items.Clear();
-            foreach (string key in new[] { "menu.view", "action.edit", "action.copy", "action.move", "action.newFolder", "action.delete", "", "menuGroup.rename", "menuGroup.properties", "menuGroup.archives", "menuGroup.integrity", "menuGroup.fileTools", "", "action.exit" }) {
+            foreach (string key in new[] { "menu.view", "action.edit", "action.copy", "action.move", "codeEditor.new", "action.newFolder", "action.delete", "", "menuGroup.rename", "menuGroup.properties", "menuGroup.archives", "menuGroup.integrity", "menuGroup.fileTools", "", "action.exit" }) {
                 if (key.Length == 0) { file.Items.Add(new Separator()); continue; }
                 var item = remaining.FirstOrDefault(x => Convert.ToString(x.Header) == L.Text(key)); if (item == null) continue;
                 if (key == "action.exit") { foreach (var extra in remaining.Where(x => x != item).ToArray()) { file.Items.Add(extra); remaining.Remove(extra); } }

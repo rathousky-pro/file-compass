@@ -20,7 +20,7 @@ namespace FileCompass {
     internal static class DiskAnalysisReports {
         internal static DiskSnapshot Capture(DiskAnalysis result){
             var snapshot=new DiskSnapshot{Root=result.Root.Path,Filters=result.FilterSignature,Created=result.ScannedUtc,Partial=result.IsPartial||result.Cancelled};var stack=new Stack<DiskFolder>();stack.Push(result.Root);
-            while(stack.Count>0){var folder=stack.Pop();snapshot.Folders.Add(new DiskSnapshotFolder{Path=folder==result.Root?".":folder.Path.Substring(result.Root.Path.TrimEnd('\\').Length).TrimStart('\\'),Bytes=folder.Bytes,Files=folder.Files});foreach(var child in folder.Children)stack.Push(child);}return snapshot;
+            while(stack.Count>0){var folder=stack.Pop();if(!folder.Virtual)snapshot.Folders.Add(new DiskSnapshotFolder{Path=result.Root.Virtual?folder.Path:folder==result.Root?".":folder.Path.Substring(result.Root.Path.TrimEnd('\\').Length).TrimStart('\\'),Bytes=folder.Bytes,Files=folder.Files});foreach(var child in folder.Children)stack.Push(child);}return snapshot;
         }
         internal static void SaveSnapshot(string path,DiskAnalysis result){File.WriteAllText(path,new JavaScriptSerializer{MaxJsonLength=64*1024*1024}.Serialize(Capture(result)),new System.Text.UTF8Encoding(true));}
         internal static DiskSnapshot LoadSnapshot(string path){

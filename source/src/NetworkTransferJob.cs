@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -230,7 +230,10 @@ namespace FileCompass
                 long size; sizes.TryGetValue(currentKey, out size);
                 long processed = Math.Min(totalBytes, doneBytes + (long)(size * fileFraction));
                 double total = totalBytes > 0 ? (double)processed / totalBytes : finished ? 1 : 0;
+                var active=items.FirstOrDefault(x=>x.Source==current&&(RelayTarget==null||currentKey==x.Source+"\0"+x.Destination));
                 return new NetworkCopyUpdate { File = fileFraction, Total = total, Preparing = totalBytes == 0 && !finished,
+                    CurrentSource=current,CurrentDestination=active==null?"":active.Destination,Phase=Paused?L.Code("state.paused"):phase,BytesDone=processed,TotalBytes=totalBytes,
+                    FilesDone=items.Count(x=>!x.Directory&&(x.State==L.Code("state.completed")||x.State==L.Code("state.skipped"))),TotalFiles=items.Count(x=>!x.Directory),
                     Text = Caption + " · " + (Move ? L.Text("transfer.moveStatusPrefix") : "") + (Paused ? L.Code("state.paused") : phase) + " · " + current + L.Text("copy.currentFilePrefix") + (100 * fileFraction).ToString("F0") + L.Text("progress.percentAndTotalSeparator") + (100 * total).ToString("F0") + "% · " + CopyUi.Bytes(processed) + " / " + CopyUi.Bytes(totalBytes) + " · " + ((Paused ? 0 : speed) / 1048576.0).ToString("F2") + " MB/s" + (planning > 0 ? L.Text("queue.calculatingAddedItemsSuffix") : "") };
             }
         }
@@ -239,4 +242,3 @@ namespace FileCompass
         void Notify() { var changed = Changed; if (changed != null) changed(); }
     }
 }
-

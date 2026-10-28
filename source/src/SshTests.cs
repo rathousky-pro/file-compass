@@ -20,7 +20,7 @@ namespace FileCompass
                 string hosts = Path.Combine(root, "known hosts's.txt");
                 var profile = new NetworkProfile { Protocol = NetworkProtocol.SSH, Name = "Server'; $(Write-Output INJECTED)", Host = "server.example",
                     UserName = "user'; $(Write-Output INJECTED)", Port = 2222, PrivateKeyPath = key, UseWindowsTerminal = false, UsePowerShell7 = false,
-                    EncryptedPassword = NetworkSettingsStore.Protect("SECRET-DO-NOT-PASS") };
+                    Path="", EncryptedPassword = NetworkSettingsStore.Protect("SECRET-DO-NOT-PASS") };
                 var store = new NetworkSettingsStore(Path.Combine(root, "connections.xml")); store.Put(profile);
                 var saved = new NetworkSettingsStore(store.FilePath).Settings.Connections.Single();
                 check(saved.Protocol == NetworkProtocol.SSH && saved.Host == profile.Host && saved.Port == 2222 && saved.UserName == profile.UserName &&
@@ -64,14 +64,18 @@ namespace FileCompass
                 check(args.SequenceEqual(isolation.Concat(new[] { "-l", profile.UserName, "-i", key, "-o", "ConnectTimeout=20", "--", "server.example" })), "real PowerShell preserves literal SSH arguments and enforces isolated host verification");
                 check(!log.Contains("INJECTED"), "profile values do not execute extra PowerShell commands");
                 var defaults = profile.Clone(); defaults.UserName = ""; defaults.PrivateKeyPath = "";
+                bool missingUser=false;try{SshTerminal.BuildCommand(defaults,recorder,hosts);}catch(ArgumentException){missingUser=true;}check(missingUser,"empty SSH user is rejected instead of inheriting the Windows account");defaults.UserName="selected-user";
                 shell = new ProcessStartInfo(info.FileName, "-NoLogo -NoProfile -NonInteractive -EncodedCommand " + SshTerminal.EncodeCommand(SshTerminal.BuildCommand(defaults, recorder, hosts)));
                 shell.EnvironmentVariables["FILECOMPASS_SSH_TEST_OUTPUT"] = output;
                 Execute(shell, null);
-                check(File.ReadAllLines(output).SequenceEqual(isolation.Concat(new[] { "-o", "ConnectTimeout=20", "--", "server.example" })), "no username or key uses isolated OpenSSH defaults and agent");
+                check(File.ReadAllLines(output).SequenceEqual(isolation.Concat(new[] { "-l","selected-user","-o", "ConnectTimeout=20", "--", "server.example" })), "chosen username is passed explicitly without a key");
                 defaults.SshCompression = true; defaults.SshAgent = false; defaults.SshKeepAliveSeconds = 90;
                 shell = new ProcessStartInfo(info.FileName, "-NoLogo -NoProfile -NonInteractive -EncodedCommand " + SshTerminal.EncodeCommand(SshTerminal.BuildCommand(defaults, recorder, hosts)));
                 shell.EnvironmentVariables["FILECOMPASS_SSH_TEST_OUTPUT"] = output; Execute(shell, null);
-                check(File.ReadAllLines(output).SequenceEqual(isolation.Concat(new[] { "-o", "ConnectTimeout=20", "-C", "-o", "ServerAliveInterval=90", "-o", "IdentityAgent=none", "--", "server.example" })), "SSH compression keepalive and agent options passed literally to terminal");
+                check(File.ReadAllLines(output).SequenceEqual(isolation.Concat(new[] { "-l","selected-user","-o", "ConnectTimeout=20", "-C", "-o", "ServerAliveInterval=90", "-o", "IdentityAgent=none", "--", "server.example" })), "SSH compression keepalive and agent options passed literally to terminal");
+                defaults.SshPasswordOnly=true;defaults.Path="/srv/project's $(touch INJECTED)";
+                shell=new ProcessStartInfo(info.FileName,"-NoLogo -NoProfile -NonInteractive -EncodedCommand "+SshTerminal.EncodeCommand(SshTerminal.BuildCommand(defaults,recorder,hosts)));shell.EnvironmentVariables["FILECOMPASS_SSH_TEST_OUTPUT"]=output;Execute(shell,null);var folderArgs=File.ReadAllLines(output);
+                check(folderArgs.Contains("PreferredAuthentications=keyboard-interactive,password")&&folderArgs.Contains("PubkeyAuthentication=no")&&folderArgs.Contains("-t")&&folderArgs.Last()==SshTerminal.RemoteFolderCommand(defaults.Path),"password login and remote folder are passed literally as separate SSH arguments");
                 string ssh = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "OpenSSH", "ssh.exe");
                 string resolved = Execute(new ProcessStartInfo(ssh, "-F NUL -G -p 2222 -l tester -- server.example"), null);
                 check(resolved.Contains("user tester") && resolved.Contains("port 2222") && resolved.Contains("hostname server.example"), "real OpenSSH accepts generated port, user and option terminator");
@@ -98,4 +102,3 @@ namespace FileCompass
         }
     }
 }
-

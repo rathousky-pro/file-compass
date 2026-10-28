@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,7 +9,7 @@ namespace FileCompass
     public partial class FilePanel
     {
         internal bool IsShellBrowser { get { return WindowsShell.IsLocation(CurrentPath); } }
-        internal bool IsVirtualBrowser { get { return IsShellBrowser || IsNetworkBrowser; } }
+        internal bool IsVirtualBrowser { get { return IsShellBrowser || IsNetworkBrowser || IsExt; } }
         internal string ShellLocationName { get; private set; }
         async Task NavigateShell(string path, bool remember)
         {

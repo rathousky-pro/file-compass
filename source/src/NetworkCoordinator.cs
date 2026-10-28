@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -24,7 +24,7 @@ namespace FileCompass
         bool PanelsLoading { get { return (left != null && left.IsLoading) || (right != null && right.IsLoading); } }
         void UpdateNetworkActions()
         {
-            actions.ForEach(b => b.IsEnabled = !busy && !PanelsLoading);
+            actions.ForEach(b => b.IsEnabled = !busy && (!PanelsLoading||refreshActions.Contains(b)));
             commandLine.IsEnabled = !busy && !PanelsLoading && (active == null || !active.IsShellBrowser);
         }
         void ManageConnections(NetworkProtocol? filter = null, Window dialogOwner = null, bool cloudSelected = false)
@@ -45,6 +45,9 @@ namespace FileCompass
         {
             try {
                 profile = profile.Clone();
+                var login = new SshLoginDialog(this,profile);
+                if(login.ShowDialog()!=true)return;
+                login.Apply(profile);
                 if (String.IsNullOrWhiteSpace(profile.HostKeyFingerprint))
                 {
                     var key = await Task.Run(delegate { return SshTerminal.ProbeKey(profile); });
@@ -52,7 +55,9 @@ namespace FileCompass
                         L.Text("network.firstConnectionPrefix") + profile.Protocol, MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
                     profile.HostKeyFingerprint = key.Item1;
                     if (networkStore == null) networkStore = new NetworkSettingsStore(NetworkSettingsStore.DefaultPath);
-                    networkStore.Put(profile);
+                    // Trust the host without replacing the saved identity/key with this session's login choices.
+                    var trusted=networkStore.Settings.Connections.FirstOrDefault(x=>x.Id==profile.Id);
+                    if(trusted!=null){trusted=trusted.Clone();trusted.HostKeyFingerprint=profile.HostKeyFingerprint;networkStore.Put(trusted);}
                 }
                 await Task.Run(delegate { SshTerminal.Open(profile); });
             }
@@ -60,8 +65,8 @@ namespace FileCompass
         }
         void OpenActiveSshTerminal()
         {
-            if (active.IsRemote && active.Remote.Profile.IsSshTransfer) OpenSshTerminal(active.Remote.Profile);
-            else if (active.IsAtLocalNetwork && active.LocalNetworkProfile.CanOpenSsh) OpenSshTerminal(active.LocalNetworkProfile);
+            if (active.IsRemote && active.Remote.Profile.IsSshTransfer) OpenSshTerminal(active.CurrentSshProfile());
+            else if (active.IsAtLocalNetwork && active.LocalNetworkProfile.CanOpenSsh) OpenSshTerminal(active.CurrentSshProfile());
             else ManageConnections(NetworkProtocol.SSH);
         }
         string RequestPassword(NetworkProfile profile, out bool remember)
@@ -81,7 +86,7 @@ namespace FileCompass
         }
         void NetworkBusy(bool value, string text)
         {
-            busy = value; actions.ForEach(b => b.IsEnabled = !value && !PanelsLoading);
+            busy = value; actions.ForEach(b => b.IsEnabled = !value && (!PanelsLoading||refreshActions.Contains(b)));
             left.IsEnabled = right.IsEnabled = !value; commandLine.IsEnabled = !value;
             if (text != null) { operation.Visibility = Visibility.Visible; operation.Text = text; }
             progress.IsIndeterminate = value; progress.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
@@ -322,6 +327,3 @@ namespace FileCompass
         }
     }
 }
-
-
-

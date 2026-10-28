@@ -51,6 +51,7 @@ namespace FileCompass
             direction.SelectionChanged += delegate { mirror.IsEnabled = direction.SelectedIndex != 2; if (!mirror.IsEnabled) { mirror.IsChecked = false; contents.IsChecked = true; } Invalidate(); }; contents.Click += delegate { Invalidate(); }; mirror.Click += delegate { Invalidate(); }; same.Click += delegate { Display(); };
             Closing += delegate(object sender, System.ComponentModel.CancelEventArgs e) { if (running) { if (control != null) control.Cancel(); e.Cancel = true; status.Text = L.Text("progress.cancellingWaitHelp"); } };
             Closed += delegate { leftLocation.Dispose(); rightLocation.Dispose(); };
+            ToolDock.Attach(this,buttons,delegate{return new DockStatus{Title=Title,Icon="⇄",Description=status.Text,Busy=running};});
         }
         void Invalidate() { plan = null; list.ItemsSource = null; apply.IsEnabled = false; status.Text = L.Text("compare.settingsChanged"); }
         void Display(bool refresh = true)
@@ -106,4 +107,3 @@ namespace FileCompass
         }
     }
 }
-

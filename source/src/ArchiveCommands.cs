@@ -100,8 +100,7 @@ namespace FileCompass
         public ArchiveExtractDialog(Window owner, IEnumerable<string> archives, string initial)
         {
             CopyUi.Style(this, owner, L.Text("archive.extractDialogTitle"), 540);
-            var body = new StackPanel { Margin = new Thickness(10) }; Content = body;
-            body.Children.Add(CopyUi.Label(String.Join("\n", archives.Take(3)) + (archives.Count() > 3 ? L.Text("common.moreLinesSuffix") : "")));
+            var layout=new OperationDialogLayout(this,L.Text("archive.extractDialogTitle"),String.Join("\n",archives.Take(3))+(archives.Count()>3?L.Text("common.moreLinesSuffix"):""));var body=layout.Body;
             body.Children.Add(CopyUi.Label(L.Text("archive.extractDestinationLabel")));
             var path = new DockPanel(); body.Children.Add(path);
             var browse = CopyUi.Button(L.Text("action.browse"), delegate
@@ -112,7 +111,7 @@ namespace FileCompass
             destination = new TextBox { Text = initial ?? "", Margin = new Thickness(2, 4, 2, 4), VerticalContentAlignment = VerticalAlignment.Center }; path.Children.Add(destination);
             rule = new ComboBox { Margin = new Thickness(2, 6, 2, 8), SelectedIndex = 0 };
             rule.Items.Add(L.Text("conflict.skipExistingFiles")); rule.Items.Add(L.Text("conflict.overwriteExistingFiles")); body.Children.Add(rule);
-            var buttons = new UniformGrid { Columns = 2 }; body.Children.Add(buttons);
+            var buttons=layout.Actions;
             var ok = CopyUi.Button(L.Text("action.extractArchive"), delegate
             {
                 try
@@ -121,9 +120,8 @@ namespace FileCompass
                     Destination = System.IO.Path.GetFullPath(destination.Text); Overwrite = rule.SelectedIndex == 1; DialogResult = true;
                 }
                 catch (Exception ex) { MessageBox.Show(this, ex.Message, L.Text("folder.destinationTitle")); }
-            }); ok.IsDefault = true; buttons.Children.Add(ok);
-            var cancel = CopyUi.Button(L.Text("action.cancel"), delegate { DialogResult = false; }); cancel.IsCancel = true; buttons.Children.Add(cancel);
+            }); ok.IsDefault = true; FluentTheme.Primary(ok);
+            var cancel = CopyUi.Button(L.Text("action.cancel"), delegate { DialogResult = false; }); cancel.IsCancel = true; buttons.Children.Add(cancel); buttons.Children.Add(ok);
         }
     }
 }
-

@@ -40,6 +40,7 @@ namespace FileCompass
         public string EncryptedProxyPassword = "";
         public bool SshCompression;
         public bool SshAgent = true;
+        [XmlIgnore] public bool SshPasswordOnly;
         public int SshKeepAliveSeconds;
         public string DriveLetter = "Z:";
         public bool NfsAnonymous = true;
@@ -181,4 +182,3 @@ namespace FileCompass
         }
     }
 }
-

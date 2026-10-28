@@ -31,7 +31,7 @@ namespace FileCompass {
             double max=ScaleMaximum>0?ScaleMaximum:125;
             foreach(double value in (SpeedMode?new[]{0.0,max/2,max}:max>=175?new[]{0.0,100,max}:new[]{0.0,100}).Distinct()) {
                 double y=8+height*(1-value/max);var pen=new Pen(!SpeedMode&&value==100?FluentTheme.Accent:CompactTheme.Line,!SpeedMode&&value==100?1.3:1);if(!SpeedMode&&value==100)pen.DashStyle=DashStyles.Dash;
-                c.DrawLine(pen,new Point(70,y),new Point(70+width,y));Label(c,value.ToString(SpeedMode?"0.#":"0")+(SpeedMode?" MB/s":" %"),0,y-7);
+                c.DrawLine(pen,new Point(70,y),new Point(70+width,y));Label(c,value.ToString(SpeedMode?"0.#":"0")+(SpeedMode?" MiB/s":" %"),0,y-7);
             }
             foreach(double fraction in new[]{0.0,.25,.5,.75,1.0}) Label(c,(fraction*100).ToString("0")+" %",70+width*fraction-(fraction==1?28:0),height+13);
             if(samples.Count==0)return;

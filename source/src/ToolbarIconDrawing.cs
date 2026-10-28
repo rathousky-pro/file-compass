@@ -8,6 +8,26 @@ namespace FileCompass
     public static partial class DesktopIcons
     {
         public static ImageSource ToolbarDrawing(string name, ToolbarTheme theme) {
+            if(name=="tools"){
+                var drawing=new DrawingGroup();using(var c=drawing.Open()){
+                    c.DrawRectangle(Brushes.Transparent,null,new Rect(0,0,32,32));
+                    var pen=new Pen(Brush("#267ED0"),1.8){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round,LineJoin=PenLineJoin.Round};
+                    Shape(c,"M21,3 C17,3 14,6 14,10 L15,14 L4,25 C1,28 5,32 8,29 L19,18 C25,21 32,15 29,8 L24,13 L19,8 L24,3 Z",Brush("#ECF4FF"),pen);
+                    c.DrawEllipse(null,pen,new Point(6,27),1,1);
+                }drawing.Freeze();return new DrawingImage(drawing);
+            }
+            if(name.StartsWith("panels-",StringComparison.Ordinal)||name=="hidden-files"){
+                var drawing=new DrawingGroup();using(var c=drawing.Open()){
+                    c.DrawRectangle(Brushes.Transparent,null,new Rect(0,0,32,32));var pen=new Pen(Brush("#267ED0"),1.8){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round,LineJoin=PenLineJoin.Round};
+                    if(name=="hidden-files"){
+                        Shape(c,"M2,16 C8,5 24,5 30,16 C24,27 8,27 2,16 Z",Brush("#ECF4FF"),pen);c.DrawEllipse(null,pen,new Point(16,16),4,4);Shape(c,"M4,28 L28,4",null,new Pen(Brush("#267ED0"),2.5));
+                    }else{
+                        c.DrawRoundedRectangle(Brush("#ECF4FF"),pen,new Rect(3,4,26,24),2,2);c.DrawLine(pen,new Point(3,10),new Point(29,10));
+                        if(name=="panels-SideBySide")c.DrawLine(pen,new Point(16,10),new Point(16,28));
+                        else if(name=="panels-Stacked")c.DrawLine(pen,new Point(3,19),new Point(29,19));
+                    }
+                }drawing.Freeze();return new DrawingImage(drawing);
+            }
             if(name=="undo"){var undo=new DrawingGroup();using(var c=undo.Open()){c.DrawRectangle(Brushes.Transparent,null,new Rect(0,0,32,32));var pen=new Pen(Brush("#267ED0"),2.7){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round,LineJoin=PenLineJoin.Round};Shape(c,"M25,25 C32,14 22,5 12,9 L5,14 M5,6 L5,14 L13,14",null,pen);}undo.Freeze();return new DrawingImage(undo);}
             if (name == "invert") {
                 var drawing = new DrawingGroup();
@@ -24,6 +44,9 @@ namespace FileCompass
         }
         public static ImageSource BuildToolbarDrawing(string name, ToolbarTheme theme)
         {
+            if(name=="new-file"){
+                var drawing=new DrawingGroup();using(var c=drawing.Open()){var pen=new Pen(Brush("#267ED0"),1.7);c.DrawRectangle(Brushes.Transparent,null,new Rect(0,0,32,32));Shape(c,"M6,3 L20,3 L26,9 L26,29 L6,29 Z",Brush("#ECF4FF"),pen);Shape(c,"M20,3 L20,9 L26,9",null,pen);var plus=new Pen(Brush("#168A76"),2.5){StartLineCap=PenLineCap.Round,EndLineCap=PenLineCap.Round};c.DrawLine(plus,new Point(11,19),new Point(21,19));c.DrawLine(plus,new Point(16,14),new Point(16,24));}drawing.Freeze();return new DrawingImage(drawing);
+            }
             if (theme == ToolbarTheme.Classic && name == "network") return FluentIcons.Network();
             if (theme == ToolbarTheme.Classic && (name == "pack" || name == "unpack")) return FluentIcons.Archive(name == "unpack");
             if (theme == ToolbarTheme.Classic) return FluentIcons.Load(name) ?? BuildLegacyDrawing(name);
@@ -90,4 +113,3 @@ namespace FileCompass
         }
     }
 }
-

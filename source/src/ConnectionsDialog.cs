@@ -14,7 +14,7 @@ namespace FileCompass {
             DialogGeometry.Bound(this,820,590,680,460);ResizeMode=ResizeMode.CanResize;
             view=new ConnectionsView(this,main,store,false,filter,cloudSelected);
             Tabs=view.Tabs;Network=view.Network;Cloud=view.Cloud;
-            Content=new Border{Child=view,Margin=new Thickness(12),Padding=new Thickness(6),Background=CompactTheme.PanelSurface,BorderBrush=CompactTheme.ChromeLine,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(8)};
+            StackPanel actions;var root=SettingsUx.Frame(this,L.Text("connections.title"),out actions);view.Margin=new Thickness(16);root.Children.Add(view);
             Closing+=delegate(object sender,System.ComponentModel.CancelEventArgs e){if(!view.AllowHostClose())e.Cancel=true;};
             Closed+=delegate{view.DisposeManagers();};
         }

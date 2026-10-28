@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>LTRData.DiscUtils.Core</id>
+    <version>1.0.90</version>
+    <authors>Kenneth Bell,Quamotion,LordMike,Olof Lagerkvist</authors>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <readme>README.md</readme>
+    <projectUrl>https://github.com/LTRData/DiscUtils</projectUrl>
+    <description>Common .NET disk, filesystem, partition and volume abstractions for DiscUtils, including raw disks and format-discovery infrastructure.</description>
+    <tags>DiscUtils VirtualDisk Filesystem Partitions MBR GPT Volumes RAW</tags>
+    <repository type="git" url="https://github.com/LTRData/DiscUtils.git" branch="refs/heads/LTRData.DiscUtils-initial" commit="414c7f7b2d82c42b07bc6fdfc18a763331334697" />
+    <dependencies>
+      <group targetFramework=".NETFramework4.6">
+        <dependency id="LTRData.DiscUtils.Streams" version="1.0.90" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETFramework4.8">
+        <dependency id="LTRData.DiscUtils.Streams" version="1.0.90" exclude="Build,Analyzers" />
+        <dependency id="System.Text.Encoding.CodePages" version="9.0.20" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework="net8.0">
+        <dependency id="LTRData.DiscUtils.Streams" version="1.0.90" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework="net9.0">
+        <dependency id="LTRData.DiscUtils.Streams" version="1.0.90" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework="net10.0">
+        <dependency id="LTRData.DiscUtils.Streams" version="1.0.90" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="LTRData.DiscUtils.Streams" version="1.0.90" exclude="Build,Analyzers" />
+        <dependency id="System.Text.Encoding.CodePages" version="9.0.20" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETStandard2.1">
+        <dependency id="LTRData.DiscUtils.Streams" version="1.0.90" exclude="Build,Analyzers" />
+        <dependency id="System.Text.Encoding.CodePages" version="9.0.20" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>

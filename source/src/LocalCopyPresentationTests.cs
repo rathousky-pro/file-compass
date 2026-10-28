@@ -49,12 +49,16 @@ namespace FileCompass
                 try {
                     var update = new CopyUpdate { Phase = "Kopírování",Source = "E:\\Temp\\aiarty-video-enhancer.exe",Target = "E:\\Temp\\Test\\aiarty-video-enhancer.exe",FileDone = 56,FileTotal = 100,TotalDone = 563L * 1048576,TotalBytes = 13341L * 1048576,Completed = 1,TotalFiles = 19,BytesPerSecond = (long)(135.9 * 1048576),RemainingSeconds = 94 };
                     dialog.Update(update); dialog.Show(); dialog.Activate(); await Task.Delay(100); dialog.UpdateLayout();
+                    var details=FluentUiTests.Children<Expander>(dialog).Single();
+                    check(!details.IsExpanded,"transfer details start collapsed");
+                    NextStageTests.Draw(dialog,Path.Combine(directory,"local-copy-compact.png"));
+                    details.IsExpanded=true;dialog.UpdateLayout();
                     var texts = FluentUiTests.Children<TextBlock>(dialog).ToArray();
-                    check(texts.Any(x => x.Text.Contains("135") && x.Text.Contains("MB/s")) && texts.Any(x => x.Text.Contains("00:01:34")),"foreground local copy displays rate and ETA");
+                    check(texts.Any(x => x.Text.Contains("135") && x.Text.Contains("MiB/s")) && texts.Any(x => x.Text.Contains("00:01:34")),"foreground local copy displays rate and ETA");
                     check(texts.Any(x => x.Text == "56 %") && texts.Any(x => x.Text == "4 %") && texts.Any(x => x.Text == "1 / 19"),"compact dialog displays file percent, total percent and file count");
-                    var tracks = FluentUiTests.Children<LocalCopyProgressBar>(dialog).ToArray(); check(tracks.Length == 2 && tracks.All(x => x.Height == 3 && Math.Abs(x.ActualHeight-3)<=1/VisualTreeHelper.GetDpi(x).DpiScaleY),"file and total progress use thin three-pixel lines");
+                    var tracks = FluentUiTests.Children<LocalCopyProgressBar>(dialog).ToArray(); check(tracks.Length == 2 && tracks[0].Height==8 && tracks[1].Height==3 && tracks[0].TranslatePoint(new Point(),dialog).Y<tracks[1].TranslatePoint(new Point(),dialog).Y,"total progress is thicker and above the current-file line");
                     var content = (FrameworkElement)dialog.Content; var bitmap = new RenderTargetBitmap((int)(content.ActualWidth + content.Margin.Left + content.Margin.Right),(int)(content.ActualHeight + content.Margin.Top + content.Margin.Bottom),96,96,PixelFormats.Pbgra32); var background = new DrawingVisual(); using (var drawing = background.RenderOpen()) drawing.DrawRectangle(dialog.Background,null,new Rect(0,0,bitmap.PixelWidth,bitmap.PixelHeight)); bitmap.Render(background); bitmap.Render(content);
-                    foreach (int i in new[] { 0,1 }) { var point = tracks[i].TranslatePoint(new Point(3,tracks[i].ActualHeight / 2),content); byte[] pixel = new byte[4]; bitmap.CopyPixels(new Int32Rect((int)(point.X + content.Margin.Left),(int)(point.Y + content.Margin.Top),1,1),pixel,4,0); check(pixel[0] == (i == 0 ? 244 : 162) && pixel[1] == (i == 0 ? 197 : 87) && pixel[2] == (i == 0 ? 133 : 20),(i == 0 ? "file bar is light blue" : "total bar is dark blue") + " pixel=" + String.Join(",",pixel) + " point=" + point); }
+                    foreach (int i in new[] { 0,1 }) { var point = tracks[i].TranslatePoint(new Point(3,tracks[i].ActualHeight / 2),content); byte[] pixel = new byte[4]; bitmap.CopyPixels(new Int32Rect((int)(point.X + content.Margin.Left),(int)(point.Y + content.Margin.Top),1,1),pixel,4,0); var expected=((SolidColorBrush)CompactTheme.ThemeBrush(i==1?"#85C5F4":"#1457A2")).Color;check(pixel[0] == expected.B && pixel[1] == expected.G && pixel[2] == expected.R,(i == 1 ? "file bar is light blue" : "total bar is dark blue") + " pixel=" + String.Join(",",pixel) + " point=" + point); }
                     var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap)); using (var stream = File.Create(Path.Combine(directory,"local-copy-progress.png"))) encoder.Save(stream);
                     double height = dialog.ActualHeight, width = dialog.ActualWidth; var foreground = GetForegroundWindow(); int activated = 0; EventHandler activatedHandler = delegate { activated++; }; Activated += activatedHandler;
                     for (int i = 0; i < 30; i++) { update.Source = "E:\\" + new string('a',i * 10) + "\\soubor.bin"; dialog.Update(update); dialog.UpdateLayout(); }
@@ -77,23 +81,29 @@ namespace FileCompass
                     check(!left.List.Items.Cast<Entry>().Any(x => x.FullPath == watched) && !right.List.Items.Cast<Entry>().Any(x => x.FullPath == watched),"automatic panel refresh is deferred behind foreground copy");
                     check(activated == 0 && GetForegroundWindow() == foreground,"progress and watcher updates do not activate windows behind copy"); Activated -= activatedHandler;
                     var buttons = FluentUiTests.Children<Button>(dialog).ToArray(); buttons.Single(x => (string)x.Content == L.Text("copy.backgroundAction")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); dialog.Update(update);
-                    activity.Update("Kopírování", .56, .04, false); UpdateLayout();
-                    check(summaryTrack.Height == 3 && summaryTrack.Value == .04 && summaryPercent.Text == "4 %" && summaryLabel.Text == "Kopírování fotografií" && summaryRoute.Text.Contains("→"), "minimized transfer uses title, route, percentage and a thin progress track");
-                    check(!dialog.IsVisible && copySummary.Visibility == Visibility.Visible && summaryTransferInfo.Visibility == Visibility.Visible && summaryTransferInfo.Text.Contains("135") && summaryTransferInfo.Text.Contains("00:01:34"),"minimized local copy shows speed and ETA before Cancel in bottom queue");
-                    summaryPause.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    activity.Update("Kopírování", .56, .04, false); UpdateLayout(); var tile=dockTiles[activity];var tileTrack=FluentUiTests.Children<ProgressBar>(tile).Single();var tileDescription=FluentUiTests.Children<TextBlock>(tile).Single(x=>x.Text.Contains("MiB/s"));var tilePause=FluentUiTests.Children<Button>(tile).Single(x=>Convert.ToString(x.Content).StartsWith("Ⅱ"));
+                    check(summaryTrack.Height == 6 && summaryTrack.Value == .04 && summaryPercent.Text == "4 %" && summaryLabel.Text == "Kopírování fotografií" && summaryRoute.Text.Contains("→"), "minimized transfer uses title, route, percentage and a thicker blue progress track");
+                    check(!dialog.IsVisible && copySummary.Visibility == Visibility.Visible && summaryTransferInfo.Visibility == Visibility.Visible && summaryTransferInfo.Text.Contains("135") && summaryTransferInfo.Text.Contains("00:01:34"),"minimized local copy retains measured speed and ETA");
+                    check(tileDescription.TranslatePoint(new Point(),tile).Y >= tileTrack.TranslatePoint(new Point(0,tileTrack.ActualHeight),tile).Y && FluentUiTests.Children<TextBlock>(copySummary).Any(x=>x.Text=="⇄"),"background copy has transfer arrows and metadata below the progress bar");
+                    tilePause.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); RefreshCopySummary();
                     check(control.Paused && dialog.Metrics().BytesPerSecond == 0 && !dialog.Metrics().RemainingSeconds.HasValue && summaryTransferInfo.Text.EndsWith("—"),"pause immediately clears local speed and ETA in bottom queue");
                     var deadline = DateTime.UtcNow.AddSeconds(5); while (!left.List.Items.Cast<Entry>().Any(x => x.FullPath == watched) && DateTime.UtcNow < deadline) await Task.Delay(50);
                     check(left.List.Items.Cast<Entry>().Any(x => x.FullPath == watched),"deferred watcher event refreshes after copy is minimized");
-                    summaryPause.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); dialog.Update(update);
-                    check(!control.Paused && summaryPause.Content.ToString() == "Ⅱ", "bottom summary pause button resumes the actual copy control");
+                    tilePause.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); RefreshCopySummary(); dialog.Update(update);
+                    check(!control.Paused && summaryPause.Content.ToString().Contains("Ⅱ"), "bottom summary pause button resumes the actual copy control");
                     UpdateLayout(); var summaryBitmap = new RenderTargetBitmap((int)Math.Ceiling(copySummary.ActualWidth), (int)Math.Ceiling(copySummary.ActualHeight), 96, 96, PixelFormats.Pbgra32);
                     var summaryVisual = new DrawingVisual(); using (var drawing = summaryVisual.RenderOpen()) drawing.DrawRectangle(new VisualBrush(copySummary), null, new Rect(0, 0, copySummary.ActualWidth, copySummary.ActualHeight));
                     summaryBitmap.Render(summaryVisual); var summaryEncoder = new PngBitmapEncoder(); summaryEncoder.Frames.Add(BitmapFrame.Create(summaryBitmap)); using (var stream = File.Create(Path.Combine(directory, "minimized-copy-summary.png"))) summaryEncoder.Save(stream);
-                    ShowSummaryDetails();
+                    var priorMotif=AppearanceTheme.Motif;
+                    foreach(string motif in new[]{"Original","Balanced"}){
+                        AppearanceTheme.SetMotif(motif);UpdateLayout();
+                        check(tileTrack.Height==6&&tileDescription.TranslatePoint(new Point(),tile).Y>tileTrack.TranslatePoint(new Point(),tile).Y,motif+": background metadata remains below the thicker track");
+                        var shot=new RenderTargetBitmap((int)Math.Ceiling(copySummary.ActualWidth),(int)Math.Ceiling(copySummary.ActualHeight),96,96,PixelFormats.Pbgra32);var visual=new DrawingVisual();using(var drawing=visual.RenderOpen())drawing.DrawRectangle(new VisualBrush(copySummary),null,new Rect(0,0,copySummary.ActualWidth,copySummary.ActualHeight));shot.Render(visual);var png=new PngBitmapEncoder();png.Frames.Add(BitmapFrame.Create(shot));using(var output=File.Create(Path.Combine(directory,motif+"-background-copy.png")))png.Save(output);
+                    }
+                    AppearanceTheme.SetMotif(priorMotif);summaryDetails.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                     check(dialog.IsVisible && copySummary.Visibility == Visibility.Collapsed && dialog.Metrics().BytesPerSecond > 0,"bottom queue restores local copy with live metrics after pause");
                 } finally { dialog.Finish(); copyProgress = null; copyControl = null; activity.Finish("Dokončeno",true); }
             }
         }
     }
 }
-

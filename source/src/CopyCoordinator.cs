@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -88,7 +88,8 @@ namespace FileCompass
                                     control.Check();
                                     return Dispatcher.Invoke(new Func<CopyErrorChoice>(delegate
                                     {
-                                        var error = new CopyErrorDialog(this, failure); error.ShowDialog(); return error.Choice;
+                                        if(!dialog.IsVisible)dialog.RestoreProgress();dialog.Activate();
+                                        var error = new CopyErrorDialog(dialog, failure, moving:job.Options.Move); error.ShowDialog(); return error.Choice;
                                     }));
                                 });
                                 engine.RecoveryTargets = job.RecoveryTargets;
@@ -173,4 +174,3 @@ namespace FileCompass
         }
     }
 }
-

@@ -1,4 +1,4 @@
-﻿# Third-party notices
+# Third-party notices
 
 Paths below refer to the installation root unless a source path is stated. Original upstream license/copyright texts are retained with each component; this English inventory does not replace them.
 
@@ -87,8 +87,27 @@ Source: https://github.com/smartmontools/smartmontools/releases/tag/RELEASE_7_5
 
 ## Media conversion
 
-- Magick.NET 15.0.0 Q8 x64 and Magick.NET.Core 15.0.0: Apache-2.0 wrapper; ImageMagick and native dependencies have their own licenses. The complete package notice is `plugins/media/MAGICK-NOTICE.txt`.
+- Magick.NET 15.0.0 Q8 OpenMP x64 and Magick.NET.Core 15.0.0: Apache-2.0 wrapper; ImageMagick and native dependencies have their own licenses. The complete package notice is `plugins/media/MAGICK-NOTICE.txt`.
 - FFmpeg `n9.0.2-35-g9a9b70bb8c-20261024`: BtbN Windows x64 **LGPL shared** build, separate processes. `FFMPEG-LICENSE.txt` and `GPL-3.0.txt` contain LGPLv3 and its incorporated GPLv3 terms. This is not the GPL/nonfree build. Runtime decoding/encoding is limited to local files by protocol/demuxer allowlists. Package SHA-256 and source links are in `plugins/media/SOURCE.json`.
+- Microsoft Visual C++ OpenMP runtime `vcomp140.dll`: Microsoft-licensed native runtime supplied unchanged inside the pinned official Magick.NET Q8 OpenMP package. It is not covered by the Apache license of the wrapper. App-local redistribution is subject to the applicable Microsoft Visual Studio / Visual C++ redistribution terms. See https://learn.microsoft.com/en-us/cpp/windows/determining-which-dlls-to-redistribute . The publisher must retain the applicable redistribution entitlement/terms before public release. Managed/native Magick.NET and this runtime are updated as one set.
 - Roslyn compiler 4.14.0: MIT, build dependency only, not distributed with the application.
 
 Dependency archives are retained under `source/downloads/media` and restored/verified with `source/prepare-media.ps1`. Do not silently update rotating FFmpeg downloads. Before public distribution, prepare the exact corresponding sources/build scripts for FFmpeg and its LGPL dependencies and all dependency notices; upstream links alone are not a complete source distribution. No patent or Dolby trademark licenses are represented by this integration. There is no Dolby Atmos encoder.
+
+
+## Linux filesystem reader
+
+LTRData.DiscUtils.Ext, Core and Streams 1.0.90 are distributed under MIT. Upstream: https://github.com/LTRData/DiscUtils at commit 414c7f7b2d82c42b07bc6fdfc18a763331334697. Copyright Kenneth Bell, Quamotion and contributors; the original notice is included in libraries/licenses/DiscUtils/DISCUTILS-LICENSE.txt.
+
+LTRData.Extensions 1.0.23: MIT, copyright 2011–2026 Olof Lagerkvist, LTR Data; source https://github.com/LTRData/Library at commit 915cdf4eaac22bffd2623de0721f7e7d18c93268. See LTRDATA-EXTENSIONS-LICENSE.txt.
+
+System.Collections.Immutable 9.0.20, System.Text.Encoding.CodePages 9.0.20 and System.Threading.Tasks.Extensions 4.6.3: MIT, Microsoft and contributors. Package license and available third-party notices are included alongside the library notices. SOURCE.json records exact package versions, download hashes, source commits and DLL hashes. Dependencies are restored by source/prepare-ext.ps1. No filesystem driver is installed. The reader uses a version-pinned metadata adapter to inspect original inode types before file operations; upstream DLLs are unmodified.
+
+
+## YamlDotNet 16.3.0
+
+The internal editor validates YAML using the unmodified YamlDotNet net47 assembly (compatible with .NET Framework 4.8). MIT; copyright Antoine Aubry and contributors. The libyaml-derived implementation retains Kirill Simonov’s MIT notice. Both original notices and exact package/assembly provenance are in `libraries/licenses/YamlDotNet`. The runtime DLL is `libraries/YamlDotNet.dll`. Source: https://github.com/aaubry/YamlDotNet/tree/v16.3.0 . Restore with `source/prepare-editor.ps1`, which verifies pinned SHA-256 values for the package, assembly and license texts. Validation streams parser events without expanding aliases or constructing arbitrary objects.
+
+## Scope of this inventory
+
+Reviewed against the checked-in runtime layout on 28 October 2026. Original upstream notices have not been rewritten or translated. No open-source license for File Compass application code is granted by this third-party inventory. Optional tool downloads retain their own vendor terms. See [distribution audit](DISTRIBUTION-AUDIT.md) for outstanding public-release requirements and restore constraints.

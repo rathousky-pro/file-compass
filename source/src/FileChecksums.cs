@@ -384,6 +384,7 @@ namespace FileCompass
             startButton.IsDefault = true; actions.Children.Add(startButton);
             var close = CopyUi.Button(L.Text("action.cancel"), delegate { if (cancellation != null) cancellation.Cancel(); else Close(); });
             close.IsCancel = true; actions.Children.Add(close);
+            ToolDock.Attach(this,actions,delegate{return new DockStatus{Title=Title,Icon="#",Description=status.Text,Busy=cancellation!=null,Fraction=progress.IsIndeterminate?(double?)null:progress.Value/Math.Max(1,progress.Maximum)};});
             Closing += delegate { if (cancellation != null) cancellation.Cancel(); };
         }
 
@@ -479,6 +480,7 @@ namespace FileCompass
             onlyErrors.Unchecked += delegate { RefreshFilter(); };
             Closing += delegate { if (cancellation != null) cancellation.Cancel(); };
             VerificationTask = RunVerification(manifestPaths);
+            ToolDock.Attach(this,actions,delegate{return new DockStatus{Title=Title,Icon="#",Description=status.Text,Busy=cancellation!=null,Fraction=progress.IsIndeterminate?(double?)null:progress.Value/Math.Max(1,progress.Maximum)};});
         }
 
         void RefreshFilter()
@@ -570,4 +572,3 @@ namespace FileCompass
         }
     }
 }
-

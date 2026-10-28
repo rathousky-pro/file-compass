@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -28,7 +28,7 @@ namespace FileCompass {
         internal static string TestRoot;
         internal static string Root {get{return TestRoot??Path.Combine(AppPaths.DataDirectory,"cloud");}}
         internal static string KeyFile {get{return Path.Combine(Root,"key.dat");}}
-        internal static string Rclone {get{return Path.Combine(AppPaths.Resource("plugins"),"cloud","rclone.exe");}}
+        internal static string Rclone {get{return UpdateRegistry.Resolve("cloud\\rclone.exe");}}
         internal static string AccountPath(CloudAccount a){
             Guid id;if(!Guid.TryParseExact(a.Id,"N",out id))throw new IOException(L.Text("cloud.invalidAccount"));
             return Path.Combine(Root,a.Id);
@@ -79,7 +79,7 @@ namespace FileCompass {
             b.Append('\\',slashes*2);b.Append('"');return b.ToString();
         }
         internal static ProcessStartInfo StartInfo(CloudAccount account,IEnumerable<string> args,bool browserFlow=false){
-            if(!File.Exists(Rclone))throw new IOException(L.Text("cloud.pluginMissing")); using(var stream=File.OpenRead(Rclone))using(var sha=SHA256.Create())if(!BitConverter.ToString(sha.ComputeHash(stream)).Replace("-","").Equals(PluginHashes.Expected["cloud\\rclone.exe"],StringComparison.OrdinalIgnoreCase))throw new IOException(L.Text("cloud.pluginMissing"));
+            if(!File.Exists(Rclone))throw new IOException(L.Text("cloud.pluginMissing")); using(PluginIntegrity.Acquire("cloud\\rclone.exe")){}
             var info=new ProcessStartInfo(Rclone,String.Join(" ",args.Concat(new[]{"--config",Config(account),"--log-level",browserFlow?"NOTICE":"ERROR"}).Select(Quote))){UseShellExecute=false,CreateNoWindow=true,WindowStyle=ProcessWindowStyle.Hidden,RedirectStandardOutput=true,RedirectStandardError=true,RedirectStandardInput=true};
             foreach(string variable in info.EnvironmentVariables.Keys.Cast<string>().Where(x=>x.StartsWith("RCLONE_",StringComparison.OrdinalIgnoreCase)).ToArray())info.EnvironmentVariables.Remove(variable);
             if(!args.Any(x=>x=="serve"))CloudApplicationOAuth.Apply(account,info);
@@ -111,7 +111,7 @@ namespace FileCompass {
             var diskOnly=new CloudAccount{Id=account.Id,Provider=account.Provider};
             string dump=await Run(diskOnly,new[]{"config","dump"},CancellationToken.None,30000).ConfigureAwait(false);
             var data=new JavaScriptSerializer().Deserialize<Dictionary<string,Dictionary<string,object>>>(dump);Dictionary<string,object> remote;object id,secret;
-            if(data==null||!data.TryGetValue("remote",out remote)||!remote.TryGetValue("client_id",out id)||!remote.TryGetValue("client_secret",out secret)||Convert.ToString(id)!=client.client_id||Convert.ToString(secret)!=client.client_secret)throw new IOException("Google application identity was not persisted to encrypted cloud configuration. Sign in again.");
+            if(data==null||!data.TryGetValue("remote",out remote)||!remote.TryGetValue("client_id",out id)||!remote.TryGetValue("client_secret",out secret)||Convert.ToString(id)!=client.client_id||Convert.ToString(secret)!=client.client_secret)throw new IOException(L.Text("cloud.identityNotSaved"));
         }
         internal static async Task ReadError(StreamReader reader,Action<string> openBrowser){
             string line;var opened=new HashSet<string>();

@@ -30,7 +30,9 @@ namespace FileCompass
         }
         public static ProcessStartInfo LaunchInfo(string file, ProgramSettings settings, bool edit = false)
         {
-            if(edit && UsesAssociatedEditor(file))return AssociatedEditInfo(file);
+            if(edit&&Path.GetExtension(file).Equals(".csv",StringComparison.OrdinalIgnoreCase))return ExcelEditInfo(file);
+            if(edit&&new[]{".html",".htm"}.Contains(Path.GetExtension(file).ToLowerInvariant()))return NotepadEditInfo(file);
+            if(edit && UsesAssociatedEditor(file))return AssociatedOpenInfo(file);
             string kind = edit ? "text" : Kind(file);
             // Only explicitly recognized document formats may use an association.
             // Unknown files, scripts and executables are passed as data to a text editor.
@@ -53,11 +55,8 @@ namespace FileCompass
             if (!edit && Kind(file) == "media" && String.IsNullOrWhiteSpace(settings.MediaPlayerPath))
             { new MediaViewerWindow(owner, file).Show(); return; }
             var info=LaunchInfo(file, settings, edit);
-            if(edit && info.UseShellExecute && info.Verb=="open" && (AttachmentSecurity.RequiresLaunchConfirmation(file)||AttachmentSecurity.ReadZone(file)!=null) &&
-                MessageBox.Show(owner,L.Text("security.externalEditorWarning"),L.Text("action.openEditor"),MessageBoxButton.YesNo,MessageBoxImage.Warning,MessageBoxResult.No)!=MessageBoxResult.Yes)return;
-            if(edit && UsesAssociatedEditor(file))StartAssociatedEdit(info,delegate(ProcessStartInfo start){Process.Start(start);});
+            if(edit && UsesAssociatedEditor(file))StartAssociatedEdit(info,delegate(ProcessStartInfo start){Process.Start(start);},owner);
             else Process.Start(info);
         }
     }
 }
-

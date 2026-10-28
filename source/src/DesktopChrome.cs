@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -46,9 +46,10 @@ namespace FileCompass
             AddMenu(file, L.Text("action.createChecksums"), CreateChecksumsDialog);
             AddMenu(file, L.Text("action.verifyChecksums"), delegate { VerifyChecksumsDialog(); });
             file.Items.Add(new Separator());
-            AddMenu(file, L.Text("menu.view"), delegate { active.ViewSelected(); }, "F3"); AddMenu(file, L.Text("action.edit"), EditSelected, "F4");
+            AddMenu(file, L.Text("menu.view"), delegate { active.ViewSelected(); }, "F3"); AddMenu(file, L.Text("action.edit"), EditSelected, "F4"); AddMenu(file,L.Text("codeEditor.external"),EditExternalSelected,"Shift+F4");
             AddMenu(file, L.Text("action.copy"), delegate { Transfer(false); }, "F5"); AddMenu(file, L.Text("action.move"), delegate { Transfer(true); }, "F6");
             AddMenu(file, L.Text("action.newFolder"), NewFolder, "F7"); AddMenu(file, L.Text("action.rename"), Rename, "Shift+F6");
+            AddMenu(file,L.Text("codeEditor.new"),NewTextFile,"F2 / Ctrl+N");
             AddMenu(file, L.Text("action.batchRename"), MultiRename, "Ctrl+M");
             AddMenu(file, L.Text("tags.edit"), EditTags);
             AddMenu(file, L.Text("imageTools.title"), QuickImageTools);
@@ -66,7 +67,7 @@ namespace FileCompass
             AddMenu(edit, L.Text("action.copyToClipboard"), delegate { CopyClipboard(false); }, "Ctrl+C"); AddMenu(edit, L.Text("action.cut"), delegate { CopyClipboard(true); }, "Ctrl+X"); AddMenu(edit, L.Text("action.paste"), PasteClipboard, "Ctrl+V");
             AddMenu(edit, L.Text("clipboard.copyNames"), delegate { CopyNames(false); }, "Ctrl+Shift+N"); AddMenu(edit, L.Text("clipboard.copyFullPaths"), delegate { CopyNames(true); }, "Ctrl+Shift+C");
             AddMenu(edit, L.Text("clipboardFile.title"), PasteClipboardAsFile, "Ctrl+Shift+V"); var commands = MenuRoot(menus, L.Text("menu.commands"));
-            AddMenu(commands, L.Text("action.refresh"), delegate { left.Refresh(); right.Refresh(); }, "Ctrl+R");
+            AddMenu(commands, L.Text("action.refresh"), RefreshPanels, "Ctrl+R",true);
             AddMenu(commands, L.Text("action.parentFolder"), delegate { active.Up(); }, "Backspace");
             AddMenu(commands, L.Text("panel.swap"), SwapPanels);
             AddMenu(commands, L.Text("panel.openSameFolderInOtherPanel"), OpenSameFolder);
@@ -118,37 +119,34 @@ namespace FileCompass
             AddMenu(start, L.Text("action.runPowerShellHere"), OpenPowerShell, "Ctrl+Alt+P");
             AddReleaseTools(edit, commands, config);
             AddMediaMenu(media,file,commands);
+            AddMenu(commands,L.Text("ext.title"),delegate{new ExtBrowserWindow(this).Show();});
             OrganizeMainMenus(file, select, edit, commands, network, display);
             menuRow.Children.Add(menus); top.Children.Add(menuRow);
             var tools = new WrapPanel { Orientation = Orientation.Horizontal };
-            Tool(tools, "refresh", L.Text("toolbar.refreshShortcut"), delegate { left.Refresh(); right.Refresh(); });
-            ToolSeparator(tools);
-            AddViewToolbarControls(tools);
-            Tool(tools, "invert", L.Text("selection.invertMarks") + " (Num *)", delegate { active.InvertMarks(); });
-            var directions = new StackPanel { Orientation = Orientation.Horizontal };
-            Tool(directions, "forward", L.Text("toolbar.folderLeftToRight"), delegate { OpenFolderInOtherPanel(left); });
-            Tool(directions, "back", L.Text("toolbar.folderRightToLeft"), delegate { OpenFolderInOtherPanel(right); });
-            tools.Children.Add(directions);
-            Tool(tools,"undo",L.Text("undoHistory.title"),ShowSafeUndo);
-            updateDirectionTools = delegate {
-                double needed = 0;
-                foreach (UIElement item in directions.Children) { item.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity)); needed += item.DesiredSize.Width; }
-                foreach (UIElement item in tools.Children) if (item != directions) { item.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity)); needed += item.DesiredSize.Width; }
-                directions.Visibility = panelLayout != "Single" && tools.ActualWidth >= needed ? Visibility.Visible : Visibility.Collapsed;
-            };
-            tools.SizeChanged += delegate { updateDirectionTools(); };
-            ToolSeparator(tools);
-            toolbarPreviewButton = Tool(tools, "view", L.Text("toolbar.filePreviewHelp"), ToggleQuickPreview, L.Text("toolbar.filePreview"));
-            Tool(tools, "edit", L.Text("toolbar.editHelp"), EditSelected, L.Text("toolbar.edit"));
-            toolbarThumbnailsButton = Tool(tools, "picture", L.Text("media.tilesHelp"), delegate { active.SetDisplay(active.DisplayMode == "Thumbnails" ? "Details" : "Thumbnails"); }, L.Text("action.preview"));
-            ToolSeparator(tools);
-            Tool(tools, "pack", L.Text("toolbar.compressShortcut"), CreateArchive, L.Text("action.compressArchive"));
-            Tool(tools, "unpack", L.Text("toolbar.extractShortcut"), ExtractArchives, L.Text("action.extractArchive"));
-            Tool(tools, "ftp", L.Text("connections.title"), delegate { ManageConnections(); }, L.Text("toolbar.connections"));
-            ToolSeparator(tools);
-            Tool(tools, "search", L.Text("toolbar.findFilesShortcut"), FindFiles, L.Text("action.search"));
-            Tool(tools, "favorite", L.Text("toolbar.favoritesShortcut"), ShowFavorites);
-            Tool(tools, "settings", L.Text("settings.title"), delegate { new ConfigurationDialog(this).ShowDialog(); });
+            var view=ToolbarGroup(tools,"view");AddViewToolbarControls(view);
+            Tool(view,"invert",L.Text("selection.invertMarks")+" (Num *)",delegate{active.InvertMarks();});
+            Tool(view,"undo",L.Text("undoHistory.title"),ShowSafeUndo);
+            var navigation=ToolbarGroup(tools,"navigation");
+            Tool(navigation,"search",L.Text("toolbar.findFilesShortcut"),FindFiles,L.Text("action.search"));
+            Tool(navigation,"favorite",L.Text("toolbar.favoritesShortcut"),ShowFavorites);
+            var directions=new StackPanel{Orientation=Orientation.Horizontal};
+            Tool(directions,"forward",L.Text("toolbar.folderLeftToRight"),delegate{OpenFolderInOtherPanel(left);});
+            Tool(directions,"back",L.Text("toolbar.folderRightToLeft"),delegate{OpenFolderInOtherPanel(right);});navigation.Children.Add(directions);
+            updateDirectionTools=delegate{directions.Visibility=panelLayout=="Single"?Visibility.Collapsed:Visibility.Visible;};
+            var files=ToolbarGroup(tools,"files");
+            toolbarPreviewButton=Tool(files,"view",L.Text("toolbar.filePreviewHelp"),ToggleQuickPreview,L.Text("toolbar.filePreview"));
+            toolbarThumbnailsButton=Tool(files,"picture",L.Text("media.tilesHelp"),delegate{active.SetDisplay(active.DisplayMode=="Thumbnails"?"Details":"Thumbnails");},L.Text("action.preview"));
+            Tool(files,"edit",L.Text("toolbar.editHelp"),EditSelected,L.Text("toolbar.edit"));
+            var utilities=ToolbarGroup(tools,"utilities");
+            AddToolsToolbarButton(utilities);
+            Tool(utilities,"sync",L.Text("action.synchronizeFolders"),delegate{CompareFolders(true);},L.Text("action.synchronize"));
+            var archives=ToolbarGroup(tools,"archives");
+            Tool(archives,"pack",L.Text("toolbar.compressShortcut"),CreateArchive,L.Text("action.compressArchive"));
+            Tool(archives,"unpack",L.Text("toolbar.extractShortcut"),ExtractArchives,L.Text("action.extractArchive"));
+            var connections=ToolbarGroup(tools,"connections");
+            Tool(connections,"ftp",L.Text("connections.title"),delegate{ManageConnections();},L.Text("toolbar.connections"));
+            var settingsTools=new StackPanel{Orientation=Orientation.Horizontal};tools.Children.Add(settingsTools);
+            Tool(settingsTools,"settings",L.Text("settings.title"),delegate{new ConfigurationDialog(this).ShowDialog();});
             top.Children.Add(new Border { Tag = "main-toolbar-frame", Child = tools, Margin = new Thickness(8, 4, 8, 6), CornerRadius = new CornerRadius(8), Padding = new Thickness(6, 4, 6, 4), Background = CompactTheme.PanelSurface, BorderBrush = CompactTheme.ChromeLine, BorderThickness = new Thickness(1) });
 
             var commandRow = new DockPanel { Margin = new Thickness(8, 2, 8, 6) };
@@ -171,12 +169,13 @@ namespace FileCompass
             };
             InitializeCopySummary(); bottom.Children.Add(copySummary);
             bottom.Children.Add(commandRow);
-            var keys = new UniformGrid { Rows = 1, Columns = 7, Margin = new Thickness(6, 0, 6, 7) };
-            AddAction(keys, L.Text("functionKey.view"), delegate { active.ViewSelected(); }); AddAction(keys, L.Text("functionKey.edit"), EditSelected);
-            AddAction(keys, L.Text("functionKey.copy"), delegate { Transfer(false); }); AddAction(keys, L.Text("functionKey.move"), delegate { Transfer(true); });
-            AddAction(keys, L.Text("functionKey.newFolder"), NewFolder);
-            AddAction(keys, L.Text("functionKey.delete"), DeleteSelected);
-            AddAction(keys, L.Text("functionKey.exit"), Close); bottom.Children.Add(keys);
+            var keys = new UniformGrid { Rows = 1, Columns = 8, Margin = new Thickness(6, 0, 6, 7) };
+            AddAction(keys,"F2 "+L.Text("codeEditor.new"),NewTextFile,"newFile");
+            AddAction(keys, L.Text("functionKey.view"), delegate { active.ViewSelected(); },"view"); AddAction(keys, L.Text("functionKey.edit"), EditSelected,"edit");
+            AddAction(keys, L.Text("functionKey.copy"), delegate { Transfer(false); },"copy"); AddAction(keys, L.Text("functionKey.move"), delegate { Transfer(true); },"move");
+            AddAction(keys, L.Text("functionKey.newFolder"), NewFolder,"newFolder");
+            AddAction(keys, L.Text("functionKey.delete"), DeleteSelected,"delete");
+            AddAction(keys, L.Text("functionKey.exit"), Close,"exit"); bottom.Children.Add(keys);
         }
 
         MenuItem MenuRoot(Menu menu, string name) { var item = new MenuItem { Header = name, Height = 28, Padding = new Thickness(8, 3, 8, 3) }; menu.Items.Add(item); return item; }
@@ -186,14 +185,14 @@ namespace FileCompass
             ((MenuItem)parent.Items[parent.Items.Count - 1]).Icon = DesktopIcons.Toolbar(icon, 16);
             toolbarImages.Add((Image)((MenuItem)parent.Items[parent.Items.Count - 1]).Icon);
         }
-        void AddMenu(MenuItem parent, string title, Action action, string shortcut = "")
+        void AddMenu(MenuItem parent, string title, Action action, string shortcut = "", bool allowDuringLoading=false)
         {
             var item = new MenuItem { Header = title, InputGestureText = shortcut, IsEnabled = action != null, ToolTip = action == null ? L.Text("common.featureNotImplemented") : null };
             RegisterReleaseCommand(item, title, action, shortcut);
             ToolTipService.SetShowOnDisabled(item, true);
-            if (action != null) item.Click += delegate { if (!busy && !PanelsLoading) action(); }; parent.Items.Add(item);
+            if (action != null) item.Click += delegate { if (!busy && (!PanelsLoading||allowDuringLoading)) action(); }; parent.Items.Add(item);
         }
-        Button Tool(Panel panel, string icon, string tooltip, Action action, string label = null)
+        Button Tool(Panel panel, string icon, string tooltip, Action action, string label = null, bool allowDuringLoading=false)
         {
             var image = DesktopIcons.Toolbar(icon, 20); toolbarImages.Add(image);
             object content = image;
@@ -202,12 +201,31 @@ namespace FileCompass
                 var row = new StackPanel { Orientation = Orientation.Horizontal };
                 row.Children.Add(image); row.Children.Add(new TextBlock { Text = label, Margin = new Thickness(7, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center }); content = row;
             }
-            var button = CompactTheme.Button(content, tooltip, delegate { if (!busy && !PanelsLoading && action != null) action(); });
+            var button = CompactTheme.Button(content, tooltip, delegate { if (!busy && (!PanelsLoading||allowDuringLoading) && action != null) action(); });
+            if(allowDuringLoading)refreshActions.Add(button);
             CompactTheme.ToolbarTile(button);
             System.Windows.Automation.AutomationProperties.SetName(button, label ?? tooltip);
             if (action == null) { button.IsEnabled = false; button.ToolTip = tooltip + L.Text("common.notImplementedSuffix"); } else actions.Add(button);
             ToolTipService.SetShowOnDisabled(button, true); panel.Children.Add(button);
             return button;
+        }
+        readonly System.Collections.Generic.HashSet<Button> refreshActions=new System.Collections.Generic.HashSet<Button>();
+        internal void RefreshPanels(){if(!left.IsLoading)left.Refresh();if(!right.IsLoading)right.Refresh();}
+        StackPanel ToolbarGroup(Panel toolbar,string name){var group=new StackPanel{Orientation=Orientation.Horizontal,Tag="toolbar-group-"+name,Margin=new Thickness(0,0,5,0)};bool first=toolbar.Children.Count==0;toolbar.Children.Add(group);if(!first)ToolSeparator(group);return group;}
+        void AddToolsToolbarButton(Panel toolbar){
+            Button button=null;
+            button=Tool(toolbar,"tools",L.Text("operation.tools"),delegate{
+                button.ContextMenu.PlacementTarget=button;button.ContextMenu.IsOpen=true;
+            },L.Text("operation.tools")+" ▾");
+            var menu=new ContextMenu{Placement=PlacementMode.Bottom};button.ContextMenu=menu;
+            Action<string,Action> add=(key,run)=>{
+                var item=new MenuItem{Header=L.Text(key)};
+                item.Click+=delegate{if(!busy&&!PanelsLoading)run();};menu.Items.Add(item);
+            };
+            add("analyzer.title",AnalyzeFolder);add("smart.title",ShowDiskSmart);
+            menu.Items.Add(new Separator());
+            add("media.convertImages",delegate{OpenMediaConverter(true);});
+            add("media.convertAudio",delegate{OpenMediaConverter(false);});
         }
         void ToolSeparator(Panel panel) { panel.Children.Add(new Border { Width = 1, Height = 22, Background = CompactTheme.Line, Margin = new Thickness(5, 7, 5, 7) }); }
         void OpenExplorer() {
@@ -249,10 +267,11 @@ namespace FileCompass
         }
         void EditSelected()
         {
+            if(RejectExtWrite())return;
             if (active.IsArchive) { var item = active.List.SelectedItem as Entry; if (item != null && !item.IsDirectory) OpenArchiveFile(active, item, true); return; }
             if (active.IsRemote) { EditRemoteSelected(); return; }
             var entry = active.List.SelectedItem as Entry; if (entry == null || entry.IsDirectory) return;
-            try { FileViewers.Open(this, entry.FullPath, true); }
+            try { if(ProgramSettings.Load().InternalTextEditor&&FileViewers.CanEditInternally(entry.FullPath))OpenInternalEditor(entry.FullPath);else FileViewers.Open(this, entry.FullPath, true); }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, L.Text("editor.openFailed")); }
         }
         void UpdatePrompt() { if (active != null) commandPrompt.Text = (active.DisplayPath ?? "") + ">"; }
@@ -270,7 +289,3 @@ namespace FileCompass
         }
     }
 }
-
-
-
-

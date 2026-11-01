@@ -19,7 +19,7 @@ namespace FileCompass
                 check(FileBehavior.CompareNames("x9999999999999999999999999999999", "x10000000000000000000000000000000", true) < 0, "numeric comparison cannot overflow");
                 check(FileBehavior.CompareNames("x2", "x02", true) < 0, "equal numbers have stable leading-zero order");
                 var previous = CultureInfo.CurrentCulture;
-                try { System.Threading.Thread.CurrentThread.CurrentCulture = new CultureInfo("cs-CZ"); check(FileBehavior.CompareNames("číslo2", "dopis1", true) < 0, "text comparison respects Czech collation"); } finally { System.Threading.Thread.CurrentThread.CurrentCulture = previous; }
+                try { System.Threading.Thread.CurrentThread.CurrentCulture = new CultureInfo("cs"); check(FileBehavior.CompareNames("číslo2", "dopis1", true) < 0, "text comparison respects Czech collation"); } finally { System.Threading.Thread.CurrentThread.CurrentCulture = previous; }
                 var settings = new ProgramSettings { DefaultCopyVerify = true, DefaultCopyTimes = false, DefaultCopyAttributes = false, DefaultCopyPermissions = true, DefaultCopyEmptyFolders = false, DefaultCopySkipHidden = true, DeleteToRecycleBin = false };
                 string config = Path.Combine(root, "preferences.xml"); settings.Save(config); var restored = ProgramSettings.Load(config);
                 check(restored.DefaultCopyVerify && !restored.DefaultCopyTimes && !restored.DefaultCopyAttributes && restored.DefaultCopyPermissions && !restored.DefaultCopyEmptyFolders && restored.DefaultCopySkipHidden && !restored.DeleteToRecycleBin && restored.NaturalSorting && restored.RenameWithoutExtension, "operation defaults and behavior survive settings roundtrip");

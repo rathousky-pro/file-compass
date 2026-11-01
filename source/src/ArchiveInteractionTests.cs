@@ -18,7 +18,7 @@ namespace FileCompass {
             Directory.CreateDirectory(root);var checks=new List<string>();var windows=new List<Window>();string oldSettings=ArchiveSettings.TestPath;
             Action<bool,string> check=(yes,message)=>{if(!yes)throw new Exception(message);checks.Add(message);File.WriteAllLines(Path.Combine(root,"progress.txt"),checks);};
             try{
-                SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));FluentTheme.Ensure();L.ChangeLanguage("cs-CZ");
+                SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));FluentTheme.Ensure();L.ChangeLanguage("cs");
                 ArchiveSettings.TestPath=Path.Combine(root,"archive-settings.xml");var settings=new ArchiveSettings{MaximumMemoryMiB=512};settings.Save();
                 var random=new Random(828);var words=Enumerable.Range(0,1200).Select(i=>new string(Enumerable.Range(0,random.Next(4,140)).Select(n=>(char)random.Next(32,126)).ToArray())).ToArray();var corpus=new StringBuilder();
                 for(int i=0;i<35000;i++){corpus.Append("<row id=\"").Append(i%731).Append("\" value=\"").Append(words[random.Next(words.Length)]).Append("\" category=\"").Append(i%19).Append("\"/>\n");}

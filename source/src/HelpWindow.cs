@@ -67,7 +67,7 @@ namespace FileCompass {
             try {
                 Title=L.Text("help.title");BackButton.Content=L.Text("help.back");ForwardButton.Content=L.Text("help.forward");HomeButton.Content=L.Text("help.home");BrowserButton.Content=L.Text("help.openBrowser");
                 searchLabel.Text=L.Text("help.search");Search.ToolTip=L.Text("help.search");Topics.ToolTip=L.Text("help.contents");
-                language.Text=L.Format("help.contentLanguage",L.Text(HelpContent.ContentLanguage=="cs-CZ"?"help.languageCzech":"help.languageEnglish"));
+                language.Text=L.Format("help.contentLanguage",L.Text(HelpContent.ContentLanguage=="cs"?"help.languageCzech":"help.languageEnglish"));
                 var catalog=HelpContent.Load();topics=catalog.ToDictionary(t=>t.Id,StringComparer.Ordinal);
                 index=catalog.ToDictionary(t=>t.Id,HelpContent.SearchText,StringComparer.Ordinal);
                 Topics.Items.Clear();treeItems.Clear();
@@ -80,7 +80,7 @@ namespace FileCompass {
             UpdateTopicWidths();Render();
         }
         void UpdateTopicWidths(){foreach(var item in treeItems.Values){var text=item.Header as TextBlock;if(text!=null)text.MaxWidth=Math.Max(100,Topics.ActualWidth-70);}}
-        void ContentLanguage(string code){language.Text=L.Format("help.contentLanguage",L.Text(code=="cs-CZ"?"help.languageCzech":"help.languageEnglish"));}
+        void ContentLanguage(string code){language.Text=L.Format("help.contentLanguage",L.Text(code=="cs"?"help.languageCzech":"help.languageEnglish"));}
         internal void Navigate(string id) {
             if(!topics.ContainsKey(id))id="home";
             updating=true;try{Search.Text="";}finally{updating=false;}

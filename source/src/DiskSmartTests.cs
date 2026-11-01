@@ -28,7 +28,7 @@ namespace FileCompass {
             return disk;
         }
         static void PresentationAndExport(DiskSmartWindow window,string root,Action<bool,string> check) {
-            L.ChangeLanguage("cs-CZ");LiveLanguage.Refresh();AppearanceTheme.Apply("Light");window.Width=1360;window.Height=900;
+            L.ChangeLanguage("cs");LiveLanguage.Refresh();AppearanceTheme.Apply("Light");window.Width=1360;window.Height=900;
             var disk=ManyAttributes(30);window.Disks.ItemsSource=new[]{disk};window.Disks.SelectedIndex=0;
             NavigationTests.Wait(System.Threading.Tasks.Task.Delay(200));window.UpdateLayout();
             check(window.HealthValue.FontSize>=24&&window.TemperatureValue.FontSize>=30,"Health and temperature are prominent");
@@ -63,7 +63,7 @@ namespace FileCompass {
 
 
         static void TilesAndClipboard(DiskSmartWindow window,string root,Action<bool,string> check) {
-            L.ChangeLanguage("cs-CZ");LiveLanguage.Refresh();AppearanceTheme.Apply("Light");window.Width=1120;window.Height=790;
+            L.ChangeLanguage("cs");LiveLanguage.Refresh();AppearanceTheme.Apply("Light");window.Width=1120;window.Height=790;
             var good=SmartDisk.Parse("/dev/sdb","nvme",Nvme);good.Letters="C: D:";
             var caution=SmartDisk.Parse("/dev/sda","ata",Ata.Replace("\"passed\":true","\"passed\":false"));caution.Letters="E:";
             var unknown=SmartDisk.Parse("/dev/usb","ata","{}");

@@ -3,7 +3,7 @@ using System;using System.IO;using System.Linq;using System.Collections.Generic;
 namespace FileCompass {
  internal static class ArchiveSfxTests {
   internal static int Run(string root){Directory.CreateDirectory(root);var log=new List<string>();Action<bool,string> check=(ok,text)=>{if(!ok)throw new Exception(text);log.Add(text);};try{
-   FluentTheme.Ensure();L.ChangeLanguage("cs-CZ");var settings=new ArchiveSettings{WinRarPath=ArchiveSettings.FindWinRar()??"",ArjPath=Path.GetFullPath(Path.Combine(root,"..","..","sfx-research","arj","ARJ32.EXE"))};
+   FluentTheme.Ensure();L.ChangeLanguage("cs");var settings=new ArchiveSettings{WinRarPath=ArchiveSettings.FindWinRar()??"",ArjPath=Path.GetFullPath(Path.Combine(root,"..","..","sfx-research","arj","ARJ32.EXE"))};
    if(File.Exists(settings.WinRarPath)){ToolTrust.Approve(settings.WinRarPath);ToolTrust.Approve(settings.RarExecutable());}if(File.Exists(settings.ArjPath))ToolTrust.Approve(settings.ArjPath);settings.Save();
    string input=Path.Combine(root,"hello.txt");File.WriteAllText(input,"SFX fixture with actual content");
    foreach(string format in new[]{"7z","zip","rar","arj"}){

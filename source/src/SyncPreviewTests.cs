@@ -15,7 +15,7 @@ namespace FileCompass
     {
         internal static int Run(string directory)
         {
-            AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(directory),"profile");L.ChangeLanguage("cs-CZ");
+            AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(directory),"profile");L.ChangeLanguage("cs");
             var checks = new List<string>(); Action<bool,string> check = delegate(bool value,string message) { if (!value) throw new Exception(message); checks.Add(message); };
             try {
                 SynchronizationContext.SetSynchronizationContext(new System.Windows.Threading.DispatcherSynchronizationContext(System.Windows.Threading.Dispatcher.CurrentDispatcher));

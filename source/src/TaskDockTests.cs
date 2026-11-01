@@ -18,7 +18,7 @@ namespace FileCompass {
         Directory.CreateDirectory(root);var checks=new List<string>();MainWindow main=null;var windows=new List<Window>();
         Action<bool,string> check=(yes,label)=>{if(!yes)throw new Exception(label);checks.Add(label);};
         try {
-            SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));L.ChangeLanguage("cs-CZ");FluentTheme.Ensure();AppearanceTheme.Apply("Light");
+            SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));L.ChangeLanguage("cs");FluentTheme.Ensure();AppearanceTheme.Apply("Light");
             string folder=Directory.CreateDirectory(Path.Combine(root,"data")).FullName;File.WriteAllText(Path.Combine(folder,"one.txt"),"fixture");
             main=new MainWindow(folder,new ProgramSettings{AutoRefresh=false}){Width=1400,Height=860};Open(main);NavigationTests.WaitPanels(main);
             var smart=new DiskSmartWindow(main,false);windows.Add(smart);Open(smart);

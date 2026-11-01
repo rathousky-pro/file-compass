@@ -52,7 +52,7 @@ namespace FileCompass {
                     check(rows.Max()-rows.Min()<1&&pages.Max()-pages.Min()<1&&(fits?inside:scroll.ScrollableWidth>0),locale+" / "+size+": translated headers stay in one row; window="+Width.ToString("F0")+", measured="+AnalyzerRequiredWidth.ToString("F0"));
                     var choice=ChartChoice.TranslatePoint(new Point(),this);var chart=Chart.TranslatePoint(new Point(),this);
                     check(choice.X>=chart.X-12&&choice.Y+ChartChoice.ActualHeight<=chart.Y&&analyzerActions.DesiredSize.Width<=((ScrollViewer)analyzerActions.Parent).ViewportWidth+1,locale+" / "+size+": chart type is over the graph and footer actions fit their row");
-                    if(size==16&&(locale=="cs-CZ"||locale=="de"||locale=="fr"))NextStageTests.Draw(this,Path.Combine(output,"translated-"+locale+"-16.png"));
+                    if(size==16&&(locale=="cs"||locale=="de"||locale=="fr"))NextStageTests.Draw(this,Path.Combine(output,"translated-"+locale+"-16.png"));
                 }
                 check(Object.ReferenceEquals(result,Result)&&Object.ReferenceEquals(task,ScanTask),"Language and font sizing retain the current analysis without restarting it");
             }finally{foreach(var item in originalFonts){if(item.Value==DependencyProperty.UnsetValue)item.Key.ClearValue(Control.FontSizeProperty);else item.Key.SetValue(Control.FontSizeProperty,item.Value);}if(hadStyle)Resources[typeof(TextBlock)]=oldStyle;else Resources.Remove(typeof(TextBlock));L.ChangeLanguage(language);LiveLanguage.Refresh(this);FontSize=font;Width=width;Height=height;FitAnalyzerWidth();UpdateLayout();}

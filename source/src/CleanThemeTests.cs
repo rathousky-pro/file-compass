@@ -7,7 +7,7 @@ namespace FileCompass {
   static string ColorOf(Brush b){return ((SolidColorBrush)b).Color.ToString();}
   internal static int Run(string root){Directory.CreateDirectory(root);var log=new List<string>();var windows=new List<Window>();string motif=AppearanceTheme.Motif,mode=AppearanceTheme.Mode;Action<bool,string> check=(ok,text)=>{if(!ok)throw new Exception(text);log.Add(text);};
    try{
-    L.Initialize();L.ChangeLanguage("cs-CZ");FluentTheme.Ensure();AppearanceTheme.Apply("Light");AppearanceTheme.SetMotif("Classic");
+    L.Initialize();L.ChangeLanguage("cs");FluentTheme.Ensure();AppearanceTheme.Apply("Light");AppearanceTheme.SetMotif("Classic");
     check(new ProgramSettings().InterfaceMotif=="Clean"&&AppearanceTheme.NormalizeMotif("Balanced")=="Clean"&&AppearanceTheme.NormalizeMotif("Original")=="Clean","all legacy preferences migrate to the single layered appearance");
     var chrome=CompactTheme.Chrome;check(ColorOf(chrome)=="#FFCFDEEC","one blue-grey base is active even for a legacy Classic request");
     string sample=Path.Combine(root,"Ukázka.txt");File.WriteAllText(sample,"Clean theme fixture");var entries=new List<Entry>{new Entry{Name="Ukázka.txt",FullPath=sample,Bytes=19}};

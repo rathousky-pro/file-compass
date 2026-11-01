@@ -30,12 +30,12 @@ namespace FileCompass {
                 var preferences=new ProgramSettings{InterfaceMotif="Classic",ColorTheme="Dark",WindowBackdrop="MicaAlt"};string config=Path.Combine(root,"settings.xml");preferences.Save(config);
                 var migrated=ProgramSettings.Load(config);check(migrated.InterfaceMotif=="Clean"&&migrated.ColorTheme=="Light"&&migrated.WindowBackdrop=="None","saving old preferences migrates all retired appearance options");
                 check(AppearanceTheme.Normalize("invalid")=="Light"&&AppearanceTheme.NormalizeMotif("invalid")=="Clean","unknown legacy values resolve to the new appearance"); var json=new JavaScriptSerializer();
-                var cs=json.Deserialize<Dictionary<string,string>>(File.ReadAllText(Path.Combine(installed,"cs-CZ.lng")));
+                var cs=json.Deserialize<Dictionary<string,string>>(File.ReadAllText(Path.Combine(installed,"cs.lng")));
                 var en=json.Deserialize<Dictionary<string,string>>(File.ReadAllText(Path.Combine(installed,"en.lng")));
                 check(cs.Keys.OrderBy(x=>x).SequenceEqual(en.Keys.OrderBy(x=>x)), "English catalog covers every Czech key");
                 check(cs.All(item => Regex.Matches(item.Value,@"\{\d+[^}]*\}").Cast<Match>().Select(x=>x.Value).OrderBy(x=>x).SequenceEqual(Regex.Matches(en[item.Key],@"\{\d+[^}]*\}").Cast<Match>().Select(x=>x.Value).OrderBy(x=>x))), "English translations preserve all format arguments");
                 check(en.All(x=>!x.Value.Contains("[[FC")&&!x.Value.Contains("â€")&&!x.Value.Contains("Ã")), "English catalog contains no translation markers or corrupted UTF-8");
-                foreach(var code in L.SupportedLanguages.Where(x=>x!="cs-CZ"&&x!="en")) {
+                foreach(var code in L.SupportedLanguages.Where(x=>x!="cs"&&x!="en")) {
                     var catalog=json.Deserialize<Dictionary<string,string>>(File.ReadAllText(Path.Combine(installed,code+".lng")));
                     check(catalog["_language"]==code&&cs.Keys.OrderBy(x=>x).SequenceEqual(catalog.Keys.OrderBy(x=>x)),code+": catalog metadata and all keys are present");
                     check(cs.All(item=>Regex.Matches(item.Value,@"\{\d+[^}]*\}").Cast<Match>().Select(x=>x.Value).OrderBy(x=>x).SequenceEqual(Regex.Matches(catalog[item.Key],@"\{\d+[^}]*\}").Cast<Match>().Select(x=>x.Value).OrderBy(x=>x))),code+": format arguments are preserved");
@@ -47,7 +47,7 @@ namespace FileCompass {
                     NextStageTests.Draw(dialog,Path.Combine(root,"settings-"+code+".png"));dialog.Close();dialog=null;
                 }
                 foreach(var key in new[]{"internal.sshExitStatusScript","proxy.basicAuthorizationHeader","clipboard.panelDataFormat","ssh.passwordPromptMatch"}) check(en[key]==cs[key], "Technical protocol value stays unchanged: "+key);
-                File.Copy(Path.Combine(installed,"cs-CZ.lng"),Path.Combine(root,"cs-CZ.lng"),true); File.Copy(Path.Combine(installed,"en.lng"),Path.Combine(root,"en.lng"),true);
+                File.Copy(Path.Combine(installed,"cs.lng"),Path.Combine(root,"cs.lng"),true); File.Copy(Path.Combine(installed,"en.lng"),Path.Combine(root,"en.lng"),true);
                 L.SaveSelection("en",root); check(File.ReadAllText(Path.Combine(root,"language.txt"))=="en", "Language selection is saved without changing current UI mid-dialog");
                 L.LoadForTests(installed,"en"); check(L.Text("action.copy")=="Copy"&&L.Text("action.cancel")=="Cancel"&&L.Text("menu.file")=="File", "English language is loaded with standard file-manager captions");
                 main.Close(); main = new MainWindow(root, new ProgramSettings { AutoRefresh = false }) { Left=-18000, Top=-18000, Width=1200, Height=760, ShowActivated=false, ShowInTaskbar=false, WindowStartupLocation=WindowStartupLocation.Manual }; main.Show(); NavigationTests.WaitPanels(main);

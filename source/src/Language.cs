@@ -28,23 +28,30 @@ namespace FileCompass
         internal static string CatalogKey(string text){Translation translation;return text!=null&&translations.TryGetValue(text,out translation)?translation.Key:null;}
         internal static bool IsCatalogText(string value){Translation translation;return value!=null&&translations.TryGetValue(value,out translation);}
         internal static void ChangeLanguage(string name) {
+            name=NormalizeLanguage(name);
             if(!SupportedLanguages.Contains(name))throw new ArgumentException("Unsupported language.");
             Ensure();string folder=AppPaths.Resource("languages");Dictionary<string,string> original;lock(gate)original=baseline;
-            var translation=name=="cs-CZ"?original:Read(Path.Combine(folder,name+".lng"));
+            var translation=name=="cs"?original:Read(Path.Combine(folder,name+".lng"));
             lock(gate)Apply(original,translation,name);
         }
         public static string Language { get; private set; }
         internal const string DefaultLanguage = "en";
-        internal static readonly string[] SupportedLanguages = { "cs-CZ", "en", "de", "es", "nl", "pl", "fr", "pt" };
+        internal static readonly string[] SupportedLanguages = { "cs", "en", "de", "es", "nl", "pl", "fr", "pt" };
         internal static readonly string[] LanguageNames = { "Čeština", "English", "Deutsch", "Español", "Nederlands", "Polski", "Français", "Português" };
+        // Accept the previous persisted identifier without exposing a second Czech language.
+        internal static string NormalizeLanguage(string name) {
+            name=name==null?null:name.Trim();
+            return String.Equals(name,"cs-CZ",StringComparison.OrdinalIgnoreCase)||String.Equals(name,"cs",StringComparison.OrdinalIgnoreCase)?"cs":name;
+        }
         internal static string StartupLanguage(string environment, string saved) {
-            return !String.IsNullOrWhiteSpace(environment) ? environment : !String.IsNullOrWhiteSpace(saved) ? saved.Trim() : DefaultLanguage;
+            return NormalizeLanguage(!String.IsNullOrWhiteSpace(environment) ? environment : !String.IsNullOrWhiteSpace(saved) ? saved : DefaultLanguage);
         }
         public static void Initialize() { Ensure(); }
         internal static string PreferredLanguage {
-            get { string path = Path.Combine(AppPaths.ConfigDirectory, "language.txt"); if (File.Exists(path)) { string name = File.ReadAllText(path).Trim(); if (SupportedLanguages.Contains(name)) return name; } return Language; }
+            get { string path = Path.Combine(AppPaths.ConfigDirectory, "language.txt"); if (File.Exists(path)) { string name = NormalizeLanguage(File.ReadAllText(path)); if (SupportedLanguages.Contains(name)) return name; } return Language; }
         }
         internal static void SaveSelection(string name, string folder = null) {
+            name=NormalizeLanguage(name);
             if (!SupportedLanguages.Contains(name)) throw new ArgumentException("Unsupported language.");
             bool explicitFolder = folder != null; folder = folder ?? AppPaths.Resource("languages");
             Read(Path.Combine(folder, name + ".lng"));
@@ -67,12 +74,12 @@ namespace FileCompass
             lock (gate) {
                 if (baseline != null) return;
                 string folder = Path.Combine(AppPaths.Resource("languages"));
-                var original = Read(Path.Combine(folder, "cs-CZ.lng"));
+                var original = Read(Path.Combine(folder, "cs.lng"));
                 string name = Environment.GetEnvironmentVariable("FILECOMPASS_LANGUAGE");
                 string config = Path.Combine(AppPaths.ConfigDirectory, "language.txt");
                 name = StartupLanguage(name, File.Exists(config) ? File.ReadAllText(config) : null);
                 if (name.Length > 40 || name.Any(c => !(Char.IsLetterOrDigit(c) || c == '-'))) throw new IOException("Invalid language identifier.");
-                var translation = name == "cs-CZ" ? original : Read(Path.Combine(folder, name + ".lng"));
+                var translation = name == "cs" ? original : Read(Path.Combine(folder, name + ".lng"));
                 Apply(original, translation, name);
             }
         }
@@ -83,7 +90,7 @@ namespace FileCompass
             Language = name; baseline = original;
         }
         internal static void LoadForTests(string folder, string name)
-        { lock (gate) { var original = Read(Path.Combine(folder, "cs-CZ.lng")); Apply(original, name == "cs-CZ" ? original : Read(Path.Combine(folder, name + ".lng")), name); } }
+        { name=NormalizeLanguage(name);lock (gate) { var original = Read(Path.Combine(folder, "cs.lng")); Apply(original, name == "cs" ? original : Read(Path.Combine(folder, name + ".lng")), name); } }
         public static string Text(string key) { Ensure(); lock(gate){key = LanguageKeyAliases.Resolve(key); string value; if (selected.TryGetValue(key, out value) || baseline.TryGetValue(key, out value)) return Remember(value,key); throw new KeyNotFoundException("Missing language key: " + key);} }
         // Canonical persisted states are independent of the selected display language.
         public static string Code(string key) { Ensure(); lock(gate)return baseline[LanguageKeyAliases.Resolve(key)]; }

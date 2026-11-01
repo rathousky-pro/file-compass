@@ -19,7 +19,7 @@
       "ext",
       "editor"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "panels",
@@ -34,7 +34,7 @@
       "linked",
       "workspaces"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "preview",
@@ -51,7 +51,7 @@
       "metadata",
       "editor"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "editor",
@@ -66,7 +66,7 @@
       "archives",
       "keys"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "copy",
@@ -82,7 +82,7 @@
       "undo",
       "locks"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "conflicts",
@@ -96,7 +96,7 @@
       "trouble",
       "checksums"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "archives",
@@ -110,7 +110,7 @@
       "guide.archives",
       "conflicts"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "network",
@@ -126,7 +126,7 @@
       "guide.cloud",
       "ext"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "smb",
@@ -139,7 +139,7 @@
       "copy",
       "trouble"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "cloud",
@@ -153,7 +153,7 @@
       "trouble",
       "guide.cloud"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "search",
@@ -168,7 +168,7 @@
       "checksums",
       "guide.tools"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "sync",
@@ -183,7 +183,7 @@
       "linked",
       "checksums"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "disk",
@@ -197,7 +197,7 @@
       "trouble",
       "smart"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "settings",
@@ -211,7 +211,7 @@
       "commands",
       "updates"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "keys",
@@ -226,7 +226,7 @@
       "commands",
       "editor"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "trouble",
@@ -244,7 +244,7 @@
       "media-audio",
       "settings"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "move",
@@ -258,7 +258,7 @@
       "panels",
       "undo"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "delete",
@@ -272,7 +272,7 @@
       "locks",
       "undo"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "attributes",
@@ -285,7 +285,7 @@
       "trouble",
       "metadata"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "rename",
@@ -301,7 +301,7 @@
       "metadata",
       "undo"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "smart",
@@ -313,7 +313,7 @@
       "disk",
       "trouble"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "checksums",
@@ -326,7 +326,7 @@
       "sync",
       "trouble"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "workspaces",
@@ -339,7 +339,7 @@
       "settings",
       "linked"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "start",
@@ -352,7 +352,7 @@
       "network",
       "undo"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "ssh",
@@ -365,7 +365,7 @@
       "copy",
       "trouble"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "guide.panels",
@@ -379,7 +379,7 @@
       "csv",
       "settings"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "guide.operations",
@@ -394,7 +394,7 @@
       "undo",
       "sync"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "guide.tools",
@@ -410,7 +410,7 @@
       "commands",
       "workspaces"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "guide.archives",
@@ -423,7 +423,7 @@
       "archives",
       "guide.operations"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "guide.cloud",
@@ -436,7 +436,7 @@
       "network",
       "trouble"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "guide.third-party-notices",
@@ -458,7 +458,7 @@
     "Related": [
       "preview"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "media-audio",
@@ -470,7 +470,7 @@
       "media-advanced",
       "undo"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "media-advanced",
@@ -482,7 +482,7 @@
       "media-audio",
       "media-images"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "media-images",
@@ -494,7 +494,7 @@
       "media-advanced",
       "metadata"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "metadata",
@@ -506,7 +506,7 @@
       "rename",
       "undo"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "undo",
@@ -519,7 +519,7 @@
       "move",
       "delete"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "locks",
@@ -530,7 +530,7 @@
     "Related": [
       "trouble"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "presets",
@@ -541,7 +541,7 @@
     "Related": [
       "copy"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "linked",
@@ -552,7 +552,7 @@
     "Related": [
       "sync"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "commands",
@@ -563,7 +563,7 @@
     "Related": [
       "keys"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "media",
@@ -579,7 +579,7 @@
       "media-advanced",
       "rename"
     ],
-    "SourceLanguage": "cs-CZ"
+    "SourceLanguage": "cs"
   },
   {
     "Id": "ext",
@@ -587,7 +587,7 @@
     "Title": "Linuxové disky: ext2, ext3 a ext4",
     "Summary": "Čtení fyzických USB disků i obrazů bez instalace ovladače linuxového souborového systému.",
     "Body": "<p>Linuxové disky otevřete přes Příkazy → Diskové nástroje → Linuxové disky. Po otevření se načtou USB disky a oddíly prvního disku. Při výběru jiného disku se jeho oddíly načtou automaticky. Tlačítkem Otevřít vlevo nebo Otevřít vpravo určíte cílový panel. Obnovit znovu vyhledá připojené disky; Načíst oddíly zopakuje čtení vybraného disku.</p><h2>Oddíl v hlavním panelu</h2><p>Po načtení oddílů zvolte Otevřít vlevo nebo Otevřít vpravo. Složky otevřete Enterem, Backspace přejde do nadřazené složky. F3 připraví náhled souboru v protějším panelu. F5 zkopíruje vybrané soubory či složky do nové složky Linux-export v místním protějším panelu. Zdroj zůstává pouze pro čtení: přejmenování, úpravy, mazání, přesun a vkládání jsou zakázané. Přenos přes schránku či přetažení zatím použijte přes F5.</p><h2>Automatické hledání</h2><p>Při spuštění File Compassu jako správce program na pozadí hledá oddíly EXT na USB discích, také bez písmene jednotky Windows. Nalezené podporované oddíly přidá do výběru disků s označením EXT. Změny zařízení kontroluje přibližně každých deset sekund; opakované čtení oddílů omezuje mezipaměť. Bez oprávnění správce použijte Příkazy → Diskové nástroje → Linuxové disky a Otevřít jako správce. Ruční prohledání ukazuje i chyby nepodporovaných nebo nečistě odpojených oddílů.</p><h2>Otevření linuxového disku</h2><ol><li>Připojte USB disk. Případnou nabídku Windows na inicializaci nebo formátování zrušte.</li><li>Zvolte Příkazy → Diskové nástroje → Linuxové disky. Obnovte seznam zařízení, vyberte fyzický USB disk; jeho oddíly se načtou automaticky. Disk nepotřebuje písmeno jednotky ve Windows.</li><li>Při odmítnutém přístupu použijte Otevřít jako správce. Po potvrzení oprávnění Windows se otevře samostatná čtečka; vyberte disk znovu.</li><li>Vyberte podporovaný oddíl ext. Enter nebo dvojklik otevírá složky, Backspace přejde výše. Pole cesty ukazuje linuxovou cestu.</li></ol><h2>Náhled a kopírování</h2><p>F3 otevře náhled jednoho běžného souboru do 64 MiB. F5 zkopíruje označené soubory či složky do nové složky Linux-export ve vybraném cíli. Existující cílové soubory se nepřepisují. Kopírování na stejný fyzický zdrojový disk je odmítnuto. Zrušení zastaví proces čtečky; dokončené kopie zůstávají a dočasné nedokončené soubory se podle možností odstraní.</p><p>Symbolické odkazy a speciální soubory zařízení se přeskakují. Linuxové názvy lišící se jen velikostí písmen mohou ve Windows kolidovat: první dokončená kopie zůstane zachována a další se ohlásí. Vyhrazené názvy Windows, nepodporované znaky a příliš hluboké složky se hlásí jako problém, bez tichého přejmenování. Po operaci ověřte počet dokončených a přeskočených souborů.</p><h2>Zdroje a omezení</h2><p>Čtečka podporuje fyzické USB disky a surové obrazy disků nebo oddílů. Rozpoznává MBR i GPT včetně sektorů 512 a 4096 bajtů. Přes Otevřít obraz vyberte IMG, RAW, DD nebo obraz ext; komprimované obrazy a kontejnery VHD je nutné předem převést jiným nástrojem. Disk se nepřipojuje jako jednotka do Průzkumníku.</p><p>Všechny zdrojové popisovače i proudy souborového systému jsou pouze pro čtení. Nečisté systémy vyžadující obnovu žurnálu a nepodporované vlastnosti ext se odmítnou. Disk bezpečně odpojte v Linuxu; případnou kontrolu systému proveďte tam. Šifrování LUKS, logické svazky LVM ani RAID tato čtečka nerozbaluje. Btrfs a ZFS nejsou součástí této funkce.</p><h2>Odpojení a formátování USB</h2><p>Pravým tlačítkem na potvrzené odpojitelné USB jednotce v liště disků můžete požádat o bezpečné odebrání nebo otevřít systémový dialog formátování. Odebrání se týká celého fyzického zařízení i všech jeho svazků; Windows je může odmítnout při otevřených souborech. Formátování maže data a je samostatnou operací, nikdy součástí čtení linuxových souborů. Systémový disk a disk s aplikací tyto příkazy nedostávají.</p><h2>Ikona flash disku a nabídka pravého tlačítka</h2><p>Odpojitelné flash disky mají standardní ikonu vyměnitelného disku Windows. Najdete ji v liště disků i v roletce výběru jednotky. Klikněte na konkrétní jednotku pravým tlačítkem a zvolte Bezpečně odebrat nebo Formátovat. Formátování otevře původní dialog Windows pro vybrané písmeno; samotné mazání spustíte až v tomto dialogu.</p><p>Před akcí aplikace uvolní náhledy a přepne dotčené panely na systémový disk. Při odebrání se uvolňují všechna písmena stejného fyzického zařízení. Probíhající souborové operace příkazy dočasně zablokují. Pokud disk drží jiný program, Windows může odebrání odmítnout; zavřete soubory a zkuste akci znovu. Aplikace nevynucuje odpojení a neukončuje jiné programy. Po úspěšném odebrání se zobrazí potvrzení.</p>",
-    "SourceLanguage": "cs-CZ",
+    "SourceLanguage": "cs",
     "Related": [
       "network",
       "copy",
@@ -601,7 +601,7 @@
     "Title": "Aktualizace programu a doplňků",
     "Summary": "Kontrola verzí, ověřené stažení a návrat předchozí součásti.",
     "Body": "<h2>Konfigurace → Aktualizace</h2><p>Ruční nebo denní kontrola ukazuje instalovanou a dostupnou verzi, zdroj, cestu a chyby. Denní kontrola sama nestahuje ani neinstaluje. Stáhnout aktualizaci je samostatná akce s průběhem a možností zrušení.</p><h2>Oficiální zdroje</h2><p>7-Zip a rclone používají vydání svých výrobců; FFmpeg používá Windows sestavení gyan.dev odkazované z ffmpeg.org. smartmontools může vyžadovat ruční postup, pokud vydání neposkytuje ověřitelný SHA-256. Magick.NET / OpenMP, jeho nativní knihovna a runtime se mění jako jeden celek s File Compass. Adresa vydání File Compass na GitHubu zatím není nastavena; vlastní aktualizace programu jsou připravené, ale neaktivní.</p><h2>Bezpečné použití</h2><p>Balíček se kontroluje podle SHA-256, platformy, soupisu souborů a funkční verze. Chybějící nebo nesouhlasící kontrola instalaci zablokuje. Nové součásti zůstávají v datové složce profilu; dodané soubory se nepřepisují. Načtený 7-Zip a rclone čekají na další spuštění. Použít připravené aktivuje dostupné balíčky; Vrátit předchozí připraví návrat. Uživatelská data se neobnovují ze zálohy doplňku. Historické balíčky se samy nemažou.</p>",
-    "SourceLanguage": "cs-CZ",
+    "SourceLanguage": "cs",
     "Related": [
       "settings",
       "archives",

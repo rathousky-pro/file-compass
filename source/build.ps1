@@ -90,6 +90,8 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'plugins\sshfs') -Destination (J
 Write-Output ('Hotovo: ' + (Join-Path $bin 'File Compass.exe'))
 New-Item -ItemType Directory -Path (Join-Path $bin 'languages') -Force | Out-Null
 Copy-Item -Path (Join-Path $PSScriptRoot 'languages\*.lng') -Destination (Join-Path $bin 'languages') -Force
+$oldCzechCatalog = Join-Path $bin 'languages\cs-CZ.lng'
+if (Test-Path -LiteralPath $oldCzechCatalog) { Remove-Item -LiteralPath $oldCzechCatalog -Force }
 
 
 
@@ -127,6 +129,15 @@ New-Item -ItemType Directory -Path $helpRoot -Force | Out-Null
 Copy-Item -Path (Join-Path $PSScriptRoot 'help/site/*') -Destination $helpRoot -Recurse -Force -ErrorAction Stop
 New-Item -ItemType Directory -Path (Join-Path $helpRoot 'images') -Force | Out-Null
 Copy-Item -Path (Join-Path $PSScriptRoot 'help/images/*.png') -Destination (Join-Path $helpRoot 'images') -Force -ErrorAction Stop
+# Retire only known former package files after their cs replacements are present.
+$oldCzechPage = Join-Path $helpRoot 'cs-CZ\index.html'
+if (Test-Path -LiteralPath $oldCzechPage) { Remove-Item -LiteralPath $oldCzechPage -Force }
+$oldCzechFolder = [IO.Path]::GetFullPath((Join-Path $helpRoot 'cs-CZ'))
+if (!$oldCzechFolder.StartsWith([IO.Path]::GetFullPath($helpRoot).TrimEnd('\')+'\',[StringComparison]::OrdinalIgnoreCase)) { throw 'Invalid former help path.' }
+if ((Test-Path -LiteralPath $oldCzechFolder) -and @(Get-ChildItem -LiteralPath $oldCzechFolder -Force).Count -eq 0) { [IO.Directory]::Delete($oldCzechFolder) }
+foreach ($oldImage in Get-ChildItem -LiteralPath (Join-Path $helpRoot 'images') -File -Filter 'cs-CZ.*.png') {
+    if (Test-Path -LiteralPath (Join-Path $helpRoot ('images\'+$oldImage.Name.Replace('cs-CZ.','cs.')))) { Remove-Item -LiteralPath $oldImage.FullName -Force }
+}
 Copy-Item -Path (Join-Path $documentationRoot '*.md') -Destination $helpRoot -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'dependencies.json') -Destination (Join-Path $helpRoot 'dependencies.json') -Force -ErrorAction Stop
 $oldDocumentation = @('README.md','FILE-COMPASS.md','ARCHIVES.md','ADVANCED-TOOLS.md','ARCHIVE-PLUGINS.md','CLOUD-STORAGE.md','DOCUMENT-PREVIEW.md','DUPLICATES-COMPARE.md','FILE-DETAILS.md','FILE-TOOLS.md','FOLDER-VIEWS.md','GOOGLE-OAUTH-PUBLISHER.md','LIBCURL-AUDIT.md','METADATA-SEARCH.md','NETWORK-PLUGINS.md','NETWORK-VALIDATION.md','THIRD-PARTY-NOTICES.md','UI-VALIDATION.md','WORKFLOW-FEATURES.md')

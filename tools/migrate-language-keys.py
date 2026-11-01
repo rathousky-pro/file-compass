@@ -4,7 +4,7 @@ import pathlib
 import re
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-CATALOG = ROOT / 'source/languages/cs-CZ.lng'
+CATALOG = ROOT / 'source/languages/cs.lng'
 MAPPING = ROOT / 'tools/language-key-migration.json'
 REPORT = ROOT / 'reports/language-key-migration'
 
@@ -31,7 +31,7 @@ def main():
         assert all(re.fullmatch(r'[a-z][A-Za-z0-9]*(?:\.[a-z][A-Za-z0-9]*)+', name) for name in names)
         mapping = dict(zip(keys, names))
         REPORT.mkdir(parents=True, exist_ok=True)
-        (REPORT / 'original-cs-CZ.lng').write_text(CATALOG.read_text(encoding='utf-8-sig'), encoding='utf-8')
+        (REPORT / 'original-cs.lng').write_text(CATALOG.read_text(encoding='utf-8-sig'), encoding='utf-8')
         MAPPING.write_text(json.dumps(mapping, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     mapping = json.loads(MAPPING.read_text(encoding='utf-8'))
     for path in (ROOT / 'source/src').glob('*.cs'):
@@ -73,7 +73,7 @@ namespace CommanderCZ
 }
 '''
     (ROOT / 'source/src/LanguageKeyAliases.cs').write_text(code, encoding='utf-8')
-    before = json.loads((REPORT / 'original-cs-CZ.lng').read_text(encoding='utf-8'))
+    before = json.loads((REPORT / 'original-cs.lng').read_text(encoding='utf-8'))
     assert all(migrated[mapping.get(key, key)] == value for key, value in before.items())
     assert not any(re.fullmatch(r'text\.[0-9a-f]{16}', key) for key in migrated)
     print(f'{len(migrated) - 2} semantic keys; all original values preserved; {len(aliases)} legacy aliases')

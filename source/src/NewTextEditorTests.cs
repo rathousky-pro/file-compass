@@ -6,7 +6,7 @@ namespace FileCompass {
   internal static int Run(string root){Directory.CreateDirectory(root);var checks=new List<string>();CodeEditorWindow window=null;MainWindow main=null;
    Action<bool,string> check=(ok,text)=>{if(!ok)throw new Exception(text);checks.Add(text);File.WriteAllLines(Path.Combine(root,"progress.txt"),checks);};
    try{
-    System.Threading.SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));L.ChangeLanguage("cs-CZ");FluentTheme.Ensure();AppearanceTheme.Apply("Light");
+    System.Threading.SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));L.ChangeLanguage("cs");FluentTheme.Ensure();AppearanceTheme.Apply("Light");
     window=new CodeEditorWindow(null){Left=-18000,Top=-18000,ShowActivated=false,ShowInTaskbar=false,WindowStartupLocation=WindowStartupLocation.Manual};window.Show();
     var doc=window.NewDocument(new EditorSaveLocation{Folder=root});check(doc.File.Path==null&&doc.Editor.Text==""&&doc.EncodingChoice==0&&doc.EolChoice==1&&!window.HasUnsaved,"new document is unnamed, blank, UTF-8 without BOM and Windows CRLF without creating a file");
     doc.Editor.Text="#!/bin/sh\r\necho 'Žluťoučký kůň'\r\n";window.Syntax.SelectedIndex=2;check(doc.Editor.SyntaxHighlighting!=null,"unnamed shell script has syntax highlighting before a filename is chosen");window.Syntax.SelectedIndex=3;check(doc.Editor.SyntaxHighlighting!=null,"RouterOS syntax is available before saving");

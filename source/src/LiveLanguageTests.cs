@@ -24,7 +24,7 @@ namespace FileCompass {
                 check(rejected,"invalid approvals still cannot authorize external executable launch");
                 File.WriteAllBytes(store,valid);File.AppendAllText(tool," changed");
                 dialog=new ConfigurationDialog(main){Left=-18000,Top=-18000,ShowActivated=false,WindowStartupLocation=WindowStartupLocation.Manual};
-                try{dialog.LanguageChoice.SelectedIndex=Array.IndexOf(L.SupportedLanguages,"cs-CZ");dialog.SaveChanges();}finally{dialog.Close();}
+                try{dialog.LanguageChoice.SelectedIndex=Array.IndexOf(L.SupportedLanguages,"cs");dialog.SaveChanges();}finally{dialog.Close();}
                 rejected=false;try{using(ToolTrust.Acquire(tool)){} }catch(IOException){rejected=true;}
                 check(rejected,"saving the same path does not silently approve a changed executable");
                 File.Delete(tool);
@@ -54,7 +54,7 @@ namespace FileCompass {
                 check(about.Logo.Source!=null&&about.Repository.NavigateUri.AbsoluteUri==ApplicationBrand.GitHubUrl,"About displays the application logo and exact repository URL");
                 check(FluentUiTests.Children<TextBlock>(about).Any(x=>x.Text==ApplicationBrand.Developer),"About displays the developer identity");
                 string canonical=L.Code("state.ready");
-                foreach(string language in new[]{"cs-CZ","de","fr","en","pl","es","pt","nl","en"}) {
+                foreach(string language in new[]{"cs","de","fr","en","pl","es","pt","nl","en"}) {
                     L.ChangeLanguage(language);LiveLanguage.Refresh(main);LiveLanguage.Refresh(probe);LiveLanguage.Refresh(about);
                     check(label.Text==L.Text("action.copy"),"existing static caption switches to "+language);
                     check(formatted.Text==L.Format("delete.chooseFileAction","File"),"formatted caption switches without altering its argument: "+language);
@@ -68,12 +68,12 @@ namespace FileCompass {
                 NextStageTests.Draw(about,Path.Combine(root,"about-light.png"));AppearanceTheme.Apply("Dark");NextStageTests.Draw(about,Path.Combine(root,"about-dark.png"));
                 {
                     var settings=new ConfigurationDialog(main){Left=-18000,Top=-18000,ShowActivated=false,WindowStartupLocation=WindowStartupLocation.Manual};
-                    settings.LanguageChoice.SelectedIndex=Array.IndexOf(L.SupportedLanguages,"cs-CZ");
+                    settings.LanguageChoice.SelectedIndex=Array.IndexOf(L.SupportedLanguages,"cs");
                     settings.Dispatcher.BeginInvoke(new Action(()=>FluentUiTests.Children<Button>(settings).First(x=>Convert.ToString(x.Content)==L.Text("action.save")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent))));
-                    check(settings.ShowDialog()==true&&L.Language=="cs-CZ"&&L.PreferredLanguage=="cs-CZ","saving settings changes and persists the language without restart");
+                    check(settings.ShowDialog()==true&&L.Language=="cs"&&L.PreferredLanguage=="cs","saving settings changes and persists the language without restart");
                     settings=new ConfigurationDialog(main){Left=-18000,Top=-18000,ShowActivated=false,WindowStartupLocation=WindowStartupLocation.Manual};settings.LanguageChoice.SelectedIndex=Array.IndexOf(L.SupportedLanguages,"en");
                     settings.Dispatcher.BeginInvoke(new Action(()=>FluentUiTests.Children<Button>(settings).First(x=>Convert.ToString(x.Content)==L.Text("action.cancel")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent))));
-                    check(settings.ShowDialog()==false&&L.Language=="cs-CZ"&&L.PreferredLanguage=="cs-CZ","cancel keeps the active and saved language unchanged");
+                    check(settings.ShowDialog()==false&&L.Language=="cs"&&L.PreferredLanguage=="cs","cancel keeps the active and saved language unchanged");
                 }
                 ExternalToolsRegression(root,main,check);
                 File.WriteAllText(Path.Combine(root,"result.txt"),"PASS: "+checks+" checks");return 0;

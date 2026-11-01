@@ -8,7 +8,7 @@ namespace FileCompass {
   static void Click(Button b){b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));}
   static IEnumerable<T> Visual<T>(DependencyObject root)where T:DependencyObject{if(root is T)yield return (T)root;for(int i=0;i<VisualTreeHelper.GetChildrenCount(root);i++)foreach(var x in Visual<T>(VisualTreeHelper.GetChild(root,i)))yield return x;}
   internal static int Run(string root){Directory.CreateDirectory(root);var log=new List<string>();var windows=new List<Window>();string old=AppearanceTheme.Motif;Action<bool,string> check=(ok,name)=>{if(!ok)throw new Exception(name);log.Add(name);};try{
-   SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));FluentTheme.Ensure();L.ChangeLanguage("cs-CZ");AppearanceTheme.Apply("Light");AppearanceTheme.SetMotif("Clean");
+   SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));FluentTheme.Ensure();L.ChangeLanguage("cs");AppearanceTheme.Apply("Light");AppearanceTheme.SetMotif("Clean");
    FieldBorderTests.Verify(root,check);
    var folder=Directory.CreateDirectory(Path.Combine(root,"files")).FullName;Directory.CreateDirectory(Path.Combine(folder,"Žlutá složka"));File.WriteAllText(Path.Combine(folder,"Žlutý.txt"),"text");File.WriteAllText(Path.Combine(folder,"other.txt"),"text");
    var main=new MainWindow(folder,new ProgramSettings{AutoRefresh=false}){Width=1320,Height=820};windows.Add(main);Open(main);NavigationTests.WaitPanels(main);var panels=FluentUiTests.Children<FilePanel>(main).ToArray();

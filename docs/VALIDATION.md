@@ -1,6 +1,6 @@
 # Validation — 1 November 2026
 
-File Compass remains **0.9.5 beta**. The current maintenance development build is `20261101.64`; clean Release build `20261101.65` also compiled successfully. This is repository/installation maintenance, not a new public binary release or a claim that every historical test was rerun.
+File Compass remains **0.9.5 beta**. The current maintenance development build is `20261101.66`; clean Release build `20261101.67` also compiled successfully. This is repository/installation maintenance, not a new public binary release or a claim that every historical test was rerun.
 
 ## Current checks
 
@@ -11,7 +11,7 @@ File Compass remains **0.9.5 beta**. The current maintenance development build i
 | Current screenshots | 28 matching scenes per language, 56 privacy-reviewed synthetic-demo images |
 | Native help and About | 184 assertions; external edits load without recompiling; no help content embedded in EXE |
 | Offline browser help | 25 checks across Czech/English, topic navigation, search, image zoom, history, language changes and mobile width |
-| Language runtime | 2,875 assertions |
+| Language runtime | 2,878 assertions |
 | Live language changes | 76 assertions with a fresh isolated test profile |
 | Integrity protections | 41 checks |
 | Application smoke test | 22 checks |
@@ -32,3 +32,5 @@ Cleanup removed 364 obsolete outputs/backups containing 22,553 files (25,029,461
 ## Limits
 
 The existing PdfPig/System.Memory binding warning remains; Release also reports unused test hooks. No claims are made about untested real provider accounts or physical USB operations. Original third-party notices are preserved verbatim. Exact FFmpeg/dependency corresponding sources and applicable Microsoft OpenMP runtime redistribution terms remain public-distribution prerequisites: see [distribution review](DISTRIBUTION-AUDIT.md). No new binary release was published and local profiles/credentials remain excluded from Git.
+
+Czech uses the canonical identifier cs throughout the application, catalog cs.lng, HTML help folder cs and screenshot names. Earlier saved Czech identifiers are accepted and normalized; new saved selections use cs. The locale rename passed 2,878 language assertions, 184 native-help checks, 76 live-language checks, 72 appearance/language checks, 22 smoke checks and 25 offline browser checks.

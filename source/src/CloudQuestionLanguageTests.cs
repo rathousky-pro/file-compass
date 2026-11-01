@@ -15,10 +15,10 @@ namespace FileCompass {
             try {
                 FluentTheme.Ensure();
                 var source = new CloudQuestion { State = "client_id_warning", Option = new CloudOption { Name = "config_shared_client_id", Help = "rclone's shared Google Drive client_id is being retired and will stop working during 2026.\nCreate your own to avoid interruption: https://rclone.org/drive/#making-your-own-client-id\nContinue using the shared client_id anyway?", Default = false, Exclusive = true, Examples = new[] { new CloudExample { Value = "true", Help = "Yes" }, new CloudExample { Value = "false", Help = "No" } } } };
-                var packs = Path.Combine(root, "languages"); Directory.CreateDirectory(packs); File.Copy(Path.Combine(installed, "cs-CZ.lng"), Path.Combine(packs, "cs-CZ.lng"), true);
+                var packs = Path.Combine(root, "languages"); Directory.CreateDirectory(packs); File.Copy(Path.Combine(installed, "cs.lng"), Path.Combine(packs, "cs.lng"), true);
                 var translated = new Dictionary<string, string> { { "cloud.sharedClientQuestion", "TEST question" }, { "cloud.sharedClientHelp", "TEST explanation for {0}" }, { "cloud.sharedClientYes", "TEST accept" }, { "cloud.sharedClientNo", "TEST own application" }, { "cloud.clientIdQuestion", "TEST client ID" }, { "cloud.clientSecretQuestion", "TEST client secret" } };
                 File.WriteAllText(Path.Combine(packs, "test.lng"), new JavaScriptSerializer().Serialize(translated));
-                foreach (string selected in new[] { "cs-CZ", "test" }) {
+                foreach (string selected in new[] { "cs", "test" }) {
                     L.LoadForTests(packs, selected);
                     var dialog = new CloudQuestionDialog(null, source) { Left = -18000, Top = -18000, WindowStartupLocation = WindowStartupLocation.Manual, ShowActivated = false, ShowInTaskbar = false }; window = dialog; dialog.Show(); NavigationTests.Wait(Task.Delay(30));
                     var visible = AdvancedToolsTests.Visual<TextBlock>(dialog).Where(x => x.IsVisible).Select(x => x.Text).ToArray();

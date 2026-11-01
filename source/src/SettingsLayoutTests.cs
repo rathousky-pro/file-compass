@@ -11,7 +11,7 @@ namespace FileCompass {
             Directory.CreateDirectory(root); var checks = new List<string>(); ConfigurationDialog dialog = null;
             Action<bool, string> check = (valid, text) => { if (!valid) throw new Exception(text); checks.Add(text); };
             try {
-                FluentTheme.Ensure();L.ChangeLanguage("cs-CZ");
+                FluentTheme.Ensure();L.ChangeLanguage("cs");
                 foreach(string motif in new[]{"Classic","Clean"}){AppearanceTheme.SetMotif(motif);
                 foreach (var size in new[] { new Size(1920, 1040), new Size(1280, 760), new Size(1024, 720) }) {
                     dialog = new ConfigurationDialog(null) { LayoutWorkArea = new Rect(-18000, -18000, size.Width, size.Height), Left = -17984, Top = -17984, Width = Math.Min(1080, size.Width - 32), ShowActivated = false, ShowInTaskbar = false, WindowStartupLocation = WindowStartupLocation.Manual };

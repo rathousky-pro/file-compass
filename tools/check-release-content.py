@@ -7,6 +7,8 @@ from pathlib import Path
 import importlib.util
 
 ROOT = Path(__file__).resolve().parents[1]
+assert (ROOT/'source/languages/cs.lng').is_file() and not (ROOT/'source/languages/cs-CZ.lng').exists(), 'Czech catalog must use cs.lng'
+assert not (ROOT/'source/help/cs-CZ.json').exists() and not (ROOT/'source/help/site/cs-CZ').exists(), 'Czech help must use cs'
 spec = importlib.util.spec_from_file_location('catalog', ROOT/'tools/language-catalog.py')
 catalog = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(catalog)
@@ -19,7 +21,7 @@ spec = importlib.util.spec_from_file_location('help_builder', ROOT/'tools/build-
 help_builder = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(help_builder)
 help_builder.generate(check=True)
-for locale in ('cs-CZ', 'en'):
+for locale in ('cs', 'en'):
     page = ROOT/'source/help/site'/locale/'index.html'
     tree = ET.fromstring(page.read_text(encoding='utf-8'))
     ids = {node.attrib['id'] for node in tree.iter() if 'id' in node.attrib}
@@ -38,7 +40,7 @@ for locale in ('cs-CZ', 'en'):
     assert not re.search(r'https?://', (ROOT/'source/help/site/help.js').read_text(encoding='utf-8')), 'Help must work offline'
 sets = []
 illustration_sets = []
-for lang in ('cs-CZ', 'en'):
+for lang in ('cs', 'en'):
     topics = json.loads((ROOT/'source/help'/f'{lang}.json').read_text(encoding='utf-8-sig'))
     ids = {t['Id'] for t in topics}
     assert len(ids) == len(topics), (lang, 'duplicate topic')

@@ -15,7 +15,7 @@ namespace FileCompass {
             Directory.CreateDirectory(root);var checks=new List<string>();Window dialog=null;
             Action<bool,string> check=(ok,text)=>{if(!ok)throw new Exception(text);checks.Add(text);File.WriteAllLines(Path.Combine(root,"progress.txt"),checks);};
             try{
-                System.Threading.SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));L.ChangeLanguage("cs-CZ");FluentTheme.Ensure();AppearanceTheme.Apply("Light");
+                System.Threading.SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));L.ChangeLanguage("cs");FluentTheme.Ensure();AppearanceTheme.Apply("Light");
                 string external=Directory.CreateDirectory(Path.Combine(root,"external")).FullName;File.WriteAllText(Path.Combine(external,"untouched.txt"),"outside");
                 string source=Directory.CreateDirectory(Path.Combine(root,"move-source")).FullName;File.WriteAllText(Path.Combine(source,"normal.txt"),"normal");
                 string link1=Path.Combine(source,"link-one"),link2=Path.Combine(source,"link-two");Junction(link1,external);Junction(link2,external);int asked=0;

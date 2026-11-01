@@ -6,7 +6,7 @@ namespace FileCompass {
   static void Open(Window w){w.Left=-18000;w.Top=-18000;w.WindowStartupLocation=WindowStartupLocation.Manual;w.ShowActivated=false;w.ShowInTaskbar=false;w.Show();Pump(w);}
   static double Alpha(Brush brush){var solid=brush as SolidColorBrush;return solid==null?255:solid.Color.A;}
   internal static int Run(string root){Directory.CreateDirectory(root);var log=new List<string>();var windows=new List<Window>();Action<bool,string> check=(ok,label)=>{if(!ok)throw new Exception(label);log.Add(label);};try{
-   FluentTheme.Ensure();L.ChangeLanguage("cs-CZ");SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));
+   FluentTheme.Ensure();L.ChangeLanguage("cs");SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));
    string sample=Path.Combine(root,"sample.txt");File.WriteAllText(sample,"fixture");var entries=new List<Entry>{new Entry{Name="sample.txt",FullPath=sample,Bytes=7}};
    foreach(double font in new[]{12.0,15.0})foreach(bool archive in new[]{false,true}){
     Window w=archive?(Window)new ArchivePackDialog(null,1,Path.Combine(root,"Documents.zip")):new CopySetupDialog(null,entries,root,new string[0]);windows.Add(w);w.FontSize=font;w.MaxHeight=900;Open(w);

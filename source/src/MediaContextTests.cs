@@ -5,7 +5,7 @@ namespace FileCompass {
   internal static int Run(string root){Directory.CreateDirectory(root);var checks=new List<string>();MainWindow main=null;MediaConverterWindow converter=null;
    Action<bool,string> check=(ok,text)=>{if(!ok)throw new Exception(text);checks.Add(text);};
    try{
-    System.Threading.SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));L.ChangeLanguage("cs-CZ");FluentTheme.Ensure();
+    System.Threading.SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));L.ChangeLanguage("cs");FluentTheme.Ensure();
     string data=Directory.CreateDirectory(Path.Combine(root,"files")).FullName;string png=Path.Combine(data,"picture.png"),wav=Path.Combine(data,"sound.wav");
     var encoder=new PngBitmapEncoder();encoder.Frames.Add(BitmapFrame.Create(BitmapSource.Create(2,2,96,96,PixelFormats.Bgr24,null,new byte[12],6)));using(var file=File.Create(png))encoder.Save(file);
     using(var writer=new BinaryWriter(File.Create(wav))){writer.Write(System.Text.Encoding.ASCII.GetBytes("RIFF"));writer.Write(16036);writer.Write(System.Text.Encoding.ASCII.GetBytes("WAVEfmt "));writer.Write(16);writer.Write((short)1);writer.Write((short)1);writer.Write(8000);writer.Write(16000);writer.Write((short)2);writer.Write((short)16);writer.Write(System.Text.Encoding.ASCII.GetBytes("data"));writer.Write(16000);writer.Write(new byte[16000]);}

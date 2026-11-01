@@ -15,9 +15,12 @@ namespace FileCompass
             Action<bool,string> check = delegate(bool valid, string label) { if (!valid) throw new Exception(label); checks.Add(label); };
             try {
                 check(L.StartupLanguage(null,null)=="en" && L.StartupLanguage(" "," ")=="en", "English is the default without a saved choice");
-                check(L.StartupLanguage(null,"cs-CZ")=="cs-CZ" && L.StartupLanguage("en","cs-CZ")=="en", "Saved language and explicit environment override retain priority");
-                var json = new JavaScriptSerializer(); var source = json.Deserialize<Dictionary<string,string>>(File.ReadAllText(Path.Combine(installed, "cs-CZ.lng"), Encoding.UTF8));
-                File.Copy(Path.Combine(installed, "cs-CZ.lng"), Path.Combine(root, "cs-CZ.lng"), true);
+                check(L.StartupLanguage(null,"cs")=="cs" && L.StartupLanguage("en","cs")=="en", "Saved language and explicit environment override retain priority");
+                var json = new JavaScriptSerializer(); var source = json.Deserialize<Dictionary<string,string>>(File.ReadAllText(Path.Combine(installed, "cs.lng"), Encoding.UTF8));
+                File.Copy(Path.Combine(installed, "cs.lng"), Path.Combine(root, "cs.lng"), true);
+                check(L.StartupLanguage(null,"cs-CZ")=="cs"&&L.StartupLanguage(" CS-cz ","en")=="cs","Old saved and environment Czech identifiers normalize to cs");
+                L.ChangeLanguage("cs-CZ");check(L.Language=="cs"&&L.SupportedLanguages.Count(x=>x=="cs")==1,"Legacy identifier selects one canonical Czech language");
+                L.SaveSelection("cs-CZ",root);check(File.ReadAllText(Path.Combine(root,"language.txt"))=="cs","Saving a legacy identifier writes cs and requires only cs.lng");
                 string menu = source.First(x => x.Value == "Soubor").Key, error = source.First(x => x.Value == "Chyba").Key, fallback = source.First(x => x.Value == "Velikost").Key;
                 var english = new Dictionary<string,string> { { "_language", "en" }, { menu, "File" }, { error, "Error" }, { "test.format", "Hello {0}" }, { "text.679e0f3cda397a79", ".invalid" }, { "text.982d9e3eb996f559", "invalid-viewer" } };
                 File.WriteAllText(Path.Combine(root, "en.lng"), json.Serialize(english), Encoding.UTF8);
@@ -45,7 +48,7 @@ namespace FileCompass
                 check(rejected && L.Text(menu) == "File", "invalid JSON is rejected without corrupting the active language");
                 File.WriteAllLines(Path.Combine(root, "language-result.txt"), checks.Concat(new[] { "PASS: " + checks.Count + " checks" })); return 0;
             } catch (Exception ex) { File.WriteAllText(Path.Combine(root, "language-result.txt"), "FAIL after " + checks.Count + " checks\n" + ex); return 1; }
-            finally { L.LoadForTests(installed, "cs-CZ"); }
+            finally { L.LoadForTests(installed, "cs"); }
         }
     }
 }

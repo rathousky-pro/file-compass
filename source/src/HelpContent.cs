@@ -20,7 +20,7 @@ namespace FileCompass {
         public string[] Related { get; set; }
     }
     internal static class HelpContent {
-        internal static string ContentLanguage { get { return L.Language=="cs-CZ"?"cs-CZ":"en"; } }
+        internal static string ContentLanguage { get { return L.Language=="cs"?"cs":"en"; } }
         internal static string Root { get { return AppPaths.Resource("help"); } }
         internal static string PagePath { get { return Path.Combine(Root,ContentLanguage,"index.html"); } }
         internal static Uri BrowserUri(string topic) { return new Uri(new Uri(PagePath).AbsoluteUri+"#"+Uri.EscapeDataString(topic??"home")); }

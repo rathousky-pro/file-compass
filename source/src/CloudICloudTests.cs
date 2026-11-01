@@ -37,7 +37,7 @@ namespace FileCompass {
                     timer.Start();try{typeof(CloudManagerWindow).GetMethod("NewAccount",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).Invoke(manager,null);}finally{timer.Stop();manager.Close();dialog=null;}
                     if(pickerError!=null)throw pickerError;check(selected&&!File.Exists(Path.Combine(CloudStore.Root,"accounts.xml")),"Cancelling account picker leaves cloud accounts untouched");
                 }finally{CloudStore.TestRoot=oldRoot;CloudApplicationOAuth.TestPath=oldOAuth;}
-                foreach(string lang in new[]{"cs-CZ","en","de","es","fr","nl","pl","pt"}) {
+                foreach(string lang in new[]{"cs","en","de","es","fr","nl","pl","pt"}) {
                     L.LoadForTests(packs,lang);
                     foreach(string field in new[]{"apple_id","password","config_2fa","config_2fa_sms","config_2fa_phone"}) {
                         var question=new CloudQuestion{Option=new CloudOption{Name=field,Required=true,IsPassword=field=="password"}};CloudICloud.PrepareQuestion(question);
@@ -45,7 +45,7 @@ namespace FileCompass {
                         check(window.Title=="iCloud Drive"&&!AdvancedToolsTests.Visual<TextBlock>(window).Any(x=>x.IsVisible&&x.Text==L.Text("cloud.icloudHelp")),lang+": iCloud sign-in shows only the current step without the full-flow explanation: "+field);
                         if(field=="apple_id"){var input=AdvancedToolsTests.Visual<TextBox>(window).First();input.Text=" person@example.test ";check(window.ReadAnswer()=="person@example.test",lang+": Apple account input trims surrounding spaces");}
                         if(field=="password"||field=="config_2fa"||field=="config_2fa_sms"){check(AdvancedToolsTests.Visual<PasswordBox>(window).Count()==1&&window.ReadAnswer()==null,lang+": secret step is masked and rejects empty input");}
-                        if(lang=="cs-CZ")NextStageTests.Draw(window,Path.Combine(root,"icloud-"+field+".png"));window.Close();dialog=null;
+                        if(lang=="cs")NextStageTests.Draw(window,Path.Combine(root,"icloud-"+field+".png"));window.Close();dialog=null;
                     }
                 }
                 File.WriteAllLines(Path.Combine(root,"result.txt"),checks.Concat(new[]{"PASS: "+checks.Count+" checks"}));return 0;

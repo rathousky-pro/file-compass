@@ -15,7 +15,7 @@ namespace FileCompass {
             Directory.CreateDirectory(root);var checks=new List<string>();DiskAnalyzerWindow analyzer=null;DiskSmartWindow smart=null;
             Action<bool,string> check=(yes,message)=>{if(!yes)throw new Exception(message);checks.Add(message);};
             try{
-                System.Threading.SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));L.ChangeLanguage("cs-CZ");FluentTheme.Ensure();AppearanceTheme.Apply("Light");
+                System.Threading.SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));L.ChangeLanguage("cs");FluentTheme.Ensure();AppearanceTheme.Apply("Light");
                 string folder=Directory.CreateDirectory(Path.Combine(root,"files")).FullName;File.WriteAllBytes(Path.Combine(folder,"small.bin"),new byte[128]);File.WriteAllBytes(Path.Combine(folder,"large.bin"),new byte[4096]);
                 analyzer=new DiskAnalyzerWindow(null,folder,null);Open(analyzer);NavigationTests.Wait(Task.Delay(180));analyzer.UpdateLayout();
                 check(analyzer.ScanTask==null&&analyzer.Result==null&&analyzer.AnalyzerPages.SelectedIndex==1,"default analyzer opens its scope/filter page without starting or reading a scan");

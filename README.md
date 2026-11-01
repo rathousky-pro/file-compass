@@ -10,6 +10,8 @@ Start **bin/File Compass.exe** with all supporting directories beside it. Requir
 
 There is one appearance: a blue-grey shell, rounded white cards and pale option groups. Windows Acrylic has a solid fallback. Colored Fluent toolbar icons are the default; Flat and monochrome Outline sets, button/drive sizes and fonts remain configurable. Folders use yellow Windows icons. English is the default; Czech, German, Spanish, Dutch, Polish, French and Portuguese remain selectable. **Apply** saves settings without closing; **Save** also closes.
 
+Czech uses `languages/cs.lng` and `help/cs/index.html`; earlier saved Czech language identifiers are normalized automatically.
+
 ## Functions
 
 - [Panels and previews](docs/PANELS.md): side-by-side, stacked or single panel, closable tabs including empty panels, adjustable columns and filtering. Document/code/image previews have a collapsible file carousel synchronized with the source-panel cursor. Video previews show six timestamped frames.

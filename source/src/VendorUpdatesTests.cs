@@ -9,7 +9,7 @@ namespace FileCompass {
         Directory.CreateDirectory(root);var log=new List<string>();MainWindow main=null;ConfigurationDialog settings=null;
         Action<bool,string> check=(valid,label)=>Require(valid,label,log);
         try{
-            SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));L.ChangeLanguage("cs-CZ");FluentTheme.Ensure();AppearanceTheme.Apply("Light");
+            SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));L.ChangeLanguage("cs");FluentTheme.Ensure();AppearanceTheme.Apply("Light");
             string official="https://github.com/ip7z/7zip/releases/download/99.0/7z9900-x64.exe";
             var item=VendorUpdates.Github("7zip",Json(official));check(item.Version=="99.0"&&item.Hash.Length==64&&VendorUpdates.ValidOrigin(item),"official GitHub release resolves one Windows x64 asset and publisher SHA-256");
             bool rejected=false;try{VendorUpdates.Github("7zip",Json("https://github.com/attacker/package/releases/download/99.0/7z9900-x64.exe"));}catch(IOException){rejected=true;}check(rejected,"release metadata cannot redirect initial package selection to another repository");

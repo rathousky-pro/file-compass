@@ -5,7 +5,7 @@ import pathlib
 import re
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-CATALOG = ROOT / 'source/languages/cs-CZ.lng'
+CATALOG = ROOT / 'source/languages/cs.lng'
 # SMART attribute segments retain their standard numeric IDs / snake_case names.
 KEY = re.compile(r'[a-z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+')
 

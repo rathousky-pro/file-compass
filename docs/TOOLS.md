@@ -83,19 +83,19 @@ Media / Rename using metadata opens the existing collision-checked batch rename 
 
 ## File system fields in rename templates
 
-The main Media menu contains batch rename, metadata-to-name rename, name-to-metadata writing and simple image editing. Existing keyboard shortcuts remain available.
+The Media menu contains batch rename, metadata-to-name rename, name-to-metadata writing and image/audio conversion. Image editing is part of the converter; there is no separate quick-image window.
 
 Rename templates now accept `[File.Created]`, `[File.Modified]` and `[File.Accessed]` for local file-system dates, plus `[File.CreatedTime]`, `[File.ModifiedTime]` and `[File.AccessedTime]`. Defaults are `yyyy-MM-dd` and `HH-mm-ss`; a custom date/time pattern can be supplied as `[File.Created:yyyyMMdd_HHmmss]`. `[File.Size]` is the file size in bytes and `[File.Folder]` is the parent folder name. These fields work without embedded EXIF or audio tags and do not write file timestamps. Missing values preserve the old name and show a warning; file size is unavailable for directories. Filename-unsafe output characters are sanitized. Existing `[RMD]` and `[hms]` templates retain their behavior.
 
 ## Batch image dimensions
 
-Select all images to process and open Simple image editing from the shared submenu. The same rotation, size and format settings apply to every selected image, producing new `_upraveno` files. Originals and existing output files are never overwritten.
+Select images and open the media converter. Use Size and rotation in its left navigation for dimensions, rotation, All landscape or All portrait. Choose Keep original format when only editing geometry. Output names use _converted with a collision number; originals and existing outputs are preserved.
 
-In addition to longest edge and percentage, choose exact width × height, width only, or height only. Exact dimensions can stretch the image if the aspect ratio differs. A single specified side calculates the other side independently for each image after EXIF orientation and rotation, rounding to whole pixels. These explicit dimensions can enlarge smaller images; longest-edge mode still only shrinks. Output dimensions and aggregate frame pixel budgets are bounded before allocating resized images. Metadata is not carried into edited image copies, as described in the dialog.
+In addition to longest edge and percentage, choose exact width × height, width only, or height only. A single side computes the other after EXIF orientation and rotation. All landscape / All portrait rotates only mismatched images; longest-edge limits follow the resulting orientation and exact dimensions swap to match it. Longest-edge mode only shrinks; explicit dimensions can enlarge. Pixel/frame budgets are bounded; metadata preservation depends on the chosen format and options.
 
 ## Média – převody obrázků a zvuku
 
-Hlavní nabídka **Média** sdružuje převod obrázků a zvuku, jednoduché hromadné úpravy obrázků, přejmenování podle metadat a zápis metadat z názvu. Nástroje pracují s lokálními soubory. Pro cloud nebo archiv je nejdříve stáhněte či rozbalte.
+Hlavní nabídka **Média** sdružuje převod obrázků a zvuku, přejmenování podle metadat a zápis metadat z názvu. Úpravy rozměrů a otáčení jsou součástí konvertoru; samostatné okno rychlých úprav se nepoužívá. Pro cloud nebo archiv nejdříve soubory stáhněte či rozbalte.
 
 Převodník má záložky **Obrázky** a **Převést zvuk**. Přidejte soubory, vyberte zaškrtnuté položky a nastavte výstupní složku. Parametry zdroje a stav převodu jsou viditelné v seznamu; po výběru řádku se zobrazí celá zdrojová a cílová cesta i podrobnosti chyby. Výstupy mají `_converted`, při kolizi další číslo. Originály se nepřepisují. Úspěšné položky se odškrtnou, aby se omylem nepřeváděly znovu. Zrušení ponechá již dokončené soubory. Výstupy jsou zapojené do historie a bezpečného vrácení operací.
 
@@ -109,7 +109,7 @@ Převodník umožňuje zvolit 1, 2, 3, 4, 6 nebo 8 souběžně zpracovávaných 
 
 Náhledy dokumentů: HTML a JavaScript pro DOCX a tabulky jsou přibalené jako prostředky v `preview/preview.dll`; na disk se při prohlížení nerozbalují. Samostatně zůstává nativní `WebView2Loader.dll` a licenční texty. PDF a HTML nadále vykresluje WebView2. Obrazové náhledy WPF se tímto balením nemění.
 
-Nastavení převodníku včetně cílové složky a souběžnosti je nahoře. Pod ním je seznam souborů přes celou šířku okna; průběh a tlačítka zůstávají dole. Pole se vzorem názvu v obou metadata nástrojích nabízí po kliknutí nebo Alt+šipka dolů seznam platných příkazů. Výběr nahradí označený text nebo se vloží na pozici kurzoru.
+Převodník používá jednoduché levé záložky Nastavení převodu, Rozměry a otočení nebo zvukové volby rychlosti/délky a Pokročilé. Více/Méně rozbalí navigaci. Obrázky i zvuk nabízejí Ponechat formát pro každý vstup zvlášť. Cílová složka, souběžnost a fronta jsou společné; průběh a akce zůstávají dole. Pole se vzorem názvu v metadata nástrojích nabízí po kliknutí nebo Alt+šipka dolů seznam platných příkazů.
 
 Režim datového toku se vybírá samostatně: MP3 nabízí CBR, ABR s cílovým průměrem a VBR podle kvality (0 nejlepší až 9 nejnižší). AAC a Vorbis nabízejí cílový průměr ABR nebo kvalitu VBR; u Vorbis je vyšší číslo kvalitnější (−1 až 10), u AAC také vyšší. Opus podporuje CBR, VBR a omezené CVBR s cílovým bitrate. Skutečný průměr závisí na obsahu a délce nahrávky. Neaktivní pole se nezohledňují při kódování. Pokročilé volby pro obrázky i zvuk jsou ve společné sekci pod zarovnanými základními poli. Detailní okénko cílového názvu pod seznamem bylo odstraněno; dlouhé stavy jsou dostupné v nápovědě buněk.
 
@@ -147,7 +147,7 @@ Batch rename retains stable row containers across previews, disables Start while
 
 ### Editor menus and audio tempo
 
-The internal editor uses File/Edit/View/Tools/Help menus instead of a command-button strip. Encoding and line endings remain in the status area and are retained per tab. View exposes line wrapping, line numbers, whitespace and indentation. File keeps save/conflict/unsaved-close guards.
+The internal editor uses File/Edit/View/Tools/Help menus instead of a command-button strip. Syntax, encoding and line endings are in the format bar and are retained per document. The active filename sits at the right of the title; single-document editing hides the redundant tab row. New text defaults to UTF-8 without BOM and Windows CRLF. View exposes line wrapping, line numbers, whitespace and indentation. File keeps save/conflict/unsaved-close guards.
 
 Audio conversion has a separate Speed and duration settings tab. Defaults preserve pitch using atempo; an alternative uses asetrate plus resampling to change both speed and pitch. Presets include exact 24000/1001 film ratios and 50/75/125/150/200 percent, custom 10–1000 percent, and target duration per file. Duration accepts hours/minutes/seconds and milliseconds. Target mode aligns the final PCM duration with end trimming/padding; compressed encoders may introduce frame padding. Conversion progress and output-duration checks use the changed duration. Stream copy and unchanged video timing are rejected with active tempo changes. Timed chapters are omitted rather than copied with invalid timestamps. No additional runtime library is required.
 

@@ -1,6 +1,6 @@
 # Aktualizace programu a doplňků
 
-V **Konfigurace → Aktualizace** najdete instalovanou a dostupnou verzi, výsledek poslední kontroly, zdroj a cestu k používanému souboru. Kontrolu lze spustit ručně nebo povolit jednou denně. Denní kontrola sama žádné balíčky nestahuje. Změna jejího nastavení se ukládá tlačítkem **Uložit**; kontrola, stažení a použití balíčku jsou samostatné okamžité akce.
+V **Konfigurace → Aktualizace** najdete instalovanou a dostupnou verzi, výsledek poslední kontroly, zdroj a cestu k používanému souboru. Kontrolu lze spustit ručně nebo povolit jednou denně. Denní kontrola sama žádné balíčky nestahuje. Změna jejího nastavení se ukládá tlačítkem **Použít** nebo **Uložit**; kontrola, stažení a použití balíčku jsou samostatné okamžité akce.
 
 ## Zdroje
 

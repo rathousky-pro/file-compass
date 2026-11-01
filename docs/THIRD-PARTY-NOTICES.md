@@ -29,7 +29,7 @@ WPF UI / WPF UI Abstractions (lepo.co), MIT. The .NET Framework 4.7.2 libraries 
 Libraries are in `libraries`, original notices in `libraries/licenses`. `libraries/manifest.json` records versions, official NuGet URLs and SHA-256. `CompactMenu.xaml` adapts WPF UI MenuItem for compact menus and retains its copyright notice. Other controls use library templates.
 Source: https://github.com/lepoco/wpfui/releases/tag/4.3.0.
 
-# SharpSevenZip
+## SharpSevenZip
 
 Managed wrapper: SharpSevenZip 2.0.128, LGPL-3.0-or-later.
 Source: https://github.com/JeremyAnsel/SharpSevenZip/tree/f4c16a6a95ace333fa33f38c1d69e44d77812eee
@@ -38,7 +38,7 @@ License and package metadata: libraries/licenses/SharpSevenZip.
 The wrapper is distributed as a separate unmodified DLL; it uses the existing bundled native 7z.dll.
 The pinned package and assembly hashes are in tools/fetch-archive-library.ps1 in the source distribution.
 
-# Microsoft Fluent UI System Icons
+## Microsoft Fluent UI System Icons
 
 Copyright Microsoft Corporation. MIT license: libraries/licenses/FLUENT-ICONS-LICENSE.txt.
 Source: https://github.com/microsoft/fluentui-system-icons
@@ -48,17 +48,17 @@ Color variants are preserved; regular command icons use blue, amber, green or re
 according to their action. Asset import: tools/fetch-fluent-icons.cjs.
 
 
-# TagLibSharp 2.3.0
+## TagLibSharp 2.3.0
 Media metadata reader, LGPL-2.1. Source: https://github.com/mono/taglib-sharp/tree/TaglibSharp-2.3.0.0 . License: libraries/licenses/TAGLIBSHARP-LICENSE.txt. NuGet package SHA-256: 3C3F5B55988F69E0BC84DC760FEB8351FEF4D5C09A322D88462E683D334DFBFC. The unmodified library remains a separate DLL and can be replaced.
 
 
-# AvalonEdit 6.3.1.120
+## AvalonEdit 6.3.1.120
 MIT; source https://github.com/icsharpcode/AvalonEdit/tree/v6.3.1 . License libraries/licenses/AVALONEDIT-LICENSE.txt. NuGet package SHA-256 8AC3E5AA2BB6178D92CBE72C7900A683FAB0AEE66A8EAFA481611C444DBEE3E3.
 
-# Markdig 0.37.0
+## Markdig 0.37.0
 BSD-2-Clause; source https://github.com/xoofx/markdig/tree/0.37.0 . License libraries/licenses/MARKDIG-LICENSE.txt. NuGet package SHA-256 9CFA31D3A2EB694D3164F1A3FAB41A040C698A22E784CD4D76E50489D5698335.
 
-# Everything SDK
+## Everything SDK
 Copyright 2022 David Carpenter, MIT. Source and SDK https://www.voidtools.com/support/everything/sdk/ . License plugins/everything/LICENSE.txt. Downloaded SDK archive SHA-256 F5716D9513CCE6B462B5170A0A2E7E081E191D9BCAC6774F5DECC061497DF443. The optional search feature requires a separately running Everything; this distribution contains only its SDK DLL. No indexing service is installed or started.
 
 
@@ -110,4 +110,4 @@ The internal editor validates YAML using the unmodified YamlDotNet net47 assembl
 
 ## Scope of this inventory
 
-Reviewed against the checked-in runtime layout on 28 October 2026. Original upstream notices have not been rewritten or translated. No open-source license for File Compass application code is granted by this third-party inventory. Optional tool downloads retain their own vendor terms. See [distribution audit](DISTRIBUTION-AUDIT.md) for outstanding public-release requirements and restore constraints.
+Reviewed against the checked-in runtime layout on 1 November 2026. The shipped 7-Zip remains 26.04 even if a local user has activated a newer vendor package. The inventory covers 49 pinned runtime binaries and 70 original notice/provenance files; exact paths and SHA-256 values are recorded in `source/dependencies.json` and checked by `tools/check-dependency-notices.py`. It also covers the 7z.sfx module and all document-preview JavaScript notices. Original upstream notices have not been rewritten or translated. No open-source license for File Compass application code is granted by this third-party inventory. Optional tool downloads retain their own vendor terms. See [distribution audit](DISTRIBUTION-AUDIT.md) for outstanding public-release requirements and restore constraints.

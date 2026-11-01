@@ -1,4 +1,4 @@
-﻿# File operations and synchronization
+# File operations and synchronization
 
 ## Copy, move and delete
 
@@ -32,11 +32,9 @@ Bidirectional mode does not propagate deletion or maintain a previous-run databa
 
 Alt+Shift+Enter or Commands → Analyze subfolder sizes calculates sizes in the background, with size/share bars. Press again to cancel/hide bars; leaving the folder cancels calculation. Local and mounted filesystems are supported. Logical lengths are measured, not allocated clusters or MFT records. Links are not followed. Skipped locations are counted in the status/tooltip and make totals partial.
 
-## Quick image processing
+## Image editing in the converter
 
-Select images and choose File → Quick image processing. Rotate 0/90/180/270 degrees; keep resolution, limit the longest side or scale by percentage. Longest-side limits never enlarge small images.
-
-Outputs are PNG/JPEG/BMP/TIFF, with JPEG quality control. New copies receive an output suffix; originals and existing outputs are not overwritten. Name collisions are rejected before processing. EXIF orientation is applied before manual rotation. Metadata is not copied. JPEG/BMP replace transparency with white. Multiple frames are retained in TIFF; incompatible single-frame conversion is rejected. Cancellation can leave completed copies.
+Open Media → Convert images. Size and rotation has its own sidebar page for resizing, EXIF-aware rotation, All landscape and All portrait. Choose Keep original format to edit geometry without deliberately changing formats. Output names use _converted with collision numbers; originals and existing outputs remain untouched. Frame/metadata support depends on the selected format and options. See [media tools](TOOLS.md).
 
 ## Move into an archive and split volumes
 
@@ -63,3 +61,9 @@ Sharing errors expose Windows Restart Manager's list of locking applications. Th
 The curved Undo arrow immediately after the left/right transfer arrows opens the transaction list; Ctrl+Z opens the same window. Green rows have available Undo steps, amber rows are partially reversible, and grey rows show the reason Undo is unavailable. Select an operation to review paths and undo it; this is not restricted to the latest transaction. Availability refreshes while the window is open and is revalidated before any changes.
 
 A later rename/move can disable an earlier one until the dependent action is undone. Deleting a renamed file makes that rename unavailable; a new file with the same name cannot inherit the original identity. Mixed new-copy/overwrite batches explicitly exclude overwritten files from Undo. Partial Undo preserves unavailable steps and user-added content. Completed transactions remain visible as Undone. The persistent journal also includes irreversible operations and previous-session records; safe Undo receipts remain session-only (20 retained groups / 5,000 steps per group).
+
+## Deletion and clearing history
+
+The confirmation follows the configured Recycle Bin preference. The preferred action sits at the right beside Cancel; the alternative is at the far left. Permanent deletion is red with white text, while recycling is blue. The bottom Delete command and removal of connection profiles keep their normal button colors. Locked-file prompts offer Skip all for the rest of the task.
+
+Both operation and transaction history offer Clear history with confirmation. Completed records and their undo receipts are removed; active/queued work and the files themselves are preserved. Vendor update rollback packages are separate and are not removed by clearing history.

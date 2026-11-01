@@ -1,4 +1,4 @@
-# Source and distribution review — 28 October 2026
+# Source and distribution review — 1 November 2026
 
 This inventory describes the checked-in application, not a new public binary release. Upstream license texts remain unchanged. The application author has not selected an open-source license for File Compass itself; third-party licenses do not grant rights to the application code.
 
@@ -27,4 +27,10 @@ This inventory describes the checked-in application, not a new public binary rel
 
 ## Documentation scope
 
-All eight interface catalogs are maintained together with equal key sets and format placeholders. Native offline help is maintained in Czech and English; other interface languages explicitly show English help. Original third-party legal notices are not translated. Historical validation records in ignored development directories are not current product specifications.
+All eight interface catalogs are maintained together with equal key sets and format placeholders. Offline help is an external HTML package shared by the native viewer and browsers, with 44 topics and 28 screenshot scenes per language. It is maintained in Czech and English; other interface languages explicitly show English help. Original third-party legal notices are not translated. Historical validation records in ignored development directories are not current product specifications.
+
+## Current inventory and cleanup boundaries
+
+`source/dependencies.json` classifies all 49 pinned runtime DLL/EXE/SFX files and hashes 70 original notice/provenance files. `python tools/check-dependency-notices.py` checks the inventory without changing upstream notices; `--refresh` is reserved for a reviewed dependency change. The content checker runs it automatically. The SDK project and PowerShell build both package external HTML help; publisher OAuth credentials are excluded from both.
+
+Maintenance removes ignored historical builds, test outputs and executable backups only after checking workspace boundaries, Git tracking, running programs and nested repositories. Compact test results are retained under ignored maintenance records. The installed application, local profiles, official dependency downloads, compiler/native build inputs, license texts and matching-source archives are preserved. Vendor update rollback packages in the user profile are retained.

@@ -8,8 +8,8 @@
     <PlatformTarget>x64</PlatformTarget>
     <AssemblyName>File Compass</AssemblyName>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <ApplicationManifest>FileVoyager.manifest</ApplicationManifest>
-    <AppConfig>FileVoyager.exe.config</AppConfig>
+    <ApplicationManifest>FileCompass.manifest</ApplicationManifest>
+    <AppConfig>FileCompass.exe.config</AppConfig>
     <ApplicationIcon>assets\file-voyager\FileVoyager-FloppyOrbit.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
@@ -19,9 +19,8 @@
     <Compile Include="src\*.cs" Exclude="src\*Tests.cs" />
     <Compile Include="obj\BuildInfo.g.cs" />
     <EmbeddedResource Include="assets\branding\rathousky-pro.png" LogicalName="FileCompass.Branding.RathouskyPro.png" />
-    <EmbeddedResource Include="help\cs-CZ.json" LogicalName="FileCompass.Help.cs-CZ.json" />
-    <EmbeddedResource Include="help\en.json" LogicalName="FileCompass.Help.en.json" />
-    <EmbeddedResource Include="help\images\*.png" LogicalName="FileCompass.Help.Images.%(Filename)%(Extension)" />
+    <Content Include="help\site\**\*" Link="help\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="help\images\*.png" Link="help\images\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Compile Include="src\*Tests.cs" Condition="'$(Configuration)' == 'Debug'" />
     <Reference Include="DiscUtils.Ext"><HintPath>ui\DiscUtils.Ext.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="DiscUtils.Core"><HintPath>ui\DiscUtils.Core.dll</HintPath><Private>false</Private></Reference>
@@ -60,19 +59,21 @@
     <Reference Include="System.Buffers"><HintPath>ui\System.Buffers.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="System.Numerics.Vectors"><HintPath>ui\System.Numerics.Vectors.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="System.Runtime.CompilerServices.Unsafe"><HintPath>ui\System.Runtime.CompilerServices.Unsafe.dll</HintPath><Private>false</Private></Reference>
-    <Content Include="ui\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="libraries\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Content Include="ui\**\*" Exclude="ui\icons\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="libraries\%(RecursiveDir)%(Filename)%(Extension)" />
     <None Update="languages\*.lng" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />
-    <None Update="languages\README.md" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />
-    <None Update="THIRD-PARTY-NOTICES.md" CopyToOutputDirectory="PreserveNewest" />
     <None Update="plugins\cloud\rclone.exe;plugins\cloud\README.txt;plugins\cloud\LICENSE.txt" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />
     <None Update="plugins\7zip\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />
     <None Update="plugins\network\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />
-    <Content Include="..\bin\icons\*.dll" Link="icons\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\bin\icons\*.dll;..\bin\icons\*.fvicons" Link="icons\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <None Update="plugins\cloud\google-oauth.json" CopyToOutputDirectory="Never" />
-    <Content Include="plugins\cloud\google-oauth.json" Condition="Exists('plugins\cloud\google-oauth.json')" CopyToOutputDirectory="PreserveNewest" TargetPath="config\oauth\google.json" />
+    <Content Include="ui\icons\LICENSE.txt" Link="libraries\licenses\FLUENT-ICONS-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="ui\icons\SOURCE.json" Link="libraries\licenses\FLUENT-ICONS-SOURCE.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="ui\icons\TOOLBAR-SOURCE.json" Link="libraries\licenses\FLUENT-TOOLBAR-SOURCE.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="ui\icons\COLOR-SOURCE.json" Link="libraries\licenses\FLUENT-COLOR-SOURCE.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\docs\*.md" Link="help\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="dependencies.json" Link="help\dependencies.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="plugins\media\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />
     <None Update="plugins\smart\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />
     <None Update="plugins\sshfs\**\*" CopyToOutputDirectory="PreserveNewest" TargetPath="%(Identity)" />

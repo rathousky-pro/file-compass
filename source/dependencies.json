@@ -1,0 +1,759 @@
+{
+  "schema": 1,
+  "reviewed": "2026-11-01",
+  "scope": "Pinned source distribution; optional vendor updates have independent versions and terms.",
+  "binaries": [
+    {
+      "file": "ui/DiscUtils.Core.dll",
+      "sha256": "07473f1085dcfdc78457b22aeec27ed23cd43a50ff169fafaeac66eef3155b04",
+      "component": "discutils",
+      "license": "MIT and third-party terms",
+      "notices": [
+        "ui/licenses/DiscUtils"
+      ]
+    },
+    {
+      "file": "ui/DiscUtils.Ext.dll",
+      "sha256": "aae761b32ba82ec3a658fa75e94ee689bc68176eacd53cae9c3696a44770949e",
+      "component": "discutils",
+      "license": "MIT and third-party terms",
+      "notices": [
+        "ui/licenses/DiscUtils"
+      ]
+    },
+    {
+      "file": "ui/DiscUtils.Streams.dll",
+      "sha256": "6b7933b90c40f731234f6d7ca5fc07b03169ec86ca3c1216a22b591f8ca77dbd",
+      "component": "discutils",
+      "license": "MIT and third-party terms",
+      "notices": [
+        "ui/licenses/DiscUtils"
+      ]
+    },
+    {
+      "file": "ui/ICSharpCode.AvalonEdit.dll",
+      "sha256": "b0032716709359f7361d5a2ddc8e2ad457a1448a093fb4900e0336312b0a10c7",
+      "component": "avalonedit",
+      "license": "MIT",
+      "notices": [
+        "ui/licenses/AVALONEDIT-LICENSE.txt"
+      ]
+    },
+    {
+      "file": "ui/LTRData.Extensions.dll",
+      "sha256": "121e60de458052110b5d1510824bfe4d43f04619db0c72cc5c5cfce8577957b7",
+      "component": "discutils",
+      "license": "MIT and third-party terms",
+      "notices": [
+        "ui/licenses/DiscUtils"
+      ]
+    },
+    {
+      "file": "ui/Magick.NET-Q8-OpenMP-x64.dll",
+      "sha256": "61138fca0bf01eb2424b8a562047450c1667f5136f66348fcb80a97cf047d048",
+      "component": "magick",
+      "license": "Apache-2.0 wrapper plus native dependency licenses",
+      "notices": [
+        "plugins/media/MAGICK-NOTICE.txt",
+        "plugins/media/SOURCE.json"
+      ]
+    },
+    {
+      "file": "ui/Magick.NET.Core.dll",
+      "sha256": "477ca5cea07e25ba4867f3da12e374bc1e9c4f848135eca556f4787f5c41d19c",
+      "component": "magick",
+      "license": "Apache-2.0 wrapper plus native dependency licenses",
+      "notices": [
+        "plugins/media/MAGICK-NOTICE.txt",
+        "plugins/media/SOURCE.json"
+      ]
+    },
+    {
+      "file": "ui/Markdig.dll",
+      "sha256": "194587cdf19ec17eee6f69461b27a7d1f542c96b78fd468a2025f3269043fb69",
+      "component": "markdig",
+      "license": "BSD-2-Clause",
+      "notices": [
+        "ui/licenses/MARKDIG-LICENSE.txt"
+      ]
+    },
+    {
+      "file": "ui/Microsoft.Bcl.HashCode.dll",
+      "sha256": "3a4e851ee5fc0f6182aa5a3d65dc56fcd6979b65334b5c3b92fbdc791457c0ab",
+      "component": "microsoft",
+      "license": "MIT",
+      "notices": [
+        "ui/licenses/MICROSOFT-LICENSE.txt"
+      ]
+    },
+    {
+      "file": "ui/Microsoft.Web.WebView2.Core.dll",
+      "sha256": "d60e6e94245078cb56e44ebd5f360dc04bf18e460136be93bfc4cfca43b98505",
+      "component": "webview",
+      "license": "Microsoft WebView2 SDK terms; runtime is external",
+      "notices": [
+        "preview/WebView2-LICENSE.txt",
+        "preview/WebView2-NOTICE.txt"
+      ]
+    },
+    {
+      "file": "ui/Microsoft.Web.WebView2.Wpf.dll",
+      "sha256": "f05a06bbc03afcb83dc98168b8d343d9015b2a533edbfac90c52d88894b653e4",
+      "component": "webview",
+      "license": "Microsoft WebView2 SDK terms; runtime is external",
+      "notices": [
+        "preview/WebView2-LICENSE.txt",
+        "preview/WebView2-NOTICE.txt"
+      ]
+    },
+    {
+      "file": "ui/SharpSevenZip.dll",
+      "sha256": "e7a586e9342942974e79489dccc43f99e5987343db1f1f01dee864e4b55feb5c",
+      "component": "sharpsevenzip",
+      "license": "LGPL-3.0-or-later",
+      "notices": [
+        "ui/licenses/SharpSevenZip/LICENSE.txt"
+      ]
+    },
+    {
+      "file": "ui/System.Buffers.dll",
+      "sha256": "2d78d770c9cb997199154ae8c018b9f1d1efbc86729f7264dde6dbad2a12cac3",
+      "component": "microsoft",
+      "license": "MIT",
+      "notices": [
+        "ui/licenses/MICROSOFT-LICENSE.txt"
+      ]
+    },
+    {
+      "file": "ui/System.Collections.Immutable.dll",
+      "sha256": "2ccaeb8ed5e9b545f94cded76d24cc0ef6aad59f84c8169f689a43b340c0543d",
+      "component": "discutils",
+      "license": "MIT and third-party terms",
+      "notices": [
+        "ui/licenses/DiscUtils"
+      ]
+    },
+    {
+      "file": "ui/System.Memory.dll",
+      "sha256": "d5e8e4866f9cfa66f7765660f84b210198893e55335487afe5ebda342c0e913d",
+      "component": "microsoft",
+      "license": "MIT",
+      "notices": [
+        "ui/licenses/MICROSOFT-LICENSE.txt"
+      ]
+    },
+    {
+      "file": "ui/System.Numerics.Vectors.dll",
+      "sha256": "20c2fa81b8c70d651099d762954f285fd4f942e63b2d7217c145dab8d4b2f4c9",
+      "component": "microsoft",
+      "license": "MIT",
+      "notices": [
+        "ui/licenses/MICROSOFT-LICENSE.txt"
+      ]
+    },
+    {
+      "file": "ui/System.Runtime.CompilerServices.Unsafe.dll",
+      "sha256": "08cbd7278b66f1e68425a82d4b97181a4130d93e3dd91831407aba7212ccdacf",
+      "component": "microsoft",
+      "license": "MIT",
+      "notices": [
+        "ui/licenses/MICROSOFT-LICENSE.txt"
+      ]
+    },
+    {
+      "file": "ui/System.Text.Encoding.CodePages.dll",
+      "sha256": "23c3e00c2f0c46b42f177f81c2ae81fdb71fb8c912c7424e3d0668d239e53e0d",
+      "component": "discutils",
+      "license": "MIT and third-party terms",
+      "notices": [
+        "ui/licenses/DiscUtils"
+      ]
+    },
+    {
+      "file": "ui/System.Threading.Tasks.Extensions.dll",
+      "sha256": "af4e13ef418fd89b432de20cd1dfb7fa10a7179c8dd049c9856316e50c5949ca",
+      "component": "discutils",
+      "license": "MIT and third-party terms",
+      "notices": [
+        "ui/licenses/DiscUtils"
+      ]
+    },
+    {
+      "file": "ui/TagLibSharp.dll",
+      "sha256": "b1833a41ab1e933f7b006e5db15300b7223bfccc2c3b6689d49a9171dd27de1d",
+      "component": "taglib",
+      "license": "LGPL-2.1",
+      "notices": [
+        "ui/licenses/TAGLIBSHARP-LICENSE.txt"
+      ]
+    },
+    {
+      "file": "ui/UglyToad.PdfPig.Core.dll",
+      "sha256": "894bf5e8daac5e4f6fbd7e2eb26c6b2f39e42b3122e35fa69c6fa30469a43bb0",
+      "component": "pdfpig",
+      "license": "Apache-2.0",
+      "notices": [
+        "ui/licenses/PdfPig/LICENSE.txt"
+      ]
+    },
+    {
+      "file": "ui/UglyToad.PdfPig.dll",
+      "sha256": "cd712f405cbd4400903d18f2855e0b2458acb76d75019765f9faaa2f3ba0717e",
+      "component": "pdfpig",
+      "license": "Apache-2.0",
+      "notices": [
+        "ui/licenses/PdfPig/LICENSE.txt"
+      ]
+    },
+    {
+      "file": "ui/UglyToad.PdfPig.DocumentLayoutAnalysis.dll",
+      "sha256": "aa79f1774b74e5bd6939e089bb7770fd62b8e8c22d444f5f736a7171c243e16c",
+      "component": "pdfpig",
+      "license": "Apache-2.0",
+      "notices": [
+        "ui/licenses/PdfPig/LICENSE.txt"
+      ]
+    },
+    {
+      "file": "ui/UglyToad.PdfPig.Fonts.dll",
+      "sha256": "b066e7440e7d76d2b8229e9274e300dcfe7dcec65dd578106e8a1bf2473bb911",
+      "component": "pdfpig",
+      "license": "Apache-2.0",
+      "notices": [
+        "ui/licenses/PdfPig/LICENSE.txt"
+      ]
+    },
+    {
+      "file": "ui/UglyToad.PdfPig.Package.dll",
+      "sha256": "ec4a85d737582d93917a4dff811267723092e60f891916dd56dc94630417b5ee",
+      "component": "pdfpig",
+      "license": "Apache-2.0",
+      "notices": [
+        "ui/licenses/PdfPig/LICENSE.txt"
+      ]
+    },
+    {
+      "file": "ui/UglyToad.PdfPig.Tokenization.dll",
+      "sha256": "84315ce24887373ed9019442edfcb1b7777e7782ed0c4bf69be63e84941b43e0",
+      "component": "pdfpig",
+      "license": "Apache-2.0",
+      "notices": [
+        "ui/licenses/PdfPig/LICENSE.txt"
+      ]
+    },
+    {
+      "file": "ui/UglyToad.PdfPig.Tokens.dll",
+      "sha256": "d91a3f93ca27728709875ef71425d4c8e7165d5d3a7b13094ec976cfc22d305c",
+      "component": "pdfpig",
+      "license": "Apache-2.0",
+      "notices": [
+        "ui/licenses/PdfPig/LICENSE.txt"
+      ]
+    },
+    {
+      "file": "ui/Wpf.Ui.Abstractions.dll",
+      "sha256": "2c2018fa8e9bae0fd5517ab9f7c771a4068fe9decfd3cd0d251ab7d7d46e4c10",
+      "component": "wpfui",
+      "license": "MIT and third-party terms",
+      "notices": [
+        "ui/licenses/WPF-UI-LICENSE.txt",
+        "ui/licenses/WPF-UI-THIRD-PARTY.txt"
+      ]
+    },
+    {
+      "file": "ui/Wpf.Ui.dll",
+      "sha256": "17857d0fe5b82206d3d7b10292fc938004033fe472909ced350b3c34715a0df5",
+      "component": "wpfui",
+      "license": "MIT and third-party terms",
+      "notices": [
+        "ui/licenses/WPF-UI-LICENSE.txt",
+        "ui/licenses/WPF-UI-THIRD-PARTY.txt"
+      ]
+    },
+    {
+      "file": "ui/YamlDotNet.dll",
+      "sha256": "9172f0758ed76963e0ede3b5ca9a1fb5b82f64c7e7a92cb3a6de39efa933a668",
+      "component": "yaml",
+      "license": "MIT, including libyaml-derived code",
+      "notices": [
+        "ui/licenses/YamlDotNet/LICENSE.txt",
+        "ui/licenses/YamlDotNet/LICENSE-libyaml.txt"
+      ]
+    },
+    {
+      "file": "plugins/7zip/7z.dll",
+      "sha256": "899cd73d7fc60e1c1c35c7de0f5bed3dc69bfe2cecbd48014d868a347970a0b1",
+      "component": "7zip",
+      "license": "LGPL-2.1-or-later with unRAR restriction and BSD components",
+      "notices": [
+        "plugins/7zip/License.txt"
+      ]
+    },
+    {
+      "file": "plugins/7zip/7z.exe",
+      "sha256": "95fff19b73eff77c87c0d7bd32822e43fb90dd2932459f962eb532d8dfb6ba53",
+      "component": "7zip",
+      "license": "LGPL-2.1-or-later with unRAR restriction and BSD components",
+      "notices": [
+        "plugins/7zip/License.txt"
+      ]
+    },
+    {
+      "file": "plugins/7zip/7z.sfx",
+      "sha256": "bdf3860863e383f2af8dda02026d81b4949a5a0956c160b5eef4ad2fc5a7560f",
+      "component": "7zip",
+      "license": "LGPL-2.1-or-later with unRAR restriction and BSD components",
+      "notices": [
+        "plugins/7zip/License.txt"
+      ]
+    },
+    {
+      "file": "plugins/cloud/rclone.exe",
+      "sha256": "41eab3e118d264920b62c3327966c5ece0dc4dd715ee617d9e30450d8ead95a4",
+      "component": "cloud",
+      "license": "MIT",
+      "notices": [
+        "plugins/cloud/LICENSE.txt"
+      ]
+    },
+    {
+      "file": "plugins/everything/Everything64.dll",
+      "sha256": "81b5be18126acd2c2b913f8f4a821e476b18393cdd3debd03387c50afd8db88f",
+      "component": "everything",
+      "license": "MIT",
+      "notices": [
+        "plugins/everything/LICENSE.txt"
+      ]
+    },
+    {
+      "file": "plugins/media/avcodec-63.dll",
+      "sha256": "3e09890100ef21cf0b1d8a196902d28994fc5187375daa0a8e761e8ea8287167",
+      "component": "ffmpeg",
+      "license": "LGPL-3.0-or-later; corresponding sources still required for public redistribution",
+      "notices": [
+        "plugins/media/FFMPEG-LICENSE.txt",
+        "plugins/media/GPL-3.0.txt",
+        "plugins/media/SOURCE.json"
+      ]
+    },
+    {
+      "file": "plugins/media/avdevice-63.dll",
+      "sha256": "aaffacb3e3bcb626c5c905f4482a4a44e38479c399404f0cee01bfda4e765c8d",
+      "component": "ffmpeg",
+      "license": "LGPL-3.0-or-later; corresponding sources still required for public redistribution",
+      "notices": [
+        "plugins/media/FFMPEG-LICENSE.txt",
+        "plugins/media/GPL-3.0.txt",
+        "plugins/media/SOURCE.json"
+      ]
+    },
+    {
+      "file": "plugins/media/avfilter-12.dll",
+      "sha256": "1a8dc136c6594a101b3db7e2de44d652feefca2dbb0b39b8babe33d2ef43ca76",
+      "component": "ffmpeg",
+      "license": "LGPL-3.0-or-later; corresponding sources still required for public redistribution",
+      "notices": [
+        "plugins/media/FFMPEG-LICENSE.txt",
+        "plugins/media/GPL-3.0.txt",
+        "plugins/media/SOURCE.json"
+      ]
+    },
+    {
+      "file": "plugins/media/avformat-63.dll",
+      "sha256": "d5610d1484c271efd688df23aba12770c1e70a9dd6de1371abde3902460771c5",
+      "component": "ffmpeg",
+      "license": "LGPL-3.0-or-later; corresponding sources still required for public redistribution",
+      "notices": [
+        "plugins/media/FFMPEG-LICENSE.txt",
+        "plugins/media/GPL-3.0.txt",
+        "plugins/media/SOURCE.json"
+      ]
+    },
+    {
+      "file": "plugins/media/avutil-61.dll",
+      "sha256": "2c57ab9a52aad49d4339c12dfe60e30e88a4741131e11a8a402200b67eefa917",
+      "component": "ffmpeg",
+      "license": "LGPL-3.0-or-later; corresponding sources still required for public redistribution",
+      "notices": [
+        "plugins/media/FFMPEG-LICENSE.txt",
+        "plugins/media/GPL-3.0.txt",
+        "plugins/media/SOURCE.json"
+      ]
+    },
+    {
+      "file": "plugins/media/ffmpeg.exe",
+      "sha256": "adf60b2e01fc2476dd4aa170d263abfcf693cc9201ebaa50ddd86725a0d2e8ad",
+      "component": "ffmpeg",
+      "license": "LGPL-3.0-or-later; corresponding sources still required for public redistribution",
+      "notices": [
+        "plugins/media/FFMPEG-LICENSE.txt",
+        "plugins/media/GPL-3.0.txt",
+        "plugins/media/SOURCE.json"
+      ]
+    },
+    {
+      "file": "plugins/media/ffprobe.exe",
+      "sha256": "101b96e90d9d59d9d69e4067ffc3be3042f61c735d2c13232b4f26c3616d5b46",
+      "component": "ffmpeg",
+      "license": "LGPL-3.0-or-later; corresponding sources still required for public redistribution",
+      "notices": [
+        "plugins/media/FFMPEG-LICENSE.txt",
+        "plugins/media/GPL-3.0.txt",
+        "plugins/media/SOURCE.json"
+      ]
+    },
+    {
+      "file": "plugins/media/Magick.Native-Q8-OpenMP-x64.dll",
+      "sha256": "9a1b0a0103641671c8c3248c53c52ac6b3f146a30b2c09bf664fce4aedea6909",
+      "component": "magick",
+      "license": "Apache-2.0 wrapper plus native dependency licenses",
+      "notices": [
+        "plugins/media/MAGICK-NOTICE.txt",
+        "plugins/media/SOURCE.json"
+      ]
+    },
+    {
+      "file": "plugins/media/swresample-7.dll",
+      "sha256": "434da9e5c64082dab1c8668e8f0f04b9b7dd3d7bdbf4625d4a6f860ef1e673ee",
+      "component": "ffmpeg",
+      "license": "LGPL-3.0-or-later; corresponding sources still required for public redistribution",
+      "notices": [
+        "plugins/media/FFMPEG-LICENSE.txt",
+        "plugins/media/GPL-3.0.txt",
+        "plugins/media/SOURCE.json"
+      ]
+    },
+    {
+      "file": "plugins/media/swscale-10.dll",
+      "sha256": "59438222bcbe8a2951fd3ac7dee8dfbbc340c0b3e3436d0fcc20b1e85c10e4f0",
+      "component": "ffmpeg",
+      "license": "LGPL-3.0-or-later; corresponding sources still required for public redistribution",
+      "notices": [
+        "plugins/media/FFMPEG-LICENSE.txt",
+        "plugins/media/GPL-3.0.txt",
+        "plugins/media/SOURCE.json"
+      ]
+    },
+    {
+      "file": "plugins/media/vcomp140.dll",
+      "sha256": "bcbdf73bfe9eadd849739671a5fe82ebb94346141b586d6a0aa405e6f93b5bec",
+      "component": "openmp",
+      "license": "Microsoft Visual C++ redistribution terms; publisher entitlement required",
+      "notices": [
+        "plugins/media/SOURCE.json",
+        "plugins/media/README.txt"
+      ]
+    },
+    {
+      "file": "plugins/network/FileCompassNetwork.dll",
+      "sha256": "0a0a03bb2a023e1f06e82f106b5460266505d15b5036a18bb7de8391271f0113",
+      "component": "network",
+      "license": "curl, BSD, MIT, ISC and dependency-specific terms",
+      "notices": [
+        "plugins/network/licenses"
+      ]
+    },
+    {
+      "file": "plugins/smart/smartctl.exe",
+      "sha256": "b5db94e5082c042be44994b7a4fa8f7b5c8e713b2ab1c9a560d8f7a7995ea27d",
+      "component": "smart",
+      "license": "GPL-2.0",
+      "notices": [
+        "plugins/smart/LICENSE.txt",
+        "plugins/smart/smartmontools-7.5.tar.gz"
+      ]
+    },
+    {
+      "file": "preview/WebView2Loader.dll",
+      "sha256": "3426dcc55fdfb8b5e7ac623cf33b4ccf283fbf68a0c5a65bddfdb4d749a8abee",
+      "component": "webview",
+      "license": "Microsoft WebView2 SDK terms; runtime is external",
+      "notices": [
+        "preview/WebView2-LICENSE.txt",
+        "preview/WebView2-NOTICE.txt"
+      ]
+    }
+  ],
+  "originalNotices": [
+    {
+      "file": "plugins/7zip/License.txt",
+      "sha256": "519ac0a4bded9c18ea02e0afb71f663d8c47373bd9facd3ac96a79f51d77765d"
+    },
+    {
+      "file": "plugins/cloud/LICENSE.txt",
+      "sha256": "8cd2e9e750b90a04b7d82dbbca3930c696ae0309d7c10464f90a44f45754cd04"
+    },
+    {
+      "file": "plugins/everything/LICENSE.txt",
+      "sha256": "04c6790b28bc5ef02986d6dc585bf312b797a0de5762a8f38d0fab52e5cb4dd6"
+    },
+    {
+      "file": "plugins/media/FFMPEG-LICENSE.txt",
+      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768"
+    },
+    {
+      "file": "plugins/media/GPL-3.0.txt",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+    },
+    {
+      "file": "plugins/media/MAGICK-NOTICE.txt",
+      "sha256": "a08ce0f18e36f83c971ab35a7504523fa25a797e99eec57e67c96ab4648b1409"
+    },
+    {
+      "file": "plugins/media/README.txt",
+      "sha256": "32b7c1b153d61b5175968ad3083c5d127ed6c0985e2f220dd0f26558f3499961"
+    },
+    {
+      "file": "plugins/media/SOURCE.json",
+      "sha256": "592b88fa2a63a3574fb0425bcca89ee0ab89a90018ab7b875ae16166fe16cc9c"
+    },
+    {
+      "file": "plugins/network/BUILD-MANIFEST.txt",
+      "sha256": "6cb042b1d7681773d215036947c68b924a03bb9365736889942e8fd3361bdedb"
+    },
+    {
+      "file": "plugins/network/licenses/brotli/LICENSE.txt",
+      "sha256": "3d180008e36922a4e8daec11c34c7af264fed5962d07924aea928c38e8663c94"
+    },
+    {
+      "file": "plugins/network/licenses/certdata/LICENSE.url",
+      "sha256": "b9954f88a27e8457cefcebd076fa533d037711383f6b28ae489d063ef8c61f79"
+    },
+    {
+      "file": "plugins/network/licenses/curl-COPYING.txt",
+      "sha256": "82f2f4427d6545ee5aaac4f0b80428da6cc8ba41c2cf5da3a03680ec327b9681"
+    },
+    {
+      "file": "plugins/network/licenses/libpsl/COPYING.txt",
+      "sha256": "e7c9f0d8498d28a360a7e8293ea70fd7bd952955b636938322c13d60a03b5a45"
+    },
+    {
+      "file": "plugins/network/licenses/libressl/COPYING.txt",
+      "sha256": "9853507b8821c3f277aa60bf554eade41441ef06b2df538d247183ad28789b7f"
+    },
+    {
+      "file": "plugins/network/licenses/libssh2/COPYING.txt",
+      "sha256": "f7f9633cf9ff2f1333f3d7ce46973a8716a4d2a2815ad56f30d437d5fea7bafe"
+    },
+    {
+      "file": "plugins/network/licenses/nghttp2/COPYING.txt",
+      "sha256": "6b94f3abc1aabd0c72a7c7d92a77f79dda7c8a0cb3df839a97890b4116a2de2a"
+    },
+    {
+      "file": "plugins/network/licenses/nghttp3/COPYING.txt",
+      "sha256": "58cc3fc8c6d6cb2485ab35eb5918e849b5bf1e56522974e106d7a39a88d61dcd"
+    },
+    {
+      "file": "plugins/network/licenses/ngtcp2/COPYING.txt",
+      "sha256": "542dd526d2ea23565f0571cc68df6f05ed11248a90ff0f32de19d8ba589db513"
+    },
+    {
+      "file": "plugins/network/licenses/psl/LICENSE.txt",
+      "sha256": "66a3107d5ad6a058aab753eaac2047ccb2ed0e39465dd0fe5844da3e300d5172"
+    },
+    {
+      "file": "plugins/network/licenses/trurl/COPYING.txt",
+      "sha256": "4b3e3c4d0d954c3693161dbcf1bab99803c79f7ce80319e11eb406e3a3d424cf"
+    },
+    {
+      "file": "plugins/network/licenses/zlibng/LICENSE.md",
+      "sha256": "6c9f0d975b41afaa34d22f55bb8986ce69e5cb7ad327cb2b28820cd425edf5ee"
+    },
+    {
+      "file": "plugins/network/licenses/zstd/LICENSE.txt",
+      "sha256": "7055266497633c9025b777c78eb7235af13922117480ed5c674677adc381c9d8"
+    },
+    {
+      "file": "plugins/network/manifest.json",
+      "sha256": "a2191a21fe69b0f6b108ed9ab8f978c26c15935a53817cda1a4213ff90c6c429"
+    },
+    {
+      "file": "plugins/smart/LICENSE.txt",
+      "sha256": "189b1af95d661151e054cea10c91b3d754e4de4d3fecfb074c1fb29476f7167b"
+    },
+    {
+      "file": "plugins/smart/smartmontools-7.5.tar.gz",
+      "sha256": "690b83ca331378da9ea0d9d61008c4b22dde391387b9bbad7f29387f2595f76e"
+    },
+    {
+      "file": "preview/docx-preview-LICENSE.txt",
+      "sha256": "8668bf4417d161e4eb4d47d6044526e4914d9eb3c748573d9bb7e87708c1253f"
+    },
+    {
+      "file": "preview/JSZip-LICENSE.txt",
+      "sha256": "566c953c6090b1218ca6217dd7359d45dde46581968586dc607d59a78af6a9c4"
+    },
+    {
+      "file": "preview/manifest.json",
+      "sha256": "c3c9daea0b8e2289920a266b23609fc82f2e92c34e3ecf3be808a62db5eb1d76"
+    },
+    {
+      "file": "preview/SheetJS-LICENSE.txt",
+      "sha256": "4d2a38ac35cda06a555c84074a819d413339cd3691b822cae50f8f322fe01f64"
+    },
+    {
+      "file": "preview/WebView2-LICENSE.txt",
+      "sha256": "0af8f1b807512aae39c2ac1aa4d0cae65cabecb6fd554b8439a5162a0d6eca55"
+    },
+    {
+      "file": "preview/WebView2-NOTICE.txt",
+      "sha256": "106423785c5b7eba0a8e61d1837f2132e9c828e20ad530f565d981c1df60dd90"
+    },
+    {
+      "file": "ui/icons/COLOR-SOURCE.json",
+      "sha256": "fdcaf5e95d44f6feed8ced538f1940dbacda9fb192e32655dd3505f606dacd32"
+    },
+    {
+      "file": "ui/icons/LICENSE.txt",
+      "sha256": "69bc45dc42b9acb96a69823adbc6ae538374e3c0bde169b855b32c48eaaef52f"
+    },
+    {
+      "file": "ui/icons/SOURCE.json",
+      "sha256": "97122b724ae15a9b06aef921a2d13e0c6474f9fe5053d433417b50ef61d5dc35"
+    },
+    {
+      "file": "ui/icons/TOOLBAR-SOURCE.json",
+      "sha256": "6c9233c30f70bf7223075bfdf86c139b8b1459f59f68c2d7f4119caee91e4d9e"
+    },
+    {
+      "file": "ui/licenses/AVALONEDIT-LICENSE.txt",
+      "sha256": "7cfe74f11eaef7a239e7c63d33595f924e7922fb3e3f3651014389620b228a07"
+    },
+    {
+      "file": "ui/licenses/DiscUtils/DISCUTILS-LICENSE.txt",
+      "sha256": "7f62225e8d08b717f9e580e3768d64791df324dd1ff509a6b5d2a684b9e058c4"
+    },
+    {
+      "file": "ui/licenses/DiscUtils/LTRDATA-EXTENSIONS-LICENSE.txt",
+      "sha256": "6ef75516fad2b9fca9b3c012bd5a437f89e0ae29da029076a715c2aa2c982a38"
+    },
+    {
+      "file": "ui/licenses/DiscUtils/ltrdata.discutils.core.nuspec",
+      "sha256": "ed17d74ca8acf9442dd98111ef97356198533a1aae68ca8e73164dde84b24205"
+    },
+    {
+      "file": "ui/licenses/DiscUtils/ltrdata.discutils.ext.nuspec",
+      "sha256": "4371e224bc9a650223016325dc34dc105670290045f4feb04e16817190ba710b"
+    },
+    {
+      "file": "ui/licenses/DiscUtils/ltrdata.discutils.streams.nuspec",
+      "sha256": "7e7cd80e7229a6b5d7ee52940e2fdee31bed1e59619962101a5ce91822b04a92"
+    },
+    {
+      "file": "ui/licenses/DiscUtils/ltrdata.extensions.nuspec",
+      "sha256": "58577400e3f6b7d425943d14652a2ad6708b0c9e404ec6cc887717e02933c0b9"
+    },
+    {
+      "file": "ui/licenses/DiscUtils/SOURCE.json",
+      "sha256": "3a081f94c34360ad6c7d7396aadb61d07cace720fd13d437780b1a9194cd8f59"
+    },
+    {
+      "file": "ui/licenses/DiscUtils/system.collections.immutable-LICENSE.TXT",
+      "sha256": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b"
+    },
+    {
+      "file": "ui/licenses/DiscUtils/system.collections.immutable-THIRD-PARTY-NOTICES.TXT",
+      "sha256": "40686c6447a7d5b5d3693068e4571b5f483d7ed335aeee773ef662440de4c5d5"
+    },
+    {
+      "file": "ui/licenses/DiscUtils/system.collections.immutable.nuspec",
+      "sha256": "d0199c35f3047828800fdd085e373979230ab4fa2c61b92682d27fcdc0212ef4"
+    },
+    {
+      "file": "ui/licenses/DiscUtils/system.text.encoding.codepages-LICENSE.TXT",
+      "sha256": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b"
+    },
+    {
+      "file": "ui/licenses/DiscUtils/system.text.encoding.codepages-THIRD-PARTY-NOTICES.TXT",
+      "sha256": "40686c6447a7d5b5d3693068e4571b5f483d7ed335aeee773ef662440de4c5d5"
+    },
+    {
+      "file": "ui/licenses/DiscUtils/system.text.encoding.codepages.nuspec",
+      "sha256": "514e2245d3ed8f6573dd088cc918a62e488f54ac4a78b3b11e8ac0e20262aaf8"
+    },
+    {
+      "file": "ui/licenses/DiscUtils/system.threading.tasks.extensions-LICENSE.txt",
+      "sha256": "cfc21f5e8bd655ae997eec916138b707b1d290b83272c02a95c9f821b8c87310"
+    },
+    {
+      "file": "ui/licenses/DiscUtils/system.threading.tasks.extensions.nuspec",
+      "sha256": "64cd22321f9ce0f46349f2c24e5759d4117f6a15bc6015eb711efb991561bf6d"
+    },
+    {
+      "file": "ui/licenses/MARKDIG-LICENSE.txt",
+      "sha256": "ae543293657b6782e3d4a76257dc4157210ce88a352ef8392065d3f04dcd88d1"
+    },
+    {
+      "file": "ui/licenses/MICROSOFT-LICENSE.txt",
+      "sha256": "cfc21f5e8bd655ae997eec916138b707b1d290b83272c02a95c9f821b8c87310"
+    },
+    {
+      "file": "ui/licenses/Microsoft.Bcl.HashCode/Microsoft.Bcl.HashCode.nuspec",
+      "sha256": "fff13c95d639c345cbb0cb348748a7b5caf5cde26123946d3ab52ea4fb4cd934"
+    },
+    {
+      "file": "ui/licenses/PdfPig/LICENSE.txt",
+      "sha256": "4c510e162f896ea43b4b1cf1b743641d7c756f1004d0e5eaf0615b28b7ded409"
+    },
+    {
+      "file": "ui/licenses/PdfPig/PdfPig.nuspec",
+      "sha256": "a8a3d5fa1563443c9cfaa70cdd3815bdca048f6da78afbe726967d42d7f1fe23"
+    },
+    {
+      "file": "ui/licenses/SharpSevenZip/LICENSE.txt",
+      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768"
+    },
+    {
+      "file": "ui/licenses/SharpSevenZip/SharpSevenZip.nuspec",
+      "sha256": "af10c2afb7a93b41a8a3d43ec2889477b63656b852fe14f4f37cdccb1023dad6"
+    },
+    {
+      "file": "ui/licenses/System.Buffers.nuspec",
+      "sha256": "be89a209f57ae6cd84ca406ee73762d7eb3fe686198a3e6032e6c77e90e9cb8d"
+    },
+    {
+      "file": "ui/licenses/System.Memory.nuspec",
+      "sha256": "98fc2db30bed06f405323c9899ae51486acf2e284ab775eb62afe41d6dd1f82d"
+    },
+    {
+      "file": "ui/licenses/System.Numerics.Vectors.nuspec",
+      "sha256": "15440dd053506902802cdfaab77d05688a18e120bff464bf03c61636fbab1014"
+    },
+    {
+      "file": "ui/licenses/System.Runtime.CompilerServices.Unsafe.nuspec",
+      "sha256": "79f5f27fd1038d84896f0dc80cca839d66b8d4df8024f805961534b174d01909"
+    },
+    {
+      "file": "ui/licenses/TAGLIBSHARP-LICENSE.txt",
+      "sha256": "6095e9ffa777dd22839f7801aa845b31c9ed07f3d6bf8a26dc5d2dec8ccc0ef3"
+    },
+    {
+      "file": "ui/licenses/WPF-UI-LICENSE.txt",
+      "sha256": "ca4cd08a26861c645d8d0e9aa5ddee90278f835c98d3910ec65a8f7a5ecd4341"
+    },
+    {
+      "file": "ui/licenses/WPF-UI-THIRD-PARTY.txt",
+      "sha256": "84d8f5ee989d2240981e8f1b08a57498ad2beff370541026d21cb1dad8220119"
+    },
+    {
+      "file": "ui/licenses/WPF-UI.Abstractions.nuspec",
+      "sha256": "372974880ced6cd4f59da9c0d6d66b6e4c98c595ef7ddd59fffd4ce7c66af729"
+    },
+    {
+      "file": "ui/licenses/WPF-UI.nuspec",
+      "sha256": "34d1284472e36b771348c6cb66afa450788236cafcd158a9fc5949efe52ea7f0"
+    },
+    {
+      "file": "ui/licenses/YamlDotNet/LICENSE-libyaml.txt",
+      "sha256": "cb65f46df0d9125ba60862117200ec6631fef3a8169cd0b4513ffcad4ef5cb9b"
+    },
+    {
+      "file": "ui/licenses/YamlDotNet/LICENSE.txt",
+      "sha256": "daea8b7f1b2bab48ea12ad50b0ce91634669d99d7dd0cb64aed8dffeeef69ed3"
+    },
+    {
+      "file": "ui/licenses/YamlDotNet/SOURCE.json",
+      "sha256": "c975123f8060f15aaa7892d3257b5515b755485e37ed63f64cf0756d573dac2e"
+    }
+  ]
+}

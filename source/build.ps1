@@ -1,4 +1,4 @@
-﻿param([string]$OutputDirectory = '', [switch]$Release)
+param([string]$OutputDirectory = '', [switch]$Release)
 $ErrorActionPreference = 'Stop'
 if(!(Test-Path -LiteralPath (Join-Path $PSScriptRoot 'ui\YamlDotNet.dll'))){throw 'Missing YAML editor dependency. Run source/prepare-editor.ps1 first.'}
 & (Join-Path $PSScriptRoot 'gen-plugin-hashes.ps1')
@@ -43,19 +43,19 @@ $appIcon = Join-Path $PSScriptRoot 'assets\file-voyager\FileVoyager-FloppyOrbit.
 $compilerArgs += Join-Path $buildInfoDirectory 'BuildInfo.g.cs'
 $compilerArgs += '/resource:' + (Join-Path $PSScriptRoot 'assets\branding\rathousky-pro.png') + ',FileCompass.Branding.RathouskyPro.png'
 $compilerArgs += '/win32icon:' + $appIcon
-$compilerArgs += '/win32manifest:' + (Join-Path $PSScriptRoot 'FileVoyager.manifest')
+$compilerArgs += '/win32manifest:' + (Join-Path $PSScriptRoot 'FileCompass.manifest')
 foreach ($library in Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'ui') -Filter '*.dll') { $compilerArgs += '/reference:' + $library.FullName }
 foreach ($reference in $references) { $compilerArgs += '/reference:' + (Join-Path $framework $reference) }
 if (!$Release) { $compilerArgs += '/define:APP_TESTS' }
 $compilerArgs += Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'src') -Filter '*.cs' | Where-Object { !$Release -or $_.Name -notlike '*Tests.cs' } | ForEach-Object { $_.FullName }
-# Embedded bilingual help and screenshots exceed the Windows process argument limit.
+# Keep the compiler invocation below the Windows process argument limit.
 # A response file also keeps builds reliable when the workspace path contains spaces.
 $responseFile = Join-Path $buildInfoDirectory 'compile.rsp'
 $responseArguments = $compilerArgs | ForEach-Object { '"' + $_ + '"' }
 [IO.File]::WriteAllLines($responseFile, $responseArguments, (New-Object Text.UTF8Encoding($true)))
 & $compiler ('@' + $responseFile)
 if ($LASTEXITCODE -ne 0) { throw 'Sestavení selhalo.' }
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'FileVoyager.exe.config') -Destination (Join-Path $bin 'File Compass.exe.config')
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'FileCompass.exe.config') -Destination (Join-Path $bin 'File Compass.exe.config')
 New-Item -ItemType Directory -Path (Join-Path $bin 'icons') -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $bin 'libraries') -Force | Out-Null
 Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'ui') | Where-Object { $_.Name -ne 'icons' } | ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $bin 'libraries') -Recurse -Force }
@@ -69,7 +69,7 @@ foreach ($reference in $references) { $exportArgs += '/reference:' + (Join-Path 
 $exportArgs += Join-Path $PSScriptRoot 'BuildIconLibraries.cs'
 & $compiler @exportArgs
 if ($LASTEXITCODE -ne 0) { throw 'Sestavení exportéru ikon selhalo.' }
-$exportConfig = (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'FileVoyager.exe.config') -Raw)
+$exportConfig = (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'FileCompass.exe.config') -Raw)
 Set-Content -LiteralPath ($exporter + '.config') -Value $exportConfig -Encoding UTF8
 $iconProcess = Start-Process -FilePath $exporter -ArgumentList @(('"' + (Join-Path $PSScriptRoot 'ui\icons') + '"'), ('"' + (Join-Path $bin 'icons') + '"'), ('"' + (Join-Path $PSScriptRoot 'assets\file-voyager') + '"')) -WindowStyle Hidden -PassThru -Wait
 if ($iconProcess.ExitCode -ne 0) { throw 'Vytvoření knihoven ikon selhalo.' }
@@ -128,6 +128,7 @@ Copy-Item -Path (Join-Path $PSScriptRoot 'help/site/*') -Destination $helpRoot -
 New-Item -ItemType Directory -Path (Join-Path $helpRoot 'images') -Force | Out-Null
 Copy-Item -Path (Join-Path $PSScriptRoot 'help/images/*.png') -Destination (Join-Path $helpRoot 'images') -Force -ErrorAction Stop
 Copy-Item -Path (Join-Path $documentationRoot '*.md') -Destination $helpRoot -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'dependencies.json') -Destination (Join-Path $helpRoot 'dependencies.json') -Force -ErrorAction Stop
 $oldDocumentation = @('README.md','FILE-COMPASS.md','ARCHIVES.md','ADVANCED-TOOLS.md','ARCHIVE-PLUGINS.md','CLOUD-STORAGE.md','DOCUMENT-PREVIEW.md','DUPLICATES-COMPARE.md','FILE-DETAILS.md','FILE-TOOLS.md','FOLDER-VIEWS.md','GOOGLE-OAUTH-PUBLISHER.md','LIBCURL-AUDIT.md','METADATA-SEARCH.md','NETWORK-PLUGINS.md','NETWORK-VALIDATION.md','THIRD-PARTY-NOTICES.md','UI-VALIDATION.md','WORKFLOW-FEATURES.md')
 foreach ($folder in @($bin,$configRoot)) {
     foreach ($name in $oldDocumentation) { $old = Join-Path $folder $name; if (Test-Path -LiteralPath $old) { Remove-Item -LiteralPath $old -Force } }

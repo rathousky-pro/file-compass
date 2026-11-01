@@ -69,7 +69,7 @@ After adjusting columns, widths, sorting and display mode, right-click the heade
 
 ## Icon libraries
 
-Action sets are `Actions.Fluent.fvicons` (Windows 11 color), `Actions.Flat.fvicons` and `Actions.Outline.fvicons`. `FileCompass.Icons.dll` contains seven app-icon variants with ten sizes from 16 to 256 px. Settings → Icons previews action/app choices immediately; Save persists them, Cancel restores saved choices. Changing the app icon updates application windows, not the embedded EXE icon or existing Windows shortcuts.
+Action sets are `Actions.Fluent.fvicons` (Windows 11 color), `Actions.Flat.fvicons` and `Actions.Outline.fvicons`. `FileCompass.Icons.dll` contains seven app-icon variants with ten sizes from 16 to 256 px. Settings → Icons previews action/app choices immediately; Apply saves without closing, Save saves and closes, and Cancel discards later unsaved changes. Changing the app icon updates application windows, not the embedded EXE icon or existing Windows shortcuts.
 
 Create shortcut with selected icon writes a `.lnk` referencing the shared library. For the taskbar, unpin the old item and pin the new shortcut; Windows can cache old pinned icons. Keep the library/application at a stable path. Shortcut Properties → Change icon can browse `FileCompass.Icons.dll`; an EXE's fixed embedded icon cannot be changed this way.
 
@@ -78,7 +78,7 @@ File icons use Windows associations, including effective user registrations and 
 
 ## Common locations and right-click menus
 
-The drive selector includes Windows known folders below physical and network drives: Desktop, Downloads, Documents, Pictures, Music, Videos and the user profile. Their actual redirected paths are resolved through SHGetKnownFolderPath, and selecting one bypasses remembered per-drive directories.
+Drive buttons remain at the left of their row. The common-folders dropdown at the right contains only Desktop, Downloads, Documents, Pictures, Music, Videos and the user profile; drives are not repeated in it. Drive label, free space and total capacity appear in the panel footer. Their actual redirected paths are resolved through SHGetKnownFolderPath, and selecting one bypasses remembered per-drive directories.
 
 A short right-click toggles the item mark while preserving other marks. A stationary hold shows feedback after 250 ms and opens the File Compass command menu at 600 ms. Its final Windows menu command opens the classic native shell menu for supported local selections, using IContextMenu with IContextMenu2/3 message forwarding. Right-button dragging marks files. Remote/archive items retain application commands; unsupported commands are disabled. Holding on a marked item preserves its group; holding on an unmarked item targets that item.
 
@@ -93,3 +93,11 @@ Short right-click toggles the target mark without clearing other marks, includin
 ## Open tabs and saved bookmarks
 
 Open tabs occupy the breadcrumb/path row itself; there is no additional tab row. Tabs use bounded widths based on their path lengths; short drive roots stay compact. When paths do not fit, both active and inactive tabs reuse the copy dialog middle-compaction rule, keeping the drive/root and path ending visible with the full path in a tooltip. The active tab retains breadcrumb navigation when its full path fits. Ctrl+L or the pencil edits the active path. The + button/Ctrl+T opens another tab and Ctrl+W closes one; each panel has its own open-tab set. Saved bookmarks are a separate list under the star button. Adding a bookmark saves a location without opening a tab; choosing one from the panel star menu opens a new tab in that panel. The list supports groups and bookmark management. Closing a tab does not remove a saved bookmark. Open tabs and bookmarks are saved separately, and startup restores only the open-tab set. Locked home tabs remain a separate optional tab behavior. Missing folders, disconnected drives and remote tabs retain their saved targets and show an explicit unavailable state with Retry/connect; remote login occurs only on explicit opening.
+
+## Current panel navigation and carousel
+
+One blue-grey row combines location tabs and navigation. The active panel has a darker row and a stronger blue border. White tabs have rounded top corners and bare close crosses; + opens a new tab. Root and parent-folder buttons sit at the right. The last tab can be closed, leaving an empty panel; disconnected FTP/SFTP tabs remain closable. Closing a connected remote tab first offers disconnect, close the tab only, or cancel.
+
+File headers have a bottom separator and thin vertical cell dividers. Right-click a header to toggle or reorder available columns, or drag headers. The sort arrow follows its column. Counts and widths are fitted to the available panel width; there is no horizontal file-list scrollbar. SI MB/GB, IEC MiB/GiB and exact bytes are configurable under Settings → Panels alongside hidden/system visibility.
+
+Preview starts with only the selected file. More/Less at the start of its information row uses down/up chevrons to show/hide the file carousel. Choosing a carousel item updates the source-panel cursor while preserving marks. Opening another folder refreshes carousel candidates from that folder. Details opens a separate popup. Wheel scrolling keeps the carousel scrollbar off the pictures, and document/archive icons remain small.

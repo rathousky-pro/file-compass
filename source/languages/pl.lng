@@ -1,4 +1,7 @@
 ﻿{
+  "help.openBrowser": "Otwórz w przeglądarce",
+  "help.unavailable": "Pomoc jest niedostępna lub uszkodzona. Przywróć folder help obok programu z pakietu instalacyjnego.",
+  "help.browserFailed": "Nie udało się otworzyć pomocy w przeglądarce. Możesz ręcznie otworzyć help/index.html.",
   "codeEditor.unsavedTitle": "Niezapisane zmiany",
   "codeEditor.unsavedBody": "Plik „{0}” zawiera niezapisane zmiany.\nZapisz je lub kontynuuj edycję.",
   "codeEditor.discardChanges": "Odrzuć zmiany",

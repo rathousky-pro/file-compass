@@ -1,4 +1,7 @@
 ﻿{
+  "help.openBrowser": "Openen in browser",
+  "help.unavailable": "De help ontbreekt of is beschadigd. Herstel de map help naast het programma vanuit het installatiepakket.",
+  "help.browserFailed": "De help kon niet in de browser worden geopend. U kunt help/index.html handmatig openen.",
   "codeEditor.unsavedTitle": "Niet-opgeslagen wijzigingen",
   "codeEditor.unsavedBody": "Het bestand “{0}” heeft niet-opgeslagen wijzigingen.\nSla ze op of ga verder met bewerken.",
   "codeEditor.discardChanges": "Wijzigingen verwerpen",

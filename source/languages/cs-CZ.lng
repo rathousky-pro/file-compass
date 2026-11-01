@@ -1,4 +1,7 @@
 ﻿{
+  "help.openBrowser": "Otevřít v prohlížeči",
+  "help.unavailable": "Nápověda chybí nebo je poškozená. Obnovte složku help vedle programu z instalačního balíčku.",
+  "help.browserFailed": "Nápovědu se nepodařilo otevřít v prohlížeči. Soubor help/index.html můžete otevřít ručně.",
   "codeEditor.unsavedTitle": "Neuložené změny",
   "codeEditor.unsavedBody": "Soubor „{0}“ obsahuje neuložené změny.\nUložte je, nebo pokračujte v úpravách.",
   "codeEditor.discardChanges": "Zahodit změny",

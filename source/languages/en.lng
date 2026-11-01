@@ -1,4 +1,7 @@
 ﻿{
+  "help.openBrowser": "Open in browser",
+  "help.unavailable": "Help is missing or damaged. Restore the help folder beside the program from the installation package.",
+  "help.browserFailed": "Help could not be opened in your browser. You can open help/index.html manually.",
   "codeEditor.unsavedTitle": "Unsaved changes",
   "codeEditor.unsavedBody": "The file “{0}” has unsaved changes.\nSave them or continue editing.",
   "codeEditor.discardChanges": "Discard changes",

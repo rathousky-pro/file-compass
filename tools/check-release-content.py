@@ -11,6 +11,27 @@ spec = importlib.util.spec_from_file_location('catalog', ROOT/'tools/language-ca
 catalog = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(catalog)
 catalog.check()
+spec = importlib.util.spec_from_file_location('help_builder', ROOT/'tools/build-help.py')
+help_builder = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(help_builder)
+help_builder.generate(check=True)
+for locale in ('cs-CZ', 'en'):
+    page = ROOT/'source/help/site'/locale/'index.html'
+    tree = ET.fromstring(page.read_text(encoding='utf-8'))
+    ids = {node.attrib['id'] for node in tree.iter() if 'id' in node.attrib}
+    assert len(ids) == len([node for node in tree.iter() if 'id' in node.attrib]), 'Duplicate HTML element ID'
+    assert len(tree.findall('.//article')) == 44
+    for node in tree.iter():
+        for attribute in ('href', 'src'):
+            target = node.get(attribute, '')
+            if target.startswith('#'):
+                assert target[1:] in ids, (locale, target)
+            elif target and '://' not in target:
+                file = page.parent/target
+                if '../images/' in target:
+                    file = ROOT/'source/help/images'/Path(target).name
+                assert file.is_file(), (locale, target)
+    assert not re.search(r'https?://', (ROOT/'source/help/site/help.js').read_text(encoding='utf-8')), 'Help must work offline'
 sets = []
 illustration_sets = []
 for lang in ('cs-CZ', 'en'):

@@ -42,8 +42,6 @@ $compilerArgs = @('/nologo', '/target:winexe', '/platform:x64', '/optimize+', '/
 $appIcon = Join-Path $PSScriptRoot 'assets\file-voyager\FileVoyager-FloppyOrbit.ico'
 $compilerArgs += Join-Path $buildInfoDirectory 'BuildInfo.g.cs'
 $compilerArgs += '/resource:' + (Join-Path $PSScriptRoot 'assets\branding\rathousky-pro.png') + ',FileCompass.Branding.RathouskyPro.png'
-foreach ($catalog in @('cs-CZ','en')) { $compilerArgs += '/resource:' + (Join-Path $PSScriptRoot ('help\' + $catalog + '.json')) + ',FileCompass.Help.' + $catalog + '.json' }
-foreach ($illustration in @(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'help\images') -Filter '*.png' -File -ErrorAction SilentlyContinue)) { $compilerArgs += '/resource:' + $illustration.FullName + ',FileCompass.Help.Images.' + $illustration.Name }
 $compilerArgs += '/win32icon:' + $appIcon
 $compilerArgs += '/win32manifest:' + (Join-Path $PSScriptRoot 'FileVoyager.manifest')
 foreach ($library in Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'ui') -Filter '*.dll') { $compilerArgs += '/reference:' + $library.FullName }
@@ -126,6 +124,9 @@ foreach ($name in @('index.html','viewer.js','docx-preview.min.js','jszip.min.js
 $documentationRoot = Join-Path (Split-Path -Parent $PSScriptRoot) 'docs'
 $helpRoot = Join-Path $bin 'help'
 New-Item -ItemType Directory -Path $helpRoot -Force | Out-Null
+Copy-Item -Path (Join-Path $PSScriptRoot 'help/site/*') -Destination $helpRoot -Recurse -Force -ErrorAction Stop
+New-Item -ItemType Directory -Path (Join-Path $helpRoot 'images') -Force | Out-Null
+Copy-Item -Path (Join-Path $PSScriptRoot 'help/images/*.png') -Destination (Join-Path $helpRoot 'images') -Force -ErrorAction Stop
 Copy-Item -Path (Join-Path $documentationRoot '*.md') -Destination $helpRoot -Force
 $oldDocumentation = @('README.md','FILE-COMPASS.md','ARCHIVES.md','ADVANCED-TOOLS.md','ARCHIVE-PLUGINS.md','CLOUD-STORAGE.md','DOCUMENT-PREVIEW.md','DUPLICATES-COMPARE.md','FILE-DETAILS.md','FILE-TOOLS.md','FOLDER-VIEWS.md','GOOGLE-OAUTH-PUBLISHER.md','LIBCURL-AUDIT.md','METADATA-SEARCH.md','NETWORK-PLUGINS.md','NETWORK-VALIDATION.md','THIRD-PARTY-NOTICES.md','UI-VALIDATION.md','WORKFLOW-FEATURES.md')
 foreach ($folder in @($bin,$configRoot)) {

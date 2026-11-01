@@ -3,10 +3,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Web.Script.Serialization;
+using System.Xml;
 using System.Windows;
 using System.Windows.Input;
 
@@ -22,17 +21,30 @@ namespace FileCompass {
     }
     internal static class HelpContent {
         internal static string ContentLanguage { get { return L.Language=="cs-CZ"?"cs-CZ":"en"; } }
+        internal static string Root { get { return AppPaths.Resource("help"); } }
+        internal static string PagePath { get { return Path.Combine(Root,ContentLanguage,"index.html"); } }
+        internal static Uri BrowserUri(string topic) { return new Uri(new Uri(PagePath).AbsoluteUri+"#"+Uri.EscapeDataString(topic??"home")); }
         internal static List<HelpTopic> Load() {
-            using(var stream=Assembly.GetExecutingAssembly().GetManifestResourceStream("FileCompass.Help."+ContentLanguage+".json")) {
-                if(stream==null)throw new InvalidDataException("Missing embedded help catalog.");
-                using(var reader=new StreamReader(stream,Encoding.UTF8)) {
-                    var topics=new JavaScriptSerializer{MaxJsonLength=4*1024*1024}.Deserialize<List<HelpTopic>>(reader.ReadToEnd());
-                    var ids=new HashSet<string>(StringComparer.Ordinal);
-                    foreach(var topic in topics)if(topic==null||String.IsNullOrWhiteSpace(topic.Id)||!ids.Add(topic.Id))throw new InvalidDataException("Invalid help topic.");
-                    foreach(var topic in topics)if(topic.Related==null||topic.Related.Any(x=>!ids.Contains(x)))throw new InvalidDataException("Invalid related help topic.");
-                    return topics;
+            var document=new XmlDocument{XmlResolver=null};
+            using(var reader=XmlReader.Create(PagePath,new XmlReaderSettings{DtdProcessing=DtdProcessing.Ignore,XmlResolver=null,MaxCharactersInDocument=8*1024*1024}))document.Load(reader);
+            var topics=new List<HelpTopic>();var ids=new HashSet<string>(StringComparer.Ordinal);
+            foreach(XmlElement article in document.SelectNodes("//article[@data-topic]")) {
+                string id=article.GetAttribute("data-topic");
+                if(!Regex.IsMatch(id,@"^[a-zA-Z0-9.-]{1,80}$")||!ids.Add(id))throw new InvalidDataException("Invalid help topic.");
+                var body=article.SelectSingleNode("div[@class='topic-body']");
+                if(body==null)throw new InvalidDataException("Missing help topic body.");
+                var native=body.CloneNode(true);
+                foreach(XmlElement figure in native.SelectNodes(".//figure[@data-figure]")) {
+                    var replacement=document.CreateElement("figure");replacement.SetAttribute("src",figure.GetAttribute("data-figure"));
+                    var caption=figure.SelectSingleNode("figcaption");
+                    if(caption!=null){var p=document.CreateElement("p");p.InnerText=caption.InnerText;replacement.AppendChild(p);}
+                    figure.ParentNode.ReplaceChild(replacement,figure);
                 }
+                topics.Add(new HelpTopic{Id=id,Title=article.GetAttribute("data-title"),Group=article.GetAttribute("data-group"),Summary=article.GetAttribute("data-summary"),SourceLanguage=article.GetAttribute("data-source-language"),Body=native.InnerXml,Related=article.SelectNodes("nav[@class='related']/a").Cast<XmlElement>().Select(x=>x.GetAttribute("href").TrimStart('#')).ToArray()});
             }
+            if(!ids.Contains("home"))throw new InvalidDataException("Missing help home topic.");
+            foreach(var topic in topics)if(topic.Related.Any(x=>!ids.Contains(x)))throw new InvalidDataException("Invalid related help topic.");
+            return topics;
         }
         internal static string Normalize(string value) {
             var result=new StringBuilder();
@@ -85,7 +97,8 @@ namespace FileCompass {
             if(owner!=null&&windows.TryGetValue(owner,out window)) {
                 window.Navigate(topic);if(window.WindowState==WindowState.Minimized)window.WindowState=WindowState.Normal;window.Show();window.Activate();return window;
             }
-            window=new HelpWindow(owner);window.Navigate(topic);
+            try{window=new HelpWindow(owner);window.Navigate(topic);}
+            catch(Exception ex){if(!(ex is IOException)&&!(ex is XmlException)&&!(ex is UnauthorizedAccessException))throw;MessageBox.Show(owner,L.Text("help.unavailable"),L.Text("help.title"),MessageBoxButton.OK,MessageBoxImage.Information);return null;}
             if(owner!=null){windows.Add(owner,window);Window key=owner;window.Closed+=delegate{windows.Remove(key);};}
             window.Show();return window;
         }

@@ -1,4 +1,7 @@
 ﻿{
+  "help.openBrowser": "Im Browser öffnen",
+  "help.unavailable": "Die Hilfe fehlt oder ist beschädigt. Stellen Sie den Ordner help neben dem Programm aus dem Installationspaket wieder her.",
+  "help.browserFailed": "Die Hilfe konnte nicht im Browser geöffnet werden. Öffnen Sie help/index.html manuell.",
   "codeEditor.unsavedTitle": "Ungespeicherte Änderungen",
   "codeEditor.unsavedBody": "Die Datei „{0}“ enthält ungespeicherte Änderungen.\nSpeichern oder weiter bearbeiten.",
   "codeEditor.discardChanges": "Änderungen verwerfen",

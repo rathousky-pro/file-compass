@@ -1,4 +1,7 @@
 ﻿{
+  "help.openBrowser": "Abrir no navegador",
+  "help.unavailable": "A ajuda está em falta ou danificada. Restaure a pasta help junto ao programa a partir do pacote de instalação.",
+  "help.browserFailed": "Não foi possível abrir a ajuda no navegador. Pode abrir help/index.html manualmente.",
   "codeEditor.unsavedTitle": "Alterações não guardadas",
   "codeEditor.unsavedBody": "O ficheiro «{0}» contém alterações não guardadas.\nGuarde-as ou continue a editar.",
   "codeEditor.discardChanges": "Descartar alterações",

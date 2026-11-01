@@ -31,6 +31,15 @@ namespace FileCompass {
                 check(help.IsVisible&&help.Owner==owner&&help.Article.Document!=null,"Help opens as a native owned window");
                 check(Object.ReferenceEquals(help,HelpService.Open(owner,"copy")),"Repeated help command reuses its window");
                 var cs=HelpContent.Load();check(cs.Count>=30&&cs.Select(t=>t.Id).Distinct().Count()==cs.Count,"Complete catalog and unique IDs");
+                check(!typeof(HelpContent).Assembly.GetManifestResourceNames().Any(x=>x.StartsWith("FileCompass.Help.")),"Help content and screenshots are not embedded in the executable");
+                check(File.Exists(Path.Combine(HelpContent.Root,"index.html"))&&File.Exists(Path.Combine(HelpContent.Root,"help.css"))&&File.Exists(Path.Combine(HelpContent.Root,"help.js")),"Standalone offline browser package exists");
+                check(HelpContent.BrowserUri("copy").IsFile&&HelpContent.BrowserUri("copy").Fragment=="#copy"&&help.BrowserButton.Content.ToString()==L.Text("help.openBrowser"),"Browser action points to the current external topic");
+                byte[] originalPage=File.ReadAllBytes(HelpContent.PagePath);
+                try{string page=File.ReadAllText(HelpContent.PagePath);File.WriteAllText(HelpContent.PagePath,page.Replace("data-title=\""+System.Security.SecurityElement.Escape(cs[0].Title)+"\"","data-title=\"External edit test\""));check(HelpContent.Load()[0].Title=="External edit test","HTML changes load without rebuilding the executable");}
+                finally{File.WriteAllBytes(HelpContent.PagePath,originalPage);}
+                string hiddenPage=HelpContent.PagePath+".test-backup";
+                try{File.Move(HelpContent.PagePath,hiddenPage);bool missing=false;try{HelpContent.Load();}catch(FileNotFoundException){missing=true;}check(missing,"Missing external help has no hidden embedded fallback");}
+                finally{if(File.Exists(hiddenPage))File.Move(hiddenPage,HelpContent.PagePath);}
                 var ids=new HashSet<string>(cs.Select(t=>t.Id));
                 foreach(var topic in cs) {
                     help.Navigate(topic.Id);

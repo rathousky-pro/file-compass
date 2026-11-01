@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -14,7 +15,7 @@ namespace FileCompass {
         internal readonly TextBox Search = new TextBox { MinWidth=120, VerticalContentAlignment=VerticalAlignment.Center };
         internal readonly TreeView Topics = new TreeView { BorderThickness=new Thickness(0), Padding=new Thickness(8) };
         internal readonly FlowDocumentScrollViewer Article = new FlowDocumentScrollViewer { IsToolBarVisible=false };
-        internal readonly Button BackButton,ForwardButton,HomeButton;
+        internal readonly Button BackButton,ForwardButton,HomeButton,BrowserButton;
         readonly TextBlock breadcrumb=new TextBlock { Margin=new Thickness(24,12,16,2), Foreground=FluentTheme.Muted };
         readonly TextBlock language=new TextBlock { VerticalAlignment=VerticalAlignment.Center, Foreground=FluentTheme.Muted };
         readonly TextBlock searchLabel=new TextBlock { VerticalAlignment=VerticalAlignment.Center, Margin=new Thickness(12,0,8,0) };
@@ -42,7 +43,9 @@ namespace FileCompass {
             navigation.Children.Add(searchLabel);toolbar.Children.Add(Search);
             var bottom=new DockPanel{Margin=new Thickness(0,10,0,0)};DockPanel.SetDock(bottom,Dock.Bottom);root.Children.Add(bottom);
             var close=CopyUi.Button(L.Text("action.close"),delegate{Close();});close.IsCancel=true;
-            close.MinWidth=90;DockPanel.SetDock(close,Dock.Right);bottom.Children.Add(close);bottom.Children.Add(language);
+            close.MinWidth=90;DockPanel.SetDock(close,Dock.Right);bottom.Children.Add(close);
+            BrowserButton=CopyUi.Button(L.Text("help.openBrowser"),delegate{try{Process.Start(new ProcessStartInfo(HelpContent.BrowserUri(CurrentTopicId).AbsoluteUri){UseShellExecute=true});}catch(Exception ex){if(!(ex is System.ComponentModel.Win32Exception)&&!(ex is InvalidOperationException))throw;MessageBox.Show(this,L.Text("help.browserFailed"),Title,MessageBoxButton.OK,MessageBoxImage.Information);}});
+            BrowserButton.Margin=new Thickness(0,0,8,0);DockPanel.SetDock(BrowserButton,Dock.Right);bottom.Children.Add(BrowserButton);bottom.Children.Add(language);
             var split=new Grid();split.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(250),MinWidth=180,MaxWidth=400});
             split.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(5)});split.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star),MinWidth=280});
             root.Children.Add(split);
@@ -62,7 +65,7 @@ namespace FileCompass {
         internal void RefreshLanguage() {
             updating=true;
             try {
-                Title=L.Text("help.title");BackButton.Content=L.Text("help.back");ForwardButton.Content=L.Text("help.forward");HomeButton.Content=L.Text("help.home");
+                Title=L.Text("help.title");BackButton.Content=L.Text("help.back");ForwardButton.Content=L.Text("help.forward");HomeButton.Content=L.Text("help.home");BrowserButton.Content=L.Text("help.openBrowser");
                 searchLabel.Text=L.Text("help.search");Search.ToolTip=L.Text("help.search");Topics.ToolTip=L.Text("help.contents");
                 language.Text=L.Format("help.contentLanguage",L.Text(HelpContent.ContentLanguage=="cs-CZ"?"help.languageCzech":"help.languageEnglish"));
                 var catalog=HelpContent.Load();topics=catalog.ToDictionary(t=>t.Id,StringComparer.Ordinal);

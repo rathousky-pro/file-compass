@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -30,6 +30,7 @@ namespace FileCompass {
                     dialog.Close(); current = null;
                 }
                 var input = new TextBox { Text = "1" }; var spinner = new NumberSpinner(input, 1, 12);
+                check(spinner.Children.OfType<Border>().Any(x=>x.BorderThickness.Left==1&&x.BorderBrush!=null),"numeric arrows have a complete shared outline");
                 spinner.Change(-1); check(input.Text == "1", "Numeric lower boundary is enforced"); input.Text = "12"; spinner.Change(1); check(input.Text == "12", "Numeric upper boundary is enforced");
                 input.Text = "invalid"; spinner.Change(1); check(input.Text == "1", "Arrow recovers an invalid manual value");
                 var font = new FontChoiceControl("Test", "Segoe UI", 12, 24); var fontSpinner = AdvancedToolsTests.Visual<NumberSpinner>(font).FirstOrDefault();

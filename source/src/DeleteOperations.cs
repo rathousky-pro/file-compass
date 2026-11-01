@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
@@ -35,10 +35,7 @@ namespace FileCompass
             Validate(path, false);
             if(permanent){PathSafety.DeleteTree(path);return;}
             using(PathSafety.LockAncestors(path)) {
-            // Shell recycling also handles directory links without walking their targets.
-            var recycle = permanent ? RecycleOption.DeletePermanently : RecycleOption.SendToRecycleBin;
-            if (Directory.Exists(path)) FileSystem.DeleteDirectory(path, UIOption.OnlyErrorDialogs, recycle, UICancelOption.ThrowException);
-            else FileSystem.DeleteFile(path, UIOption.OnlyErrorDialogs, recycle, UICancelOption.ThrowException);
+            ShellRecycle.Delete(path);
             }
         }
         public static void Remote(Session session, string path)
@@ -73,8 +70,10 @@ namespace FileCompass
         {
             RemoteConnection worker = null;
             bool cancelled = false, skipErrors = false; int done = 0, skipped = 0;
+            var pauseControl=new CopyControl();
             deletions++;
-            var activity = AddCopyActivity(L.Text("delete.operationTitlePrefix") + directory, delegate { cancelled = true; if (worker != null) worker.Session.Abort(); });
+            var activity = AddCopyActivity(L.Text("delete.operationTitlePrefix") + directory, delegate { cancelled = true;pauseControl.Cancel(); if (worker != null) worker.Session.Abort(); });
+            activity.PauseAction=delegate{pauseControl.Pause(!pauseControl.Paused);};activity.IsPaused=delegate{return pauseControl.Paused;};
             activity.Record.Retry = delegate { var failed = activity.Record.Items.Where(x => x.State == L.Code("state.error")).Select(x => new Entry { FullPath = x.Source, Name = Path.GetFileName(x.Source) }).ToList(); if (failed.Count > 0) { var retryTask = DeleteBatch(failed, connection, remote, permanent, directory); } };
             try
             {
@@ -82,6 +81,7 @@ namespace FileCompass
                 if (remote) { worker = connection.TransferConnection(); await Task.Run(delegate { worker.OpenTransfer(); }); }
                 foreach (var entry in selected)
                 {
+                    try{await Task.Run(pauseControl.Check);}catch(OperationCanceledException){cancelled=true;break;}
                     if (cancelled) break;
                     activity.Update(L.Text("delete.statusPrefix") + entry.FullPath + " · " + done + " / " + selected.Count, 0, (double)(done + skipped) / selected.Count);
                     bool retry;
@@ -113,6 +113,7 @@ namespace FileCompass
             catch (Exception ex) { activity.Finish(L.Text("delete.failedPrefix") + ex.Message, false); MessageBox.Show(this, ex.Message, L.Text("delete.failedTitle"), MessageBoxButton.OK, MessageBoxImage.Warning); }
             finally
             {
+                pauseControl.Dispose();
                 if (worker != null) worker.Dispose();
                 deletions--;
                 // Refresh only the original location; the user may have navigated elsewhere.

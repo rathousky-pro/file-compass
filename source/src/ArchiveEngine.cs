@@ -84,7 +84,7 @@ namespace FileCompass
             if (arguments.Any(x => x.StartsWith("-p", StringComparison.OrdinalIgnoreCase) || x.StartsWith("-hp", StringComparison.OrdinalIgnoreCase))) throw new IOException(L.Text("archive.commandLinePasswordRejected"));
             var limits = ArchiveSettings.Load();
             if (!File.Exists(executable)) throw new IOException(L.Text("archive.archiverMissingPrefix") + executable);
-            var info = new ProcessStartInfo(executable, String.Join(" ", arguments.Select(Quote))) { WorkingDirectory = directory ?? AppDomain.CurrentDomain.BaseDirectory,
+            var info = new ProcessStartInfo(ArchiveSelfExtract.ExecutablePath(executable), String.Join(" ", arguments.Select(Quote))) { WorkingDirectory = directory ?? AppDomain.CurrentDomain.BaseDirectory,
                 UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true, RedirectStandardInput = true,
                 StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8 };
             using (ArchivePluginInstaller.AcquireManagedExecutable(executable))
@@ -115,6 +115,7 @@ namespace FileCompass
                 });
                 while (!process.WaitForExit(100))
                 {
+                    OperationPause.HoldChild(process,token,clock);
                     if (outputTask.IsFaulted || clock.Elapsed.TotalSeconds > limits.MaximumSeconds || token.IsCancellationRequested)
                     { try { process.Kill(); } catch (InvalidOperationException) { } process.WaitForExit(); token.ThrowIfCancellationRequested(); if (outputTask.IsFaulted) outputTask.GetAwaiter().GetResult(); throw new IOException(L.Text("archive.operationTimeout")); }
                 }
@@ -242,7 +243,7 @@ namespace FileCompass
                 if (File.Exists(extracted)) AttachmentSecurity.WriteZone(extracted, zone);
             }
         }
-        public static bool Writable(ArchiveDocument doc) { return !doc.MultiVolume && new[] { "zip", "7z", "rar", "rar5" }.Contains(doc.Type.ToLowerInvariant()) && (!doc.Type.StartsWith("Rar", StringComparison.OrdinalIgnoreCase) || (String.IsNullOrEmpty(doc.Password) && (doc.Items == null || !doc.Items.Any(x => x.Encrypted)))) && (doc.Parent == null || Writable(doc.Parent)); }
+        public static bool Writable(ArchiveDocument doc) { return !System.IO.Path.GetExtension(doc.FilePath).Equals(".exe",StringComparison.OrdinalIgnoreCase) && !doc.MultiVolume && new[] { "zip", "7z", "rar", "rar5" }.Contains(doc.Type.ToLowerInvariant()) && (!doc.Type.StartsWith("Rar", StringComparison.OrdinalIgnoreCase) || (String.IsNullOrEmpty(doc.Password) && (doc.Items == null || !doc.Items.Any(x => x.Encrypted)))) && (doc.Parent == null || Writable(doc.Parent)); }
         static string Hash(string path) { using (var stream = File.OpenRead(path)) using (var sha = SHA256.Create()) return Convert.ToBase64String(sha.ComputeHash(stream)); }
         static string ReadStamp(string path) { var info = new FileInfo(path); return info.Length + ":" + info.LastWriteTimeUtc.Ticks + ":" + info.CreationTimeUtc.Ticks + ArchiveExtended.VolumeStamp(path); }
         static void CheckCurrent(ArchiveDocument doc)
@@ -314,6 +315,7 @@ namespace FileCompass
             settings.ValidateCreationTool(target);
             if(pack!=null)ArchiveCompressionQuality.Validate(pack.Level);
             if (pack != null && (pack.Move || pack.VolumeBytes > 0)) { ArchiveExtended.Create(target,sources,settings,token,progress,pack); return; }
+            if(pack!=null&&pack.SelfExtracting){ArchiveSelfExtract.Create(target,sources,settings,token,progress,pack);return;}
             string lower = target.ToLowerInvariant();
             string suffix = new[] { ".tar.gz", ".tar.bz2", ".tar.xz", ".tgz", ".tbz2", ".txz" }.FirstOrDefault(lower.EndsWith);
             if (suffix == null) { CreateCore(target, sources, settings, token, progress, pack); return; }

@@ -8,16 +8,18 @@ namespace FileCompass {
  internal sealed class MediaProfile {
   internal string Id,Extension,Codec,Muxer;internal int MaxChannels;internal bool Lossless,Vbr,Video;
   internal MediaProfile(string id,string ext,string codec,string muxer,int channels,bool lossless=false,bool vbr=false,bool video=false){Id=id;Extension=ext;Codec=codec;Muxer=muxer;MaxChannels=channels;Lossless=lossless;Vbr=vbr;Video=video;}
-  public override string ToString(){return L.Text("media.profile."+Id);}
+  public override string ToString(){return L.Text(Id=="keep"?"media.keepFormat":"media.profile."+Id);}
  }
  public sealed class MediaAudioOptions {
+  public bool KeepFormat;public string MuxerOverride,CodecOverride;internal MediaAudioOptions Clone(){return (MediaAudioOptions)MemberwiseClone();}
   public double Speed=1,TargetDurationSeconds;public bool PreservePitch=true;
   public string RateMode;public double? VbrQuality;public string Profile="aac";public int Bitrate=192,Channels=2,SampleRate=48000,Depth=16,Track;public bool Vbr,Normalize,Upmix,Copy,KeepVideo,KeepMetadata=true;
  }
  public sealed class MediaImageOptions {
-  public string Format="PNG";public int Quality=90,Resize,Width=1920,Height=1080,Percent=50,Rotation;public bool FirstFrame,KeepMetadata=true,Lossless;
+  public bool KeepFormat;internal MediaImageOptions Clone(){return (MediaImageOptions)MemberwiseClone();}
+  public string Format="PNG";public int Quality=90,Resize,Width=1920,Height=1080,Percent=50,Rotation,Orientation;public bool FirstFrame,KeepMetadata=true,Lossless;
  }
- public sealed class MediaTrack {public double Duration;public int Index,Channels,SampleRate;public string Codec,Layout,Language;}
+ public sealed class MediaTrack {public double Duration;public int Index,Channels,SampleRate,Depth;public string Codec,Layout,Language;}
  public sealed class MediaInfo {
   public double Duration;public int Width,Height,Frames;public string Format;public List<MediaTrack> Audio=new List<MediaTrack>();public List<int> Video=new List<int>();public int Cover=-1;
   internal string Summary{get{return Width>0?Width+" × "+Height+" px · "+Frames+" "+L.Text("media.frames"):Audio.Count==0?L.Text("media.noAudio"):String.Join(" · ",new[]{Audio[0].Codec,Audio[0].Channels+" ch",Audio[0].SampleRate+" Hz",TimeSpan.FromSeconds(Math.Max(0,Duration)).ToString(@"hh\:mm\:ss")})+(Audio.Count>1?" · "+Audio.Count+" "+L.Text("media.tracks"):"");}}
@@ -34,8 +36,12 @@ namespace FileCompass {
   internal static readonly string[] Images={"PNG","JPEG","WebP","AVIF","TIFF","BMP","GIF"};
   internal static bool IsImage(string path){return new[]{".png",".jpg",".jpeg",".bmp",".tif",".tiff",".webp",".avif",".gif",".heic",".heif",".ico",".jxl"}.Contains(Path.GetExtension(path).ToLowerInvariant());}
   internal static bool IsAudio(string path){return new[]{".mp3",".aac",".ac3",".eac3",".wav",".flac",".ogg",".opus",".m4a",".m4b",".mp4",".mkv",".mov",".avi",".webm",".wma",".aiff",".aif",".mka",".oga",".mp2",".m2ts",".ts"}.Contains(Path.GetExtension(path).ToLowerInvariant());}
-  internal static MediaProfile Profile(string id){var profile=Audio.FirstOrDefault(x=>x.Id==id);if(profile==null)throw new IOException(L.Text("media.invalidOptions"));return profile;}
-  internal static string Extension(bool image,MediaImageOptions picture,MediaAudioOptions sound){return image?(picture.Format=="JPEG"?".jpg":picture.Format=="TIFF"?".tiff":"."+picture.Format.ToLowerInvariant()):sound.KeepVideo&&Profile(sound.Profile).Video?".mp4":Profile(sound.Profile).Extension;}
+  internal static readonly MediaProfile KeepProfile=new MediaProfile("keep","","","",8,false,false,true);
+  internal static MediaProfile[] AudioChoices {get{return new[]{KeepProfile}.Concat(Audio).ToArray();}}
+  internal static string[] ImageChoices {get{return new[]{L.Text("media.keepFormat")}.Concat(Images).ToArray();}}
+  static readonly MediaProfile[] ExtraAudio={new MediaProfile("wmav2",".wma","wmav2","asf",2),new MediaProfile("wmav1",".wma","wmav1","asf",2),new MediaProfile("mp2",".mp2","mp2","mp2",2)};
+  internal static MediaProfile Profile(string id){if(id=="keep")return KeepProfile;var profile=Audio.Concat(ExtraAudio).FirstOrDefault(x=>x.Id==id);if(profile==null)throw new IOException(L.Text("media.invalidOptions"));return profile;}
+  internal static string Extension(bool image,MediaImageOptions picture,MediaAudioOptions sound){if(image&&picture.KeepFormat||!image&&sound.KeepFormat)return L.Text("media.keepFormat");return image?(picture.Format=="JPEG"?".jpg":picture.Format=="TIFF"?".tiff":"."+picture.Format.ToLowerInvariant()):sound.KeepVideo&&Profile(sound.Profile).Video?".mp4":Profile(sound.Profile).Extension;}
   internal static string Target(string source,string folder,string extension,ISet<string> reserved){for(int i=0;i<10000;i++){string path=Path.Combine(folder,Path.GetFileNameWithoutExtension(source)+"_converted"+(i==0?"":"_"+(i+1))+extension);if(!File.Exists(path)&&!Directory.Exists(path)&&!reserved.Contains(path)){reserved.Add(path);return path;}}throw new IOException(L.Text("parts.outputExists"));}
  }
 }

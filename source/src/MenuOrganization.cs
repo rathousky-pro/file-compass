@@ -8,7 +8,7 @@ namespace FileCompass {
             GroupMenu(file, "menuGroup.integrity", "action.compareFiles", "action.createChecksums", "action.verifyChecksums");
             GroupMenu(file, "menuGroup.properties", "action.properties", "action.openWith", "action.changeAttributes", "tags.edit");
             GroupMenu(file, "menuGroup.rename", "action.rename", "action.batchRename");
-            GroupMenu(file, "menuGroup.fileTools", "imageTools.title", "parts.split", "parts.combine");
+            GroupMenu(file, "menuGroup.fileTools", "parts.split", "parts.combine");
             GroupMenu(selection, "menuGroup.masks", "selection.markByMask", "selection.unmarkByMask", "selection.markSameExtension");
             GroupMenu(selection, "menuGroup.rememberSelection", "selection.saveMarks", "selection.restoreMarks");
             GroupMenu(edit, "menuGroup.copyDetails", "clipboard.copyNames", "clipboard.copyFullPaths", "clipboardFile.title");

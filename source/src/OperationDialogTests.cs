@@ -4,7 +4,7 @@ namespace FileCompass {
  internal static class OperationDialogTests {
   static void Open(Window w){SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));w.WindowStartupLocation=WindowStartupLocation.Manual;w.Left=-18000;w.Top=-18000;w.ShowActivated=false;w.ShowInTaskbar=false;w.Show();NavigationTests.Wait(Task.Delay(120));w.UpdateLayout();}
   internal static int Run(string root){Directory.CreateDirectory(root);var checks=new List<string>();var windows=new List<Window>();string old=AppearanceTheme.Motif;Action<bool,string> check=(yes,text)=>{if(!yes)throw new Exception(text);checks.Add(text);};try{L.ChangeLanguage("cs-CZ");FluentTheme.Ensure();AppearanceTheme.Apply("Light");WorkflowStore.TestRoot=Path.Combine(root,"workflow");string sample=Path.Combine(root,"Nabídka.txt");File.WriteAllText(sample,"demo");var entries=new List<Entry>{new Entry{FullPath=sample,Name="Nabídka.txt",Bytes=4}};
-   foreach(string motif in new[]{"Original","Balanced"}){
+   foreach(string motif in new[]{"Classic","Clean"}){
     AppearanceTheme.SetMotif(motif);
     var copy=new CopySetupDialog(null,entries,root,new string[0],false,new ProgramSettings());windows.Add(copy);Open(copy);CheckPages(copy,motif+"-copy",root,check);var options=copy.CreateOptions(true);check(options.Queue&&!options.Move&&options.Rule==CopyRule.Ask&&options.Filter=="*.*",motif+": cleaned copy dialog preserves queue and default conflict policy");Shot(copy,motif+"-copy",root,check);
     var copyNav=FluentUiTests.Children<ListBox>(copy).Single();copyNav.SelectedIndex=3;

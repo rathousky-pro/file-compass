@@ -32,8 +32,10 @@ namespace FileCompass
         {
             List.AllowDrop = true;
             List.PreviewTextInput += delegate(object s, TextCompositionEventArgs e) {
-                if (Keyboard.Modifiers != ModifierKeys.None || String.IsNullOrEmpty(e.Text) || LocalLoading || IsLoading) return;
-                SetQuickFilter(quickText.Text + e.Text); e.Handled = true;
+                var modifiers=Keyboard.Modifiers;
+                bool altGr=(modifiers&(ModifierKeys.Control|ModifierKeys.Alt))==(ModifierKeys.Control|ModifierKeys.Alt);
+                if ((!altGr&&(modifiers&(ModifierKeys.Control|ModifierKeys.Alt|ModifierKeys.Windows))!=0) || String.IsNullOrEmpty(e.Text) || e.Text.Any(Char.IsControl) || LocalLoading || IsLoading) return;
+                quickMode.SelectedIndex=0;SetQuickFilter(quickText.Text + e.Text); e.Handled = true;
             };
             List.PreviewKeyDown += delegate(object s, KeyEventArgs e) {
                 if (e.Key == Key.Apps || (e.Key == Key.F10 && Keyboard.Modifiers == ModifierKeys.Shift)) { ShowFileContextMenu(false); e.Handled = true; return; }

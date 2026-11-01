@@ -29,7 +29,7 @@ namespace FileCompass
             using (var reader = new StreamReader(path,Encoding.GetEncoding(options.EncodingCodePage),true,65536)) {
                 char[] buffer = new char[65536]; string tail = ""; int read;
                 while ((read = reader.Read(buffer,0,buffer.Length)) > 0) {
-                    token.ThrowIfCancellationRequested(); string part = tail + new string(buffer,0,read);
+                    OperationPause.Wait(token); string part = tail + new string(buffer,0,read);
                     if (options.TextRegex) {
                         int start = 0,end;
                         while ((end = part.IndexOf('\n',start)) >= 0) { if (end - start > 131072) throw new IOException(L.Text("search.regexLineLengthLimit")); if (TextMatches(part.Substring(start,end - start).TrimEnd('\r'),options)) return true; start = end + 1; }
@@ -49,10 +49,10 @@ namespace FileCompass
             foreach (var size in candidates.GroupBy(x => x.Bytes).Where(x => x.Count() > 1)) {
                 var hashes = new Dictionary<string,List<SearchHit>>();
                 foreach (var hit in size) try {
-                    token.ThrowIfCancellationRequested(); byte[] buffer = new byte[65536];
+                    OperationPause.Wait(token); byte[] buffer = new byte[65536];
                     using (var stream = new FileStream(hit.Path,FileMode.Open,FileAccess.Read,FileShare.Read)) using (var hash = SHA256.Create()) {
                         if (stream.Length != hit.Bytes || File.GetLastWriteTimeUtc(hit.Path) != hit.Modified) throw new IOException(L.Text("search.fileChangedAfterMatch"));
-                        int read; while ((read = stream.Read(buffer,0,buffer.Length)) > 0) { token.ThrowIfCancellationRequested(); hash.TransformBlock(buffer,0,read,null,0); } hash.TransformFinalBlock(new byte[0],0,0); if (File.GetLastWriteTimeUtc(hit.Path) != hit.Modified) throw new IOException(L.Text("compare.fileChangedDuringContentCheck"));
+                        int read; while ((read = stream.Read(buffer,0,buffer.Length)) > 0) { OperationPause.Wait(token); hash.TransformBlock(buffer,0,read,null,0); } hash.TransformFinalBlock(new byte[0],0,0); if (File.GetLastWriteTimeUtc(hit.Path) != hit.Modified) throw new IOException(L.Text("compare.fileChangedDuringContentCheck"));
                         string key = Convert.ToBase64String(hash.Hash); List<SearchHit> list; if (!hashes.TryGetValue(key,out list)) hashes[key] = list = new List<SearchHit>(); list.Add(hit);
                     }
                 } catch (IOException ex) { warning(hit.Path + ": " + ex.Message); } catch (UnauthorizedAccessException ex) { warning(hit.Path + ": " + ex.Message); }

@@ -88,6 +88,7 @@ namespace FileCompass
                 catch (FormatException ex) { MessageBox.Show(this, ex.Message, L.Text("attributes.invalidTimeTitle")); }
             }); ok.IsDefault = true; buttons.Children.Add(ok); var cancel = CopyUi.Button(L.Text("action.cancel"), delegate { DialogResult = false; }); cancel.IsCancel = true; buttons.Children.Add(cancel);
             buttons.Children.Add(CopyUi.Button(L.Text("action.help"), delegate { HelpService.Open(this,"attributes"); }));
+            CleanOptions.Sections(this,panel,buttons);
             Loaded += delegate { LoadValues(paths, false); };
         }
         static void Add(Grid row, UIElement child, int column) { Grid.SetColumn(child, column); row.Children.Add(child); }

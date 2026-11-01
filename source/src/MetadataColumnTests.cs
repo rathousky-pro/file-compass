@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
@@ -81,7 +81,7 @@ namespace FileCompass {
             check(DetectFolderKind(new[]{new Entry{Extension="png"},new Entry{Extension="txt"}})=="","Mixed folders keep the ordinary view");
             Navigate(docs,false);await NavigationTask;SetMetadataColumns(new[]{"author","pages"});SetDisplay("Details");await LoadAllColumnMetadata();Sort();
             var savedTabs=SaveTabs(); check(savedTabs.Any(x=>x.View!=null&&x.View.MetadataColumns.SequenceEqual(new[]{"author","pages"})),"Saved tabs retain their metadata columns"); var header=(GridViewColumnHeader)view.Columns[0].Header;header.ContextMenu.IsOpen=true;await Task.Delay(50);
-            check(header.ContextMenu.Items.OfType<MenuItem>().Count(x=>x.IsCheckable)==MetadataColumn.Keys.Length,"Header menu exposes every supported metadata column");header.ContextMenu.IsOpen=false;
+            check(header.ContextMenu.Items.OfType<MenuItem>().Count(x=>x.IsCheckable)==MetadataColumn.Keys.Length+5,"Header menu exposes base columns and every supported metadata column");header.ContextMenu.IsOpen=false;
         }
     }
 }

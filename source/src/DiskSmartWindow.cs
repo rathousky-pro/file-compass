@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
@@ -22,11 +22,11 @@ namespace FileCompass {
         readonly Dictionary<string,TextBlock> values=new Dictionary<string,TextBlock>();
         readonly Grid content=new Grid(),summaryLayout=new Grid(),info=new Grid(),tables=new Grid();
         readonly StackPanel headline=new StackPanel();
-        readonly ContentControl kindBadge=new ContentControl{ContentTemplate=new DataTemplate{VisualTree=SmartDiskKind.Badge()},Margin=new Thickness(0,0,9,8),VerticalAlignment=VerticalAlignment.Top};
         readonly Border healthCard,temperatureCard,summaryCard,attributesCard;
         readonly Button refresh,elevated,copy,save;
         readonly DispatcherTimer timer=new DispatcherTimer();readonly ProgressBar progress=new ProgressBar{Height=3,IsIndeterminate=true,Visibility=Visibility.Collapsed};
         readonly CancellationTokenSource lifetime=new CancellationTokenSource();
+        OperationPause.Ticket dockPause;
         CancellationTokenSource cancellation;bool copying,closed,layoutQueued,inLayout,stacked,layoutReady,split;
         internal string Feedback {get{return status.Text;}}
         internal bool CopyEnabled {get{return copy.IsEnabled;}}
@@ -35,10 +35,11 @@ namespace FileCompass {
         internal bool SplitAttributes {get{return split;}}
         internal SmartSnapshot Snapshot {get{return snapshot;}}
         internal DiskSmartWindow(Window owner,bool autoLoad=true) {
+            ToolBackdrop.Attach(this);
             CopyUi.Style(this,owner,L.Text("smart.title"),1360);SizeToContent=SizeToContent.Manual;ResizeMode=ResizeMode.CanResize;
             var work=SystemParameters.WorkArea;Width=Math.Min(1360,work.Width-32);Height=Math.Min(900,work.Height-32);MinWidth=Math.Min(800,Width);MinHeight=Math.Min(560,Height);
             StackPanel footerActions;var body=SettingsUx.Frame(this,L.Text("smart.title"),out footerActions);
-            var header=(Border)body.Children[0];header.Child=null;var top=new DockPanel();header.Child=top;header.Padding=new Thickness(18,10,18,10);
+            var header=SettingsUx.HeaderFrame(this);header.Child=null;var top=new DockPanel();header.Child=top;header.Padding=new Thickness(18,10,18,10);
             refresh=CopyUi.Button(L.Text("action.refresh"),delegate{if(cancellation==null)LoadingTask=RefreshDisks();});refresh.VerticalAlignment=VerticalAlignment.Center;DockPanel.SetDock(refresh,Dock.Right);top.Children.Add(refresh);top.Children.Add(Disks);
             System.Windows.Automation.AutomationProperties.SetName(Disks,L.Text("smart.diskSelection"));
             Disks.SelectionChanged+=delegate{RenderDisk();if(Disks.SelectedItem!=null)Disks.ScrollIntoView(Disks.SelectedItem);};
@@ -48,7 +49,7 @@ namespace FileCompass {
             copy=CopyUi.Button(L.Text("smart.copy"),async delegate{await CopyReportAsync();});actions.Children.Add(copy);
             save=CopyUi.Button(L.Text("smart.save"),SaveReport);save.ToolTip=L.Text("smart.exportHelp");FluentTheme.Primary(save);actions.Children.Add(save);actions.Children.Add(CopyUi.Button(L.Text("action.close"),Close));
             content.Margin=new Thickness(16,12,16,12);body.Children.Add(content);
-            var modelRow=new DockPanel();DockPanel.SetDock(kindBadge,Dock.Left);modelRow.Children.Add(kindBadge);modelRow.Children.Add(model);headline.Children.Add(modelRow);var cards=new Grid{Margin=new Thickness(0,0,0,12)};cards.ColumnDefinitions.Add(new ColumnDefinition());cards.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(10)});cards.ColumnDefinitions.Add(new ColumnDefinition());
+            var modelRow=new WrapPanel{VerticalAlignment=VerticalAlignment.Center};model.Margin=new Thickness(0);model.VerticalAlignment=VerticalAlignment.Center;modelRow.Children.Add(model);modelRow.Margin=new Thickness(0,0,0,12);headline.Children.Add(modelRow);var cards=new Grid{Margin=new Thickness(0,0,0,12)};cards.ColumnDefinitions.Add(new ColumnDefinition());cards.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(10)});cards.ColumnDefinitions.Add(new ColumnDefinition());
             healthCard=Card("smart.health",HealthValue,healthRemaining);temperatureCard=Card("smart.temperature",TemperatureValue,null);cards.Children.Add(healthCard);Grid.SetColumn(temperatureCard,2);cards.Children.Add(temperatureCard);headline.Children.Add(cards);
             summaryLayout.Children.Add(headline);summaryLayout.Children.Add(info);
             summaryCard=Section(null,summaryLayout);content.Children.Add(summaryCard);
@@ -61,7 +62,7 @@ namespace FileCompass {
             content.SizeChanged+=delegate{QueueLayout();};
             timer.Tick+=delegate{if(cancellation==null)LoadingTask=RefreshDisks();};Loaded+=delegate{QueueLayout();if(autoLoad)LoadingTask=RefreshDisks();};Closed+=delegate{closed=true;timer.Stop();lifetime.Cancel();if(cancellation!=null)cancellation.Cancel();};
             status.Text=L.Text("smart.starting");RenderDisk();
-            ToolDock.Attach(this,actions,delegate{return new DockStatus{Title=L.Text("smart.title"),Icon="◉",Busy=cancellation!=null,Description=cancellation!=null?status.Text:model.Text+" · "+TemperatureValue.Text+" · "+HealthValue.Text};});
+            ToolDock.Attach(this,actions,delegate{return new DockStatus{Title=L.Text("smart.title"),Icon="◉",Busy=cancellation!=null,Description=cancellation!=null?status.Text:model.Text+" · "+TemperatureValue.Text+" · "+HealthValue.Text};},delegate{if(dockPause!=null)dockPause.Toggle();},delegate{return dockPause!=null&&dockPause.Paused;},delegate{if(cancellation!=null)cancellation.Cancel();else Close();});
         }
         sealed class TileScrollPadding : IValueConverter {
             public object Convert(object value,Type type,object parameter,System.Globalization.CultureInfo culture){return new Thickness(0,0,0,value is Visibility&&(Visibility)value==Visibility.Visible?12:0);}
@@ -92,7 +93,7 @@ namespace FileCompass {
         static DataTemplate DiskTileTemplate() {
             var panel=new FrameworkElementFactory(typeof(StackPanel));
             string[] paths={"TileHealth","TileTemperature","TileVolumes","TileModel"};double[] sizes={12,22,12,11};
-            for(int i=0;i<paths.Length;i++){var text=new FrameworkElementFactory(typeof(TextBlock));text.SetBinding(TextBlock.TextProperty,new Binding(paths[i]));text.SetValue(TextBlock.FontSizeProperty,sizes[i]);text.SetValue(TextBlock.TextAlignmentProperty,TextAlignment.Center);text.SetValue(TextBlock.TextTrimmingProperty,TextTrimming.CharacterEllipsis);text.SetValue(TextBlock.FontWeightProperty,i==1?FontWeights.Bold:FontWeights.SemiBold);if(i<2)text.SetBinding(TextBlock.ForegroundProperty,new Binding(i==0?"TileHealthBrush":"TileTemperatureBrush"));else text.SetValue(TextBlock.ForegroundProperty,i==2?FluentTheme.Text:FluentTheme.Muted);if(i==1){var temperatureRow=new FrameworkElementFactory(typeof(StackPanel));temperatureRow.SetValue(StackPanel.OrientationProperty,Orientation.Horizontal);temperatureRow.SetValue(FrameworkElement.HorizontalAlignmentProperty,HorizontalAlignment.Center);temperatureRow.AppendChild(text);temperatureRow.AppendChild(SmartDiskKind.Badge(true));panel.AppendChild(temperatureRow);}else panel.AppendChild(text);}
+            for(int i=0;i<paths.Length;i++){var text=new FrameworkElementFactory(typeof(TextBlock));text.SetBinding(TextBlock.TextProperty,new Binding(paths[i]));text.SetValue(TextBlock.FontSizeProperty,sizes[i]);text.SetValue(TextBlock.TextAlignmentProperty,TextAlignment.Center);text.SetValue(TextBlock.TextTrimmingProperty,TextTrimming.CharacterEllipsis);text.SetValue(TextBlock.FontWeightProperty,i==1?FontWeights.Bold:FontWeights.SemiBold);if(i<2)text.SetBinding(TextBlock.ForegroundProperty,new Binding(i==0?"TileHealthBrush":"TileTemperatureBrush"));else text.SetValue(TextBlock.ForegroundProperty,i==2?FluentTheme.Text:FluentTheme.Muted);if(i==1){var temperatureRow=new FrameworkElementFactory(typeof(StackPanel));temperatureRow.SetValue(StackPanel.OrientationProperty,Orientation.Horizontal);temperatureRow.SetValue(FrameworkElement.HorizontalAlignmentProperty,HorizontalAlignment.Center);temperatureRow.AppendChild(text);panel.AppendChild(temperatureRow);}else panel.AppendChild(text);}
             return new DataTemplate{VisualTree=panel};
         }
         internal void SetResults(List<SmartDisk> disks) {
@@ -191,7 +192,6 @@ namespace FileCompass {
         internal void RefreshLanguage(){Title=L.Text("smart.title");Disks.ItemTemplate=DiskTileTemplate();System.Windows.Automation.AutomationProperties.SetName(Disks,L.Text("smart.diskSelection"));foreach(var grid in new[]{Attributes,AttributesRight}){string[] labels={"ID",L.Text("smart.attribute"),L.Text("smart.current"),L.Text("smart.worst"),L.Text("smart.threshold"),L.Text("smart.raw"),L.Text("smart.state"),L.Text("smart.normalizedCompact")};for(int i=0;i<labels.Length;i++){var header=grid.Columns[i].Header as TextBlock;if(header!=null){header.Text=labels[i];header.ToolTip=i==7?L.Text("smart.normalizedHelp"):labels[i];}}RowStyle(grid);}if(layoutReady)BuildInformation(stacked?2:1);RenderDisk();}
         internal void RenderDisk() {
             var disk=Disks.SelectedItem as SmartDisk;snapshot=disk==null?null:SmartSnapshot.Create(disk);copy.IsEnabled=disk!=null&&!copying;save.IsEnabled=disk!=null;
-            kindBadge.Content=null;kindBadge.Content=disk;kindBadge.Visibility=disk==null?Visibility.Collapsed:Visibility.Visible;
             if(snapshot==null){model.Text=L.Text("smart.title");HealthValue.Text=L.Text("smart.unknown");TemperatureValue.Text="-";healthRemaining.Text="";foreach(var value in values.Values)value.Text="-";ApplyBadge(healthCard,"unknown");ApplyBadge(temperatureCard,"unknown");attributeCount.Text=L.Format("smart.attributeCount",0);BindAttributes();return;}
             model.Text=snapshot.Model;model.ToolTip=snapshot.Device;HealthValue.Text=snapshot.HealthText;HealthValue.ToolTip=L.Text("smart.healthHelp");healthRemaining.Text=snapshot.RemainingText;healthRemaining.ToolTip=L.Text("smart.healthHelp");healthRemaining.Visibility=snapshot.RemainingText.Length>0?Visibility.Visible:Visibility.Collapsed;TemperatureValue.Text=snapshot.TemperatureText;
             ApplyBadge(healthCard,snapshot.HealthKey);ApplyBadge(temperatureCard,disk.Temperature.HasValue?"temperature":"unknown");foreach(var item in snapshot.Information){values[item.Key].Text=item.Value;values[item.Key].ToolTip=item.Value;}
@@ -211,11 +211,11 @@ namespace FileCompass {
             try{string extension=Path.GetExtension(dialog.FileName).ToLowerInvariant();int format=extension==".png"?1:extension==".pdf"?2:extension==".txt"?3:extension==".json"?4:dialog.FilterIndex;if(format==1)SmartReports.Png(dialog.FileName,captured);else if(format==2)SmartReports.Pdf(dialog.FileName,captured);else if(format==3)File.WriteAllText(dialog.FileName,captured.TextReport(),new System.Text.UTF8Encoding(true));else File.WriteAllText(dialog.FileName,captured.RawJson??"{}",new System.Text.UTF8Encoding(true));status.Text=L.Format("smart.exportSaved",dialog.FileName);}catch(Exception ex){status.Text=L.Text("smart.failed")+" "+ex.Message;}
         }
         internal async Task RefreshDisks(){
-            if(cancellation!=null)return;cancellation=new CancellationTokenSource();var token=cancellation.Token;refresh.IsEnabled=false;progress.Visibility=Visibility.Visible;status.Text=L.Text("smart.loading");
+            if(cancellation!=null)return;cancellation=new CancellationTokenSource();dockPause=OperationPause.Create(cancellation.Token);var token=cancellation.Token;refresh.IsEnabled=false;progress.Visibility=Visibility.Visible;status.Text=L.Text("smart.loading");
             var report=new Progress<string>(x=>{if(!closed&&cancellation!=null)status.Text=L.Text("smart.loading")+" "+x;});
             try{var disks=await Task.Run(()=>SmartData.Collect(token,x=>((IProgress<string>)report).Report(x)));if(closed)return;SetResults(disks);collectionStatus=Results.Count==0?L.Text("smart.noDisks"):(SmartData.Administrator?L.Text("smart.updated"):L.Text("smart.adminHint"))+" · "+DateTime.Now.ToString("T");status.Text=collectionStatus;RenderDisk();}
             catch(OperationCanceledException){}catch(Exception ex){if(!closed)status.Text=L.Text("smart.failed")+" "+ex.Message;}
-            finally{cancellation.Dispose();cancellation=null;if(!closed){refresh.IsEnabled=true;progress.Visibility=Visibility.Collapsed;}}
+            finally{if(dockPause!=null){dockPause.Dispose();dockPause=null;}cancellation.Dispose();cancellation=null;if(!closed){refresh.IsEnabled=true;progress.Visibility=Visibility.Collapsed;}}
         }
 
     }

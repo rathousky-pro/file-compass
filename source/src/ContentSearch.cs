@@ -21,7 +21,7 @@ namespace FileCompass {
   }
   internal static ContentMatch Scan(TextReader reader,FileSearchOptions options,CancellationToken token,string location){
    char[] buffer=new char[65536];string tail="";long line=1;int read;var regex=options.TextRegex?new Regex(options.Text,options.CaseSensitive?RegexOptions.None:RegexOptions.IgnoreCase,TimeSpan.FromSeconds(1)):null;
-   while((read=reader.Read(buffer,0,buffer.Length))>0){token.ThrowIfCancellationRequested();string part=tail+new string(buffer,0,read);
+   while((read=reader.Read(buffer,0,buffer.Length))>0){OperationPause.Wait(token);string part=tail+new string(buffer,0,read);
     if(regex!=null){int start=0,end;while((end=part.IndexOf('\n',start))>=0){if(end-start>131072)throw new IOException(L.Text("search.regexLineLengthLimit"));string text=part.Substring(start,end-start).TrimEnd('\r');var match=regex.Match(text);if(match.Success)return Result(text,match.Index,line,location);line++;start=end+1;}tail=part.Substring(start);if(tail.Length>131072)throw new IOException(L.Text("search.regexLineLengthLimit"));}
     else{int index=part.IndexOf(options.Text,options.CaseSensitive?StringComparison.Ordinal:StringComparison.OrdinalIgnoreCase);if(index>=0)return Result(part,index,line+part.Take(index).Count(x=>x=='\n'),location);int keep=Math.Min(part.Length,options.Text.Length-1);int consumed=part.Length-keep;line+=part.Take(consumed).Count(x=>x=='\n');tail=part.Substring(consumed);}
    }
@@ -33,7 +33,7 @@ namespace FileCompass {
    using(var temp=new ArchiveTemp(Path.Combine(AppPaths.ConfigDirectory,"content-search")))using(var job=new ArchiveProcessJob(512)){
     string request=Path.Combine(temp.Path,"request.json"),result=Path.Combine(temp.Path,"result.json");var json=new JavaScriptSerializer{MaxJsonLength=262144};File.WriteAllText(request,json.Serialize(new ContentRequest{Path=path,Options=options}),Encoding.UTF8);
     using(var process=new Process{StartInfo=new ProcessStartInfo(Process.GetCurrentProcess().MainModule.FileName,"--content-search-worker "+SshTerminal.QuoteWindowsArgument(request)+" "+SshTerminal.QuoteWindowsArgument(result)){UseShellExecute=false,CreateNoWindow=true,WindowStyle=ProcessWindowStyle.Hidden}}){
-     process.Start();job.Assign(process);try{var watch=Stopwatch.StartNew();while(!process.WaitForExit(40)){token.ThrowIfCancellationRequested();if(watch.ElapsedMilliseconds>15000)throw new IOException(L.Text("tools1.documentTimeout"));}token.ThrowIfCancellationRequested();if(!File.Exists(result)||new FileInfo(result).Length>262144)throw new IOException(L.Text("tools1.documentFailed"));var data=json.Deserialize<ContentResponse>(File.ReadAllText(result));if(data==null||!String.IsNullOrEmpty(data.Error))throw new IOException(data==null?L.Text("tools1.documentFailed"):data.Error);return data.Match;}
+     process.Start();job.Assign(process);try{var watch=Stopwatch.StartNew();while(!process.WaitForExit(40)){OperationPause.Wait(token);if(watch.ElapsedMilliseconds>15000)throw new IOException(L.Text("tools1.documentTimeout"));}OperationPause.Wait(token);if(!File.Exists(result)||new FileInfo(result).Length>262144)throw new IOException(L.Text("tools1.documentFailed"));var data=json.Deserialize<ContentResponse>(File.ReadAllText(result));if(data==null||!String.IsNullOrEmpty(data.Error))throw new IOException(data==null?L.Text("tools1.documentFailed"):data.Error);return data.Match;}
      finally{if(!process.HasExited){try{process.Kill();process.WaitForExit(2000);}catch{}}}
     }
    }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -13,7 +13,7 @@ namespace FileCompass
         public string Name;
         public string LeftFilter = "", RightFilter = "";
         public SavedTab[] Left = new SavedTab[0], Right = new SavedTab[0];
-        public int LeftIndex, RightIndex;
+        public int LeftIndex, RightIndex;public bool LeftEmpty,RightEmpty;
         public PanelView LeftView = new PanelView(), RightView = new PanelView();
         public double Split = .5; public double[] Widths = new double[0];
         public string PanelLayout = "SideBySide"; public bool SinglePanelRight; public double StackedSplitRatio = .5;
@@ -28,7 +28,7 @@ namespace FileCompass
         {
             name = name.Trim(); if (name.Length == 0 || name.Length > 80) throw new IOException(L.Text("workspace.invalidName"));
             var state = new ProgramSettings(); CaptureView(state);
-            return new Workspace { Name = name, LeftFilter = left.QuickFilter, RightFilter = right.QuickFilter, Left = state.LeftTabs, Right = state.RightTabs, LeftIndex = state.LeftTabIndex, RightIndex = state.RightTabIndex, LeftView = state.LeftView, RightView = state.RightView, Split = state.SplitRatio, Widths = state.ColumnWidths, PanelLayout = state.PanelLayout, SinglePanelRight = state.SinglePanelRight, StackedSplitRatio = state.StackedSplitRatio, LastDualLayout = state.LastDualLayout };
+            return new Workspace { Name = name,LeftEmpty=left.EmptyPanel,RightEmpty=right.EmptyPanel, LeftFilter = left.QuickFilter, RightFilter = right.QuickFilter, Left = state.LeftTabs, Right = state.RightTabs, LeftIndex = state.LeftTabIndex, RightIndex = state.RightTabIndex, LeftView = state.LeftView, RightView = state.RightView, Split = state.SplitRatio, Widths = state.ColumnWidths, PanelLayout = state.PanelLayout, SinglePanelRight = state.SinglePanelRight, StackedSplitRatio = state.StackedSplitRatio, LastDualLayout = state.LastDualLayout };
         }
         internal async Task ApplyWorkspace(Workspace workspace)
         {
@@ -36,7 +36,7 @@ namespace FileCompass
             CloseQuickPreview(); left.RestorePanelView(workspace.LeftView); right.RestorePanelView(workspace.RightView);
             foreach (var panel in new[] { left, right }) { if (panel.IsRemote || panel.IsArchive) panel.Navigate(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), false); }
             await Task.WhenAll(left.NavigationTask ?? Task.FromResult(true), right.NavigationTask ?? Task.FromResult(true));
-            left.RestoreTabs(workspace.Left, workspace.LeftIndex); right.RestoreTabs(workspace.Right, workspace.RightIndex);
+            left.RestoreTabs(workspace.Left, workspace.LeftIndex); right.RestoreTabs(workspace.Right, workspace.RightIndex);if(workspace.LeftEmpty)left.ClearEmptyPanel(false);if(workspace.RightEmpty)right.ClearEmptyPanel(false);
             if (workspace.Widths != null) for (int i = 0; i < Math.Min(5, workspace.Widths.Length); i++) { left.SetColumnWidth(i, workspace.Widths[i]); right.SetColumnWidth(i, workspace.Widths[i]); }
             RestorePanelLayout(new ProgramSettings { PanelLayout = workspace.PanelLayout, SinglePanelRight = workspace.SinglePanelRight, SplitRatio = workspace.Split, StackedSplitRatio = workspace.StackedSplitRatio, LastDualLayout = workspace.LastDualLayout });
             await Task.WhenAll(left.NavigationTask ?? Task.FromResult(true), right.NavigationTask ?? Task.FromResult(true));

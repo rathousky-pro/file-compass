@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -50,7 +50,7 @@ namespace FileCompass
         public bool IsParent { get; set; }
         public long Bytes { get; set; }
         internal bool SizeKnown, SizeLoading;
-        public string Size { get { return IsParent ? "" : IsLink ? "<LNK>" : SizeLoading ? L.Text("common.ellipsis") : IsDirectory && !SizeKnown ? "<DIR>" : Bytes.ToString("N0"); } }
+        public string Size { get { return IsParent ? "" : IsLink ? "<LNK>" : SizeLoading ? L.Text("common.ellipsis") : IsDirectory && !SizeKnown ? "<DIR>" : ByteSize.Format(Bytes); } }
         internal void FolderSize(long? bytes, bool loading)
         {
             if (loading) { SizeKnown = false; Bytes = 0; }
@@ -115,6 +115,7 @@ namespace FileCompass
             left.Navigate(initialDirectory != null ? home : ProgramSettings.StartupFolder(preferences.LeftFolder, home), false);
             right.Navigate(initialDirectory != null ? home : ProgramSettings.StartupFolder(preferences.RightFolder, home), false); SetActive(left);
             if (initialDirectory == null) { left.RestoreTabs(preferences.LeftTabs, preferences.LeftTabIndex, !preferences.SaveFoldersOnExit || preferences.SaveTabsOnExit); right.RestoreTabs(preferences.RightTabs, preferences.RightTabIndex, !preferences.SaveFoldersOnExit || preferences.SaveTabsOnExit); }
+            if(initialDirectory==null){if(preferences.LeftPanelEmpty)left.ClearEmptyPanel(false);if(preferences.RightPanelEmpty)right.ClearEmptyPanel(false);}
             InitializeWorkflows(preferences);
             if(initialDirectory==null){left.TabsChanged+=PersistPanelTabs;right.TabsChanged+=PersistPanelTabs;}
             InitializeReleaseTools();
@@ -140,6 +141,7 @@ namespace FileCompass
         {
             var button = CompactTheme.Button(label, label, delegate { if (!busy && !PanelsLoading) action(); });
             button.ContentTemplate=FunctionKeyIcons.Caption(icon);
+            button.Tag="function-key";
             button.Height = 30; button.Padding = new Thickness(6, 2, 6, 2);
             button.Background = CompactTheme.WhiteSurface; button.BorderBrush = CompactTheme.Line;
             panel.Children.Add(button); actions.Add(button);
@@ -178,6 +180,7 @@ namespace FileCompass
         }
         void Transfer(bool move)
         {
+            if(active.EmptyPanel||(active==left?right:left).EmptyPanel){MessageBox.Show(this,L.Text("tabs.emptyTransfer"),ApplicationBrand.Name);return;}
             if(active.IsExt){ExportExtToOther(move);return;}if((active==left?right:left).IsExt){MessageBox.Show(this,L.Text("ext.readOnly"),L.Text("ext.title"));return;}
             if (active.IsShellBrowser || (active == left ? right : left).IsShellBrowser) { MessageBox.Show(this, L.Text("tree.openFolderFirst"), ApplicationBrand.Name); return; }
             if ((active == left ? right : left).IsProjection) { MessageBox.Show(this, L.Text("projection.destinationRejected"), ApplicationBrand.Name); return; }
@@ -252,6 +255,23 @@ namespace FileCompass
         static int RunVerified(string[] args)
         {
 #if APP_TESTS
+            if(args.Length==2&&args[0]=="--appearance-language-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return AppearanceLanguageTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--field-border-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return FieldBorderTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--web-gallery-video-screenshots-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"isolated-video-profile");return WebGalleryScreenshots.RunVideo(args[1]);}
+            if(args.Length==2&&args[0]=="--web-gallery-screenshots-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"isolated-profile");return WebGalleryScreenshots.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--panel-strip-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return PanelStripTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--glass-dialog-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return GlassDialogTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--dialog-cards-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return DialogCardsTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--preview-card-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return PreviewCardTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--selection-brackets-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return SelectionBracketTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--media-keep-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return MediaKeepTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--panel-experience-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return PanelExperienceTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--toolbar-symbols-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return ToolbarSymbolsTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--metadata-columns-test")AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");
+            if(args.Length==2&&args[0]=="--smart-release-live-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return SmartReleaseTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--archive-sfx-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return ArchiveSfxTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--pause-fixture"){for(int i=0;i<1500;i++){File.WriteAllText(args[1],i.ToString());System.Threading.Thread.Sleep(20);}return 0;}
+            if(args.Length==2&&args[0]=="--clean-refinements-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return CleanRefinementTests.Run(args[1]);}
             if(args.Length==2&&args[0]=="--archive-worker"&&!String.IsNullOrEmpty(Environment.GetEnvironmentVariable("FILECOMPASS_TEST_PROFILE")))AppPaths.TestProfileDirectory=Path.GetFullPath(Environment.GetEnvironmentVariable("FILECOMPASS_TEST_PROFILE"));
             if(args.Length==2&&(args[0]=="--media-progress-eta-test"||args[0]=="--openmp-media-test"||args[0]=="--media-context-test"||args[0]=="--new-text-editor-test"||args[0]=="--copy-error-flow-test"||args[0]=="--analyzer-start-smart-kind-test"||args[0]=="--archive-test"||args[0]=="--archive-upgrade-test"||args[0]=="--archive-interaction-test"||args[0]=="--archive-formats-test"||args[0]=="--compression-progress-test"||args[0]=="--archive-memory-test"||args[0]=="--panel-layout-test"||args[0]=="--preview-refresh-test"||args[0]=="--prepared-preview-test"||args[0]=="--video-filmstrip-test"||args[0]=="--vendor-updates-test"||args[0]=="--vendor-updates-live-test"||args[0]=="--task-dock-test"||args[0]=="--preview-selection-test"||args[0]=="--search-media-ux-test"||args[0]=="--disk-tools-ux-test"||args[0]=="--settings-surfaces-test"||args[0]=="--settings-layout-test"||args[0]=="--settings-connections-test"||args[0]=="--cloud-question-language-test"||args[0]=="--inline-tabs-test"||args[0]=="--pinned-tabs-test"||args[0]=="--network-progress-ux-test"||args[0]=="--conflict-ux-test"||args[0]=="--operation-dialog-test"||args[0]=="--transfer-progress-layout-test"||args[0]=="--interface-theme-test"||args[0]=="--dispatch-units-test"||args[0]=="--editor-tempo-test"||args[0]=="--editor-analyzer-test"||args[0]=="--editor-analyzer-screens-test"||args[0]=="--live-language-test"||args[0]=="--help-window-test"||args[0]=="--disk-smart-test"||args[0]=="--disk-analyzer-test"||args[0]=="--disk-analyzer-upgrade-test"||args[0]=="--local-copy-ui-test"||args[0]=="--navigation-focus-test"||args[0]=="--icloud-test"||args[0]=="--release-tools-test"||args[0]=="--media-names-test"||args[0]=="--undo-history-test"||args[0]=="--image-batch-test"||args[0]=="--media-converter-test"||args[0]=="--csv-preview-test"||args[0]=="--media-layout-test"||args[0]=="--help-screenshots-test"||args[0]=="--internal-preview-test"||args[0]=="--file-context-test"||args[0]=="--usb-drive-test"||args[0]=="--ext-reader-test"))AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");
 #endif

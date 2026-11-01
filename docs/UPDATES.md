@@ -14,6 +14,8 @@ V **Konfigurace → Aktualizace** najdete instalovanou a dostupnou verzi, výsle
 | Knihovny a ovladače | Síťové/náhledové knihovny zůstávají součástí vydání File Compass. SSHFS/WinFsp nadále používají instalační postupy výrobce. |
 | File Compass | Řádek je připravený pro vydání na GitHubu. Adresa zatím nebyla určena, proto kontrola a stažení programu nejsou aktivní. |
 
+Zjištění verze a ověření stahovaného balíčku jsou samostatné kroky. Pokud metadata výrobce potvrzují stejnou nebo starší verzi, stav je **Aktuální** i tehdy, když vydavatel neposkytuje SHA-256. U novější verze bez SHA-256 stav nabízí ruční stažení; automatické stažení a instalace zůstávají vypnuté. Podrobnost u řádku vysvětluje chybějící kontrolní součet. Chyba síťové kontroly se nadále zobrazuje jako chyba.
+
 Používají se stabilní vydání. Neexistuje vlastní přebalovací server ani odhadované číslo nejnovější verze. Výpadek sítě nebo chybějící ověření se zobrazí jako chyba, nikoli jako „Aktuální“. GitHub může omezit počet anonymních požadavků; ruční kontrolu lze zopakovat později. FFmpeg se kontroluje proti verzi a SHA-256 zveřejněným přímo na stránkách poskytovatele Windows sestavení.
 
 ## Stažení a použití

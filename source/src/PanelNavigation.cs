@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -32,8 +32,10 @@ namespace FileCompass
         readonly DockPanel tabRow = new DockPanel { LastChildFill = true, Background = CompactTheme.PanelSurface, Height = 34 };
         DockPanel panelPathRow;
         Border activeTabFace;
+        Button newTabButton,cleanRootButton,cleanParentButton;
         internal Action<FilePanel> BookmarksRequested;
         readonly StackPanel crumbs = new StackPanel { Orientation = Orientation.Horizontal };
+        readonly StackPanel cleanCrumbs = new StackPanel { Orientation=Orientation.Horizontal };
         readonly ScrollViewer crumbScroll = new ScrollViewer { HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, ClipToBounds = true };
         readonly TextBox quickText = new TextBox { Width = 220, MinHeight = 24, VerticalContentAlignment = VerticalAlignment.Center };
         readonly ComboBox quickMode = new ComboBox { Width = 110, MinHeight = 24 };
@@ -46,16 +48,17 @@ namespace FileCompass
         public event EventHandler TabsChanged;
         void NotifyTabsChanged(){if(TabsChanged!=null)TabsChanged(this,EventArgs.Empty);}
         internal int CurrentTabIndex { get { return tabIndex; } }
-        internal int TabCount { get { return tabs.Count; } }
-        internal string SavedLocalFolder { get { if(HasUnavailableTab)return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile); if(IsExt)return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile); if (!IsRemote && !IsArchive) return CurrentPath; return IsArchive ? archiveReturnPath : localReturnPath; } }
+        internal int TabCount { get { return EmptyPanel?0:tabs.Count; } }
+        internal string SavedLocalFolder { get { if(EmptyPanel)return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);if(HasUnavailableTab)return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile); if(IsExt)return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile); if (!IsRemote && !IsArchive) return CurrentPath; return IsArchive ? archiveReturnPath : localReturnPath; } }
         internal void InitializeNavigation(Grid grid)
         {
             tabs.Add(new PanelTab());
             var wrapper = new DockPanel(); Child = wrapper;
             var row = tabRow;
 
-            var add = CompactTheme.Button("+", L.Text("tabs.newShortcutTooltip"), delegate { NewTab(); });
-            DockPanel.SetDock(add, Dock.Right); row.Children.Add(add);
+            newTabButton=CompactTheme.Button("+",L.Text("tabs.newShortcutTooltip"),delegate{NewTab();});
+            newTabButton.Tag="panel-tab";newTabButton.Width=36;newTabButton.Height=36;newTabButton.MinWidth=0;newTabButton.Padding=new Thickness(0);newTabButton.Margin=new Thickness(6,0,0,0);newTabButton.Background=CompactTheme.PanelSurface;newTabButton.BorderThickness=new Thickness(0);newTabButton.FontSize=16;
+            System.Windows.Automation.AutomationProperties.SetAutomationId(newTabButton,"PanelNewTab");
             var tabScroller=new ScrollViewer { Content = tabStrip, HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled };tabScroller.PreviewMouseWheel+=delegate(object sender,MouseWheelEventArgs e){tabScroller.ScrollToHorizontalOffset(tabScroller.HorizontalOffset-e.Delta/3.0);e.Handled=true;};row.Children.Add(tabScroller);row.SizeChanged+=delegate(object sender,SizeChangedEventArgs e){if(e.WidthChanged)RenderTabs();};
             DockPanel.SetDock(quickBar, Dock.Bottom); wrapper.Children.Add(quickBar);
             quickMode.Items.Add(L.Text("action.filter")); quickMode.Items.Add(L.Text("action.find")); quickMode.SelectedIndex = 0;
@@ -74,12 +77,11 @@ namespace FileCompass
         }
         internal void InitializeAddress(DockPanel row)
         {
-            var bookmarks=CompactTheme.Button("★",L.Text("favorites.title"),delegate{if(BookmarksRequested!=null)BookmarksRequested(this);});DockPanel.SetDock(bookmarks,Dock.Right);row.Children.Add(bookmarks);
-            var host = new Grid();host.Children.Add(tabRow);host.Children.Add(address);address.Visibility=Visibility.Collapsed;crumbScroll.Content=crumbs;row.Children.Add(host);
+            row.Children.Clear();row.Children.Add(tabRow);address.Visibility=Visibility.Collapsed;
             crumbs.Background = CompactTheme.InactivePath;
             crumbScroll.PreviewMouseWheel += delegate(object s, MouseWheelEventArgs e) { crumbScroll.ScrollToHorizontalOffset(crumbScroll.HorizontalOffset - e.Delta / 3.0); e.Handled = true; };
-            address.GotKeyboardFocus += delegate { tabRow.Visibility = Visibility.Collapsed; };
-            address.LostKeyboardFocus += delegate { address.Visibility=Visibility.Collapsed;tabRow.Visibility=Visibility.Visible;completions.IsOpen = false; };
+            address.GotKeyboardFocus += delegate { RefreshCleanNavigation(); };
+            address.LostKeyboardFocus += delegate { address.Visibility=Visibility.Collapsed;tabRow.Visibility=Visibility.Visible;completions.IsOpen = false;RefreshCleanNavigation(); };
             completions.PlacementTarget = address;
             completions.Child = new Border { Background = CompactTheme.WhiteSurface, BorderBrush = CompactTheme.Line, BorderThickness = new Thickness(1), Child = completionList };
             completionList.PreviewMouseLeftButtonDown += delegate(object s, MouseButtonEventArgs e) { var element = e.OriginalSource as DependencyObject; while (element != null && !(element is ListBoxItem)) element = VisualTreeHelper.GetParent(element); if (element is ListBoxItem) { completionList.SelectedItem = ((ListBoxItem)element).Content; AcceptCompletion(); e.Handled = true; } };
@@ -118,7 +120,7 @@ namespace FileCompass
         }
         void CaptureTab()
         {
-            if (tabs.Count == 0 || CurrentPath == null || switchingTabs) return;
+            if (EmptyPanel || tabs.Count == 0 || CurrentPath == null || switchingTabs) return;
             var tab = tabs[tabIndex];
             if (tab.Pending) return;
             string newProfile = IsRemote ? Remote.Profile.Id : "", newArchive = IsArchive ? Archive.FilePath : "";
@@ -139,13 +141,13 @@ namespace FileCompass
             var view = item.View ?? new PanelView();
             return new SavedTab { ExtSource=item.ExtSource,ExtVolume=item.ExtVolume,Path = item.Path, Home = item.Home, Label = item.Label, Caption = item.Caption, ProfileId = item.ProfileId, ArchiveFile = item.ArchiveFile, ArchivePrefix = item.ArchivePrefix, Locked = item.Locked, Filter = item.Filter,
                 Projection = item.Projection == null ? null : new ProjectionSpec { Kind = item.Projection.Kind, Root = item.Projection.Root, Query = item.Projection.Query, Paths = item.Projection.Paths == null ? null : (string[])item.Projection.Paths.Clone() },
-                View = new PanelView { MetadataColumns = view.MetadataColumns == null ? new string[0] : (string[])view.MetadataColumns.Clone(), Sort = view.Sort, Descending = view.Descending, Widths = view.Widths == null ? new double[0] : (double[])view.Widths.Clone(), Display = view.Display, Tree = view.Tree, ThumbnailSize = view.ThumbnailSize, DetailExpanded = view.DetailExpanded, DetailConfigured = view.DetailConfigured, DetailRatio = view.DetailRatio, TreeWidth = view.TreeWidth } };
+                View = new PanelView { MetadataColumns = view.MetadataColumns == null ? new string[0] : (string[])view.MetadataColumns.Clone(), Sort = view.Sort, Descending = view.Descending, Widths = view.Widths == null ? new double[0] : (double[])view.Widths.Clone(), Display = view.Display, Tree = view.Tree, ThumbnailSize = view.ThumbnailSize, ExtensionColumn=view.ExtensionColumn,AttributesColumn=view.AttributesColumn,SizeColumn=view.SizeColumn,ModifiedColumn=view.ModifiedColumn,ColumnOrder=view.ColumnOrder==null?new string[0]:(string[])view.ColumnOrder.Clone(),DetailExpanded = view.DetailExpanded, DetailConfigured = view.DetailConfigured, DetailRatio = view.DetailRatio, TreeWidth = view.TreeWidth } };
         }
-        internal SavedTab[] SaveTabs() { CaptureTab(); return tabs.Select(x => CloneSavedTab(x.Saved)).ToArray(); }
+        internal SavedTab[] SaveTabs() { if(EmptyPanel)return new SavedTab[0];CaptureTab(); return tabs.Select(x => CloneSavedTab(x.Saved)).ToArray(); }
         internal void RestoreTabs(SavedTab[] saved, int selected, bool restoreActiveFolder = true)
         {
             if (saved == null || saved.Length == 0) return;
-            tabs.Clear(); foreach (var item in saved.Take(50)) if (item != null && !String.IsNullOrWhiteSpace(item.Path)) { var copy = CloneSavedTab(item);if(copy.ExtSource!=null&&copy.ExtVolume!=null)ExtLocations.Register(copy.ExtSource,copy.ExtVolume); tabs.Add(new PanelTab { Saved = copy, View = copy.View, Pending = true }); }
+            EmptyPanel=false;tabs.Clear(); foreach (var item in saved.Take(50)) if (item != null && !String.IsNullOrWhiteSpace(item.Path)) { var copy = CloneSavedTab(item);if(copy.ExtSource!=null&&copy.ExtVolume!=null)ExtLocations.Register(copy.ExtSource,copy.ExtVolume); tabs.Add(new PanelTab { Saved = copy, View = copy.View, Pending = true }); }
             if (tabs.Count == 0) tabs.Add(new PanelTab());
             tabIndex = Math.Max(0, Math.Min(selected, tabs.Count - 1)); RenderTabs();
             var tab = tabs[tabIndex];
@@ -167,6 +169,7 @@ namespace FileCompass
         internal void NewTab()
         {
             if (IsLoading || LocalLoading) return;
+            if(EmptyPanel){EmptyPanel=false;Navigate(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),false);NotifyTabsChanged();return;}
             if(HasUnavailableTab){tabs.Add(new PanelTab());tabIndex=tabs.Count-1;Navigate(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),false);RenderTabs();NotifyTabsChanged();return;}
             CaptureTab(); var current = tabs[tabIndex];
             var fresh = new PanelTab { Saved = new SavedTab { ExtSource=current.Saved.ExtSource,ExtVolume=current.Saved.ExtVolume,Projection = projection, Path = CurrentPath, Home = CurrentPath, ProfileId = IsRemote ? Remote.Profile.Id : "", ArchiveFile = IsArchive ? Archive.FilePath : "", ArchivePrefix = IsArchive ? ArchivePrefix : "", Caption = IsRemote ? Remote.Profile.DisplayLabel : IsArchive ? Path.GetFileName(Archive.FilePath) : "" }, Remote = Remote, Archive = Archive, ReturnPath = current.ReturnPath, Parents = current.Parents };
@@ -207,7 +210,9 @@ namespace FileCompass
         }
         internal void CloseTab(int index)
         {
-            if (tabs.Count <= 1 || IsLoading || LocalLoading || index < 0 || index >= tabs.Count) return;
+            if (EmptyPanel || IsLoading || LocalLoading || index < 0 || index >= tabs.Count) return;
+            CaptureTab();if(!ConfirmRemoteTabClose(tabs[index]))return;
+            if(tabs.Count==1){ClearEmptyPanel();return;}
             CaptureTab(); bool selected = index == tabIndex; tabs.RemoveAt(index);
             if (index < tabIndex) tabIndex--; else if (tabIndex >= tabs.Count) tabIndex = tabs.Count - 1;
             if(selected)switchingTabs=true;RenderTabs();NotifyTabsChanged(); if (selected) { SwitchTabWithoutCapture(tabIndex); }
@@ -221,10 +226,12 @@ namespace FileCompass
         internal void LockTab(int index) { CaptureTab(); var tab = tabs[index]; tab.Saved.Locked = !tab.Saved.Locked; tab.Saved.Home = tab.Saved.Path; RenderTabs();NotifyTabsChanged(); }
         void RenderTabs()
         {
-            tabRow.Visibility = Visibility.Visible;
+            if(AppearanceTheme.IsClean){RenderCleanTabs();return;}
+            tabRow.Background=AppearanceTheme.IsClean?CompactTheme.WhiteSurface:CompactTheme.PanelSurface;
+            tabRow.Visibility = address.Visibility==Visibility.Visible?Visibility.Collapsed:Visibility.Visible;RefreshCleanNavigation();
             if(activeTabFace!=null){activeTabFace.Child=null;activeTabFace=null;}
             var widths=TabWidths();
-            tabStrip.Children.Clear(); for (int i = 0; i < tabs.Count; i++) {
+            tabStrip.Children.Clear(); if(EmptyPanel)return;for (int i = 0; i < tabs.Count; i++) {
                 int index = i; var saved = tabs[i].Saved;
                 string name = saved.Label;
                 if (String.IsNullOrEmpty(name) && saved.Projection != null) name = ProjectionFiles.Title(saved.Projection);
@@ -244,27 +251,34 @@ namespace FileCompass
                 button.ContextMenu = menu;
                 if(i==tabIndex){
                     var fullCaption=new TextBlock{Text=TabPrefix(i)+TabPath(i),FontFamily=System.Windows.Documents.TextElement.GetFontFamily(this),FontSize=System.Windows.Documents.TextElement.GetFontSize(this)};fullCaption.Measure(new Size(Double.PositiveInfinity,30));
-                    if(fullCaption.DesiredSize.Width+TabPath(i).Count(c=>c=='\\'||c=='/')*12+40>widths[i]){var compact=new DockPanel{Width=Math.Max(20,widths[i]-2)};var edit=CompactTheme.Button("✎",L.Text("navigation.editPathShortcutTooltip"),delegate{FocusAddress();});DockPanel.SetDock(edit,Dock.Right);compact.Children.Add(edit);compact.Children.Add(new PathTextBlock{FullPath=TabPath(i),Prefix=TabPrefix(i),Foreground=FluentTheme.Accent,Margin=new Thickness(5,0,2,0)});crumbScroll.Content=compact;}else crumbScroll.Content=crumbs;
-                    crumbScroll.ScrollToHorizontalOffset(0);activeTabFace=new Border{Child=crumbScroll,Width=widths[i],Height=30,Margin=new Thickness(2,1,2,1),Background=CompactTheme.ActivePath,BorderBrush=FluentTheme.Accent,BorderThickness=new Thickness(2),CornerRadius=new CornerRadius(4),ToolTip=button.ToolTip,ContextMenu=menu};activeTabFace.MouseLeftButtonDown+=delegate{activate(this);};tabStrip.Children.Add(activeTabFace);}else tabStrip.Children.Add(button);
+                    if(fullCaption.DesiredSize.Width+TabPath(i).Count(c=>c=='\\'||c=='/')*12+40>widths[i]){var compact=new DockPanel{Width=Math.Max(20,widths[i]-2)};var edit=CompactTheme.Button("✎",L.Text("navigation.editPathShortcutTooltip"),delegate{FocusAddress();});if(AppearanceTheme.IsClean)edit.Height=20;DockPanel.SetDock(edit,Dock.Right);compact.Children.Add(edit);compact.Children.Add(new PathTextBlock{FullPath=TabPath(i),Prefix=TabPrefix(i),Foreground=FluentTheme.Accent,Margin=new Thickness(5,0,2,0)});crumbScroll.Content=compact;}else crumbScroll.Content=crumbs;
+                    crumbScroll.ScrollToHorizontalOffset(0);activeTabFace=new Border{Child=crumbScroll,Width=widths[i],Height=30,Margin=new Thickness(2,1,2,1),Background=CompactTheme.ActivePath,BorderBrush=FluentTheme.Accent,BorderThickness=new Thickness(AppearanceTheme.IsClean?1:2),CornerRadius=new CornerRadius(AppearanceTheme.IsClean?6:4),ToolTip=button.ToolTip,ContextMenu=menu};activeTabFace.MouseLeftButtonDown+=delegate{activate(this);};tabStrip.Children.Add(activeTabFace);}else tabStrip.Children.Add(button);
+            }
+            if(cleanBreadcrumbFrame!=null&&activeTabFace!=null){
+                var menu=activeTabFace.ContextMenu;
+                if(AppearanceTheme.IsClean){menu.Items.Add(new Separator());AddTabAction(menu,L.Text("navigation.editPathShortcutTooltip"),FocusAddress);AddTabAction(menu,L.Text("favorites.title"),delegate{if(BookmarksRequested!=null)BookmarksRequested(this);});var recent=new MenuItem{Header=L.Text("navigation.folderHistory")};foreach(string path in history.Distinct(StringComparer.OrdinalIgnoreCase).Take(20)){string captured=path;AddTabActionTo(recent,captured,delegate{Navigate(captured,true);});}recent.IsEnabled=recent.Items.Count>0;menu.Items.Add(recent);}
+                cleanBreadcrumbFrame.ContextMenu=menu;
             }
         }
+        static void AddTabActionTo(MenuItem parent,string title,Action action){var item=new MenuItem{Header=title};item.Click+=delegate{action();};parent.Items.Add(item);}
         string TabPath(int index){return index==tabIndex&&CurrentPath!=null?CurrentPath:tabs[index].Saved.Path??"";}
         string TabPrefix(int index){var tab=tabs[index];return (!String.IsNullOrEmpty(tab.Error)?"⚠ ":tab.Saved.Locked?"🔒 ":"")+(!String.IsNullOrEmpty(tab.Saved.ProfileId)?tab.Saved.Caption+" · ":"");}
         double[] TabWidths(){
             var natural=new double[tabs.Count];
-            for(int i=0;i<tabs.Count;i++){var text=new TextBlock{Text=TabPrefix(i)+TabPath(i),FontFamily=System.Windows.Documents.TextElement.GetFontFamily(this),FontSize=System.Windows.Documents.TextElement.GetFontSize(this)};text.Measure(new Size(Double.PositiveInfinity,30));natural[i]=Math.Max(100,Math.Min(320,text.DesiredSize.Width+(i==tabIndex?48:24)));}
+            for(int i=0;i<tabs.Count;i++){var text=new TextBlock{Text=AppearanceTheme.IsClean?CleanTabCaption(i):TabPrefix(i)+TabPath(i),FontFamily=System.Windows.Documents.TextElement.GetFontFamily(this),FontSize=AppearanceTheme.IsClean?Math.Max(14,System.Windows.Documents.TextElement.GetFontSize(this)+1):System.Windows.Documents.TextElement.GetFontSize(this)};text.Measure(new Size(Double.PositiveInfinity,30));natural[i]=Math.Max(70,Math.Min(260,text.DesiredSize.Width+72));}
             double available=Math.Max(100,tabRow.ActualWidth-36-tabs.Count*4);if(natural.Sum()<=available)return natural;
-            double lo=100,hi=320;for(int n=0;n<20;n++){double mid=(lo+hi)/2;if(natural.Sum(x=>Math.Min(x,mid))>available)hi=mid;else lo=mid;}return natural.Select(x=>Math.Min(x,lo)).ToArray();
+            double lo=70,hi=260;for(int n=0;n<20;n++){double mid=(lo+hi)/2;if(natural.Sum(x=>Math.Min(x,mid))>available)hi=mid;else lo=mid;}return natural.Select(x=>Math.Min(x,lo)).ToArray();
         }
         static void AddTabAction(ContextMenu menu, string title, Action action) { var item = new MenuItem { Header = title }; item.Click += delegate { action(); }; menu.Items.Add(item); }
         void NavigationChanged()
         {
-            if(CurrentPath!=null){tabs[tabIndex].Pending=false;tabs[tabIndex].Error=null;tabNotice.Visibility=Visibility.Collapsed;}
+            RefreshCleanDrives();
+            if(CurrentPath!=null){EmptyPanel=false;tabs[tabIndex].Pending=false;tabs[tabIndex].Error=null;tabNotice.Visibility=Visibility.Collapsed;}
             if (!switchingTabs) CaptureTab(); RenderCrumbs(); RenderTabs(); ConfigureWatcher();
         }
         void RenderCrumbs()
         {
-            crumbs.Children.Clear(); if (CurrentPath == null) {if(HasUnavailableTab)crumbs.Children.Add(new TextBlock{Text=tabs[tabIndex].Saved.Path,Margin=new Thickness(6),Foreground=FluentTheme.Muted});return;}
+            crumbs.Children.Clear();cleanCrumbs.Children.Clear(); if (CurrentPath == null) {if(HasUnavailableTab)foreach(var panel in new[]{crumbs,cleanCrumbs})panel.Children.Add(new TextBlock{Text=tabs[tabIndex].Saved.Path,Margin=new Thickness(6),Foreground=FluentTheme.Muted});return;}
             if(IsExt){var location=ExtLocations.Get(CurrentPath);AddCrumb(location.Root,"EXT");string currentExt=location.Root;foreach(string part in ExtLocations.Relative(CurrentPath).Split(new[]{'/'},StringSplitOptions.RemoveEmptyEntries)){currentExt=currentExt.TrimEnd('/')+"/"+part;AddCrumb(currentExt,part);}return;}
             if (IsShellBrowser) { AddCrumb(CurrentPath, ShellLocationName ?? L.Text("tree.systemLocation")); return; }
             if (IsNetworkBrowser) { AddCrumb(NetworkBrowser.Root, L.Text("network.shortTitle")); if (CurrentPath != NetworkBrowser.Root) AddCrumb(CurrentPath, CurrentPath.Trim('\\')); return; }
@@ -279,8 +293,15 @@ namespace FileCompass
             edit.Background = Brushes.Transparent; edit.BorderBrush = Brushes.Transparent; crumbs.Children.Add(edit);
 
         }
-        void AddCrumb(string path, string label) { var button = CompactTheme.Button(label + " ›", path, delegate { Navigate(path, true); }); button.Height = 28; button.MinWidth = 0; button.Padding = new Thickness(4, 0, 4, 0); button.Background = Brushes.Transparent; button.BorderBrush = Brushes.Transparent; button.Foreground = IsActivePanel ? FluentTheme.Accent : FluentTheme.Text; crumbs.Children.Add(button); }
-        internal void FocusAddress() { address.Visibility=Visibility.Visible;tabRow.Visibility=Visibility.Collapsed;address.Focus(); address.SelectAll(); }
+        void AddCrumb(string path,string label){
+            foreach(var panel in new[]{crumbs,cleanCrumbs}){
+                bool clean=Object.ReferenceEquals(panel,cleanCrumbs);
+                if(clean&&panel.Children.Count>0)panel.Children.Add(new TextBlock{Text="›",Foreground=FluentTheme.Accent,VerticalAlignment=VerticalAlignment.Center,Margin=new Thickness(2,0,2,0)});
+                string caption=clean?(label.Length==3&&label[1]==':'?label.Substring(0,2):label):label+"  ›";
+                var button=CompactTheme.Button(caption,path,delegate{Navigate(path,true);});button.Tag="panel-breadcrumb";button.Height=28;button.MinWidth=0;button.Padding=new Thickness(4,0,4,0);button.Background=Brushes.Transparent;button.BorderBrush=Brushes.Transparent;button.Foreground=FluentTheme.Accent;panel.Children.Add(button);
+            }
+        }
+        internal void FocusAddress() { address.Visibility=Visibility.Visible;RefreshCleanNavigation();address.Focus(); address.SelectAll(); }
         internal static string EntryName(Entry entry) { return entry.IsDirectory ? entry.Name != null && entry.Name.StartsWith("[", StringComparison.Ordinal) && entry.Name.EndsWith("]", StringComparison.Ordinal) ? entry.Name.Substring(1, entry.Name.Length - 2) : entry.Name : entry.Name + (String.IsNullOrEmpty(entry.Extension) ? "" : "." + entry.Extension); }
         internal bool MatchesFilter(object value)
         {
@@ -296,8 +317,8 @@ namespace FileCompass
             if (List.ItemsSource == null) return;
             var cursor = List.SelectedItem as Entry; var collection = System.Windows.Data.CollectionViewSource.GetDefaultView(List.ItemsSource); collection.Filter = MatchesFilter;
             if (quickMode.SelectedIndex == 1 && !String.IsNullOrEmpty(quickText.Text)) { var found = List.Items.Cast<Entry>().FirstOrDefault(x => !x.IsParent && EntryName(x).StartsWith(quickText.Text, StringComparison.CurrentCultureIgnoreCase)); if (found != null) List.SelectedItem = found; }
-            else if (cursor != null && List.Items.Contains(cursor)) List.SelectedItem = cursor;
-            else if (List.Items.Count > 0) List.SelectedIndex = 0;
+            else if (cursor != null && List.Items.Contains(cursor) && (!cursor.IsParent || String.IsNullOrEmpty(quickText.Text))) List.SelectedItem = cursor;
+            else if (List.Items.Count > 0) List.SelectedItem = String.IsNullOrEmpty(quickText.Text)?List.Items[0]:List.Items.Cast<Entry>().FirstOrDefault(x=>!x.IsParent)??List.Items[0];
             if (List.SelectedItem != null) List.ScrollIntoView(List.SelectedItem); UpdateStatus();
         }
         internal void FocusFilter() { quickBar.Visibility = Visibility.Visible; quickText.Focus(); quickText.SelectAll(); }

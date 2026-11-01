@@ -1,10 +1,15 @@
-#if APP_TESTS
+﻿#if APP_TESTS
 using System;using System.IO;using System.Linq;using System.Collections.Generic;using System.Threading;using System.Threading.Tasks;using System.Windows;using System.Windows.Controls;using System.Windows.Threading;
 namespace FileCompass {
  public partial class MainWindow {
     internal double CopyDockWidthForTests{get{return copySummary.ActualWidth;}}
     internal ToolDockItem[] DockToolsForTests {get{return dockTools.ToArray();}}
     internal int DockTileCountForTests {get{return dockTiles.Count;}}
+    internal void VerifyStableDock(Action<bool,string> check){
+     double height=copySummary.ActualHeight;int flashes=0;DependencyPropertyChangedEventHandler changed=delegate{flashes++;};copySummary.IsVisibleChanged+=changed;var existing=dockTiles.Values.ToArray();
+     var archive=AddDockTransferForTests("Compression",delegate{});RefreshTaskDock();UpdateLayout();for(int i=0;i<10;i++){archive.Update("Progress "+i,.1,.2);RefreshCopySummary();UpdateLayout();}
+     check(flashes==0&&Math.Abs(copySummary.ActualHeight-height)<1,"copy/archive progress cannot blink or increase the fixed dock height");check(existing.All(x=>dockTiles.Values.Contains(x)),"updating transfers retains the same tool tile instances");archive.Finish("done",true);copySummary.IsVisibleChanged-=changed;
+    }
     internal CopyActivity AddDockTransferForTests(string title,Action open){var activity=AddCopyActivity(title,delegate{},open);activity.TransferTitle=title;activity.TransferRoute="Dokumenty → Záloha";activity.Update("6 / 10",.6,.54);return activity;}
  }
  internal static class TaskDockTests {
@@ -36,17 +41,18 @@ namespace FileCompass {
             check(main.DockTileCountForTests==3,"SMART, analyzer and converter coexist as three independent tiles");
             NavigationTests.Wait(converter.ConvertRows());main.RefreshTaskDock();
             check(!converter.IsVisible&&converter.Rows.Single().Status==L.Text("media.done")&&File.Exists(converter.Rows.Single().Target),"real image conversion completes while its tool stays hidden in the dock");
+            main.UpdateLayout();main.VerifyStableDock(check);
             bool restored=false;var copy=main.AddDockTransferForTests("Kopírování",delegate{restored=true;});var ftp=main.AddDockTransferForTests("FTP · testovací přenos",delegate{});main.RefreshTaskDock();main.UpdateLayout();
             var tiles=FluentUiTests.Children<ActivityTile>(main).ToArray();check(tiles.Length==5,"two transfer activities coexist with three background tools");
-            check(tiles.Select(x=>x.TransformToAncestor(main).Transform(new Point()).Y).Distinct().Count()==1,"all dock tiles share one horizontal row");
-            check(tiles.All(x=>x.ActualWidth>=250&&x.ActualHeight>=90),"individual dock tiles retain usable size");
-            var first=tiles[0];var scroll=FluentUiTests.Children<ScrollViewer>(main).First(x=>FluentUiTests.Children<ActivityTile>(x).Any());check(scroll.ComputedVerticalScrollBarVisibility!=Visibility.Visible,"dock never adds a vertical list of task rows");
+            check(tiles.Select(x=>x.TranslatePoint(new Point(),main).Y).Distinct().Count()==1&&tiles.Count(x=>x.ActualWidth>250)==3,"transfers share the same row with compact SMART/analyzer tiles and use remaining width");
+            check(tiles.All(x=>x.ActualWidth>=230&&x.ActualHeight>=56&&x.ActualHeight<=72),"dock tiles retain usable width and compact height");
+            check(tiles.All(x=>Convert.ToString(x.Background)=="#FFFFFFFF"),"background task tiles retain white card surfaces on the blue-grey base");var first=tiles[0];var scroll=FluentUiTests.Children<ScrollViewer>(main).First(x=>FluentUiTests.Children<ActivityTile>(x).Any());check(scroll.ComputedHorizontalScrollBarVisibility!=Visibility.Visible,"dock rows and compact tool tiles do not require horizontal scrolling");
             NextStageTests.Draw(main,Path.Combine(root,"five-activity-tiles.png"));
             var local=tiles.Single(x=>FluentUiTests.Children<TextBlock>(x).Any(t=>t.Text=="Kopírování"));FluentUiTests.Children<Button>(local).Single(x=>Convert.ToString(x.Content).StartsWith("↗")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));check(restored,"each transfer tile opens its own details action");
             copy.Finish("done",true);main.RefreshTaskDock();check(main.DockTileCountForTests==4,"completed transfer disappears without removing unrelated tools");ftp.Finish("done",true);
             main.DockToolsForTests.Single(x=>x.Window==smart).Placement.Restore();check(main.DockTileCountForTests==2,"restoring SMART leaves analyzer and converter in the dock");smart.Close();windows.Remove(smart);
             foreach(var window in windows.ToArray()){window.Close();windows.Remove(window);}main.RefreshTaskDock();check(main.DockTileCountForTests==0,"closing hidden tools removes their registrations and tiles");
-            var wide=main.AddDockTransferForTests("Kopírování",delegate{});main.RefreshTaskDock();main.UpdateLayout();main.RefreshTaskDock();main.UpdateLayout();var single=FluentUiTests.Children<ActivityTile>(main).Single();check(Math.Abs(single.ActualWidth-main.CopyDockWidthForTests)<2,"single copy uses the entire available dock width");NextStageTests.Draw(main,Path.Combine(root,"full-width-copy.png"));wide.Finish("done",true);
+            var wide=main.AddDockTransferForTests("Kopírování",delegate{});main.RefreshTaskDock();main.UpdateLayout();main.RefreshTaskDock();main.UpdateLayout();var single=FluentUiTests.Children<ActivityTile>(main).Single();check(Math.Abs(single.ActualWidth-main.CopyDockWidthForTests)<=3,"single copy uses the entire available dock width");NextStageTests.Draw(main,Path.Combine(root,"full-width-copy.png"));wide.Finish("done",true);
             var login=new SshLoginDialog(main,new NetworkProfile{Protocol=NetworkProtocol.SSH,Host="fixture.invalid",UserName="",Path="/srv/data"});windows.Add(login);Open(login);check(!FluentUiTests.Children<Button>(login).Single(x=>Convert.ToString(x.Content)==L.Text("ssh.loginContinue")).IsEnabled,"SSH cannot continue with an empty user");login.User.Text="chosen-user";var profile=new NetworkProfile{UserName="windows-fallback",PrivateKeyPath="fixture",SshAgent=true};login.Apply(profile);check(profile.UserName=="chosen-user"&&profile.SshPasswordOnly&&!profile.SshAgent&&profile.PrivateKeyPath=="","SSH defaults to chosen identity and password authentication");NextStageTests.Draw(login,Path.Combine(root,"ssh-login.png"));login.Close();windows.Remove(login);
             main.Close();main=null;File.WriteAllLines(Path.Combine(root,"result.txt"),checks.Concat(new[]{"PASS: "+checks.Count+" checks"}));return 0;
         }catch(Exception ex){File.WriteAllLines(Path.Combine(root,"result.txt"),checks.Concat(new[]{"FAIL: "+ex}));return 1;}

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -15,6 +15,7 @@ namespace FileCompass
     {
         internal static int Run(string directory)
         {
+            AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(directory),"profile");L.ChangeLanguage("cs-CZ");
             var checks = new List<string>(); Action<bool,string> check = delegate(bool value,string message) { if (!value) throw new Exception(message); checks.Add(message); };
             try {
                 SynchronizationContext.SetSynchronizationContext(new System.Windows.Threading.DispatcherSynchronizationContext(System.Windows.Threading.Dispatcher.CurrentDispatcher));
@@ -64,7 +65,10 @@ namespace FileCompass
                 var data = PreviewData.Load(large,Encoding.UTF8,CancellationToken.None); check(data.Text.Length == 131072 && data.Status.Contains("128"),"large text preview is bounded and labeled as partial");
                 using (var stream = new FileStream(large,FileMode.Open,FileAccess.ReadWrite,FileShare.None)) check(stream.Length == 1000000,"preview releases source handle");
                 var app = new MainWindow(source) { Left = -20000, Top = -20000, WindowStartupLocation = WindowStartupLocation.Manual, ShowActivated = false }; app.Show(); NavigationTests.WaitPanels(app); app.UpdateLayout(); app.VerifyQuickPreview(source,target,directory,check);
-                var dialog = new DirectorySyncWindow(app,source,target,true) { Left = -20000, Top = -20000, WindowStartupLocation = WindowStartupLocation.Manual, ShowActivated = false }; dialog.Show(); NavigationTests.Wait(dialog.Compare()); dialog.UpdateLayout(); NetworkTests.Render(dialog,Path.Combine(directory,"sync-window.png")); dialog.Close();
+                var dangerWindow=new Window{Owner=app,Width=320,Height=160,Left=-20000,Top=-20000,WindowStartupLocation=WindowStartupLocation.Manual,ShowActivated=false};var dangerButton=CopyUi.Button(L.Text("delete.permanentTitle"),delegate{});dangerButton.IsDefault=true;dangerWindow.Content=dangerButton;dangerWindow.Show();NavigationTests.Wait(System.Threading.Tasks.Task.Delay(60));CleanTheme.Refresh(dangerWindow);dangerWindow.UpdateLayout();dangerButton.ApplyTemplate();var dangerFrame=(Border)dangerButton.Template.FindName("Frame",dangerButton);check(Convert.ToString(dangerFrame.Background)=="#FFC6323E","default destructive action renders red rather than blue");dangerWindow.Close();
+                foreach(string key in new[]{"delete.moveToRecycleBin","action.remove","functionKey.delete"}){var normalWindow=new Window{Owner=app,Width=320,Height=160,Left=-20000,Top=-20000,WindowStartupLocation=WindowStartupLocation.Manual,ShowActivated=false};var normalButton=CopyUi.Button(L.Text(key),delegate{});normalButton.IsDefault=key=="delete.moveToRecycleBin";normalWindow.Content=normalButton;normalWindow.Show();NavigationTests.Wait(System.Threading.Tasks.Task.Delay(30));CleanTheme.Refresh(normalWindow);normalWindow.UpdateLayout();normalButton.ApplyTemplate();var normalFrame=(Border)normalButton.Template.FindName("Frame",normalButton);check(Convert.ToString(normalFrame.Background)!="#FFC6323E","recycle, profile removal and function key use normal colors: "+key);if(normalButton.IsDefault)check(Convert.ToString(normalFrame.Background)==Convert.ToString(FluentTheme.Accent),"recycle default action remains blue: "+normalFrame.Background+" vs "+FluentTheme.Accent);normalWindow.Close();}
+                var spinner=new NumberSpinner(new TextBox{Text="9"},6,40);check(spinner.Children.OfType<Border>().Any(x=>x.BorderThickness==new Thickness(1)&&x.BorderBrush!=null),"spinner arrows have an enclosed outline");spinner.Change(1);check(spinner.Input.Text=="10","outlined numeric arrows retain their increment action");
+                var dialog = new DirectorySyncWindow(app,source,target,true) { Left = -20000, Top = -20000, WindowStartupLocation = WindowStartupLocation.Manual, ShowActivated = false }; dialog.Show(); NavigationTests.Wait(dialog.VerifyDirectionsForTests(check)); NavigationTests.Wait(dialog.Compare()); dialog.UpdateLayout(); NetworkTests.Render(dialog,Path.Combine(directory,"sync-window.png")); dialog.Close();
                 var workflow = DirectorySync.Compare(source,target,false,false,delegate { });
                 using (var control = new CopyControl()) NavigationTests.Wait(app.RunDirectorySync(workflow,control,delegate { }));
                 check(File.Exists(Path.Combine(target,"preview.png")) && File.Exists(Path.Combine(target,"large.txt")),"real application synchronization runs background copy and refreshes panels");
@@ -89,12 +93,11 @@ namespace FileCompass
             check(FluentUiTests.Children<Image>(quickPreview).Single().Source != null,"Ctrl+Q displays selected image in other panel");
             left.List.SelectedItem = left.List.Items.Cast<Entry>().Single(x => x.FullPath == Path.Combine(source,"cp1250.txt")); NavigationTests.Wait(quickPreview.LoadingTask);
             check(quickPreview != null,"source cursor changes update preview");
-            FluentUiTests.Children<ComboBox>(quickPreview).Single().SelectedIndex = 1; NavigationTests.Wait(quickPreview.LoadingTask);
-            check(FluentUiTests.Children<TextBox>(quickPreview).Single(x => x.IsReadOnly).Text == "Příliš žluťoučký kůň","preview encoding control reloads Czech text correctly");
+            FluentUiTests.Children<ComboBox>(quickPreview).Single(x=>x.Items.Contains("Windows-1250")).SelectedIndex = 1; NavigationTests.Wait(quickPreview.LoadingTask);
+            check(FluentUiTests.Children<TextBox>(quickPreview).Any(x => x.IsReadOnly&&x.Text == "Příliš žluťoučký kůň"),"preview encoding control reloads Czech text correctly");
             NetworkTests.Render(this,Path.Combine(directory,"quick-preview.png"));
             CloseQuickPreview(); check(right.List.Visibility == Visibility.Visible && right.CurrentPath == keptPath && ReferenceEquals(right.List.ItemsSource,keptItems),"closing preview restores exact original folder and list");
             ToggleQuickPreview(); CloseQuickPreview(); SwapPanels(); SetActive(right); ToggleQuickPreview(); NavigationTests.Wait(quickPreview.LoadingTask); CloseQuickPreview(); check(left.List.Visibility == Visibility.Visible && right.List.Visibility == Visibility.Visible,"preview remains usable after swapping panels");
         }
     }
 }
-

@@ -1,0 +1,175 @@
+{
+  "repository": "https://github.com/microsoft/fluentui-system-icons",
+  "catalog": "https://icones.js.org/collection/fluent-color",
+  "commit": "a347af95478f989038cccbf085978865264c048a",
+  "license": "MIT",
+  "renderSize": 256,
+  "icons": {
+    "folder": {
+      "kind": "Microsoft Fluent Color",
+      "name": "Document Folder",
+      "commit": "a347af95478f989038cccbf085978865264c048a"
+    },
+    "refresh": {
+      "kind": "Microsoft Fluent Color",
+      "name": "Arrow Sync",
+      "commit": "a347af95478f989038cccbf085978865264c048a"
+    },
+    "details": {
+      "kind": "Microsoft Fluent Color",
+      "name": "Apps List",
+      "commit": "a347af95478f989038cccbf085978865264c048a"
+    },
+    "select": {
+      "kind": "Microsoft Fluent Color",
+      "name": "Checkbox",
+      "commit": "a347af95478f989038cccbf085978865264c048a"
+    },
+    "archive-test": {
+      "kind": "Microsoft Fluent Color",
+      "name": "Shield Checkmark",
+      "commit": "a347af95478f989038cccbf085978865264c048a"
+    },
+    "ftp": {
+      "kind": "Microsoft Fluent Color",
+      "name": "Cloud",
+      "commit": "a347af95478f989038cccbf085978865264c048a"
+    },
+    "url": {
+      "kind": "Microsoft Fluent Color",
+      "name": "Link",
+      "commit": "a347af95478f989038cccbf085978865264c048a"
+    },
+    "network": {
+      "kind": "Microsoft Fluent Color",
+      "name": "Org",
+      "commit": "a347af95478f989038cccbf085978865264c048a"
+    },
+    "rename": {
+      "kind": "Microsoft Fluent Color",
+      "name": "Edit",
+      "commit": "a347af95478f989038cccbf085978865264c048a"
+    },
+    "edit": {
+      "kind": "Microsoft Fluent Color",
+      "name": "Document Edit",
+      "commit": "a347af95478f989038cccbf085978865264c048a"
+    },
+    "favorite": {
+      "kind": "Microsoft Fluent Color",
+      "name": "Bookmark",
+      "commit": "a347af95478f989038cccbf085978865264c048a"
+    },
+    "notepad": {
+      "kind": "Microsoft Fluent Color",
+      "name": "Document Text",
+      "commit": "a347af95478f989038cccbf085978865264c048a"
+    },
+    "settings": {
+      "kind": "Microsoft Fluent Color",
+      "name": "Settings",
+      "commit": "a347af95478f989038cccbf085978865264c048a"
+    },
+    "document": {
+      "kind": "Microsoft Fluent Color",
+      "name": "Document",
+      "commit": "a347af95478f989038cccbf085978865264c048a"
+    },
+    "lock": {
+      "kind": "Microsoft Fluent Color",
+      "name": "Document Lock",
+      "commit": "a347af95478f989038cccbf085978865264c048a"
+    },
+    "tools": {
+      "kind": "Microsoft Fluent Color",
+      "name": "Wrench Screwdriver",
+      "commit": "a347af95478f989038cccbf085978865264c048a"
+    },
+    "view": {
+      "kind": "Microsoft Fluent Color",
+      "name": "Content View",
+      "commit": "a347af95478f989038cccbf085978865264c048a"
+    },
+    "new-file": {
+      "kind": "Microsoft Fluent Color",
+      "name": "Document Add",
+      "commit": "a347af95478f989038cccbf085978865264c048a"
+    },
+    "back": {
+      "kind": "File Compass original",
+      "style": "Fluent Color companion"
+    },
+    "forward": {
+      "kind": "File Compass original",
+      "style": "Fluent Color companion"
+    },
+    "undo": {
+      "kind": "File Compass original",
+      "style": "Fluent Color companion"
+    },
+    "search": {
+      "kind": "File Compass original",
+      "style": "Fluent Color companion"
+    },
+    "sync": {
+      "kind": "File Compass original",
+      "style": "Fluent Color companion"
+    },
+    "copy": {
+      "kind": "File Compass original",
+      "style": "Fluent Color companion"
+    },
+    "move": {
+      "kind": "File Compass original",
+      "style": "Fluent Color companion"
+    },
+    "delete": {
+      "kind": "File Compass original",
+      "style": "Fluent Color companion"
+    },
+    "tree": {
+      "kind": "File Compass original",
+      "style": "Fluent Color companion"
+    },
+    "invert": {
+      "kind": "File Compass original",
+      "style": "Fluent Color companion"
+    },
+    "pack": {
+      "kind": "File Compass original",
+      "style": "Fluent Color companion"
+    },
+    "unpack": {
+      "kind": "File Compass original",
+      "style": "Fluent Color companion"
+    },
+    "panels-SideBySide": {
+      "kind": "File Compass original",
+      "style": "Fluent Color companion"
+    },
+    "panels-Stacked": {
+      "kind": "File Compass original",
+      "style": "Fluent Color companion"
+    },
+    "panels-Single": {
+      "kind": "File Compass original",
+      "style": "Fluent Color companion"
+    },
+    "hidden-files-visible": {
+      "kind": "File Compass original",
+      "style": "Fluent Color companion"
+    },
+    "hidden-files-partial": {
+      "kind": "File Compass original",
+      "style": "Fluent Color companion"
+    },
+    "hidden-files-hidden": {
+      "kind": "File Compass original",
+      "style": "Fluent Color companion"
+    },
+    "picture": {
+      "kind": "File Compass original",
+      "style": "Fluent Color companion"
+    }
+  }
+}

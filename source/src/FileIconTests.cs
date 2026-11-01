@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
@@ -11,6 +11,7 @@ internal static class FileIconTests {
 static byte[] Pixels(ImageSource image){var visual=new DrawingVisual();using(var d=visual.RenderOpen())d.DrawImage(image,new Rect(0,0,24,24));var bmp=new RenderTargetBitmap(24,24,96,96,PixelFormats.Pbgra32);bmp.Render(visual);var bytes=new byte[24*24*4];bmp.CopyPixels(bytes,24*4,0);return bytes;}
 internal static int Run(string root){Directory.CreateDirectory(root);var checks=new List<string>();Window window=null;try{
 var panel=new System.Windows.Controls.Primitives.UniformGrid {Columns=4,Margin=new Thickness(12)};
+var folder=DesktopIcons.FileIcon("virtual-folder",true);var colors=Pixels(folder);int yellow=0;for(int i=0;i<colors.Length;i+=4)if(colors[i]<140&&colors[i+1]>120&&colors[i+2]>180&&colors[i+3]>100)yellow++;if(yellow<30)throw new Exception("Folder icon is not Explorer yellow");if(!Object.ReferenceEquals(folder,DesktopIcons.FileIcon(@"\\offline.invalid\folder",true)))throw new Exception("Virtual/network folders do not reuse the generic shell icon");checks.Add("folder icons are Explorer yellow and cached for local and virtual folders");var folderRow=new StackPanel{Orientation=Orientation.Horizontal};folderRow.Children.Add(new Image{Source=folder,Width=24,Height=24});folderRow.Children.Add(new TextBlock{Text="Folder"});panel.Children.Add(folderRow);
 var unknown=DesktopIcons.FileIcon("unknown.filecompass_unknown_type",false);
 foreach(string ext in new[]{"rar","zip","7z","tar","gz","arj","cab","iso","pdf","docx","xlsx","txt","md","cs","json","jpg","png","mp3","mp4","html","lnk","ico","exe","filecompass_unknown_type"}){
 string path=Path.Combine(root,"sample."+ext);File.WriteAllText(path,"");var icon=DesktopIcons.FileIcon(path,false);if(icon==null||!icon.IsFrozen)throw new Exception("Missing/non-frozen icon: "+ext);

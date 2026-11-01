@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -66,17 +66,25 @@ namespace FileCompass
         {
             bool video=path!=null&&FileViewers.IsVideo(path);
             if(!video){
-                detailRow.MinHeight=detailBody.MinHeight=Math.Min(count>1?280:0,Math.Max(0,detailGrid.ActualHeight*.7));
+                var header=view.Columns.Count==0?null:view.Columns[0].Header as FrameworkElement;
+                double fixedHeight=detailToggle.ActualHeight+detailSplitter.ActualHeight;
+                double listMinimum=(header==null?34:header.ActualHeight)+Math.Max(26,List.FontSize+12)+4;
+                detailGrid.RowDefinitions[0].MinHeight=Math.Min(listMinimum,Math.Max(0,detailGrid.ActualHeight-fixedHeight));
+                double previewMaximum=Math.Max(0,detailGrid.ActualHeight-fixedHeight-detailGrid.RowDefinitions[0].MinHeight);
+                detailRow.MinHeight=detailBody.MinHeight=Math.Min(count>1?280:0,Math.Min(previewMaximum,Math.Max(0,detailGrid.ActualHeight*.7)));
                 detailRow.Height=new GridLength(detailRatio,GridUnitType.Star);return;
             }
-            // Pixel sizing avoids a child minimum forcing the entire grid outside a small window.
-            // Keep room for the list header and at least one file row above the preview.
-            var parent=detailGrid.Parent as Grid;
-            double fixedRows=parent==null?130:parent.RowDefinitions.Where((row,index)=>index!=3).Sum(row=>row.ActualHeight)+4;
-            double available=Math.Max(0,ActualHeight-fixedRows),wanted=count>1?380:300;
+            // Reserve the actual list header, one row and the detail controls before sizing video.
+            // Measuring the panel instead overestimates space by its border and padding.
+            double available=Math.Max(0,detailGrid.ActualHeight),wanted=count>1?380:300;
+            var videoHeader=view.Columns.Count==0?null:view.Columns[0].Header as FrameworkElement;
+            double videoListMinimum=(videoHeader==null?34:videoHeader.ActualHeight)+Math.Max(26,List.FontSize+12)+4;
+            double controls=detailToggle.ActualHeight+detailSplitter.ActualHeight;
+            detailGrid.RowDefinitions[0].MinHeight=Math.Min(videoListMinimum,Math.Max(0,available-controls));
+            double room=Math.Max(0,available-controls-detailGrid.RowDefinitions[0].MinHeight);
             detailBody.MinHeight=detailRow.MinHeight=0;
-            double preferred=Math.Max(available*detailRatio,Math.Min(wanted,Math.Max(0,available-95)));
-            detailRow.Height=new GridLength(Math.Min(Math.Max(0,available-40),preferred));
+            double preferred=Math.Max(available*detailRatio,Math.Min(wanted,room));
+            detailRow.Height=new GridLength(Math.Min(room,preferred));
         }
         void RememberDetailRatio()
         {
@@ -122,11 +130,17 @@ namespace FileCompass
 
         internal void EnsureExplorerDetail() { if (!detailConfigured) SetDetailExpanded(true); }
 
+        string detailCursorPath;bool selectingDetailPreview;
+        void ApplyDetailSelection(Entry[] entries){
+            string cursor=(List.SelectedItem as Entry)?.FullPath;string preferred=String.Equals(cursor,detailCursorPath,StringComparison.OrdinalIgnoreCase)?null:cursor;detailCursorPath=cursor;
+            DetailPreviewMinimum(entries.FirstOrDefault()?.FullPath,entries.Length);fileDetail.SetSelection(entries,PreviewContext,delegate(Entry chosen){selectingDetailPreview=true;try{if(!fileDetail.UpdatingSelection)SelectPreviewCursor(chosen);detailCursorPath=chosen.FullPath;}finally{selectingDetailPreview=false;}DetailPreviewMinimum(chosen.FullPath,entries.Length);detailMetadata.Visibility=FileViewers.IsVideo(chosen.FullPath)?Visibility.Collapsed:Visibility.Visible;detailMetadata.Text=chosen.FullName+" · "+chosen.Size+" · "+chosen.Modified+(chosen.TagNames.Length==0?"":" · "+chosen.TagsLabel);detailMetadata.ToolTip=chosen.FullPath+"\n"+detailMetadata.Text;PreviewEntry(fileDetail,chosen);},!IsRemote&&!IsArchive&&!IsExt,preferred);
+        }
+
         void ScheduleFileDetail()
         {
-            if (detailDisposed || !detailExpanded || !detailLayoutVisible || fileDetail == null || LocalLoading) return;
+            if (selectingDetailPreview || detailDisposed || !detailExpanded || !detailLayoutVisible || fileDetail == null || LocalLoading) return;
             var entries=PreviewEntries();
-            if (!IsRemote && !IsArchive && entries.Length>0 && fileDetail.SelectionMatches(entries,PreviewContext)&&fileDetail.IsCurrentLocalFile(fileDetail.SelectedPreviewPath??entries[0].FullPath)) return;
+            if (!IsRemote && !IsArchive && !IsExt && entries.Length>0 && String.Equals((List.SelectedItem as Entry)?.FullPath,detailCursorPath,StringComparison.OrdinalIgnoreCase)&&fileDetail.IsCurrentLocalFile(fileDetail.SelectedPreviewPath)){ApplyDetailSelection(entries);return;}
             DetailLoadingTask = LoadFileDetail(++detailRequest);
         }
 
@@ -136,7 +150,7 @@ namespace FileCompass
             fileDetail.ShowMessage(L.Text("preview.loadingStatus"));
             await Task.Delay(150);
             if (request != detailRequest || !detailExpanded || !detailLayoutVisible || detailDisposed || !IsVisible || LocalLoading) return;
-            var entries=PreviewEntries();DetailPreviewMinimum(entries.FirstOrDefault()?.FullPath,entries.Length);if(entries.Length>0){fileDetail.SetSelection(entries,PreviewContext,delegate(Entry chosen){DetailPreviewMinimum(chosen.FullPath,entries.Length);detailMetadata.Text=chosen.FullName+" · "+chosen.Size+" · "+chosen.Modified+(chosen.TagNames.Length==0?"":" · "+chosen.TagsLabel);detailMetadata.ToolTip=chosen.FullPath+"\n"+detailMetadata.Text;PreviewEntry(fileDetail,chosen);},!IsRemote&&!IsArchive&&!IsExt);if(fileDetail.LoadingTask!=null)await fileDetail.LoadingTask;return;}
+            var entries=PreviewEntries();if(entries.Length>0){ApplyDetailSelection(entries);if(fileDetail.LoadingTask!=null)await fileDetail.LoadingTask;return;}
             fileDetail.SetSelection(new Entry[0],PreviewContext,delegate{},false);
             var entry = List.SelectedItem as Entry;
             if (entry == null || entry.IsParent) { detailMetadata.Text = ""; fileDetail.ShowMessage(L.Text("layout.selectFile")); return; }

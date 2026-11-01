@@ -76,7 +76,7 @@ namespace FileCompass
                     return read.GetAwaiter().GetResult();
                 }
                 catch (AggregateException ex)
-                { var cause = ex.Flatten().InnerExceptions[0]; if (cause is IOException && !(cause is EndOfStreamException)) throw cause; throw new IOException(L.Text("archive.workerFailedOrMemoryExceeded"), cause); }
+                { var cause = ex.Flatten().InnerExceptions[0]; if(cause is OperationCanceledException)throw cause;if (cause is IOException && !(cause is EndOfStreamException)) throw cause; throw new IOException(L.Text("archive.workerFailedOrMemoryExceeded"), cause); }
                 finally {
                     // The result can arrive just before normal process teardown. Give it
                     // time to exit instead of racing TerminateProcess against teardown.
@@ -101,6 +101,7 @@ namespace FileCompass
         }
         static void Check(Process child, Stopwatch clock, ArchiveSettings settings, CancellationToken token, Task<string> errors)
         {
+            OperationPause.HoldChild(child,token,clock);
             token.ThrowIfCancellationRequested();
             if (clock.Elapsed.TotalSeconds > settings.MaximumSeconds) throw new IOException(L.Text("archive.operationTimeout"));
             if (child.HasExited) throw new IOException(L.Text("archive.workerExitedPrefix") + child.ExitCode + L.Text("archive.workerExitMemorySuffix") + errors.GetAwaiter().GetResult());
@@ -131,7 +132,7 @@ namespace FileCompass
                     using (PluginIntegrity.Acquire(@"7zip\7z.dll"))
                     {
                         SharpSevenZipBase.SetLibraryPath(ArchiveEngine.SevenZipLibraryPath);
-                        budget = new ArchiveBudget(settings);
+                        budget = new ArchiveBudget(settings){ParentMonitored=true};
                         string result = Execute(arguments, directory, scratch, budget, delegate(string text) { lock (writer) { writer.Write((byte)1); Send(writer, text); } });
                         writer.Write((byte)2); Send(writer, result);
                     }
@@ -197,7 +198,13 @@ namespace FileCompass
         {
             SharpSevenZipExtractor extractor = null;
             try { extractor = password == null ? new SharpSevenZipExtractor(path) : new SharpSevenZipExtractor(path, password); var count = extractor.FilesCount; return extractor; }
-            catch (SharpSevenZipException) { if (extractor != null) extractor.Dispose(); throw new ArchivePasswordException(); }
+            catch (SharpSevenZipException) {
+                if(extractor!=null)extractor.Dispose();
+                if(Path.GetExtension(path).Equals(".exe",StringComparison.OrdinalIgnoreCase))foreach(var format in new[]{InArchiveFormat.SevenZip,InArchiveFormat.Zip,InArchiveFormat.Rar,InArchiveFormat.Arj}){
+                    extractor=null;try{extractor=password==null?new SharpSevenZipExtractor(path,format):new SharpSevenZipExtractor(path,password,format);var count=extractor.FilesCount;return extractor;}catch(SharpSevenZipException){if(extractor!=null)extractor.Dispose();}
+                }
+                throw new ArchivePasswordException();
+            }
             catch { if (extractor != null) extractor.Dispose(); throw; }
         }
         static List<ArchiveFileInfo> Entries(SharpSevenZipExtractor extractor, ArchiveBudget budget)
@@ -333,9 +340,11 @@ namespace FileCompass
     {
         internal readonly ArchiveSettings Settings; internal readonly long MaximumBytes; long written; int items; readonly Stopwatch clock = Stopwatch.StartNew();
         internal IOException Failure;
+        // The controlling process enforces the wall-time limit excluding user pauses.
+        internal bool ParentMonitored;
         internal ArchiveBudget(ArchiveSettings settings) { Settings = settings; MaximumBytes = checked(settings.MaximumExtractedMiB * 1048576); }
         IOException Fail(string text) { return Failure = new IOException(text); }
-        internal void Check() { if (clock.Elapsed.TotalSeconds > Settings.MaximumSeconds) throw Fail(L.Text("archive.workerTimeout")); }
+        internal void Check() { if (!ParentMonitored&&clock.Elapsed.TotalSeconds > Settings.MaximumSeconds) throw Fail(L.Text("archive.workerTimeout")); }
         internal void Item() { Check(); if (++items > Settings.MaximumItems) throw Fail(L.Text("archive.itemLimitExceeded")); }
         internal void Write(int count, string path, bool extracted)
         {

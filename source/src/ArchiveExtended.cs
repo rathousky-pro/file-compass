@@ -34,7 +34,7 @@ namespace FileCompass
         internal static ArchivePackOptions PlainOptions(ArchivePackOptions options)
         {
             return new ArchivePackOptions { Paths = options.Paths, Recursive = options.Recursive, ExcludeBase = options.ExcludeBase,
-                Password = options.Password, Level = options.Level, NewestFileDate = options.NewestFileDate,Inputs=options.Inputs };
+                SelfExtracting=options.SelfExtracting,Format=options.Format,Password = options.Password, Level = options.Level, NewestFileDate = options.NewestFileDate,Inputs=options.Inputs };
         }
         static List<ArchiveSourceVersion> Snapshot(string[] sources, ArchivePackOptions options, CancellationToken token)
         {
@@ -80,7 +80,7 @@ namespace FileCompass
             target = Path.GetFullPath(target); string[] sources = input.Select(Path.GetFullPath).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
             if (sources.Any(x => sources.Any(y => x != y && Directory.Exists(y) && WindowsShell.IsWithin(x,y)))) throw new IOException(L.Text("archive.overlappingSources"));
             if (options.Move && !options.Recursive) throw new IOException(L.Text("archive.moveNeedsRecursive"));
-            if (options.VolumeBytes > 0 && !new[] { ".zip", ".7z" }.Contains(Path.GetExtension(target).ToLowerInvariant())) throw new IOException(L.Text("archive.volumeFormats"));
+            if (options.VolumeBytes > 0 && !(options.SelfExtracting&&options.Format=="7z") && !new[] { ".zip", ".7z" }.Contains(Path.GetExtension(target).ToLowerInvariant())) throw new IOException(L.Text("archive.volumeFormats"));
             if (File.Exists(target) || Directory.Exists(target)) throw new IOException(L.Text("parts.outputExists"));
             foreach (string source in sources) if (WindowsShell.SamePath(source,target) || (Directory.Exists(source) && WindowsShell.IsWithin(target,source)) || WindowsShell.SamePath(source,Path.GetPathRoot(source))) throw new IOException(L.Text("archive.outputInsideInputRejected"));
             var snapshot = options.Move ? Snapshot(sources,options,token) : null;
@@ -96,12 +96,13 @@ namespace FileCompass
                         VerifyMembers(document,snapshot,options.Paths,token,progress);
                     }
                     token.ThrowIfCancellationRequested();
-                    if (options.VolumeBytes > 0) outputs.AddRange(FileParts.Split(complete,target,options.VolumeBytes,token,progress));
+                    if(options.SelfExtracting&&options.VolumeBytes>0){if(options.Format!="7z")throw new IOException(L.Text("archive.sfxVolumeFormat"));outputs.AddRange(ArchiveSelfExtract.Split(complete,target,options.VolumeBytes,token,progress));using(var module=PluginIntegrity.OpenVerified(@"7zip\7z.sfx"))using(var stub=new FileStream(target,FileMode.CreateNew,FileAccess.Write,FileShare.None)){outputs.Add(target);module.CopyTo(stub);}}
+                    else if (options.VolumeBytes > 0) outputs.AddRange(FileParts.Split(complete,target,options.VolumeBytes,token,progress));
                     else { File.Move(complete,target); outputs.Add(target); }
                     var locks = new List<FileStream>();
                     try {
                         foreach (string file in outputs) locks.Add(new FileStream(file,FileMode.Open,FileAccess.Read,FileShare.Read));
-                        var published = ArchiveEngine.Open(options.VolumeBytes > 0 ? target + ".001" : target,options.Password,token);
+                        var published = ArchiveEngine.Open(options.VolumeBytes > 0 ? (options.SelfExtracting?Path.ChangeExtension(target,"7z"):target) + ".001" : target,options.Password,token);
                         ArchiveEngine.Test(published,token,progress);
                         verified = true;
                         if (options.Move) {

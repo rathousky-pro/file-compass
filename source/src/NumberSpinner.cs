@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -14,10 +14,10 @@ namespace FileCompass {
             if (!Double.IsNaN(input.Width)) { Width = input.Width + 18; input.Width = Double.NaN; }
             MinHeight = 28;
             ColumnDefinitions.Add(new ColumnDefinition()); ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(18) });
-            Children.Add(input); var arrows = new Grid(); arrows.RowDefinitions.Add(new RowDefinition()); arrows.RowDefinitions.Add(new RowDefinition()); Grid.SetColumn(arrows, 1); Children.Add(arrows);
+            Children.Add(input); var arrows = new Grid(); arrows.RowDefinitions.Add(new RowDefinition()); arrows.RowDefinitions.Add(new RowDefinition()); Grid.SetColumn(arrows, 1); Children.Add(new Border{Child=arrows,BorderBrush=CompactTheme.FieldLine,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(4),Background=CompactTheme.WhiteSurface,Margin=new Thickness(2,0,0,0)});Grid.SetColumn(Children[Children.Count-1],1);
             for (int i = 0; i < 2; i++) {
                 int direction = i == 0 ? 1 : -1;
-                var button = new RepeatButton { Content = i == 0 ? "▲" : "▼", FontSize = 7, Padding = new Thickness(0), Focusable = false, Delay = 400, Interval = 70, ToolTip = L.Text(i == 0 ? "number.increase" : "number.decrease") };
+                var button = new RepeatButton { Content = new TextBlock{Text=i==0?"▴":"▾",FontSize=12,Foreground=FluentTheme.Muted,VerticalAlignment=VerticalAlignment.Center,HorizontalAlignment=HorizontalAlignment.Center}, FontSize = 7, Padding = new Thickness(0), BorderBrush=CompactTheme.Line,BorderThickness=i==0?new Thickness(0,0,0,1):new Thickness(0),Background=CompactTheme.WhiteSurface,Foreground=FluentTheme.Muted,Focusable = false, Delay = 400, Interval = 70, ToolTip = L.Text(i == 0 ? "number.increase" : "number.decrease") };
                 System.Windows.Automation.AutomationProperties.SetName(button, Convert.ToString(button.ToolTip));
                 button.Click += delegate { Change(direction); }; Grid.SetRow(button, i); arrows.Children.Add(button);
             }

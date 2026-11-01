@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -10,6 +10,7 @@ namespace FileCompass
     internal sealed class DeleteConfirmationDialog : Window
     {
         internal readonly Button Recycle;
+        internal readonly Button Remove;
         readonly TextBlock question = new TextBlock { TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
         readonly List<Entry> entries;
         internal bool Permanent { get; private set; }
@@ -32,9 +33,13 @@ namespace FileCompass
             permanentInfo.Children.Add(new TextBlock{Text=L.Text("delete.permanentTitle"),FontWeight=FontWeights.SemiBold,Margin=new Thickness(0,0,0,6)});
             permanentInfo.Children.Add(new TextBlock{Text=L.Text("delete.permanentButtonHelp"),TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted});
             var buttons=layout.Actions;
-            var no = CopyUi.Button(L.Text("action.cancel"), delegate { DialogResult = false; }); no.IsCancel = true; buttons.Children.Add(no);
-            var remove = CopyUi.Button(L.Text("delete.permanentTitle"), delegate { Permanent = true; DialogResult = true; }); remove.IsDefault = permanent || !canRecycle; remove.ToolTip = L.Text("delete.permanentButtonHelp"); buttons.Children.Add(remove);
+            var no = CopyUi.Button(L.Text("delete.cancel"), delegate { DialogResult = false; }); no.IsCancel = true; buttons.Children.Add(no);
+            var remove = Remove = CopyUi.Button(L.Text("delete.permanentTitle"), delegate { Permanent = true; DialogResult = true; }); remove.IsDefault = permanent || !canRecycle; remove.ToolTip = L.Text("delete.permanentButtonHelp"); buttons.Children.Add(remove);
             Recycle = CopyUi.Button(L.Text("delete.moveToRecycleBin"), delegate { if (!canRecycle) return; Permanent = false; DialogResult = true; }); Recycle.IsEnabled = canRecycle; Recycle.IsDefault = canRecycle && !permanent; buttons.Children.Add(Recycle);
+            FluentTheme.Primary(Recycle);
+            buttons.Children.Clear();buttons.Children.Add(no);var preferred=Permanent?remove:Recycle;var alternative=Permanent?Recycle:remove;buttons.Children.Add(preferred);
+            var footer=(Border)buttons.Parent;footer.Child=null;var footerGrid=new Grid();footerGrid.ColumnDefinitions.Add(new ColumnDefinition());footerGrid.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});alternative.HorizontalAlignment=HorizontalAlignment.Left;footerGrid.Children.Add(alternative);Grid.SetColumn(buttons,1);footerGrid.Children.Add(buttons);footer.Child=footerGrid;
+            System.Windows.Automation.AutomationProperties.SetAutomationId(alternative,"DeleteAlternative");System.Windows.Automation.AutomationProperties.SetAutomationId(preferred,"DeletePreferred");
             UpdateQuestion();
             var primary = Recycle.IsDefault ? Recycle : remove;
             FluentTheme.Primary(primary);

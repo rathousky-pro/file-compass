@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -23,7 +23,7 @@ namespace FileCompass {
    return title+"\n"+error.Message;
   }
   internal System.Threading.Tasks.Task OpenLocationTab(SavedTab saved){
-   if(IsLoading||LocalLoading||saved==null)return System.Threading.Tasks.Task.FromResult(0);CaptureTab();var copy=CloneSavedTab(saved);copy.Locked=false;copy.Home=copy.Path;tabs.Add(new PanelTab{Saved=copy,View=copy.View??new PanelView(),Pending=true});tabIndex=tabs.Count-1;switchingTabs=true;RenderTabs();NotifyTabsChanged();SwitchTab(tabIndex);return TabNavigationTask;
+   if(IsLoading||LocalLoading||saved==null)return System.Threading.Tasks.Task.FromResult(0);if(EmptyPanel){EmptyPanel=false;tabs.Clear();}CaptureTab();var copy=CloneSavedTab(saved);copy.Locked=false;copy.Home=copy.Path;tabs.Add(new PanelTab{Saved=copy,View=copy.View??new PanelView(),Pending=true});tabIndex=tabs.Count-1;switchingTabs=true;RenderTabs();NotifyTabsChanged();SwitchTab(tabIndex);return TabNavigationTask;
   }
   internal void PinCurrentFolder(){
    if(CurrentPath==null||IsLoading||LocalLoading)return;CaptureTab();var current=tabs[tabIndex].Saved;
@@ -34,7 +34,7 @@ namespace FileCompass {
  }
  public partial class MainWindow {
   void PersistPanelTabs(object sender,EventArgs args){
-   try{var settings=ProgramSettings.Load();settings.SaveTabsOnExit=true;settings.LeftTabs=left.SaveTabs();settings.RightTabs=right.SaveTabs();settings.LeftTabIndex=left.CurrentTabIndex;settings.RightTabIndex=right.CurrentTabIndex;settings.Save();}
+   try{var settings=ProgramSettings.Load();settings.SaveTabsOnExit=true;settings.LeftTabs=left.SaveTabs();settings.RightTabs=right.SaveTabs();settings.LeftPanelEmpty=left.EmptyPanel;settings.RightPanelEmpty=right.EmptyPanel;settings.LeftTabIndex=left.CurrentTabIndex;settings.RightTabIndex=right.CurrentTabIndex;settings.Save();}
    catch(Exception ex){MessageBox.Show(this,ex.Message,L.Text("settings.saveViewFailed"),MessageBoxButton.OK,MessageBoxImage.Warning);}
   }
  }

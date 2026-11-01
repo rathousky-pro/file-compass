@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using System.Windows.Controls;
 namespace FileCompass
 {
@@ -32,7 +32,8 @@ namespace FileCompass
             var marked = List.Items.Cast<Entry>().Where(x => x.IsMarked && !x.IsParent).ToArray();
             if (new System.Collections.Generic.HashSet<Entry>(marked).SetEquals(List.SelectedItems.Cast<Entry>().Where(x => !x.IsParent))) return;
             synchronizingSelection = true;
-            try { List.SelectedItems.Clear(); foreach (var entry in marked) List.SelectedItems.Add(entry); }
+            var cursor=List.SelectedItem as Entry;
+            try { List.SelectedItems.Clear(); if(cursor!=null&&marked.Contains(cursor))List.SelectedItems.Add(cursor);foreach(var entry in marked)if(entry!=cursor)List.SelectedItems.Add(entry); }
             finally { synchronizingSelection = false; }
         }
     }

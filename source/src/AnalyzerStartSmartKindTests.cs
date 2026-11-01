@@ -1,4 +1,4 @@
-#if APP_TESTS
+﻿#if APP_TESTS
 using System;
 using System.IO;
 using System.Linq;
@@ -43,8 +43,8 @@ namespace FileCompass {
                 check(hdd.KindHint.Contains(7200.ToString("N0"))&&hdd.Health=="good"&&ssd.Health=="good"&&nvme.Health=="good","kind hints include rotation where known and do not alter health interpretation");
                 hdd.Letters="E: F:";ssd.Letters="C: D:";nvme.Letters="G:";usb.Letters="H:";
                 smart=new DiskSmartWindow(null,false);Open(smart);smart.SetResults(new List<SmartDisk>{hdd,ssd,nvme,usb,unknown});NavigationTests.Wait(Task.Delay(120));smart.UpdateLayout();
-                NextStageTests.Draw(smart,Path.Combine(root,"smart-kinds-before-selection.png"));var labels=AdvancedToolsTests.Visual<TextBlock>(smart.Disks).Where(x=>x.IsVisible).Select(x=>x.Text).ToArray();check(new[]{"HDD","SSD","NVMe","USB",L.Text("smart.kindUnknown")}.All(labels.Contains),"all disk tiles show readable kind badges in addition to health and temperature: "+String.Join(" | ",labels));
-                smart.Disks.SelectedItem=ssd;smart.UpdateLayout();check(smart.Snapshot.Model==ssd.Model,"selected disk summary retains its model and diagnostic snapshot");NextStageTests.Draw(smart,Path.Combine(root,"smart-kinds-light.png"));AppearanceTheme.Apply("Dark");smart.UpdateLayout();NextStageTests.Draw(smart,Path.Combine(root,"smart-kinds-dark.png"));smart.Close();smart=null;
+                NextStageTests.Draw(smart,Path.Combine(root,"smart-kinds-before-selection.png"));var labels=AdvancedToolsTests.Visual<TextBlock>(smart.Disks).Where(x=>x.IsVisible).Select(x=>x.Text).ToArray();check(!new[]{"HDD","SSD","NVMe","USB",L.Text("smart.kindUnknown")}.Any(labels.Contains),"disk tiles keep health and temperature without repeating kind badges: "+String.Join(" | ",labels));
+                smart.Disks.SelectedItem=ssd;smart.UpdateLayout();check(smart.Snapshot.Model==ssd.Model,"selected disk summary retains its model and diagnostic snapshot");check(!AdvancedToolsTests.Visual<System.Windows.Controls.Image>(smart).Any(x=>Object.ReferenceEquals(x.Source,ssd.KindIcon)),"selected disk headline contains no redundant hardware-kind icon");NextStageTests.Draw(smart,Path.Combine(root,"smart-kinds-light.png"));AppearanceTheme.Apply("Dark");smart.UpdateLayout();NextStageTests.Draw(smart,Path.Combine(root,"smart-kinds-dark.png"));smart.Close();smart=null;
                 File.WriteAllLines(Path.Combine(root,"result.txt"),checks.Concat(new[]{"PASS: "+checks.Count+" checks"}));return 0;
             }catch(Exception ex){File.WriteAllLines(Path.Combine(root,"result.txt"),checks.Concat(new[]{"FAIL: "+ex}));return 1;}finally{if(analyzer!=null)analyzer.Close();if(smart!=null)smart.Close();AppearanceTheme.Apply("Light");}
         }

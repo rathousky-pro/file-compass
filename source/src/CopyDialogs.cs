@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -46,8 +46,8 @@ namespace FileCompass
         }
         internal static void Surface(Window window, FrameworkElement content)
         {
-            var root = new Grid { Margin = new Thickness(12) };
-            root.Children.Add(new Border { Background = CompactTheme.WhiteSurface, BorderBrush = CompactTheme.Line,
+            var root = new Grid { Margin = new Thickness(0), Background=CompactTheme.Chrome };
+            root.Children.Add(new Border { Tag="window-shell", Background = CompactTheme.Chrome, BorderBrush = CompactTheme.Line,
                 BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8), Padding = new Thickness(12), Child = content });
             content.Margin = new Thickness(0); window.Content = root;
             AppearanceTheme.RegisterShell(window);
@@ -78,20 +78,11 @@ namespace FileCompass
         public static TextBlock Label(string text) { return new TextBlock { Text = text, Margin = new Thickness(2, 4, 2, 7), TextWrapping = TextWrapping.Wrap }; }
         public static string Bytes(long bytes)
         {
-            double n = bytes; string[] units = { "B", "kB", "MB", "GB", "TB" }; int i = 0;
-            while (n >= 1024 && i < units.Length - 1) { n /= 1024; i++; }
-            return n.ToString(i == 0 ? "N0" : "N2") + " " + units[i];
+            return ByteSize.Format(bytes);
         }
         public static string Prompt(Window owner, string title, string value)
         {
-            var window = new Window(); Style(window, owner, title, 470);
-            var panel = new StackPanel { Margin = new Thickness(12) }; window.Content = panel;
-            panel.Children.Add(Label(title)); var input = new TextBox { Text = value, Margin = new Thickness(2, 3, 2, 9) }; panel.Children.Add(input);
-            var buttons = new UniformGrid { Columns = 2 };
-            var ok = Button("OK", delegate { window.DialogResult = true; }); ok.IsDefault = true; buttons.Children.Add(ok);
-            var cancel = Button(L.Text("action.cancel"), delegate { window.DialogResult = false; }); cancel.IsCancel = true; buttons.Children.Add(cancel); panel.Children.Add(buttons);
-            window.Loaded += delegate { input.Focus(); input.SelectAll(); };
-            return window.ShowDialog() == true ? input.Text : null;
+            return SettingsUx.Prompt(owner,title,value,null,"action.save");
         }
     }
 
@@ -211,6 +202,7 @@ namespace FileCompass
         {
             this.conflict = conflict; CopyUi.Style(this, owner, L.Text("conflict.fileExistsTitle"), 900);
             var layout=new OperationDialogLayout(this,L.Text("conflict.compareTitle"),Path.GetFileName(conflict.Target));var panel=layout.AddPage(L.Text("operation.basic"));var extras=layout.AddPage(L.Text("conflict.rulesTab"));
+            if(AppearanceTheme.IsClean){Width=760;layout.Compact(230);}
             var thumbs=new List<Image>();var comparison=new Grid();comparison.ColumnDefinitions.Add(new ColumnDefinition());comparison.ColumnDefinitions.Add(new ColumnDefinition());
             var existing=Info(L.Text("conflict.existingVersion"),conflict.Target,conflict.TargetDirectory,conflict.TargetSize,conflict.TargetTime,thumbs);existing.Margin=new Thickness(0,0,6,0);comparison.Children.Add(existing);
             var incoming=Info(L.Text("conflict.incomingVersion"),conflict.Source,conflict.SourceDirectory,conflict.SourceSize,conflict.SourceTime,thumbs);incoming.Margin=new Thickness(6,0,0,0);Grid.SetColumn(incoming,1);comparison.Children.Add(incoming);panel.Children.Add(comparison);
@@ -218,13 +210,13 @@ namespace FileCompass
             string note=!compatible?L.Text("conflict.fileFolderHelp"):conflict.SourceTime>conflict.TargetTime?L.Text("conflict.incomingNewer"):conflict.SourceTime<conflict.TargetTime?L.Text("conflict.incomingOlder"):conflict.SourceSize==conflict.TargetSize?L.Text("conflict.sameMetadata"):L.Text("conflict.sameTimeDifferentSize");
             panel.Children.Add(new TextBlock{Text=note,TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,12,0,0)});
             panel.Children.Add(ApplyToAll);if(conflict.IsReadOnly)panel.Children.Add(readOnly);
-            var extraActions=new WrapPanel{Margin=new Thickness(0,8,0,0)};panel.Children.Add(extraActions);
+            var extraActions=new WrapPanel{Margin=new Thickness(0,8,0,0)};(AppearanceTheme.IsClean?extras:panel).Children.Add(extraActions);
             extraActions.Children.Add(CopyUi.Button(L.Text("action.rename"),delegate{
                 string name=CopyUi.Prompt(this,L.Text("conflict.newCopyNameTitle"),Path.GetFileName(conflict.Target));if(name==null)return;
                 try{FileOperations.ValidateName(name);if(String.Equals(name,Path.GetFileName(conflict.Target),StringComparison.OrdinalIgnoreCase))throw new IOException(L.Text("conflict.differentNameRequired"));Decision=new CopyDecision(CopyChoice.Rename,name){AllowReadOnly=readOnly.IsChecked==true};DialogResult=true;}catch(Exception ex){MessageBox.Show(this,ex.Message);}
             }));
             var append=CopyUi.Button(L.Text("action.append"),delegate{if(MessageBox.Show(this,L.Text("conflict.confirmAppendBytes"),L.Text("conflict.appendTitle"),MessageBoxButton.OKCancel,MessageBoxImage.Question)==MessageBoxResult.OK)Choose(CopyChoice.Append);});append.IsEnabled=compatible;extraActions.Children.Add(append);
-            var previews=new CheckBox{Content=L.Text("action.preview"),Margin=new Thickness(0,8,0,8)};previews.Checked+=delegate{foreach(Image image in thumbs){image.Source=Thumbnail((string)image.Tag);image.Visibility=image.Source==null?Visibility.Collapsed:Visibility.Visible;}};previews.Unchecked+=delegate{foreach(Image image in thumbs)image.Visibility=Visibility.Collapsed;};panel.Children.Add(previews);
+            var previews=new CheckBox{Content=L.Text("action.preview"),Margin=new Thickness(0,8,0,8)};previews.Checked+=delegate{foreach(Image image in thumbs){image.Source=Thumbnail((string)image.Tag);image.Visibility=image.Source==null?Visibility.Collapsed:Visibility.Visible;}};previews.Unchecked+=delegate{foreach(Image image in thumbs)image.Visibility=Visibility.Collapsed;};(AppearanceTheme.IsClean?extras:panel).Children.Add(previews);
             extras.Children.Add(new TextBlock{Text=L.Text("conflict.applyRulesHelp"),TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,8,0,6)});
             var rules=new WrapPanel();extras.Children.Add(rules);
             foreach(var pair in new[]{Tuple.Create(L.Text("conflict.overwriteAll"),CopyChoice.OverwriteAll),Tuple.Create(L.Text("conflict.skipAll"),CopyChoice.SkipAll),Tuple.Create(L.Text("conflict.overwriteOlder"),CopyChoice.Older),Tuple.Create(L.Text("conflict.overwriteDifferentSizeOrTime"),CopyChoice.Different),Tuple.Create(L.Text("conflict.overwriteIfSourceLarger"),CopyChoice.Larger),Tuple.Create(L.Text("conflict.overwriteIfSourceSmaller"),CopyChoice.Smaller),Tuple.Create(L.Text("conflict.autoRenameAll"),CopyChoice.RenameAll)})Add(rules,pair.Item1,pair.Item2,compatible||pair.Item2==CopyChoice.SkipAll||pair.Item2==CopyChoice.RenameAll);

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -63,7 +63,7 @@ namespace FileCompass
                 settings.MaximumMemoryMiB = 1024; settings.MaximumSeconds = 1; settings.Save();
                 bool timedOut = false;
                 try { ArchiveEngine.Create(limited, new[] { expensive }, settings, CancellationToken.None, null, new ArchivePackOptions { Level = 9 }); }
-                catch (IOException ex) { timedOut = ex.ToString().IndexOf("časov", StringComparison.OrdinalIgnoreCase) >= 0; if (!timedOut) throw; }
+                catch (IOException ex) { timedOut = ex.ToString().IndexOf("časov", StringComparison.OrdinalIgnoreCase) >= 0 || ex.ToString().IndexOf("timed out", StringComparison.OrdinalIgnoreCase) >= 0 || ex.ToString().IndexOf("timeout", StringComparison.OrdinalIgnoreCase) >= 0; if (!timedOut) throw; }
                 check(timedOut, "hard timeout stops costly native compression");
                 check(!File.Exists(limited), "timed out job does not publish archive");
                 check(!Directory.GetDirectories(tempRoot).Except(previousTemps).Any(), "parent cleans worker plaintext scratch after forced termination");

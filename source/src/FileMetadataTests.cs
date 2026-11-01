@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
@@ -65,14 +65,14 @@ namespace FileCompass {
             var pane=new QuickPreviewPane(window.Close);window.Content=pane;window.Show();
             try {
                 pane.ShowFile(png);await pane.LoadingTask;await pane.MetadataLoadingTask;check(pane.Metadata!=null&&pane.Metadata.Summary.Contains("320 × 200"),"Shared preview displays image details");
-                AdvancedToolsTests.Visual<Expander>(pane).Single().IsExpanded=true;await Task.Delay(250);window.UpdateLayout();NextStageTests.Draw(window,Path.Combine(root,"image-details.png"));
+                pane.ShowDetailsPopup();window.OwnedWindows.Cast<Window>().Last().Close();await Task.Delay(250);window.UpdateLayout();NextStageTests.Draw(window,Path.Combine(root,"image-details.png"));
                 pane.ShowFile(pdf);await pane.LoadingTask;await pane.MetadataLoadingTask;check(AdvancedToolsTests.Visual<TextBox>(pane).Any(x=>x.Text.Contains("Hello PDF")),"PDF auto preview shows extracted text instead of binary data");
                 window.UpdateLayout();NextStageTests.Draw(window,Path.Combine(root,"pdf-details.png"));
                 pane.ShowFile(pdf);pane.ShowFile(png);await pane.LoadingTask;await pane.MetadataLoadingTask;check(pane.Metadata.Summary.Contains("320 × 200"),"Rapid selection changes cannot show details from an earlier file");
                 pane.ShowMessage("No file");check(pane.Metadata==null,"Clearing preview also clears metadata");
                 SetPanelLayout("Single");left.Navigate(root,false);await left.NavigationTask;left.List.SelectedItem=left.List.Items.Cast<Entry>().First(x=>x.FullPath==png);left.SetDetailExpanded(true);if(left.DetailLoadingTask!=null)await left.DetailLoadingTask;
                 var compact=AdvancedToolsTests.Visual<QuickPreviewPane>(left).Single();if(compact.MetadataLoadingTask!=null)await compact.MetadataLoadingTask;check(compact.Metadata!=null,"Single-panel bottom preview uses the same metadata reader");
-                AdvancedToolsTests.Visual<Expander>(compact).Single().IsExpanded=true;await Task.Delay(250);UpdateLayout();check(AdvancedToolsTests.Visual<System.Windows.Controls.Image>(compact).Any(x=>x.Source!=null&&x.ActualHeight>=35&&x.ActualWidth>=35),"Expanded compact details leave room for the actual image preview");NextStageTests.Draw(this,Path.Combine(root,"single-panel-details.png"));
+                compact.ShowDetailsPopup();Window.GetWindow(compact).OwnedWindows.Cast<Window>().Last().Close();await Task.Delay(250);UpdateLayout();check(AdvancedToolsTests.Visual<System.Windows.Controls.Image>(compact).Any(x=>x.Source!=null&&x.ActualHeight>=35&&x.ActualWidth>=35),"Expanded compact details leave room for the actual image preview");NextStageTests.Draw(this,Path.Combine(root,"single-panel-details.png"));
             }finally{pane.DisposePreview();window.Close();}
         }
     }

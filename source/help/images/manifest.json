@@ -1,0 +1,350 @@
+{
+  "captured": "2026-11-01",
+  "application": "File Compass 0.9.5 beta / 20261101.49; video capture 20261101.50",
+  "source": "Actual File Compass windows; shared with the published bilingual web gallery",
+  "privacy": "Only generated demo files and video, fictional example.test profiles, synthetic SMART and progress data. No user files or credentials.",
+  "languages": [
+    "cs",
+    "en"
+  ],
+  "scenesPerLanguage": 28,
+  "images": [
+    {
+      "file": "cs-CZ.analyzer.png",
+      "width": 1480,
+      "height": 813,
+      "sha256": "37d59d03a013cb71e043221e4a254de1b228f769d7dbe0877919639e6ed98c76"
+    },
+    {
+      "file": "cs-CZ.audio-speed.png",
+      "width": 1411,
+      "height": 783,
+      "sha256": "3ec4ba0948eb501cff6ef7455f788a0522c2d24e12b883492ad2f66deb0e5197"
+    },
+    {
+      "file": "cs-CZ.audio.png",
+      "width": 1411,
+      "height": 783,
+      "sha256": "a0b4855db632816d36e6007c9a7af32d8b82db8f5bfe534782b43107ab52df6d"
+    },
+    {
+      "file": "cs-CZ.cloud.png",
+      "width": 966,
+      "height": 643,
+      "sha256": "096c8b64c96045e5841e0c6cd80ea93b0af978a2d08e31e0a998d3952376b497"
+    },
+    {
+      "file": "cs-CZ.compression-security.png",
+      "width": 950,
+      "height": 593,
+      "sha256": "ab77b2974e158e5f9a77bb88bef849792d159aca1e9527b51d5ad7d0b54a0eee"
+    },
+    {
+      "file": "cs-CZ.compression.png",
+      "width": 950,
+      "height": 593,
+      "sha256": "3ce93f08bc04355f2369f4ab2050cfafb2f65fcf809c6aba6840df673270efc0"
+    },
+    {
+      "file": "cs-CZ.conflict.png",
+      "width": 756,
+      "height": 399,
+      "sha256": "318e5121d4103b0835dee26e44737e9419a6ee85ccc888bf53ab2cde99debe4f"
+    },
+    {
+      "file": "cs-CZ.connection-profile.png",
+      "width": 1120,
+      "height": 579,
+      "sha256": "f4c8c313de398a43ee879894836495ede7a4bb035120fb1e156ae5476883694f"
+    },
+    {
+      "file": "cs-CZ.connections.png",
+      "width": 966,
+      "height": 643,
+      "sha256": "bb9509680b20ed7f06dc35bc09c562f08a7deeb94fc8011ea5848089778b8fc4"
+    },
+    {
+      "file": "cs-CZ.copy-progress.png",
+      "width": 576,
+      "height": 431,
+      "sha256": "4b7391d599f5daa50595cba79a487d736d6a3d4e2bb8499b2d61e88e233f3212"
+    },
+    {
+      "file": "cs-CZ.copy.png",
+      "width": 776,
+      "height": 479,
+      "sha256": "348acd0de661e0819f3c6cb4ac3102df1be12fd62fb989dbfb071866b8e5574d"
+    },
+    {
+      "file": "cs-CZ.csv.png",
+      "width": 1146,
+      "height": 683,
+      "sha256": "271458003c21a84d9b6369b40d8b6233b2f77f4981e058666f36e218592464d4"
+    },
+    {
+      "file": "cs-CZ.delete.png",
+      "width": 696,
+      "height": 429,
+      "sha256": "b4fb2eb222bf62097fbd57a228cbdfbd481cbcb21f3f7193787442252a61ec18"
+    },
+    {
+      "file": "cs-CZ.duplicates.png",
+      "width": 1226,
+      "height": 743,
+      "sha256": "972d44fc75d84772023c72a99bf2b5d71cb103488ea8dfc88093fd978f857813"
+    },
+    {
+      "file": "cs-CZ.editor.png",
+      "width": 1166,
+      "height": 723,
+      "sha256": "bbe65ced0b39f70af6c9c96f349e9c31aa9c42c5ad3b584eea3c4044493329c2"
+    },
+    {
+      "file": "cs-CZ.history.png",
+      "width": 886,
+      "height": 533,
+      "sha256": "90e58bab4d2502af4811e58d9e7a3f5b99d9c77e767487219dc72566e3accfab"
+    },
+    {
+      "file": "cs-CZ.image-geometry.png",
+      "width": 1411,
+      "height": 783,
+      "sha256": "169a0ed3f0b235a952212ac26f99521c7a7c48d979c2cc90f251117ce703443a"
+    },
+    {
+      "file": "cs-CZ.images.png",
+      "width": 1411,
+      "height": 783,
+      "sha256": "baf82d11bdd043fef54a4135cdc00287793a1f26b0527f687191a2784e8c711e"
+    },
+    {
+      "file": "cs-CZ.metadata.png",
+      "width": 1186,
+      "height": 713,
+      "sha256": "15d305c485f61ede4eff832cc2cdcc8f986f6fe0224cbae1139a84f620d67913"
+    },
+    {
+      "file": "cs-CZ.panel-settings.png",
+      "width": 1066,
+      "height": 537,
+      "sha256": "5fabbc4eef3e985fc39fd71c45ed05927d2273b46cfd2fecc0fd2ace996e40a0"
+    },
+    {
+      "file": "cs-CZ.panels.png",
+      "width": 1426,
+      "height": 843,
+      "sha256": "6ca833c9ac653b0ee0cc585e3bdd363837c9c955a8a2e972aa344960e9cdbe5b"
+    },
+    {
+      "file": "cs-CZ.preview.png",
+      "width": 1426,
+      "height": 843,
+      "sha256": "9d63498f7e0e81fa884f32b51da041cdca92e14809ae7f5f3fd8659950a68aa1"
+    },
+    {
+      "file": "cs-CZ.rename.png",
+      "width": 1236,
+      "height": 703,
+      "sha256": "c356a2b4eda2895664db267575b7f6b711b911e8ddba7ff50fb0d5d904172de9"
+    },
+    {
+      "file": "cs-CZ.search.png",
+      "width": 1340,
+      "height": 743,
+      "sha256": "cf35e730e76c1639ec2b8904dc4696a6cc3654e0a9943bd90d807251ca2a1500"
+    },
+    {
+      "file": "cs-CZ.settings.png",
+      "width": 1066,
+      "height": 441,
+      "sha256": "142c197d92971d99dd433c28e016f84979a209e46e8fc998da96f3c33aaf66e6"
+    },
+    {
+      "file": "cs-CZ.smart.png",
+      "width": 1246,
+      "height": 803,
+      "sha256": "2a2aef3bb809ec08935b0e3105305ac2aa32f7bc4739bd8f9de3ca714f7f7242"
+    },
+    {
+      "file": "cs-CZ.sync.png",
+      "width": 1186,
+      "height": 723,
+      "sha256": "b02c5e72444b059a236f5a7e4c49e8b8ccdf0f9ed8338ee8f7759b3e1c8043f0"
+    },
+    {
+      "file": "cs-CZ.video-preview.png",
+      "width": 1106,
+      "height": 763,
+      "sha256": "ff6962b16f4947485ac0fcf32457637c4ae0e6c8616d4a8e16f578d3af0ec119"
+    },
+    {
+      "file": "en.analyzer.png",
+      "width": 1480,
+      "height": 813,
+      "sha256": "812629d0f43b30fa841188048840d102d7a687c19c5b0e7742232d7a4d6fec53"
+    },
+    {
+      "file": "en.audio-speed.png",
+      "width": 1411,
+      "height": 783,
+      "sha256": "b6c647edbd995a8f2e71822c1936e3ef5b3e3f044ebd38c2bb593a90a77f6610"
+    },
+    {
+      "file": "en.audio.png",
+      "width": 1411,
+      "height": 783,
+      "sha256": "db0c24276b255bcd5e1149e9ae33fc6807f96101c3362f739fd7cd67714448ad"
+    },
+    {
+      "file": "en.cloud.png",
+      "width": 966,
+      "height": 643,
+      "sha256": "03bea1a697fd950c0fda4c39df90efc798c0775c56948ce1e4c0af3525ad9c6b"
+    },
+    {
+      "file": "en.compression-security.png",
+      "width": 950,
+      "height": 593,
+      "sha256": "ff9d8c38329e5df35877f079f2960dff656a5bf862ba8e16255541abbb8c70ab"
+    },
+    {
+      "file": "en.compression.png",
+      "width": 950,
+      "height": 593,
+      "sha256": "b85ebc529eaec463b66b7de9b581637f47e4b30c3c71585697be3b31cdec3f76"
+    },
+    {
+      "file": "en.conflict.png",
+      "width": 756,
+      "height": 399,
+      "sha256": "153e8224575da89e8ae8c5925cd74c1b6f27e4a8e325efbd32960dafe05d850c"
+    },
+    {
+      "file": "en.connection-profile.png",
+      "width": 1120,
+      "height": 579,
+      "sha256": "e0edfb69365372b423738664a999ab273c02bedafc9bbd6870e3a3c630c8abb1"
+    },
+    {
+      "file": "en.connections.png",
+      "width": 966,
+      "height": 643,
+      "sha256": "c75ef6b2d7187548a8a13a2bd249598d1621b21c4d7708d0b11ae91904406157"
+    },
+    {
+      "file": "en.copy-progress.png",
+      "width": 576,
+      "height": 431,
+      "sha256": "8d603d64c568285d5cfbd8f989d90d2683d519e8598995ba8c7b70dab2797e9f"
+    },
+    {
+      "file": "en.copy.png",
+      "width": 776,
+      "height": 479,
+      "sha256": "472cd875614cc267d92069f9ca665770fc81af5a0a87a2be8980fc87697eda81"
+    },
+    {
+      "file": "en.csv.png",
+      "width": 1146,
+      "height": 683,
+      "sha256": "3ab0c97f83def0024865e87bad36b11fea8e1ce54862bac3bd440b65716cb353"
+    },
+    {
+      "file": "en.delete.png",
+      "width": 696,
+      "height": 445,
+      "sha256": "6df35ad98be84d686a521799996c46b1d6a7783499f31352758d5df8323cdc5e"
+    },
+    {
+      "file": "en.duplicates.png",
+      "width": 1226,
+      "height": 743,
+      "sha256": "62aafc73eeb0a928eba970cf0b3ae4143611f9e0c6f734cc4b5be512ab53a218"
+    },
+    {
+      "file": "en.editor.png",
+      "width": 1166,
+      "height": 723,
+      "sha256": "bd0e1e91536f70c6e8245354771c35fbc3f97d3217232396f5e4aef38c6b08af"
+    },
+    {
+      "file": "en.history.png",
+      "width": 886,
+      "height": 533,
+      "sha256": "ef0bfb40211e998391bc7d6abf95f8d0e25c854f861ed507317e9266ac361b09"
+    },
+    {
+      "file": "en.image-geometry.png",
+      "width": 1411,
+      "height": 783,
+      "sha256": "57691c10ad575854c9f021c0af444881992aa0aa4b1abe3267263d62fa53ed2b"
+    },
+    {
+      "file": "en.images.png",
+      "width": 1411,
+      "height": 783,
+      "sha256": "cbdcd9996558f5aee009b6ea7bd58f8b4240f4af14ea7addbc9a2852674221ae"
+    },
+    {
+      "file": "en.metadata.png",
+      "width": 1186,
+      "height": 713,
+      "sha256": "1dd4dcad6c6418d1ca381d901045cdfced282d5ffedddb7f985e4cd86d93cb05"
+    },
+    {
+      "file": "en.panel-settings.png",
+      "width": 1066,
+      "height": 537,
+      "sha256": "7d9c505518a6b60fb02d238054adb2875d0dbfef5372edfda2dddbac33484748"
+    },
+    {
+      "file": "en.panels.png",
+      "width": 1426,
+      "height": 843,
+      "sha256": "5e46ce46ab24dff10e31e8fa085f856459d443c9fc89f7d10e9a96e14d57f8ff"
+    },
+    {
+      "file": "en.preview.png",
+      "width": 1426,
+      "height": 843,
+      "sha256": "fc055a77a36c333f99f438011ff37cafad6c56326817d2228efb5b86cf3de2db"
+    },
+    {
+      "file": "en.rename.png",
+      "width": 1236,
+      "height": 703,
+      "sha256": "6ee7004c37b0a66d42efaea08cb54286d3656d6c7b375da0dc5644c454294cc5"
+    },
+    {
+      "file": "en.search.png",
+      "width": 1340,
+      "height": 743,
+      "sha256": "5d0e32dba470dbe0724a00a35edba94cac826182e1c31522fc6e698b0f9aad80"
+    },
+    {
+      "file": "en.settings.png",
+      "width": 1066,
+      "height": 441,
+      "sha256": "f809c148d23951c41038b045d9802e47464a6b1499e7aff01b4b867894fb9e83"
+    },
+    {
+      "file": "en.smart.png",
+      "width": 1246,
+      "height": 803,
+      "sha256": "57cad45e1a0edb0ebcae9f651d5577f0690c74883071bedb669ec89ba409af04"
+    },
+    {
+      "file": "en.sync.png",
+      "width": 1186,
+      "height": 723,
+      "sha256": "89fd29c06805dfcfcbb5be1081f395875ac2ed2b3b996108dd6018bfd38dfd7c"
+    },
+    {
+      "file": "en.video-preview.png",
+      "width": 1106,
+      "height": 763,
+      "sha256": "479f3649a89a9e23a0b386ee50298b4b25d418e9b7b5e82626d8c87a9bda04ff"
+    }
+  ],
+  "websiteCommit": "36b95c2dcde2f2b38ee125fd45e218ded091093a"
+}

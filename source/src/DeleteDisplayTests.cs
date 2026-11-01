@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -34,14 +34,17 @@ namespace FileCompass
                 var dialog = new DeleteConfirmationDialog(main, selected, true, false, root); windows.Add(dialog); dialog.Show(); dialog.UpdateLayout();
                 check(!dialog.Permanent && dialog.Recycle.IsEnabled && dialog.Recycle.IsDefault, "local deletion defaults to the recycle action");
                 check(!FluentUiTests.Children<CheckBox>(dialog).Any(), "deletion choice has no checkbox");
-                check(FluentUiTests.Children<Button>(dialog).Count(x => new[] { L.Text("delete.permanentTitle"), L.Text("action.cancel"), L.Text("delete.moveToRecycleBin") }.Contains(x.Content as string)) == 3, "confirmation offers Delete No and Recycle");
+                check(FluentUiTests.Children<Button>(dialog).Count(x => new[] { L.Text("delete.permanentTitle"), L.Text("delete.cancel"), L.Text("delete.moveToRecycleBin") }.Contains(x.Content as string)) == 3, "confirmation offers Delete No and Recycle");
+                CleanTheme.Refresh(dialog);dialog.UpdateLayout();dialog.Remove.ApplyTemplate();var caption=(FrameworkElement)dialog.Remove.Template.FindName("Caption",dialog.Remove);check(Convert.ToString(caption.GetValue(System.Windows.Documents.TextElement.ForegroundProperty))=="#FFFFFFFF"&&Convert.ToString(dialog.Remove.Foreground)=="#FFFFFFFF","permanent deletion text is white in both the template and button");
+                check(dialog.Remove.TranslatePoint(new Point(),dialog).X<dialog.Recycle.TranslatePoint(new Point(),dialog).X-100,"nonpreferred permanent action sits alone on the left");
+                var preferredPermanent=new DeleteConfirmationDialog(main,selected,true,true,root);windows.Add(preferredPermanent);preferredPermanent.Show();preferredPermanent.UpdateLayout();check(preferredPermanent.Remove.IsDefault&&!preferredPermanent.Recycle.IsDefault&&preferredPermanent.Recycle.TranslatePoint(new Point(),preferredPermanent).X<preferredPermanent.Remove.TranslatePoint(new Point(),preferredPermanent).X-100,"permanent preference moves the red default action right and recycle left");NextStageTests.Draw(preferredPermanent,Path.Combine(root,"delete-prefer-permanent.png"));preferredPermanent.Close();
                 NextStageTests.Draw(dialog, Path.Combine(root, "delete-permanent.png")); dialog.Close();
                 var unavailable = new DeleteConfirmationDialog(main, selected, false, true, "\\\\server\\share"); windows.Add(unavailable); unavailable.Show(); check(unavailable.Permanent && !unavailable.Recycle.IsEnabled, "network deletion cannot select unavailable recycle mode"); NextStageTests.Draw(unavailable, Path.Combine(root, "delete-network.png")); unavailable.Close();
-                foreach (string answer in new[] { "action.cancel", "delete.permanentTitle", "delete.moveToRecycleBin" }) {
+                foreach (string answer in new[] { "delete.cancel", "delete.permanentTitle", "delete.moveToRecycleBin" }) {
                     var modal = new DeleteConfirmationDialog(main, selected, true, false, root); windows.Add(modal);
                     modal.Loaded += delegate { modal.Dispatcher.BeginInvoke(new Action(delegate { FluentUiTests.Children<Button>(modal).Single(x => (x.Content as string) == L.Text(answer)).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); })); };
-                    check(modal.ShowDialog() == (answer != "action.cancel"), "modal answer handled correctly: " + answer);
-                    if (answer != "action.cancel") check(modal.Permanent == (answer == "delete.permanentTitle"), "button selects the correct deletion mode: " + answer);
+                    check(modal.ShowDialog() == (answer != "delete.cancel"), "modal answer handled correctly: " + answer);
+                    if (answer != "delete.cancel") check(modal.Permanent == (answer == "delete.permanentTitle"), "button selects the correct deletion mode: " + answer);
                 }
                 check(File.Exists(normal) && File.Exists(hidden) && File.Exists(system), "confirmation tests never delete fixture files");
                 var config = new ConfigurationDialog(main); windows.Add(config); config.Show(); config.UpdateLayout(); NextStageTests.Draw(config, Path.Combine(root, "appearance-settings.png")); config.Close();

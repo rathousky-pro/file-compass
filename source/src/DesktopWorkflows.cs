@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -272,11 +272,14 @@ namespace FileCompass
         }
         async void ApplyAttributes(string[] paths, AttributeChanges changes)
         {
-            bool cancel = false; var activity = AddCopyActivity(L.Text("attributes.changeDialogTitle"), delegate { cancel = true; });
-            var result = await Task.Run(delegate { return AttributeChanges.Apply(paths, changes, delegate { return cancel; }); });
+            using(var control=new CopyControl()){
+            bool cancel = false; var activity = AddCopyActivity(L.Text("attributes.changeDialogTitle"), delegate { cancel = true;control.Cancel(); });activity.CompactDock=true;
+            activity.PauseAction=delegate{control.Pause(!control.Paused);};activity.IsPaused=delegate{return control.Paused;};
+            var result = await Task.Run(delegate { return AttributeChanges.Apply(paths, changes, delegate { try{control.Check();return cancel;}catch(OperationCanceledException){return true;} }); });
             activity.Record.Items.AddRange(result); activity.Finish(cancel ? L.Code("state.cancelled") : L.Text("attributes.changedErrorCountPrefix") + result.Count(x => x.State == L.Code("state.error")), !cancel && !result.Any(x => x.State == L.Code("state.error")));
             var failed = result.Where(x => x.State == L.Code("state.error")).Select(x => x.Source).ToArray(); if (failed.Length > 0) activity.Record.Retry = delegate { ApplyAttributes(failed, changes); };
             left.Refresh(); right.Refresh();
+            }
         }
     }
 }

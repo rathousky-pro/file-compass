@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -26,30 +26,33 @@ namespace FileCompass
         internal event Action LocalNavigationCompleted;
         public Task NavigationTask { get; private set; }
         internal void CancelNavigation() { navigationVersion++; var previous = navigationCancellation; navigationCancellation = null; if (previous != null) previous.Cancel(); LocalLoading = false; List.IsEnabled = true; }
-        internal void SavePanelView(PanelView saved) { saved.MetadataColumns = MetadataColumnKeys; saved.Sort = sortProperty; saved.Descending = descending; saved.Widths = view.Columns.Select(x => x.Width).ToArray(); saved.Display = displayMode; saved.Tree = treeRequested; saved.ThumbnailSize = thumbnailSize; SaveDetailView(saved); }
+        internal void SavePanelView(PanelView saved) { saved.ExtensionColumn=extensionColumn;saved.AttributesColumn=attributesColumn;saved.SizeColumn=sizeColumn;saved.ModifiedColumn=modifiedColumn;saved.ColumnOrder=view.Columns.Select(ColumnKey).ToArray();saved.MetadataColumns = MetadataColumnKeys; saved.Sort = sortProperty; saved.Descending = descending; saved.Widths = LogicalColumns.Select((x,i) => i>0&&i<5&&!BaseColumnVisible(i)?RememberedWidth(i):x.Width).ToArray(); saved.Display = displayMode; saved.Tree = treeRequested; saved.ThumbnailSize = thumbnailSize; SaveDetailView(saved); }
         internal bool SharedColumnWidths;
         internal event Action<int, double> ColumnWidthChanged;
         internal void SetColumnWidth(int index, double width)
         {
-            if (index < 0 || index >= view.Columns.Count || Double.IsNaN(width) || Double.IsInfinity(width)) return;
+            var columns=LogicalColumns.ToArray();if (index < 0 || index >= columns.Length || Double.IsNaN(width) || Double.IsInfinity(width)) return;
+            if(index>0&&index<5&&!BaseColumnVisible(index)){RememberWidth(index,width);preserveColumnWidths=true;return;}
             resizingColumns = true;
-            try { view.Columns[index].Width = Math.Max(25, Math.Min(4000, width)); preserveColumnWidths = true; }
+            try { columns[index].Width = Math.Max(25, Math.Min(4000, width)); preserveColumnWidths = true; }
             finally { resizingColumns = false; }
+            if(!batchColumnWidths)FitColumns(ColumnIdentity(index));
         }
         internal void RestorePanelView(PanelView saved)
         {
             if (saved == null) return;
+            extensionColumn=saved.ExtensionColumn;attributesColumn=saved.AttributesColumn;sizeColumn=saved.SizeColumn;modifiedColumn=saved.ModifiedColumn;ApplyBaseColumns();
             SetMetadataColumns(saved.MetadataColumns); if (new[] { "Name", "Extension", "Size", "Modified", "Attributes" }.Contains(saved.Sort) || MetadataColumn.IsSort(saved.Sort)) sortProperty = saved.Sort;
             descending = saved.Descending;
             thumbnailSize = Math.Max(0, Math.Min(2, saved.ThumbnailSize)); SetDisplay(saved.Display ?? "Details"); SetTree(saved.Tree);
             RestoreDetailView(saved);
-            if (saved.Widths != null) for (int i = 0; i < Math.Min(saved.Widths.Length, view.Columns.Count); i++) if ((!SharedColumnWidths || i >= 5 || MetadataColumnKeys.Length > 0 || applyingFolderView) && saved.Widths[i] >= 25 && saved.Widths[i] <= 4000) SetColumnWidth(i, saved.Widths[i]);
-            Sort();
+            batchColumnWidths=true;try{if (saved.Widths != null) for (int i = 0; i < Math.Min(saved.Widths.Length, view.Columns.Count); i++) if ((!SharedColumnWidths || i >= 5 || MetadataColumnKeys.Length > 0 || applyingFolderView) && saved.Widths[i] >= 25 && saved.Widths[i] <= 4000) SetColumnWidth(i, saved.Widths[i]);}finally{batchColumnWidths=false;}
+            ApplyColumnOrder(saved.ColumnOrder!=null&&saved.ColumnOrder.Length>0?saved.ColumnOrder:BaseColumnKeys.Concat(MetadataColumnKeys.Select(x=>"Meta:"+x)));FitColumns();Sort();
         }
         public string CurrentPath { get; private set; }
         public readonly ListView List = new ListView();
         readonly TextBox address = new TextBox();
-        readonly TextBlock status = new TextBlock();
+        readonly TextBlock status = new TextBlock(); readonly TextBlock panelRole=new TextBlock{Foreground=FluentTheme.Muted,FontSize=11,VerticalAlignment=VerticalAlignment.Center,Margin=new Thickness(0,0,24,0),Visibility=Visibility.Collapsed}; Border cleanFileFrame,cleanDriveFrame,cleanBreadcrumbFrame; DockPanel cleanBreadcrumbDock;
         readonly TextBlock capacity = new TextBlock { VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
         readonly ComboBox driveSelector = new ComboBox { Width = 58, Height = 24, MinHeight = 0, Padding = new Thickness(4, 0, 4, 0), Margin = new Thickness(0, 0, 6, 0) };
         readonly Dictionary<string, Button> driveButtons = new Dictionary<string, Button>(StringComparer.OrdinalIgnoreCase);
@@ -73,18 +76,20 @@ namespace FileCompass
             BorderThickness = new Thickness(2); BorderBrush = CompactTheme.ChromeLine; CornerRadius = new CornerRadius(6); Padding = new Thickness(2);
             CornerRadius = new CornerRadius(6); Padding = new Thickness(0); Margin = new Thickness(0); Background = Brushes.Transparent;
             var grid = new Grid();
+            cleanPaneGrid=grid;
             grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(31) });
             grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(39) });
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             grid.RowDefinitions.Add(new RowDefinition());
             grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(24) });
             InitializeNavigation(grid);
-            var fileFrame = new Border { Background = CompactTheme.PanelSurface, BorderBrush = CompactTheme.ChromeLine, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), IsHitTestVisible = false };
+            var fileFrame = cleanFileFrame = new Border { Tag="panel-surface", Background = CompactTheme.PanelSurface, BorderBrush = CompactTheme.ChromeLine, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), IsHitTestVisible = false };
             Grid.SetRow(fileFrame, 2); Grid.SetRowSpan(fileFrame, 3); grid.Children.Add(fileFrame);
             var driveGrid = new Grid();
+            cleanDriveGrid=driveGrid;
             driveGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(29) });
-            driveGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(29) });
-            var driveFrame = new Border { Child = driveGrid, Background = CompactTheme.PanelSurface, BorderBrush = CompactTheme.ChromeLine, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), Padding = new Thickness(2), Margin = new Thickness(0, 0, 0, 6) };
+            driveGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(0) });
+            var driveFrame = cleanDriveFrame = new Border { Tag="panel-surface", Child = driveGrid, Background = CompactTheme.PanelSurface, BorderBrush = CompactTheme.ChromeLine, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(6), Padding = new Thickness(2), Margin = new Thickness(0, 0, 0, 6) };
             Grid.SetRowSpan(driveFrame, 2); grid.Children.Add(driveFrame);
 
             var drives = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
@@ -92,38 +97,15 @@ namespace FileCompass
             var networkLabel = new StackPanel { Orientation = Orientation.Horizontal };
             networkLabel.Children.Add(DesktopIcons.Toolbar("network", 16));
             networkLabel.Children.Add(new TextBlock { Text = L.Text("network.shortTitle"), VerticalAlignment = VerticalAlignment.Center });
-            drives.Children.Add(CompactTheme.Button(networkLabel, L.Text("network.browseDevices"), delegate { activate(this); Navigate(NetworkBrowser.Root, true); }));
+            networkDriveButton=CompactTheme.Button(networkLabel, L.Text("network.browseDevices"), delegate { activate(this); Navigate(NetworkBrowser.Root, true); });drives.Children.Add(networkDriveButton);
             drives.Children.Add(connectionButtons);
             var driveScroll = new ScrollViewer { Content = drives, HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled };
-            driveGrid.Children.Add(driveScroll);
+            var driveLine=new DockPanel();DockPanel.SetDock(driveSelector,Dock.Right);driveLine.Children.Add(driveSelector);driveLine.Children.Add(driveScroll);driveGrid.Children.Add(driveLine);
 
-            var diskRow = new DockPanel { LastChildFill = true };
-            driveSelector.SelectionChanged += delegate
-            {
-                if(!selectingDrive && driveSelector.SelectedItem is DriveChoice){var choice=(DriveChoice)driveSelector.SelectedItem;if(choice.IsLocation){activate(this);FocusFiles();Navigate(choice.Root,true);}else SelectDrive(choice.Root);}
-            };
+            driveSelector.SelectionChanged += delegate { if(!selectingDrive && driveSelector.SelectedItem is DriveChoice){var choice=(DriveChoice)driveSelector.SelectedItem;if(choice.IsLocation){activate(this);FocusFiles();Navigate(choice.Root,true);}} };
             DriveSelector.Configure(driveSelector);
-            DockPanel.SetDock(driveSelector, Dock.Left); diskRow.Children.Add(driveSelector);
-            var parent = CompactTheme.Button("..", L.Text("navigation.parentShortcutTooltip"), delegate { Up(); }); DockPanel.SetDock(parent, Dock.Right); diskRow.Children.Add(parent);
-            var rootButton = CompactTheme.Button("\\", L.Text("navigation.driveRootTooltip"), delegate { if (CurrentPath != null) Navigate(IsShellBrowser ? WindowsShell.Computer : IsNetworkBrowser ? NetworkBrowser.Root : IsExt ? ExtLocations.Root(CurrentPath) : IsRemote || IsArchive ? "/" : Path.GetPathRoot(CurrentPath), true); });
-            DockPanel.SetDock(rootButton, Dock.Right); diskRow.Children.Add(rootButton);
-            diskRow.Children.Add(capacity); Grid.SetRow(diskRow, 1); driveGrid.Children.Add(diskRow);
 
-            var pathRow = panelPathRow = new DockPanel { Margin = new Thickness(3, 1, 3, 0) };
-            var recent = CompactTheme.Button("▾", L.Text("navigation.folderHistory"), delegate(object sender, RoutedEventArgs e)
-            {
-                var menu = new ContextMenu();
-                foreach (string path in history.Distinct(StringComparer.OrdinalIgnoreCase).Take(20))
-                {
-                    string captured = path; var item = new MenuItem { Header = captured };
-                    item.Click += delegate { Navigate(captured, true); }; menu.Items.Add(item);
-                }
-                if (menu.Items.Count == 0) menu.Items.Add(new MenuItem { Header = L.Text("navigation.historyEmpty"), IsEnabled = false });
-                menu.PlacementTarget = (UIElement)sender; menu.IsOpen = true;
-            });
-            DockPanel.SetDock(recent, Dock.Right); pathRow.Children.Add(recent);
-            var allFiles = CompactTheme.Button("*", L.Text("navigation.showAllAndRefresh"), delegate { Refresh(); });
-            DockPanel.SetDock(allFiles, Dock.Right); pathRow.Children.Add(allFiles);
+            var pathRow = panelPathRow = new DockPanel { Margin = new Thickness(8,0,8,0) };
             address.GotKeyboardFocus += delegate { address.Text = CurrentPath ?? ""; address.SelectAll(); };
             address.LostKeyboardFocus += delegate { ShowPath(); };
             address.BorderThickness = new Thickness(0); address.Padding = new Thickness(6, 3, 6, 3);
@@ -133,16 +115,28 @@ namespace FileCompass
                 if (e.Key == Key.Enter) { Navigate(address.Text, true); List.Focus(); e.Handled = true; }
                 else if (e.Key == Key.Escape) { address.Text = CurrentPath ?? ""; List.Focus(); e.Handled = true; }
             };
-            InitializeAddress(pathRow);pathRow.Height=34;Grid.SetRow(pathRow,2);grid.Children.Add(pathRow);
+            InitializeAddress(pathRow);pathRow.Height=40;tabRow.Height=40;tabRow.VerticalAlignment=VerticalAlignment.Bottom;
+            var pathStack=new StackPanel();cleanBreadcrumbDock=new DockPanel{Tag="panel-breadcrumb-actions",LastChildFill=true};
+            cleanRootButton=CompactTheme.Button("\\",L.Text("navigation.driveRootTooltip"),delegate{if(CurrentPath!=null)Navigate(IsShellBrowser?WindowsShell.Computer:IsNetworkBrowser?NetworkBrowser.Root:IsExt?ExtLocations.Root(CurrentPath):IsRemote||IsArchive?"/":Path.GetPathRoot(CurrentPath),true);});
+            cleanParentButton=CompactTheme.Button("↑",L.Text("navigation.parentShortcutTooltip"),delegate{Up();});
+            System.Windows.Automation.AutomationProperties.SetAutomationId(cleanRootButton,"PanelRoot");System.Windows.Automation.AutomationProperties.SetAutomationId(cleanParentButton,"PanelUp");
+            foreach(var action in new[]{cleanRootButton,cleanParentButton}){action.Tag="panel-breadcrumb";action.Width=30;action.Height=30;action.MinWidth=0;action.Margin=new Thickness(1,0,3,0);action.Padding=new Thickness(0);action.Background=CompactTheme.WhiteSurface;action.BorderBrush=CompactTheme.Line;action.BorderThickness=new Thickness(1);action.Foreground=FluentTheme.Accent;DockPanel.SetDock(action,Dock.Right);cleanBreadcrumbDock.Children.Add(action);}
+            pathRow.Children.Clear();cleanBreadcrumbDock.Children.Add(tabRow);
+            var pathEditor=new Grid();pathEditor.Children.Add(cleanBreadcrumbDock);pathEditor.Children.Add(address);
+            cleanBreadcrumbFrame=new Border{Tag="panel-path",Child=pathEditor,Background=CompactTheme.PanelSurface,BorderThickness=new Thickness(0),CornerRadius=new CornerRadius(10),Margin=new Thickness(8,5,8,0),Padding=new Thickness(7,1,7,0),Height=46};
+            System.Windows.Automation.AutomationProperties.SetAutomationId(cleanBreadcrumbFrame,"PanelBreadcrumb");cleanBreadcrumbFrame.MouseLeftButtonDown+=delegate(object sender,MouseButtonEventArgs e){activate(this);if(e.ClickCount==2){FocusAddress();e.Handled=true;}};
+            pathStack.Children.Add(cleanBreadcrumbFrame);Grid.SetRow(pathStack,2);grid.Children.Add(pathStack);
 
             AddColumn(L.Text("column.name"), "Name", 230); AddColumn(L.Text("column.extension"), "Extension", 80);
             AddColumn(L.Text("column.size"), "Size", 90); AddColumn(L.Text("column.date"), "Modified", 130); AddColumn(L.Text("attributes.title"), "Attributes", 70);
-            List.View = view; List.SelectionMode = SelectionMode.Single;
+            var fillerFrame=new FrameworkElementFactory(typeof(Border));fillerFrame.SetValue(Border.BackgroundProperty,CompactTheme.WhiteSurface);fillerFrame.SetValue(Border.BorderBrushProperty,CompactTheme.Line);fillerFrame.SetValue(Border.BorderThicknessProperty,new Thickness(0,0,0,1));
+            var fillerStyle=new Style(typeof(GridViewColumnHeader),Application.Current.Resources[typeof(GridViewColumnHeader)] as Style);fillerStyle.Setters.Add(new Setter(Control.TemplateProperty,new ControlTemplate(typeof(GridViewColumnHeader)){VisualTree=fillerFrame}));fillerStyle.Setters.Add(new Setter(FrameworkElement.HeightProperty,34.0));fillerStyle.Setters.Add(new Setter(Control.PaddingProperty,new Thickness(0)));List.Resources[typeof(GridViewColumnHeader)]=fillerStyle;view.ColumnHeaderContainerStyle=fillerStyle;
+            view.AllowsColumnReorder=true;List.View = view; List.SelectionMode = SelectionMode.Single;
             List.Margin = new Thickness(1, 0, 1, 0); List.BorderThickness = new Thickness(0, 1, 0, 1); List.BorderBrush = CompactTheme.Line;
             List.Background = CompactTheme.WhiteSurface; List.Foreground = FluentTheme.Text;
             List.FontFamily = new FontFamily("Segoe UI"); List.FontSize = 12;
-            ScrollViewer.SetHorizontalScrollBarVisibility(List, ScrollBarVisibility.Auto);
-            List.ItemContainerStyle = RowStyle();
+            ScrollViewer.SetHorizontalScrollBarVisibility(List, ScrollBarVisibility.Disabled);
+            List.ItemContainerStyle = RowStyle();InitializeSelectionBrackets();
             List.SizeChanged += delegate { ResizeColumns(); };
             List.PreviewMouseLeftButtonDown += delegate(object sender, MouseButtonEventArgs e)
             {
@@ -154,9 +148,9 @@ namespace FileCompass
                 List.SelectedItem = entry; row.Focus(); e.Handled = true;
                 if (e.ClickCount == 2) OpenSelected();
             };
-            List.PreviewMouseRightButtonDown+=delegate(object sender,MouseButtonEventArgs e){BeginFileContextGesture(e);};
+            List.PreviewMouseRightButtonDown+=delegate(object sender,MouseButtonEventArgs e){var header=FileColumnHeader(e.OriginalSource as DependencyObject);if(header!=null){CancelFileContextGesture();if(header.ContextMenu==null)header.ContextMenu=MetadataColumnMenu("Name");header.ContextMenu.PlacementTarget=header;header.ContextMenu.IsOpen=true;e.Handled=true;return;}BeginFileContextGesture(e);};
             List.PreviewMouseMove+=delegate(object sender,MouseEventArgs e){ContinueFileContextGesture(e);};
-            List.PreviewMouseRightButtonUp+=delegate(object sender,MouseButtonEventArgs e){EndFileContextGesture(e);};
+            List.PreviewMouseRightButtonUp+=delegate(object sender,MouseButtonEventArgs e){if(FileColumnHeader(e.OriginalSource as DependencyObject)!=null){e.Handled=true;return;}EndFileContextGesture(e);};
             List.LostMouseCapture+=delegate{CancelFileContextGesture();};
             // ListViewItem handles Space before a bubbling KeyDown reaches the list.
             // Handle file-manager commands on the tunnelling route instead.
@@ -181,7 +175,7 @@ namespace FileCompass
             List.MouseDoubleClick += delegate(object sender, MouseButtonEventArgs e) { if (windowsSelection && e.ChangedButton == MouseButton.Left && RowAt(e.GetPosition(List)) != null) { OpenSelected(); e.Handled = true; } };
             Grid.SetRow(List, 3); grid.Children.Add(List);
             status.Margin = new Thickness(9, 3, 5, 0); status.Foreground = FluentTheme.Muted; status.FontSize = 11;
-            Grid.SetRow(status, 4); grid.Children.Add(status);
+            System.Windows.Automation.AutomationProperties.SetAutomationId(status,"PanelStatus");System.Windows.Automation.AutomationProperties.SetAutomationId(panelRole,"PanelRole");var statusRow=new Grid();statusRow.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star)});statusRow.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(2,GridUnitType.Star)});capacity.Margin=new Thickness(8,0,12,0);capacity.VerticalAlignment=VerticalAlignment.Center;capacity.HorizontalAlignment=HorizontalAlignment.Right;capacity.TextTrimming=TextTrimming.CharacterEllipsis;Grid.SetColumn(capacity,1);status.TextTrimming=TextTrimming.CharacterEllipsis;statusRow.Children.Add(capacity);statusRow.Children.Add(status);Grid.SetRow(statusRow,4);grid.Children.Add(statusRow);
             PreviewGotKeyboardFocus += delegate { activate(this); };
             PreviewMouseDown += delegate { activate(this); };
             InitializePanelTools();
@@ -192,6 +186,8 @@ namespace FileCompass
         Style RowStyle()
         {
             var style = new Style(typeof(ListViewItem));
+            style.Setters.Add(new Setter(FrameworkElement.MarginProperty,new Thickness(0)));style.Setters.Add(new Setter(FrameworkElement.UseLayoutRoundingProperty,true));style.Setters.Add(new Setter(UIElement.SnapsToDevicePixelsProperty,true));
+            style.Setters.Add(new Setter(BracketOwnerProperty,this));style.Setters.Add(new Setter(BracketMarkedProperty,new Binding("IsMarked")));style.Setters.Add(new EventSetter(FrameworkElement.LoadedEvent,new RoutedEventHandler(delegate{QueueSelectionBrackets();})));
             style.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(0)));
             style.Setters.Add(new Setter(FrameworkElement.HeightProperty, Math.Max(27, List.FontSize * 1.65 + 6)));
             style.Setters.Add(new Setter(Control.ForegroundProperty, FluentTheme.Text));
@@ -199,15 +195,15 @@ namespace FileCompass
             style.Setters.Add(new Setter(Control.BorderBrushProperty, Brushes.Transparent));
             style.Setters.Add(new Setter(Control.HorizontalContentAlignmentProperty, HorizontalAlignment.Stretch));
             style.Setters.Add(new Setter(Control.FocusVisualStyleProperty, null));
-            var border = new FrameworkElementFactory(typeof(Border));
+            var border = new FrameworkElementFactory(typeof(Border),"RowFrame");border.SetValue(UIElement.SnapsToDevicePixelsProperty,true);
             border.SetBinding(Border.BackgroundProperty, new Binding("Background") { RelativeSource = RelativeSource.TemplatedParent });
             border.SetBinding(Border.BorderBrushProperty, new Binding("BorderBrush") { RelativeSource = RelativeSource.TemplatedParent });
-            border.SetValue(Border.BorderThicknessProperty, new Thickness(3, 0, 0, 0));
+            border.SetValue(Border.BorderThicknessProperty, new Thickness(3, 0, 0, 0));border.SetBinding(Border.CornerRadiusProperty,new Binding{Path=new PropertyPath(BracketCornersProperty),RelativeSource=RelativeSource.TemplatedParent});
             var presenter = new FrameworkElementFactory(typeof(GridViewRowPresenter));
             presenter.SetBinding(GridViewRowPresenter.ContentProperty, new Binding());
             presenter.SetBinding(GridViewRowPresenter.ColumnsProperty, new Binding("View.Columns") { RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(ListView), 1) });
             border.AppendChild(presenter);
-            style.Setters.Add(new Setter(Control.TemplateProperty, new ControlTemplate(typeof(ListViewItem)) { VisualTree = border }));
+            var rowTemplate=new ControlTemplate(typeof(ListViewItem)){VisualTree=border};style.Setters.Add(new Setter(Control.TemplateProperty,rowTemplate));
             var cursor = new MultiDataTrigger();
             cursor.Conditions.Add(new Condition(new Binding("IsSelected") { RelativeSource = RelativeSource.Self }, true));
             cursor.Conditions.Add(new Condition(new Binding("IsActivePanel") { RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(FilePanel), 1) }, true));
@@ -216,6 +212,7 @@ namespace FileCompass
             cursor.Setters.Add(new Setter(Control.BackgroundProperty, CompactTheme.ThemeBrush("#E4F0FF")));
             cursor.Setters.Add(new Setter(Control.BorderBrushProperty, FluentTheme.Accent)); style.Triggers.Add(cursor);
             var marked = new DataTrigger { Binding = new Binding("IsMarked"), Value = true };
+            marked.Setters.Add(new Setter(Control.BorderBrushProperty,FluentTheme.Accent));
             marked.Setters.Add(new Setter(Control.ForegroundProperty, CompactTheme.ThemeBrush("#B92331")));
             marked.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.SemiBold)); style.Triggers.Add(marked);
             return style;
@@ -258,13 +255,13 @@ namespace FileCompass
         void AddColumn(string caption, string property, double width)
         {
             var header = new GridViewColumnHeader { Content = caption, Tag = property, HorizontalContentAlignment = HorizontalAlignment.Left,
-                Padding = new Thickness(8, 0, 0, 0), Height = 29, Background = CompactTheme.WhiteSurface, Foreground = FluentTheme.Muted,
-                FontSize = 11, FontWeight = FontWeights.Normal,
+                Padding = new Thickness(8, 0, 0, 0), Height = 34, Background = CompactTheme.WhiteSurface, Foreground = FluentTheme.Muted,
+                FontSize = 12, FontWeight = FontWeights.Normal,
                 BorderBrush = CompactTheme.ChromeLine, BorderThickness = new Thickness(0, 0, 1, 1) };
-            var border = new FrameworkElementFactory(typeof(Border));
+            var border = new FrameworkElementFactory(typeof(Border),"ColumnFrame");
             border.SetBinding(Border.BackgroundProperty, new Binding("Background") { RelativeSource = RelativeSource.TemplatedParent });
-            border.SetValue(Border.BorderBrushProperty, CompactTheme.ChromeLine); border.SetValue(Border.BorderThicknessProperty, new Thickness(0, 0, 1, 1));
-            var presenter = new FrameworkElementFactory(typeof(ContentPresenter)); presenter.SetValue(FrameworkElement.MarginProperty, new Thickness(8, 5, 0, 0)); border.AppendChild(presenter);
+            border.SetValue(Border.BorderBrushProperty, CompactTheme.Line); border.SetValue(Border.BorderThicknessProperty, new Thickness(0, 0, 1, 1));border.SetValue(FrameworkElement.MarginProperty,new Thickness(0,5,0,0));
+            var presenter = new FrameworkElementFactory(typeof(ContentPresenter)); presenter.SetValue(FrameworkElement.MarginProperty, new Thickness(8,0,0,0));presenter.SetValue(FrameworkElement.VerticalAlignmentProperty,VerticalAlignment.Center); border.AppendChild(presenter);
             var headerGrid = new FrameworkElementFactory(typeof(Grid)); headerGrid.AppendChild(border);
             var grip = new FrameworkElementFactory(typeof(System.Windows.Controls.Primitives.Thumb), "PART_HeaderGripper");
             grip.SetValue(FrameworkElement.WidthProperty, 7.0);
@@ -273,15 +270,17 @@ namespace FileCompass
             var gripBorder = new FrameworkElementFactory(typeof(Border)); gripBorder.SetValue(Border.BackgroundProperty, Brushes.Transparent);
             grip.SetValue(Control.TemplateProperty, new ControlTemplate(typeof(System.Windows.Controls.Primitives.Thumb)) { VisualTree = gripBorder });
             headerGrid.AppendChild(grip);
-            header.Template = new ControlTemplate(typeof(GridViewColumnHeader)) { VisualTree = headerGrid };
-            header.ContextMenu = MetadataColumnMenu(); header.Click += delegate { if (sortProperty == property) descending = !descending; else { sortProperty = property; descending = false; } Sort(); if (MetadataColumn.IsSort(property)) LoadAllColumnMetadata(); };
+                        var headerTemplate=new ControlTemplate(typeof(GridViewColumnHeader)){VisualTree=headerGrid};var cleanHeader=new DataTrigger{Binding=new Binding("Clean"){Source=InterfaceTheme.State},Value=true};cleanHeader.Setters.Add(new Setter(Border.BorderThicknessProperty,new Thickness(0,0,1,1),"ColumnFrame"));cleanHeader.Setters.Add(new Setter(Border.BorderBrushProperty,CompactTheme.ThemeBrush("#C6D8F5"),"ColumnFrame"));headerTemplate.Triggers.Add(cleanHeader);header.Template=headerTemplate;
+            header.ContextMenu = MetadataColumnMenu(property);header.PreviewMouseRightButtonDown+=delegate(object sender,MouseButtonEventArgs e){CancelFileContextGesture();header.ContextMenu.PlacementTarget=header;header.ContextMenu.IsOpen=true;e.Handled=true;};header.PreviewMouseRightButtonUp+=delegate(object sender,MouseButtonEventArgs e){e.Handled=true;}; header.Click += delegate { if (sortProperty == property) descending = !descending; else { sortProperty = property; descending = false; } Sort(); if (MetadataColumn.IsSort(property)) LoadAllColumnMetadata(); };
             var column = new GridViewColumn { Header = header, Width = width };
             var text = new FrameworkElementFactory(typeof(TextBlock));
-            text.SetBinding(TextBlock.TextProperty, new Binding(property.StartsWith("Meta:") ? "MetadataValues["+property.Substring(5)+"]" : property == "Name" ? "ListName" : property));
+                        if(property=="Name"){var nameBinding=new MultiBinding{Converter=new PanelNameConverter()};nameBinding.Bindings.Add(new Binding("ListName"));nameBinding.Bindings.Add(new Binding("FullName"));nameBinding.Bindings.Add(new Binding("IsDirectory"));nameBinding.Bindings.Add(new Binding("LocationName"));nameBinding.Bindings.Add(new Binding("Clean"){Source=InterfaceTheme.State});nameBinding.Bindings.Add(new Binding("SeparateExtension"){Source=this});text.SetBinding(TextBlock.TextProperty,nameBinding);}
+                        else if(property=="Size"||property=="Modified"){var valueBinding=new MultiBinding{Converter=new PanelValueConverter(),ConverterParameter=property=="Size"?"size":"date"};valueBinding.Bindings.Add(new Binding(property));valueBinding.Bindings.Add(new Binding("ModifiedTime"));valueBinding.Bindings.Add(new Binding("Bytes"));valueBinding.Bindings.Add(new Binding("IsDirectory"));valueBinding.Bindings.Add(new Binding("Clean"){Source=InterfaceTheme.State});text.SetBinding(TextBlock.TextProperty,valueBinding);text.SetBinding(FrameworkElement.ToolTipProperty,new Binding(property));}
+            else text.SetBinding(TextBlock.TextProperty,new Binding(property.StartsWith("Meta:")?"MetadataValues["+property.Substring(5)+"]":property));
             text.SetValue(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center);
             text.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);
             text.SetValue(FrameworkElement.MarginProperty, new Thickness(0, 0, 3, 0));
-            if (property == "Size" || property == "Modified") text.SetValue(TextBlock.TextAlignmentProperty, TextAlignment.Right);
+            if (property == "Size" || property == "Modified") {var alignment=new Style(typeof(TextBlock));alignment.Setters.Add(new Setter(TextBlock.TextAlignmentProperty,TextAlignment.Right));var cleanAlign=new DataTrigger{Binding=new Binding("Clean"){Source=InterfaceTheme.State},Value=true};cleanAlign.Setters.Add(new Setter(TextBlock.TextAlignmentProperty,TextAlignment.Left));alignment.Triggers.Add(cleanAlign);text.SetValue(FrameworkElement.StyleProperty,alignment);}
             if (property == "Name")
             {
                 text.SetBinding(FrameworkElement.ToolTipProperty, new Binding("NameToolTip"));
@@ -305,20 +304,28 @@ namespace FileCompass
             view.Columns.Add(column);
             DependencyPropertyDescriptor.FromProperty(GridViewColumn.WidthProperty, typeof(GridViewColumn)).AddValueChanged(column, delegate {
                 if (resizingColumns) return;
-                preserveColumnWidths = true;
-                if (ColumnWidthChanged != null) ColumnWidthChanged(view.Columns.IndexOf(column), column.Width);
+                preserveColumnWidths = true;FitColumns(ColumnKey(column));
+                if (ColumnWidthChanged != null) ColumnWidthChanged(LogicalColumns.ToList().IndexOf(column), column.Width);
             });
         }
 
         void ResizeColumns()
         {
-            if (preserveColumnWidths || view.Columns.Count != 5) return;
-            double available = Math.Max(480, List.ActualWidth - 24);
+            if (preserveColumnWidths || view.Columns.Count != 5){FitColumns();return;}
+            double available = Math.Max(AppearanceTheme.IsClean?200:480, List.ActualWidth - 24);
             double[] ratios = { .50, .15, .08, .13, .14 };
             if (available < 850) ratios = new double[] { .39, .10, .14, .24, .13 };
+            if(AppearanceTheme.IsClean)ratios=new double[]{.66,BaseColumnVisible(1)?.10:0,.16,.18,BaseColumnVisible(4)?.10:0};
+            for(int i=1;i<5;i++)if(!BaseColumnVisible(i))ratios[i]=0;
+            double total=ratios.Sum();ratios=ratios.Select(x=>x/total).ToArray();
             resizingColumns = true;
-            try { for (int i = 0; i < view.Columns.Count; i++) view.Columns[i].Width = Math.Floor(available * ratios[i]); }
+            try {
+                var widths=ratios.Select(x=>Math.Floor(available*x)).ToArray();
+                if(AppearanceTheme.IsClean)foreach(int index in new[]{1,4})if(BaseColumnVisible(index)){double extra=Math.Max(0,(index==1?80:90)-widths[index]);widths[index]+=extra;widths[0]=Math.Max(140,widths[0]-extra);}
+                for(int i=0;i<5;i++)BaseColumn(i).Width=widths[i];
+            }
             finally { resizingColumns = false; }
+            FitColumns();
         }
 
         void Sort()
@@ -329,18 +336,19 @@ namespace FileCompass
             foreach (GridViewColumn column in view.Columns)
             {
                 var header = (GridViewColumnHeader)column.Header;
-                string label = MetadataColumn.IsSort((string)header.Tag) ? MetadataColumn.Caption(((string)header.Tag).Substring(5)) : (string)header.Tag == "Name" ? L.Text("column.name") : (string)header.Tag == "Extension" ? L.Text("column.extension") : (string)header.Tag == "Size" ? L.Text("column.size") : (string)header.Tag == "Modified" ? L.Text("column.date") : L.Text("attributes.title");
-                header.Content = ((string)header.Tag == sortProperty ? (descending ? "▼ " : "▲ ") : "") + label;
-                header.Background = IsActivePanel && (string)header.Tag == sortProperty ? CompactTheme.SortedHeader : CompactTheme.WhiteSurface;
+                string label = MetadataColumn.IsSort((string)header.Tag) ? MetadataColumn.Caption(((string)header.Tag).Substring(5)) : (string)header.Tag == "Name" ? L.Text("column.name") : (string)header.Tag == "Extension" ? L.Text("column.extension") : (string)header.Tag == "Size" ? L.Text("column.size") : (string)header.Tag == "Modified" ? L.Text(AppearanceTheme.IsClean?"details.modified":"column.date") : L.Text("attributes.title");
+                header.Content = AppearanceTheme.IsClean ? label.ToUpper(System.Globalization.CultureInfo.CurrentCulture)+((string)header.Tag==sortProperty?(descending?" ↓":" ↑"):"") : ((string)header.Tag == sortProperty ? (descending ? "▼ " : "▲ ") : "") + label;
+                header.ToolTip=label;
+                header.Background = !AppearanceTheme.IsClean && IsActivePanel && (string)header.Tag == sortProperty ? CompactTheme.SortedHeader : CompactTheme.WhiteSurface;
             }
         }
 
-        public void Highlight(bool active) { IsActivePanel = active; BorderBrush = active ? (AppearanceTheme.IsBalanced ? CompactTheme.ThemeBrush("#79A9DF") : FluentTheme.Accent) : CompactTheme.ChromeLine; address.Background = active ? CompactTheme.ActivePath : CompactTheme.InactivePath; crumbs.Background = address.Background; if (panelPathRow != null) panelPathRow.Background = address.Background; foreach (GridViewColumn column in view.Columns) { var header = column.Header as GridViewColumnHeader; if (header != null) header.Background = active && (string)header.Tag == sortProperty ? CompactTheme.SortedHeader : CompactTheme.WhiteSurface; } address.Foreground = active ? FluentTheme.Accent : FluentTheme.Text; crumbs.SetValue(TextBlock.ForegroundProperty, active ? FluentTheme.Accent : FluentTheme.Text); }
+        public void Highlight(bool active) { bool changed=IsActivePanel!=active;IsActivePanel = active;panelRole.Text=L.Text(active?"panel.activeRole":"panel.targetRole"); BorderThickness=new Thickness(AppearanceTheme.IsClean?(active?3:2):AppearanceTheme.IsBalanced?1:2);BorderBrush = AppearanceTheme.IsClean ? active?CompactTheme.ThemeBrush("#146DCC"):CompactTheme.ThemeBrush("#C6D8F5") : active ? (AppearanceTheme.IsBalanced ? CompactTheme.ThemeBrush("#79A9DF") : FluentTheme.Accent) : CompactTheme.ChromeLine; address.Background = active ? CompactTheme.ActivePath : CompactTheme.InactivePath; crumbs.Background = address.Background; RefreshCleanNavigation(); foreach (GridViewColumn column in view.Columns) { var header = column.Header as GridViewColumnHeader; if (header != null) header.Background = !AppearanceTheme.IsClean && active && (string)header.Tag == sortProperty ? CompactTheme.SortedHeader : CompactTheme.WhiteSurface; } address.Foreground = active ? FluentTheme.Accent : FluentTheme.Text; crumbs.SetValue(TextBlock.ForegroundProperty, active ? FluentTheme.Accent : FluentTheme.Text);if(changed)UpdateStatus(); }
         void ShowPath() { address.Text = CurrentPath == null ? "" : IsRemote || IsArchive || IsExt ? DisplayPath : CurrentPath.TrimEnd('\\') + "\\*.*"; }
         public void Navigate(string path, bool remember)
         {
             if (IsLoading) return;
-            projection = null;
+            EmptyPanel=false;projection = null;
             if(ExtLocations.IsPath(path)){NavigationTask=NavigateExt(path,remember);return;}
             if (WindowsShell.IsLocation(path)) { NavigationTask = NavigateShell(path, remember); return; }
             if (NetworkBrowser.IsLocation(path)) { NavigationTask = NavigateNetwork(path, remember); return; }
@@ -481,7 +489,7 @@ namespace FileCompass
             Task.Run(delegate
             {
                 string text;
-                try { var drive = new DriveInfo(root); text = "[" + drive.VolumeLabel + "]  " + (drive.AvailableFreeSpace / 1024).ToString("N0") + L.Text("drive.freeAndTotalCapacitySeparator") + (drive.TotalSize / 1024).ToString("N0") + " kB"; }
+                try { var drive = new DriveInfo(root); text = "[" + drive.VolumeLabel + "]  " + ByteSize.Format(drive.AvailableFreeSpace) + L.Text("drive.freeAndTotalCapacitySeparator") + ByteSize.Format(drive.TotalSize); }
                 catch { text = root + L.Text("drive.capacityUnavailable"); }
                 Dispatcher.BeginInvoke(new Action(delegate { if (CurrentPath == location) { capacity.Text = text; capacity.ToolTip = text; } }));
             });
@@ -510,11 +518,12 @@ namespace FileCompass
         }
         void UpdateStatus()
         {
-            SyncWindowsSelection();
+            QueueSelectionBrackets();SyncWindowsSelection();
             var all = List.Items.Cast<Entry>().Where(x => !x.IsParent).ToList();
             var marked = all.Where(x => x.IsMarked).ToList();
-            status.Text = L.Text("panel.selectionSizePrefix") + (marked.Sum(x => (decimal)x.Bytes) / 1024).ToString("N0") + " kB / " + (all.Sum(x => (decimal)x.Bytes) / 1024).ToString("N0") +
+            string detailed = L.Text("panel.selectionSizePrefix") + ByteSize.Format(marked.Sum(x => (decimal)x.Bytes)) + " / " + ByteSize.Format(all.Sum(x => (decimal)x.Bytes)) +
                 L.Text("panel.fileCountSeparator") + marked.Count(x => !x.IsDirectory) + " / " + all.Count(x => !x.IsDirectory) + L.Text("panel.folderCountSeparator") + marked.Count(x => x.IsDirectory) + " / " + all.Count(x => x.IsDirectory);
+            int selected=marked.Count>0?marked.Count:IsActivePanel&&List.SelectedItem is Entry&&!((Entry)List.SelectedItem).IsParent?1:0;status.Text=AppearanceTheme.IsClean?L.Format("panel.cleanSummary",selected,all.Count):detailed;status.ToolTip=detailed;
             if(PreviewSelectionChanged!=null)PreviewSelectionChanged();
         }
         public void OpenSelected()

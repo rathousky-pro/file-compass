@@ -45,9 +45,7 @@ namespace FileCompass {
         internal DateTime ScannedUtc;
         internal readonly Dictionary<string,DiskBucket> Categories=new Dictionary<string,DiskBucket>();
         internal static string FormatSize(long bytes) {
-            string[] units = { "B", "KiB", "MiB", "GiB", "TiB", "PiB" }; double value = bytes; int unit = 0;
-            while (value >= 1024 && unit < units.Length-1) { value /= 1024; unit++; }
-            return value.ToString(unit == 0 ? "N0" : "N2") + " " + units[unit];
+            return ByteSize.Format(bytes);
         }
         internal static DiskAnalysis Scan(string path, CancellationToken token, Action<long,long,string> progress, DateTime? now = null, DiskScanOptions options=null, Action<DiskAnalysis> update=null,DiskScanActivity activity=null) {
             var result = new DiskAnalysis { Root = new DiskFolder { Path = System.IO.Path.GetFullPath(path) } };
@@ -63,7 +61,7 @@ namespace FileCompass {
                 var folder = stack.Pop(); visited.Add(folder); result.Folders++;bool failed=false;if(activity!=null)activity.Begin(folder.Path,"analyzer.enumerating");
                 try {
                     foreach (string entry in Directory.EnumerateFileSystemEntries(folder.Path)) {
-                        if (token.IsCancellationRequested) break;
+                        if (!OperationPause.Check(token)) break;
                         folder.SawEntries=true;if(activity!=null){activity.Progress();activity.Begin(entry,"analyzer.metadata");}
                         if(String.Equals(entry,result.IndexPath,StringComparison.OrdinalIgnoreCase))continue;
                         try {

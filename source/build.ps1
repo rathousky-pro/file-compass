@@ -50,7 +50,12 @@ foreach ($library in Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'ui') -
 foreach ($reference in $references) { $compilerArgs += '/reference:' + (Join-Path $framework $reference) }
 if (!$Release) { $compilerArgs += '/define:APP_TESTS' }
 $compilerArgs += Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'src') -Filter '*.cs' | Where-Object { !$Release -or $_.Name -notlike '*Tests.cs' } | ForEach-Object { $_.FullName }
-& $compiler @compilerArgs
+# Embedded bilingual help and screenshots exceed the Windows process argument limit.
+# A response file also keeps builds reliable when the workspace path contains spaces.
+$responseFile = Join-Path $buildInfoDirectory 'compile.rsp'
+$responseArguments = $compilerArgs | ForEach-Object { '"' + $_ + '"' }
+[IO.File]::WriteAllLines($responseFile, $responseArguments, (New-Object Text.UTF8Encoding($true)))
+& $compiler ('@' + $responseFile)
 if ($LASTEXITCODE -ne 0) { throw 'Sestavení selhalo.' }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'FileVoyager.exe.config') -Destination (Join-Path $bin 'File Compass.exe.config')
 New-Item -ItemType Directory -Path (Join-Path $bin 'icons') -Force | Out-Null
@@ -58,6 +63,8 @@ New-Item -ItemType Directory -Path (Join-Path $bin 'libraries') -Force | Out-Nul
 Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'ui') | Where-Object { $_.Name -ne 'icons' } | ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $bin 'libraries') -Recurse -Force }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'ui\icons\LICENSE.txt') -Destination (Join-Path $bin 'libraries\licenses\FLUENT-ICONS-LICENSE.txt') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'ui\icons\SOURCE.json') -Destination (Join-Path $bin 'libraries\licenses\FLUENT-ICONS-SOURCE.json') -Force
+if (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'ui\icons\TOOLBAR-SOURCE.json')) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'ui\icons\TOOLBAR-SOURCE.json') -Destination (Join-Path $bin 'libraries\licenses\FLUENT-TOOLBAR-SOURCE.json') -Force }
+if (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'ui\icons\COLOR-SOURCE.json')) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'ui\icons\COLOR-SOURCE.json') -Destination (Join-Path $bin 'libraries\licenses\FLUENT-COLOR-SOURCE.json') -Force }
 $exporter = Join-Path $bin 'BuildIconLibraries.exe'
 $exportArgs = @('/nologo', '/target:exe', '/platform:x64', '/optimize+', '/codepage:65001', ('/out:' + $exporter), ('/reference:' + (Join-Path $bin 'File Compass.exe')))
 foreach ($reference in $references) { $exportArgs += '/reference:' + (Join-Path $framework $reference) }

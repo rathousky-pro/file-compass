@@ -38,12 +38,13 @@ namespace FileCompass {
         Loaded+=async delegate{if(manager!=null)await manager.Inventory();};
     }
     static TextBlock Text(){return new TextBlock{TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,3,0,3)};}
+    internal static string ReleaseStatus(VendorUpdate item,string current){Version installed=null,available=null;bool versionKnown=Version.TryParse(current,out installed)&&Version.TryParse(item.Version,out available);bool metadataOnly=!String.IsNullOrEmpty(item.Error)&&String.IsNullOrEmpty(item.Hash)&&VendorUpdates.ValidOrigin(item);if(!String.IsNullOrEmpty(item.Error)&&!metadataOnly)return L.Text("updates.unverified");if(versionKnown&&installed>=available)return L.Text("updates.currentState");return L.Text(metadataOnly?"updates.manualRelease":"updates.newVersion");}
     internal void SavePreferences(){if(String.IsNullOrEmpty(UpdateRegistry.StateError))UpdateRegistry.Edit(x=>x.Daily=daily.IsChecked==true);}
     internal void Render(){
         string selected=(Items.SelectedItem as UpdateRow)?.Id;
         var state=UpdateRegistry.State();var rows=new List<UpdateRow>();
         foreach(string id in VendorUpdates.Ids){var item=state.Available.FirstOrDefault(x=>x.Id==id);string current=VendorUpdates.InstalledVersion(id);var pending=state.Pending.FirstOrDefault(x=>x.Id==id);string status=L.Text("updates.notChecked");
-            if(item!=null){if(!String.IsNullOrEmpty(item.Error))status=L.Text("updates.unverified");else{Version installed,available;status=Version.TryParse(current,out installed)&&Version.TryParse(item.Version,out available)&&installed>=available?L.Text("updates.currentState"):L.Text("updates.newVersion");}}
+            if(item!=null)status=ReleaseStatus(item,current);
             if(pending!=null)status=L.Text(UpdateRegistry.RequiresRestart(id)?"updates.restartRequired":"updates.waiting");
             if(state.RestoreBundled.Contains(id))status=L.Text("updates.restartRequired");
             rows.Add(new UpdateRow{Id=id,Name=VendorUpdates.Name(id),Installed=current,Available=item?.Version??"—",Status=status,Package=item});

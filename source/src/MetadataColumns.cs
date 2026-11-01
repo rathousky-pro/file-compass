@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -79,8 +79,8 @@ namespace FileCompass {
         bool automaticFolderViews, applyingFolderView, columnScanQueued;
         string lastColumnPath;
         PanelView normalFolderView;
-        internal string[] MetadataColumnKeys {get{return view.Columns.Cast<GridViewColumn>().Select(x=>ColumnIdentity(view.Columns.IndexOf(x))).Where(MetadataColumn.IsSort).Select(x=>x.Substring(5)).ToArray();}}
-        internal string ColumnIdentity(int index) {return index<0||index>=view.Columns.Count?null:Convert.ToString(((GridViewColumnHeader)view.Columns[index].Header).Tag);}
+        internal string[] MetadataColumnKeys {get{return view.Columns.Cast<GridViewColumn>().Select(ColumnKey).Where(MetadataColumn.IsSort).Select(x=>x.Substring(5)).ToArray();}}
+        internal string ColumnIdentity(int index) {var columns=LogicalColumns.ToArray();return index<0||index>=columns.Length?null:ColumnKey(columns[index]);}
         internal void InitializeMetadataColumns() {
             PathChanged+=delegate {
                 columnCancellation.Cancel();columnCancellation.Dispose();columnCancellation=new CancellationTokenSource();columnPending.Clear();
@@ -97,6 +97,7 @@ namespace FileCompass {
         internal void SetMetadataColumns(IEnumerable<string> keys) {
             var wanted=(keys??new string[0]).Where(MetadataColumn.Keys.Contains).Distinct().ToArray();
             if(MetadataColumnKeys.SequenceEqual(wanted))return;
+            var previousOrder=view.Columns.Select(ColumnKey).ToArray();
             foreach(var c in view.Columns.Cast<GridViewColumn>().Where(x=>MetadataColumn.IsSort(Convert.ToString(((GridViewColumnHeader)x.Header).Tag))).ToArray())view.Columns.Remove(c);
             foreach(string key in wanted)AddColumn(MetadataColumn.Caption(key),"Meta:"+key,150);
             if(List.ActualWidth>100) {
@@ -104,26 +105,35 @@ namespace FileCompass {
                 try {
                     double available=Math.Max(480,List.ActualWidth-24);
                     double extra=Math.Min(wanted.Length*125,Math.Max(125,available-420));
-                    double[] minimum={140,50,70,110,55};double total=minimum.Sum();
-                    for(int i=0;i<5;i++)view.Columns[i].Width=minimum[i]*Math.Max(1,(available-extra)/total);
-                    for(int i=5;i<view.Columns.Count;i++)view.Columns[i].Width=Math.Max(85,extra/Math.Max(1,wanted.Length));
+                    double[] minimum=AppearanceTheme.IsClean?new double[]{140,BaseColumnVisible(1)?80:0,BaseColumnVisible(2)?70:0,BaseColumnVisible(3)?110:0,BaseColumnVisible(4)?90:0}:new double[]{140,BaseColumnVisible(1)?50:0,BaseColumnVisible(2)?70:0,BaseColumnVisible(3)?110:0,BaseColumnVisible(4)?55:0};double total=minimum.Sum();
+                    for(int i=0;i<5;i++)BaseColumn(i).Width=minimum[i]*Math.Max(1,(available-extra)/total);
+                    foreach(var column in view.Columns.Where(x=>MetadataColumn.IsSort(ColumnKey(x))))column.Width=Math.Max(85,extra/Math.Max(1,wanted.Length));
                     if(wanted.Length==0){preserveColumnWidths=false;ResizeColumns();}
                 }finally{resizingColumns=false;}
             }
             if(MetadataColumn.IsSort(sortProperty)&&!wanted.Contains(sortProperty.Substring(5)))sortProperty="Name";
-            ScheduleColumnMetadata();
+            ApplyColumnOrder(previousOrder);FitColumns();ScheduleColumnMetadata();
         }
-        ContextMenu MetadataColumnMenu() {
+        ContextMenu MetadataColumnMenu(string selectedColumn) {
             var menu=new ContextMenu();
             menu.Opened+=delegate {
                 menu.Items.Clear();
                 menu.Items.Add(new MenuItem{Header=L.Text("columns.choose"),IsEnabled=false});
+                foreach(int index in new[]{0,1,2,3,4}){
+                    int captured=index;var baseItem=new MenuItem{Header=ColumnCaption(BaseColumnKeys[index]),Tag=BaseColumnKeys[index],IsCheckable=true,IsChecked=BaseColumn(index).Width>0,IsEnabled=index!=0&&(BaseColumn(index).Width>0||CanShowColumn(BaseColumnKeys[index]))};
+                    baseItem.Click+=delegate{SetBaseColumnVisible(captured,baseItem.IsChecked);};menu.Items.Add(baseItem);
+                }
+                menu.Items.Add(new Separator());
                 foreach(string key in MetadataColumn.Keys){
-                    string captured=key;var item=new MenuItem{Header=MetadataColumn.Caption(key),IsCheckable=true,IsChecked=MetadataColumnKeys.Contains(key)};
-                    item.Click+=delegate {var keys=MetadataColumnKeys.ToList();if(item.IsChecked)keys.Add(captured);else keys.Remove(captured);SetMetadataColumns(keys);Sort();};
+                    string captured=key;var item=new MenuItem{Header=MetadataColumn.Caption(key),IsCheckable=true,IsChecked=view.Columns.Any(x=>ColumnKey(x)=="Meta:"+key&&x.Width>0),IsEnabled=view.Columns.Any(x=>ColumnKey(x)=="Meta:"+key&&x.Width>0)||CanShowColumn("Meta:"+key)};
+                    item.Click+=delegate {var keys=MetadataColumnKeys.ToList();if(item.IsChecked)keys.Add(captured);else keys.Remove(captured);SetMetadataColumns(keys);FitColumns();Sort();};
                     menu.Items.Add(item);
                 }
-                var reset=new MenuItem{Header=L.Text("columns.reset")};reset.Click+=delegate {SetMetadataColumns(new string[0]);Sort();};menu.Items.Add(reset);
+                menu.Items.Add(new Separator());
+                var visible=view.Columns.Where(x=>x.Width>0).Select(ColumnKey).ToList();int position=visible.IndexOf(selectedColumn);
+                var moveLeft=new MenuItem{Header=L.Text("columns.moveLeft"),IsEnabled=position>0};moveLeft.Click+=delegate{MoveVisibleColumn(selectedColumn,-1);};menu.Items.Add(moveLeft);
+                var moveRight=new MenuItem{Header=L.Text("columns.moveRight"),IsEnabled=position>=0&&position<visible.Count-1};moveRight.Click+=delegate{MoveVisibleColumn(selectedColumn,1);};menu.Items.Add(moveRight);
+                var reset=new MenuItem{Header=L.Text("columns.reset")};reset.Click+=delegate {extensionColumn=null;attributesColumn=null;sizeColumn=null;modifiedColumn=null;ApplyBaseColumns();SetMetadataColumns(new string[0]);ApplyColumnOrder(BaseColumnKeys);preserveColumnWidths=false;ResizeColumns();Sort();};menu.Items.Add(reset);
                 menu.Items.Add(new Separator());
                 AddFolderRuleItem(menu,false);AddFolderRuleItem(menu,true);
                 var remove=new MenuItem{Header=L.Text("columns.removeRule"),IsEnabled=CanUseFolderView};

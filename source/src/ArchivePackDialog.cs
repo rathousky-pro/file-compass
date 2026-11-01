@@ -11,7 +11,7 @@ namespace FileCompass
     {
         public string Target, Password;
         public int Level = 6;
-        public bool Move;
+        public bool Move, SelfExtracting; public string Format;
         public long VolumeBytes;
         public bool? NewestFileDate;
         public bool Paths = true, Recursive = true, Separate, ExcludeBase;
@@ -58,15 +58,15 @@ namespace FileCompass
             var toolsGroup=OperationDialogLayout.Group(toolsPage,L.Text("operation.tools"));
             toolsGroup.Children.Add(new TextBlock{Text=L.Text("archive.formatCreationHelp"),TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,0,0,10)});
             toolsGroup.Children.Add(CopyUi.Button(L.Text("action.settings"),delegate{new ConfigurationDialog(this,L.Text("settings.archivesSection")).ShowDialog();}));
-            var sfx=add(toolsGroup,L.Text("archive.selfExtracting"),false);sfx.IsEnabled=false;sfx.ToolTip=L.Text("common.optionNotSupported");ToolTipService.SetShowOnDisabled(sfx,true);
+            var sfx=add(toolsGroup,L.Text("archive.selfExtracting"),false);sfx.ToolTip=L.Text("archive.sfxHelp");ToolTipService.SetShowOnDisabled(sfx,true);toolsGroup.Children.Add(new TextBlock{Text=L.Text("archive.sfxHelp"),TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,8,0,8)});
             toolsGroup.Children.Add(CopyUi.Button(L.Text("action.help"),delegate{HelpService.Open(this,"archives");}));
             Action applyFormat=delegate{
                 string name=(string)formats.SelectedItem;format=name=="7-ZIP"?"7z":name=="LHA*"?"lzh":name.TrimEnd('*').ToLowerInvariant();
                 level.IsEnabled=format!="tar"&&format!="lzh";
-                level.ToolTip=L.Text(level.IsEnabled?"archive.compressionQualityHelp":"archive.fixedCompressionHelp");ToolTipService.SetShowOnDisabled(level,true);target.Text=ChangeFormat(target.Text,format);
-                bool supported=format=="zip"||format=="7z";volumes.IsEnabled=password.IsEnabled=supported;
+                level.ToolTip=L.Text(level.IsEnabled?"archive.compressionQualityHelp":"archive.fixedCompressionHelp");ToolTipService.SetShowOnDisabled(level,true);target.Text=ChangeFormat(target.Text,sfx.IsChecked==true?"exe":format);
+                bool supported=format=="zip"||format=="7z";volumes.IsEnabled=supported&&(sfx.IsChecked!=true||format=="7z");password.IsEnabled=supported;if(!volumes.IsEnabled)volumes.IsChecked=false;sfx.IsEnabled=ArchiveSelfExtract.Supports(format);if(!sfx.IsEnabled)sfx.IsChecked=false;
                 if(!supported){volumes.IsChecked=false;password.IsChecked=false;}
-            };formats.SelectionChanged+=delegate{applyFormat();};applyFormat();
+            };formats.SelectionChanged+=delegate{applyFormat();};sfx.Checked+=delegate{applyFormat();};sfx.Unchecked+=delegate{applyFormat();};applyFormat();
             var ok = CopyUi.Button(L.Text("action.compressArchive"), delegate
             {
                 try
@@ -74,15 +74,15 @@ namespace FileCompass
                     string destination = Environment.ExpandEnvironmentVariables(target.Text.Trim());
                     if (count > 1 && separate.IsChecked != true && format == "gz") throw new IOException(L.Text("archive.singleStreamRequired"));
                     if (!Path.IsPathRooted(destination)) throw new IOException(L.Text("archive.absoluteOutputPathRequired"));
-                    destination = Path.GetFullPath(ChangeFormat(destination, format));
+                    destination = Path.GetFullPath(ChangeFormat(destination, sfx.IsChecked==true?"exe":format));
                     if (!Directory.Exists(Path.GetDirectoryName(destination))) throw new IOException(L.Text("archive.outputFolderMissing"));
                     if (password.IsChecked == true && secret.Password.Length == 0) throw new IOException(L.Text("archive.passwordRequired"));
                     if (password.IsChecked == true && format != "zip" && format != "7z") throw new IOException(L.Text("archive.passwordRequiresZipOr7z"));
-                    ArchiveSettings.Load().ValidateCreationTool(destination);
+                    ArchiveSettings.Load().ValidateCreationTool(ChangeFormat(destination,format));if(sfx.IsChecked==true)ArchiveSelfExtract.Validate(format,ArchiveSettings.Load());
                     if (move.IsChecked == true && recursive.IsChecked != true) throw new IOException(L.Text("archive.moveNeedsRecursive"));
                     if (volumes.IsChecked == true && format != "zip" && format != "7z") throw new IOException(L.Text("archive.volumeFormats"));
                     if ((volumes.IsChecked == true || move.IsChecked == true) && File.Exists(destination)) throw new IOException(L.Text("parts.outputExists"));
-                    Options = new ArchivePackOptions { Move = move.IsChecked == true, VolumeBytes = volumes.IsChecked == true ? FileParts.ParseSize(volumeSize.Text) : 0, Target = destination, Level = level.SelectedIndex, Paths = paths.IsChecked == true, Recursive = recursive.IsChecked == true,
+                    Options = new ArchivePackOptions { SelfExtracting=sfx.IsChecked==true,Format=format,Move = move.IsChecked == true, VolumeBytes = volumes.IsChecked == true ? FileParts.ParseSize(volumeSize.Text) : 0, Target = destination, Level = level.SelectedIndex, Paths = paths.IsChecked == true, Recursive = recursive.IsChecked == true,
                         Separate = separate.IsChecked == true, ExcludeBase = exclude.IsChecked == true, Password = password.IsChecked == true ? secret.Password : null }; DialogResult = true;
                 }
                 catch (ArchiveToolMissingException ex) { new ConfigurationDialog(this, L.Text("settings.archivesSection"), ex.Message).ShowDialog(); }
@@ -95,8 +95,21 @@ namespace FileCompass
             });
             DockPanel.SetDock(browse,Dock.Right);targetRow.Children.Remove(target);targetRow.Children.Add(browse);targetRow.Children.Add(target);
             var cancel = CopyUi.Button(L.Text("action.cancel"), delegate { DialogResult = false; }); cancel.IsCancel = true; buttons.Children.Add(cancel); buttons.Children.Add(ok);
-
-            Loaded += delegate { target.Focus(); target.SelectAll(); };
+            if(AppearanceTheme.IsClean){
+                var name=new TextBox{Text=Path.GetFileName(target.Text),Margin=new Thickness(0,3,0,3)};
+                var folder=new TextBox{Text=Path.GetDirectoryName(target.Text),Margin=new Thickness(0,3,5,3)};bool syncing=false;
+                ((GroupBox)destinationGroup.Parent).Header=L.Text("archive.outputName");targetRow.Children.Clear();targetRow.Children.Add(name);
+                var destination=OperationDialogLayout.Group(body,L.Text("archive.outputFolder"));var destinationRow=new DockPanel();destination.Children.Add(destinationRow);DockPanel.SetDock(browse,Dock.Right);destinationRow.Children.Add(browse);destinationRow.Children.Add(folder);
+                Action sync=delegate{if(syncing)return;try{syncing=true;target.Text=Path.Combine(folder.Text,name.Text);}catch(ArgumentException){}finally{syncing=false;}};name.TextChanged+=delegate{sync();};folder.TextChanged+=delegate{sync();};
+                target.TextChanged+=delegate{if(syncing)return;try{syncing=true;name.Text=Path.GetFileName(target.Text);folder.Text=Path.GetDirectoryName(target.Text);}catch(ArgumentException){}finally{syncing=false;}};
+                var originalContents=(GroupBox)contents.Parent;body.Children.Remove(originalContents);originalContents.Content=null;filesPage.Children.Insert(0,new GroupBox{Header=L.Text("operation.contents"),Content=contents,Margin=new Thickness(0,0,0,12)});
+                var summaries=new WrapPanel{Margin=new Thickness(0,5,0,10)};body.Children.Add(summaries);
+                var volumeSummary=CopyUi.Button(L.Text("archive.noVolumes"),delegate{layout.SelectPage(1);});var passwordSummary=CopyUi.Button(L.Text("archive.noPassword"),delegate{layout.SelectPage(3);});var sfxSummary=CopyUi.Button(L.Text("archive.noSfx"),delegate{layout.SelectPage(4);});
+                foreach(var chip in new[]{volumeSummary,passwordSummary,sfxSummary}){chip.MinWidth=0;chip.Tag="archive-summary";chip.Padding=new Thickness(9,4,9,4);summaries.Children.Add(chip);}
+                Action summary=delegate{volumeSummary.Content=volumes.IsChecked==true?L.Format("archive.volumeSummary",volumeSize.Text):L.Text("archive.noVolumes");passwordSummary.Content=L.Text(password.IsChecked==true?"archive.withPassword":"archive.noPassword");sfxSummary.Content=L.Text(sfx.IsChecked==true?"archive.withSfx":"archive.noSfx");};volumes.Checked+=delegate{summary();};volumes.Unchecked+=delegate{summary();};volumeSize.AddHandler(TextBox.TextChangedEvent,new TextChangedEventHandler(delegate{summary();}));password.Checked+=delegate{summary();};password.Unchecked+=delegate{summary();};sfx.Checked+=delegate{summary();};sfx.Unchecked+=delegate{summary();};
+                var output=new TextBlock{Text=target.Text,Foreground=FluentTheme.Muted,TextTrimming=TextTrimming.CharacterEllipsis,Margin=new Thickness(0,6,0,0)};body.Children.Add(output);target.TextChanged+=delegate{output.Text=target.Text;};
+                Loaded+=delegate{name.Focus();name.SelectAll();};
+            }else Loaded += delegate { target.Focus(); target.SelectAll(); };
         }
         internal static string ChangeFormat(string path, string format)
         {

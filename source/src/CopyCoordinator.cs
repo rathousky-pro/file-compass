@@ -55,6 +55,7 @@ namespace FileCompass
                         activity.TransferTitle = (job.Options.Move ? L.Text("copy.movingStatus") : L.Text("copy.copyingStatus")) + (job.Sources.Length == 1 ? System.IO.Path.GetFileName(job.Sources[0].TrimEnd('\\')) : job.Sources.Length + L.Text("common.itemCountSuffix"));
                         activity.TransferRoute = String.Join("; ", job.Sources) + L.Text("common.routeArrow") + job.Options.Target;
                         activity.LocalMetrics = dialog.Metrics;
+                        activity.PauseAction=dialog.TogglePause;activity.IsPaused=delegate{return control.Paused;};
                         dialog.MetricsChanged = RefreshCopySummary;
                         activity.Backgrounded = false; dialog.BecameBackground = delegate { activity.Backgrounded = true; RefreshCopySummary(); }; dialog.BecameForeground = delegate { activity.Backgrounded = false; RefreshCopySummary(); };
                         dialog.Show(); RefreshCopySummary();

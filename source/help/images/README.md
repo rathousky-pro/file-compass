@@ -1,7 +1,7 @@
-# Help illustrations
+# Current help illustrations
 
-These 22 PNG resources are actual native File Compass views in Czech and English. They use newly generated demonstration folders, CSV, an image gradient and a synthesized audio sample. User files, cloud profiles and credentials are not used. Visible example paths are sanitized before capture. Numbered callouts match the ordered explanations in the embedded help catalogs. No desktop or unrelated application window is captured.
+56 real application renders: 28 workflows in Czech and English, captured on 1 November 2026. These are the same privacy-reviewed PNGs used by the public File Compass website. `manifest.json` records their dimensions, hashes and provenance.
 
-To regenerate, run a development build with `--help-screenshots-test OUTPUT_DIRECTORY`, review the generated views and copy the reviewed locale-prefixed PNG files here. This harness is excluded from release builds. The production viewer resolves curated embedded resource identifiers and never opens illustration paths or remote URLs.
+All inputs were generated for the capture. Network/cloud accounts use fictional names and example.test hosts. SMART devices, transfer figures and history entries are synthetic. No user files, credentials or personal paths are included. No real network connection, sign-in or hardware scan was performed. The images have no numbered callouts; their help captions describe the actual interface.
 
-All figures were refreshed for the 28 October 2026 Balanced UX. Use `--editor-analyzer-screens-test OUTPUT_DIRECTORY` for the editor, analyzer and audio-tempo figures. Both harnesses use synthetic data.
+Names use `<locale>.<scene>.png`, matching `HelpIllustrations.Load`. Both locales contain the same 28 scenes. `audio-advanced` is a compatibility alias of the current audio-speed scene. Capture is reproducible with the development-only `--web-gallery-screenshots-test` and `--web-gallery-video-screenshots-test` commands in `WebGalleryScreenshots.cs`. Local profiles, fixture files and visible-text audits are never included in the repository or release.

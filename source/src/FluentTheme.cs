@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -48,6 +48,7 @@ namespace FileCompass
             resources["ComboBoxBorderBrushPointerOver"] = Accent;
             resources["ComboBoxBorderBrushFocused"] = Accent;
             resources["CheckBoxHeight"] = 16.0;
+            resources["CompassNavigation"] = CompactTheme.ToolbarSurface;
             resources["CheckBoxWidth"] = 16.0;
             resources["CheckBoxIconSize"] = 11.0;
             resources["CompassSurface"] = CompactTheme.WhiteSurface; resources["CompassLine"] = CompactTheme.FieldLine; resources["CompassText"] = Text; resources["CompassGroup"] = CompactTheme.PanelSurface; resources["CompassAccent"] = Accent; resources["CompassMuted"] = Muted; resources["CompassHover"] = CompactTheme.ThemeBrush("#F0F5FA"); resources["CompassSelection"] = CompactTheme.ThemeBrush("#DDEDFC");
@@ -68,13 +69,13 @@ namespace FileCompass
             var buttons = Add(typeof(Button), "DefaultButtonStyle", Control.MinHeightProperty, 28.0, Control.PaddingProperty, new Thickness(12, 3, 12, 3));
             buttons.Setters.Add(new Setter(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Stretch));
             buttons.Setters.Add(new Setter(Control.BackgroundProperty, CompactTheme.WhiteSurface)); buttons.Setters.Add(new Setter(Control.BorderBrushProperty, CompactTheme.FieldLine));
-            buttons.Setters.Add(new Setter(Control.ForegroundProperty, Text));
+            buttons.Setters.Add(new Setter(Control.ForegroundProperty, Text));buttons.Setters.Add(new Setter(Control.FocusVisualStyleProperty,null));
             ReadableDisabled(buttons);
             resources[typeof(Button)] = buttons;
             var fluent = Add(typeof(Wpf.Ui.Controls.Button), "DefaultUiButtonStyle", Control.MinHeightProperty, 0.0, Control.PaddingProperty, new Thickness(8, 2, 8, 2));
             fluent.Setters.Add(new Setter(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Stretch));
             fluent.Setters.Add(new Setter(Control.BackgroundProperty, CompactTheme.WhiteSurface));
-            fluent.Setters.Add(new Setter(Control.ForegroundProperty, Text));
+            fluent.Setters.Add(new Setter(Control.ForegroundProperty, Text));fluent.Setters.Add(new Setter(Control.FocusVisualStyleProperty,null));
             fluent.Setters.Add(new Setter(Control.BorderBrushProperty, CompactTheme.FieldLine));
             fluent.Setters.Add(new Setter(Wpf.Ui.Controls.Button.MouseOverBackgroundProperty, CompactTheme.ThemeBrush("#E5F1FF")));
             fluent.Setters.Add(new Setter(Wpf.Ui.Controls.Button.MouseOverBorderBrushProperty, Accent));
@@ -103,6 +104,7 @@ namespace FileCompass
             resources[typeof(GroupBox)] = groups;
             var headers = Add(typeof(GridViewColumnHeader), "UiGridViewColumnHeaderStyle", Control.PaddingProperty, new Thickness(8, 5, 8, 5), Control.FontWeightProperty, FontWeights.SemiBold);
             headers.Setters.Add(new Setter(Control.HorizontalContentAlignmentProperty, HorizontalAlignment.Left));
+            headers.Setters.Add(new Setter(Control.BorderBrushProperty,CompactTheme.Line));headers.Setters.Add(new Setter(Control.BorderThicknessProperty,new Thickness(0,0,0,1)));
             resources[typeof(GridViewColumnHeader)] = headers;
             resources[typeof(ListViewItem)] = ListRow();
             var lists = new Style(typeof(ListView));
@@ -170,7 +172,7 @@ namespace FileCompass
         {
             if (window is MainWindow) return;
             var body = window.Content as FrameworkElement;
-            if (body != null && body.Margin.Left < 12 && body.Margin.Right < 12) body.Margin = new Thickness(12);
+            if (body != null) body.Margin = new Thickness(0);
             Normalize(window);
         }
         static void Normalize(DependencyObject parent)

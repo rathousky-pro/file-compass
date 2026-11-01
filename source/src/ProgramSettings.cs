@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Xml;
 using System.Xml.Serialization;
@@ -12,14 +12,18 @@ namespace FileCompass
         public string Sort = "Name"; public bool Descending; public double[] Widths = new double[0];
         public string Display = "Details"; public bool Tree; public string[] MetadataColumns = new string[0];
         public int ThumbnailSize = 1;
+        public bool? ExtensionColumn, AttributesColumn, SizeColumn, ModifiedColumn;
+        public string[] ColumnOrder = new string[0];
         public bool DetailExpanded, DetailConfigured;
         public double DetailRatio = .38, TreeWidth = 210;
     }
     public sealed class ProgramSettings
     {
-        public string ColorTheme = "System"; public string WindowBackdrop = "None";
-        public string InterfaceMotif = "Balanced";
+        public string ColorTheme = "Light"; public string WindowBackdrop = "None";
+        public string InterfaceMotif = "Clean";
         public string LeftFolder = "", RightFolder = "";
+        public bool LeftPanelEmpty,RightPanelEmpty;
+        public string SizeUnits = "IEC";
         public double WindowLeft = Double.NaN, WindowTop = Double.NaN, WindowWidth = 1440, WindowHeight = 800, SplitRatio = .5;
         public bool Maximized;
         public string PanelLayout = "SideBySide";
@@ -44,19 +48,20 @@ namespace FileCompass
         public bool DefaultCopyTimes = true, DefaultCopyAttributes = true, DefaultCopyEmptyFolders = true, DeleteToRecycleBin = true;
         public string InterfaceFontFamily = "Segoe UI", FileListFontFamily = "Segoe UI";
         public double InterfaceFontSize = 12, FileListFontSize = 12;
+        public double ButtonIconSize = 20, DriveIconSize = 10;
         public static string ConfigPath { get { return System.IO.Path.Combine(AppPaths.ConfigDirectory, "settings.xml"); } }
         public static ProgramSettings Load(string path = null)
         {
             try
             {
                 path = path ?? ConfigPath; if (!File.Exists(path)) return new ProgramSettings();
-                var saved=ConfigurationIntegrity.Read<ProgramSettings>(path); saved.InterfaceMotif="Balanced"; saved.ImageViewerPath=AppPaths.ResolveLegacyResourceFile(saved.ImageViewerPath); saved.MediaPlayerPath=AppPaths.ResolveLegacyResourceFile(saved.MediaPlayerPath); saved.TextEditorPath=AppPaths.ResolveLegacyResourceFile(saved.TextEditorPath); return saved;
+                var saved=ConfigurationIntegrity.Read<ProgramSettings>(path); saved.InterfaceMotif="Clean";saved.ColorTheme="Light";saved.WindowBackdrop="None"; saved.ImageViewerPath=AppPaths.ResolveLegacyResourceFile(saved.ImageViewerPath); saved.MediaPlayerPath=AppPaths.ResolveLegacyResourceFile(saved.MediaPlayerPath); saved.TextEditorPath=AppPaths.ResolveLegacyResourceFile(saved.TextEditorPath); return saved;
             }
             catch (Exception ex) { if (ex is ConfigurationIntegrityException || !(ex is IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException || ex is XmlException)) throw; return new ProgramSettings(); }
         }
         public void Save(string path = null)
         {
-            InterfaceMotif = "Balanced";
+            InterfaceMotif = "Clean"; ColorTheme="Light"; WindowBackdrop="None";
             path = path ?? ConfigPath; Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path)));
             string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
             try

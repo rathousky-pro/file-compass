@@ -17,6 +17,7 @@ namespace FileCompass {
         internal double AnalyzerRequiredWidth;
 
         void InitializeAnalyzerWorkspace(DockPanel body,StackPanel oldHeader,System.Windows.Controls.Grid split,WrapPanel chartControls,System.Windows.Controls.Grid chartBody,StackPanel actions) {
+            CleanOptions.Tabs(this,AnalyzerPages,actions);
             body.Children.Remove(oldHeader);body.Children.Remove(split);
             AnalyzerPages.Margin=new Thickness(12,8,12,10);body.Children.Add(AnalyzerPages);
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -37,6 +37,7 @@ namespace FileCompass
             buttons.Children.Remove(ok);buttons.Children.Add(ok);FluentTheme.Primary(ok);Tabs.Margin=new Thickness(16);
             Tabs.Items.Add(new TabItem { Header = L.Text("tab.general"), Content = Page(general) });
             Tabs.Items.Add(new TabItem { Header = L.Text("tab.details"), Content = Page(advanced) }); root.Children.Add(Tabs);
+            CleanOptions.Tabs(this,Tabs,buttons);
             name.Text = Profile.Name; host.Text = HostText(Profile);
             path.Text = Profile.Path; local.Text = Profile.LocalPath; user.Text = Profile.UserName; key.Text = Profile.PrivateKeyPath; fingerprint.Text = Profile.HostKeyFingerprint;
             remember.IsChecked = !String.IsNullOrEmpty(Profile.EncryptedPassword);
@@ -166,7 +167,6 @@ namespace FileCompass
                 Row(proxyFields, L.Text("proxy.usernameLabel"), proxyUser); Row(proxyFields, L.Text("proxy.passwordLabel"), proxyPassword);
                 advanced.Children.Add(new Expander { Header = L.Text("proxy.settingsGroup"), Content = proxyFields, IsExpanded = proxy.SelectedIndex > 0, Margin = new Thickness(2, 5, 2, 3) });
             }
-            var more = CopyUi.Button(L.Text("network.openAdvancedTab"), delegate { Tabs.SelectedIndex = 1; }); more.HorizontalAlignment = HorizontalAlignment.Right; general.Children.Add(more);
             ProxyState();
             var details = new StackPanel();
             foreach (UIElement child in System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Cast<UIElement>(advanced.Children))) { advanced.Children.Remove(child); details.Children.Add(child); }

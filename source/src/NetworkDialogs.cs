@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -40,7 +40,7 @@ namespace FileCompass
             var name = new FrameworkElementFactory(typeof(TextBlock)); name.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding()); row.AppendChild(name);
             list.ItemTemplate = new DataTemplate { VisualTree = row };
             var buttons = new StackPanel(); Grid.SetColumn(buttons, 1); body.Children.Add(buttons);
-            connect = CopyUi.Button(L.Text("action.append"), Connect); connect.IsDefault = !managementOnly; connect.BorderBrush = System.Windows.Media.Brushes.DodgerBlue; connect.Margin = new Thickness(2, 0, 0, 10); if (!managementOnly) buttons.Children.Add(connect);
+            connect = CopyUi.Button(L.Text("action.connect"), Connect); connect.IsDefault = !managementOnly; connect.BorderBrush = System.Windows.Media.Brushes.DodgerBlue; connect.Margin = new Thickness(2, 0, 0, 10); if (!managementOnly) buttons.Children.Add(connect);
             buttons.Children.Add(CopyUi.Button(L.Text("network.newConnection"), delegate { Edit(null, ProtocolFilter); }));
             var duplicate = CopyUi.Button(L.Text("action.duplicate"), Duplicate); buttons.Children.Add(duplicate); selectionButtons.Add(duplicate);
             buttons.Children.Add(new Border { Height = 8 });

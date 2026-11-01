@@ -34,8 +34,10 @@ internal static class BuildIconLibraries
                     foreach (string name in names)
                     {
                         ImageSource image = DesktopIcons.BuildToolbarDrawing(name, (ToolbarTheme)theme);
-                        var visual = new DrawingVisual(); using (var draw = visual.RenderOpen()) draw.DrawImage(image, new Rect(0, 0, 128, 128));
-                        var bitmap = new RenderTargetBitmap(128, 128, 96, 96, PixelFormats.Pbgra32); bitmap.Render(visual);
+                        // 32 DIP at 400% DPI uses 128 pixels. Keep 2x headroom and
+                        // render directly from the 256px source, never an upscaled thumbnail.
+                        var visual = new DrawingVisual(); using (var draw = visual.RenderOpen()) draw.DrawImage(image, new Rect(0, 0, 256, 256));
+                        var bitmap = new RenderTargetBitmap(256, 256, 96, 96, PixelFormats.Pbgra32); bitmap.Render(visual);
                         var png = new PngBitmapEncoder(); png.Frames.Add(BitmapFrame.Create(bitmap));
                         using (var bytes = new MemoryStream())
                         {

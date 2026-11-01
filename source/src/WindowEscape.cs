@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -24,8 +24,8 @@ namespace FileCompass {
             };timer.Start();
         }
         internal static void Install(){
-            if(installed)return;installed=true;
-            EventManager.RegisterClassHandler(typeof(Window),Keyboard.PreviewKeyDownEvent,new KeyEventHandler(OnKey));
+            if(installed)return;installed=true;EventManager.RegisterClassHandler(typeof(Window),FrameworkElement.LoadedEvent,new RoutedEventHandler(delegate(object sender,RoutedEventArgs args){ToolBackdrop.Attach((Window)sender);}));
+            EventManager.RegisterClassHandler(typeof(Window),Keyboard.PreviewKeyDownEvent,new KeyEventHandler(OnKey),true);
         }
         static void OnKey(object sender,KeyEventArgs args){
             var window=sender as Window;

@@ -12,7 +12,7 @@ namespace FileCompass {
             Action<bool, string> check = (valid, text) => { if (!valid) throw new Exception(text); checks.Add(text); };
             try {
                 FluentTheme.Ensure();L.ChangeLanguage("cs-CZ");
-                foreach(string motif in new[]{"Original","Balanced"}){AppearanceTheme.SetMotif(motif);
+                foreach(string motif in new[]{"Classic","Clean"}){AppearanceTheme.SetMotif(motif);
                 foreach (var size in new[] { new Size(1920, 1040), new Size(1280, 760), new Size(1024, 720) }) {
                     dialog = new ConfigurationDialog(null) { LayoutWorkArea = new Rect(-18000, -18000, size.Width, size.Height), Left = -17984, Top = -17984, Width = Math.Min(1080, size.Width - 32), ShowActivated = false, ShowInTaskbar = false, WindowStartupLocation = WindowStartupLocation.Manual };
                     dialog.Show();
@@ -32,7 +32,7 @@ namespace FileCompass {
                         var paths = AdvancedToolsTests.Visual<DockPanel>(scroll).Where(x => x.Children.OfType<TextBox>().Any() && x.Children.OfType<Button>().Any()).ToArray();
                         foreach (var row in paths) {
                             var input = row.Children.OfType<TextBox>().Single(); var browse = row.Children.OfType<Button>().Single();
-                            check(Math.Abs(input.ActualHeight - browse.ActualHeight) < 1 && Math.Abs(input.TranslatePoint(new Point(), row).Y - browse.TranslatePoint(new Point(), row).Y) < 1, label + " input and browse button share height and baseline");
+                            check(Math.Abs(input.ActualHeight - browse.ActualHeight) < 1 && Math.Abs(input.TranslatePoint(new Point(), row).Y - browse.TranslatePoint(new Point(), row).Y) < 1, label + " input and browse button share height and baseline: "+input.ActualHeight+"/"+browse.ActualHeight+" y="+input.TranslatePoint(new Point(),row).Y+"/"+browse.TranslatePoint(new Point(),row).Y);
                         }
                         if (index == 1) check(AdvancedToolsTests.Visual<RadioButton>(scroll).Count(x => x.GroupName == "ApplicationIcon") == 7 && AdvancedToolsTests.Visual<RadioButton>(scroll).Count(x => x.GroupName == "ConfigurationIcons") == 3, label + " retains every application icon and toolbar theme");
                         if (index == 2) check(AdvancedToolsTests.Visual<TextBox>(scroll).Count() == 10, label + " retains three executable paths and all seven limits");

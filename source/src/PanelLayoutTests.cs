@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -93,11 +93,11 @@ namespace FileCompass
             check(reloaded.PanelLayout == "Single" && !reloaded.LeftView.DetailExpanded && reloaded.LeftView.DetailConfigured && reloaded.LeftView.Tree, "settings round trip preserves layout and a deliberately collapsed detail");
             check(reloaded.LastDualLayout == "Stacked", "single-panel settings preserve the preceding dual-panel layout");
             SetPanelLayout("SideBySide"); UpdateLayout(); check(left.IsVisible && right.IsVisible && right.CurrentPath == destination, "returning to two panels restores the original destination");
-            check(!FluentUiTests.Children<TreeView>(left).Single().IsVisible && !FluentUiTests.Children<TreeView>(right).Single().IsVisible && left.List.TranslatePoint(new Point(), left).X < 10, "returning from one panel to side-by-side hides both trees and releases their width");
+            check(!FluentUiTests.Children<TreeView>(left).Single().IsVisible && !FluentUiTests.Children<TreeView>(right).Single().IsVisible && left.List.TranslatePoint(new Point(), left).X <= left.BorderThickness.Left+left.Padding.Left+left.List.Margin.Left+1, "returning from one panel to side-by-side hides both trees and releases their width");
             left.SwitchTab(1); await left.TabNavigationTask; left.SwitchTab(0); await left.TabNavigationTask; UpdateLayout();
             check(!FluentUiTests.Children<TreeView>(left).Single().IsVisible, "restoring a tab with a saved tree cannot show it in a dual-panel layout");
             left.RestorePanelView(reloaded.LeftView); UpdateLayout();
-            check(!FluentUiTests.Children<TreeView>(left).Single().IsVisible && left.List.TranslatePoint(new Point(), left).X < 10, "legacy saved views with Tree=true stay full-width in dual-panel mode");
+            check(!FluentUiTests.Children<TreeView>(left).Single().IsVisible && left.List.TranslatePoint(new Point(), left).X <= left.BorderThickness.Left+left.Padding.Left+left.List.Margin.Left+1, "legacy saved views with Tree=true stay full-width in dual-panel mode");
             NextStageTests.Draw(this, Path.Combine(root, "panely-vedle-sebe-bez-stromu.png"));
             SetPanelLayout("Stacked"); SwapPanels(); UpdateLayout();
             check(!FluentUiTests.Children<TreeView>(left).Single().IsVisible && !FluentUiTests.Children<TreeView>(right).Single().IsVisible, "stacked layout also keeps both trees hidden after swapping panels");
@@ -155,7 +155,7 @@ namespace FileCompass
             click(toolbarThumbnailsButton); check(left.DisplayMode == "Thumbnails" && quickPreview == samePreview, "thumbnails change the file list without toggling file preview");
             click(toolbarThumbnailsButton); check(left.DisplayMode == "Details", "thumbnails toggle back to the details list");
             ApplyDisplaySettings(new ProgramSettings { ShowHiddenFiles = false, ShowSystemFiles = false });
-            check(name(toolbarAllFilesButton) == L.Text("toolbar.allFilesYes") && System.Windows.Automation.AutomationProperties.GetItemStatus(toolbarAllFilesButton) == L.Text("toolbar.disabled"), "hidden-files toolbar label shows the disabled state");
+            check(name(toolbarAllFilesButton) == L.Text("toolbar.allFilesNo") && System.Windows.Automation.AutomationProperties.GetItemStatus(toolbarAllFilesButton) == L.Text("toolbar.disabled"), "hidden-files toolbar label shows the disabled state");
             ApplyDisplaySettings(new ProgramSettings { ShowHiddenFiles = true, ShowSystemFiles = true });
             check(name(toolbarAllFilesButton) == L.Text("toolbar.allFilesYes") && System.Windows.Automation.AutomationProperties.GetItemStatus(toolbarAllFilesButton) == L.Text("toolbar.enabled"), "hidden-files toolbar label shows the enabled state");
             click(toolbarLayoutButton); UpdateLayout(); if (quickPreview.LoadingTask != null) await quickPreview.LoadingTask;

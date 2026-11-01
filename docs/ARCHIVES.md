@@ -36,3 +36,20 @@ When a source cannot be opened or read during folder preparation, a clean prompt
 ## Compression levels and unreadable inputs
 
 The selected level is mapped to each supported archiver rather than ignored by ZIP. Higher levels may produce identical sizes for small, incompressible or already compressed files; TAR stores data without compression. File preparation shows counts and names without percentage bars. Compression then shows blue total/current-file progress. Locked/unreadable inputs offer retry, skip, skip-all and cancellation where supported; skipped inputs remain at their original locations during move-to-archive.
+
+## Self-extracting archives (SFX)
+
+In the creation dialog choose More → Tools → Self-extracting archive. The output changes to .exe, and the basic page summary opens that option directly. Creation never executes the generated EXE.
+
+| Payload | Required module/tool | Supported combinations |
+| --- | --- | --- |
+| 7z | Bundled, integrity-checked 7z.sfx | Password, move after verification, separate archives, split volumes |
+| ZIP | Configured WinRAR.exe and Zip.SFX beside it | Password, move after verification, separate archives; single volume |
+| RAR | Configured RAR/WinRAR and Default.SFX beside it | Move after verification, separate archives; single volume |
+| ARJ | Configured ARJ32 with its embedded Win32 module | Move after verification, separate archives; single volume |
+
+For split 7z, keep the launcher name.exe and every name.7z.001, name.7z.002, … together. Do not split the completed EXE as arbitrary file fragments. LHA and TAR/GZ do not expose SFX with the supported tools. Existing SFX containers are read-only in archive browsing.
+
+ZIP/RAR/ARJ modules belong to their external archivers and are not redistributed with File Compass. Their license terms apply. In particular ARJ Software's supplied SFX.TXT requires a separate distribution license for non-personal distribution of ARJ/ARJ32 self-extracting archives; a standard registration is not sufficient. The bundled 7-Zip license remains included with its module.
+
+The archive payload and resulting EXE are verified before publication; move-to-archive retains its existing source hash verification. Passwords stay in the isolated codec worker and are not put in external-tool arguments. Integration checks really run generated text-only 7z/ZIP/RAR/ARJ SFX fixtures and a split-7z launcher, and verify the extracted bytes.

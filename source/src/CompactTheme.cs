@@ -34,7 +34,7 @@ namespace FileCompass
         public static void ToolbarTile(Button button)
         {
             button.Height = 34; button.MinWidth = 30; button.MinHeight = 0;
-            button.Margin = new Thickness(1, 1, 1, 1); button.Padding = new Thickness(8, 4, 8, 4);
+            button.Margin = new Thickness(3, 3, 3, 3); button.Padding = new Thickness(8, 4, 8, 4);
             button.Background = CompactTheme.WhiteSurface; button.BorderBrush = Line;
             button.UseLayoutRounding = true; button.SnapsToDevicePixels = true;
         }

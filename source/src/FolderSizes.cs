@@ -26,7 +26,7 @@ namespace FileCompass
                 });
                 await Dispatcher.InvokeAsync(new Action(delegate { entry.FolderSize(bytes, false); if (List.Items.Contains(entry)) UpdateStatus(); })).Task;
             }
-            catch (Exception ex) { Dispatcher.Invoke(new Action(delegate { entry.FolderSize(null, false); System.Windows.MessageBox.Show(System.Windows.Window.GetWindow(this), L.Text("folderSize.incompleteWarningPrefix") + ex.Message, L.Text("folderSize.title")); })); }
+            catch (Exception ex) { Dispatcher.Invoke(new Action(delegate { entry.FolderSize(null, false); MessageBox.Show(System.Windows.Window.GetWindow(this), L.Text("folderSize.incompleteWarningPrefix") + ex.Message, L.Text("folderSize.title")); })); }
         }
         internal static long LocalFolderBytes(string path)
         {

@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -41,8 +42,9 @@ namespace FileCompass
     public sealed class ToolbarThemeDialog : Window
     {
         public ToolbarTheme SelectedTheme { get; private set; }
-        internal static readonly string[] PreviewNames = { "refresh", "folder", "details", "picture", "tree", "select", "back", "forward", "pack", "unpack", "ftp", "url", "search", "rename", "edit", "sync", "favorite", "notepad" };
+        internal static readonly string[] PreviewNames = new[] { "refresh", "folder", "details", "picture", "tree", "select", "back", "forward", "pack", "unpack", "ftp", "url", "search", "rename", "edit", "sync", "favorite", "notepad" }.Concat(ToolbarSymbols.Names).Distinct().ToArray();
         static readonly string[] PreviewLabels = { L.Text("action.refresh"), L.Text("action.openFolder"), L.Text("panel.detailsView"), L.Text("toolbar.previewIconsLabel"), L.Text("panel.folderTree"), L.Text("selection.invertMarks"), L.Text("action.back"), L.Text("action.forward"), L.Text("action.compressArchive"), L.Text("action.extractArchive"), L.Text("network.connectionsTitle"), L.Text("toolbar.networkLocations"), L.Text("action.search"), L.Text("rename.batchTitle"), L.Text("action.edit"), L.Text("panel.swap"), L.Text("toolbar.projectFolder"), L.Text("toolbar.notepad") };
+        internal static string PreviewLabel(string name){int index=Array.IndexOf(PreviewNames,name);if(index>=0&&index<PreviewLabels.Length)return PreviewLabels[index];return L.Text(name.StartsWith("panels-")?name=="panels-Single"?"toolbar.panelsSingle":name=="panels-Stacked"?"toolbar.panelsStacked":"toolbar.panelsSideBySide":name=="tools"?"operation.tools":name=="undo"?"undoHistory.title":name=="invert"?"selection.invertMarks":name=="settings"?"settings.title":name=="view"?"toolbar.filePreview":name=="new-file"?"codeEditor.new":name=="hidden-files-visible"?"toolbar.allFilesYes":name=="hidden-files-partial"?"toolbar.allFilesPartial":"toolbar.allFilesNo");}
         public ToolbarThemeDialog(Window owner)
         {
             CopyUi.Style(this, owner, L.Text("settings.toolbarIcons"), 740); SelectedTheme = ToolbarThemeSettings.Current;
@@ -56,10 +58,10 @@ namespace FileCompass
                 var card = new StackPanel { Margin = new Thickness(9) };
                 var radio = new RadioButton { Content = titles[(int)theme], GroupName = "ToolbarTheme", IsChecked = theme == SelectedTheme, FontWeight = FontWeights.Bold };
                 radio.Checked += delegate { SelectedTheme = selected; }; card.Children.Add(radio); card.Children.Add(CopyUi.Label(descriptions[(int)theme]));
-                var row = new StackPanel { Orientation = Orientation.Horizontal };
+                var row = new WrapPanel();
                 foreach (string name in PreviewNames)
                     row.Children.Add(new Border { Width = 34, Height = 36, Margin = new Thickness(1, 0, 1, 0), BorderThickness = new Thickness(1), BorderBrush = CompactTheme.Line, Background = CompactTheme.WhiteSurface,
-                        Child = new Image { Source = DesktopIcons.ToolbarDrawing(name, theme), Width = 28, Height = 28 }, ToolTip = PreviewLabels[Array.IndexOf(PreviewNames, name)] });
+                        Child = new Image { Source = DesktopIcons.ToolbarDrawing(name, theme), Width = 28, Height = 28 }, ToolTip = PreviewLabel(name) });
                 card.Children.Add(row); body.Children.Add(new Border { Child = card, BorderThickness = new Thickness(1), BorderBrush = CompactTheme.Line, Margin = new Thickness(0, 3, 0, 5) });
             }
             var buttons = new UniformGrid { Columns = 2, Margin = new Thickness(360, 4, 0, 0) }; body.Children.Add(buttons);

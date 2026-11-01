@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Media;
+using System.Windows.Controls.Primitives;
 
 namespace FileCompass
 {
@@ -35,7 +37,7 @@ namespace FileCompass
             DockPanel.SetDock(status, Dock.Bottom); body.Children.Add(status);
             var top = new StackPanel(); DockPanel.SetDock(top, Dock.Top); body.Children.Add(top);
             options = FluentTheme.Section(top, L.Text("compare.foldersAndRulesGroup"));
-            options.Children.Add(CopyUi.Label(L.Text("compare.leftPrefix") + left + L.Text("compare.rightPrefix") + right)); options.Children.Add(direction);
+            options.Children.Add(DirectionTiles());
             options.Children.Add(contents); options.Children.Add(mirror); options.Children.Add(same);
             options.Children.Add(new TextBlock { Text = L.Text("sync.directionHelp"), TextWrapping = TextWrapping.Wrap, Foreground = FluentTheme.Muted });
             var columns = new GridView();
@@ -53,6 +55,27 @@ namespace FileCompass
             Closed += delegate { leftLocation.Dispose(); rightLocation.Dispose(); };
             ToolDock.Attach(this,buttons,delegate{return new DockStatus{Title=Title,Icon="⇄",Description=status.Text,Busy=running};});
         }
+        readonly Button directionCycle=CopyUi.Button("",delegate{});
+        UIElement DirectionTiles(){
+            var grid=new Grid{Margin=new Thickness(0,0,0,12)};grid.ColumnDefinitions.Add(new ColumnDefinition());grid.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});grid.ColumnDefinitions.Add(new ColumnDefinition());
+            for(int i=0;i<2;i++){
+                var labels=new StackPanel();labels.Children.Add(new TextBlock{Text=L.Text(i==0?"compare.leftPrefix":"compare.rightPrefix").Trim().TrimEnd(':'),FontWeight=FontWeights.SemiBold,Foreground=FluentTheme.Text,Margin=new Thickness(0,0,0,6)});labels.Children.Add(new TextBlock{Text=i==0?left:right,TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Text});
+                var tile=new Border{Tag="panel-sync-location",Child=labels,Background=Brushes.White,CornerRadius=new CornerRadius(9),Padding=new Thickness(16),BorderBrush=CompactTheme.Line,BorderThickness=new Thickness(1),MinHeight=96,ToolTip=i==0?left:right};Grid.SetColumn(tile,i==0?0:2);grid.Children.Add(tile);
+            }
+            var arrows=new StackPanel{Orientation=Orientation.Horizontal,VerticalAlignment=VerticalAlignment.Center,Margin=new Thickness(12,0,12,0)};
+            directionCycle.Width=76;directionCycle.Height=64;directionCycle.MinWidth=0;directionCycle.Padding=new Thickness(12);System.Windows.Automation.AutomationProperties.SetAutomationId(directionCycle,"SyncDirection");directionCycle.Click+=delegate{direction.SelectedIndex=direction.SelectedIndex==1?0:direction.SelectedIndex==0?2:1;RefreshDirections();};arrows.Children.Add(directionCycle);
+            Grid.SetColumn(arrows,1);grid.Children.Add(arrows);RefreshDirections();return grid;
+        }
+        void RefreshDirections(){string name=direction.SelectedIndex==1?"back":direction.SelectedIndex==0?"forward":"sync";directionCycle.Content=new Image{Source=DesktopIcons.ToolbarDrawing(name,ToolbarThemeSettings.Current),Width=36,Height=36};directionCycle.ToolTip=((string[])direction.ItemsSource)[direction.SelectedIndex];System.Windows.Automation.AutomationProperties.SetName(directionCycle,Convert.ToString(directionCycle.ToolTip));}
+#if APP_TESTS
+        internal async Task VerifyDirectionsForTests(Action<bool,string> check){
+            check(!FluentUiTests.Children<ComboBox>(options).Any(),"sync options use folder tiles and arrows instead of a direction dropdown");
+            check(FluentUiTests.Children<Border>(options).Count(x=>Convert.ToString(x.Tag)=="panel-sync-location")==2,"sync displays distinct left and right location cards");
+            check(FluentUiTests.Children<Button>(options).Count(x=>System.Windows.Automation.AutomationProperties.GetAutomationId(x)=="SyncDirection")==1,"one large themed arrow cycles all directions");
+            foreach(int expected in new[]{2,1,0}){directionCycle.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));check(direction.SelectedIndex==expected&&directionCycle.Content is Image,"single arrow selects mode and themed image: "+expected);await Compare();check(plan!=null&&plan.SourceRoot==(expected==1?right:left),"single arrow reaches comparison logic: "+expected);if(expected==2)check(!mirror.IsEnabled&&mirror.IsChecked!=true,"bidirectional mode continues to disallow mirrored deletion");}
+
+        }
+#endif
         void Invalidate() { plan = null; list.ItemsSource = null; apply.IsEnabled = false; status.Text = L.Text("compare.settingsChanged"); }
         void Display(bool refresh = true)
         {
@@ -95,7 +118,8 @@ namespace FileCompass
         }
         internal async Task RunDirectorySync(SyncPlan plan, CopyControl control, Action<string> update)
         {
-            var results = new List<OperationItem>(); var activity = AddCopyActivity(L.Text("sync.operationTitlePrefix") + plan.TargetRoot, control.Cancel);
+            var results = new List<OperationItem>(); var activity = AddCopyActivity(L.Text("sync.operationTitlePrefix") + plan.TargetRoot, control.Cancel);activity.CompactDock=true;
+            activity.PauseAction=delegate{control.Pause(!control.Paused);};activity.IsPaused=delegate{return control.Paused;};
             fileToolsRunning++;
             var progress = new Progress<Tuple<string,double>>(delegate(Tuple<string,double> value) { update(value.Item1); activity.Update(value.Item1, 0, value.Item2); });
             string message; bool success = false;

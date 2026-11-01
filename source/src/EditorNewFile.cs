@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -20,7 +20,7 @@ namespace FileCompass {
         internal EditorDocument NewDocument(EditorSaveLocation location=null){
             if(location==null&&Current!=null){location=Current.Location==null?new EditorSaveLocation{Folder=String.IsNullOrEmpty(Current.File.Path)?DefaultFolder:Path.GetDirectoryName(Current.File.Path)}:Current.Location.Clone();}
             var doc=Add(EditorTextFile.New());doc.Location=location??new EditorSaveLocation{Folder=DefaultFolder};
-            doc.EncodingChoice=0;doc.EolChoice=2;SyncOptions();RefreshStatus();return doc;
+            doc.EncodingChoice=0;doc.EolChoice=1;SyncOptions();RefreshStatus();return doc;
         }
         string PickLocalPath(EditorDocument doc){
             if(ChooseLocalPath!=null)return ChooseLocalPath(doc);

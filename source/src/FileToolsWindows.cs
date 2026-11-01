@@ -14,6 +14,7 @@ namespace FileCompass
     public sealed class FileSearchWindow : Window
     {
         readonly ObservableCollection<SearchHit> hits = new ObservableCollection<SearchHit>();
+        OperationPause.Ticket dockPause;
         CancellationTokenSource cancellation; internal MetadataSearchEditor MetadataEditor; internal Func<FileSearchOptions> ReadSearchOptions;
         public FileSearchWindow(Window owner, string root, bool local, bool selectedAvailable, Func<FileSearchOptions, CancellationToken, Action<SearchHit>, Action<string>, int> search, Action<SearchHit> open, Action<string[], string> feedToPanel = null, Action<string, string> compareTwo = null)
         {
@@ -22,6 +23,7 @@ namespace FileCompass
             var top = new DockPanel{Margin=new Thickness(12,6,12,0)}; DockPanel.SetDock(top, Dock.Top); body.Children.Add(top);
             var controls = new StackPanel { Width = 120, Margin = new Thickness(8, 24, 0, 0) }; DockPanel.SetDock(controls, Dock.Right); top.Children.Add(controls);
             var tabs = new TabControl(); top.Children.Add(tabs); var commonPage = new StackPanel { Margin = new Thickness(8) }; var common = FluentTheme.Section(commonPage, L.Text("search.nameAndLocationsGroup")); tabs.Items.Add(new TabItem { Header = L.Text("tab.general"), Content = commonPage });
+            CleanOptions.Tabs(this,tabs,footerActions);
             common.Children.Add(CopyUi.Label(L.Text("search.fileMaskLabel"))); var mask = new TextBox { Text = "*.*" }; common.Children.Add(mask);
             common.Children.Add(CopyUi.Label(L.Text("search.multipleRootsLabel"))); var path = new TextBox { Text = root, AcceptsReturn = true, Height = 48, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }; common.Children.Add(path);
             var regex = new CheckBox { Content = L.Text("search.nameRegex"), Margin = new Thickness(0, 7, 0, 4) }; common.Children.Add(regex);
@@ -98,13 +100,13 @@ namespace FileCompass
                 }
                 catch (Exception ex) { MessageBox.Show(this, ex.Message, L.Text("search.title")); return; }
                 metadataColumn.Width=MetadataSearch.Enabled(options)?220:0; columns.Columns[0].Width=MetadataSearch.Enabled(options)?160:190; columns.Columns[2].Width=MetadataSearch.Enabled(options)?260:410; columns.Columns[3].Width=MetadataSearch.Enabled(options)?80:95; columns.Columns[4].Width=MetadataSearch.Enabled(options)?70:100; hits.Clear(); status.Text = options.Duplicates ? L.Text("search.comparingCandidatesStatus") : L.Text("search.runningStatus"); start.IsEnabled = false; tabs.IsEnabled = false; updateResultButtons(); int warnings = 0; string warningText = "";
-                cancellation = new CancellationTokenSource(); var token = cancellation.Token;
+                cancellation = new CancellationTokenSource();dockPause=OperationPause.Create(cancellation.Token); var token = cancellation.Token;
                 var found = new Progress<SearchHit>(delegate(SearchHit hit) { hits.Add(hit); status.Text = L.Text("search.foundCountPrefix") + hits.Count; });
                 var inspectionClock=System.Diagnostics.Stopwatch.StartNew(); long lastInspection=-1000; var inspecting=new Progress<string>(delegate(string current){if(cancellation!=null){status.Text=L.Text("metaSearch.inspecting")+current;status.ToolTip=current;}}); options.MetadataInspecting=delegate(string current){if(inspectionClock.ElapsedMilliseconds-lastInspection<150)return;lastInspection=inspectionClock.ElapsedMilliseconds;((IProgress<string>)inspecting).Report(current);}; var warn = new Progress<string>(delegate(string warning) { warnings++; if (warnings < 11) warningText += warning + "\n"; });
                 try { int count = await Task.Run(delegate { return search(options, token, ((IProgress<SearchHit>)found).Report, ((IProgress<string>)warn).Report); }); status.Text = L.Text("search.completedCountPrefix") + count + (count >= 20000 ? L.Text("search.resultLimitReachedSuffix") : "") + L.Text("search.warningPrefix") + warnings; status.ToolTip = warningText; }
                 catch (OperationCanceledException) { status.Text = L.Text("search.cancelledCountPrefix") + hits.Count; }
                 catch (Exception ex) { status.Text = L.Text("search.failedPrefix") + ex.Message; status.ToolTip = ex.ToString(); }
-                finally { cancellation.Dispose(); cancellation = null; start.IsEnabled = true; tabs.IsEnabled = true; updateResultButtons(); }
+                finally { if(dockPause!=null){dockPause.Dispose();dockPause=null;}cancellation.Dispose(); cancellation = null; start.IsEnabled = true; tabs.IsEnabled = true; updateResultButtons(); }
             }); start.IsDefault = true; controls.Children.Add(start);
             if (feedToPanel != null)
             {
@@ -134,7 +136,7 @@ namespace FileCompass
             }
             controls.Children.Add(CopyUi.Button(L.Text("action.cancel"), delegate { if (cancellation != null) cancellation.Cancel(); else Close(); }));
             controls.Children.Add(CopyUi.Button(L.Text("action.help"), delegate { HelpService.Open(this,"search"); }));
-            ToolDock.Attach(this,controls,delegate{return new DockStatus{Title=Title,Icon="⌕",Description=status.Text,Busy=cancellation!=null};});
+            ToolDock.Attach(this,controls,delegate{return new DockStatus{Title=Title,Icon="⌕",Description=status.Text,Busy=cancellation!=null};},delegate{if(dockPause!=null)dockPause.Toggle();},delegate{return dockPause!=null&&dockPause.Paused;},delegate{if(cancellation!=null)cancellation.Cancel();else Close();});
             Closing += delegate { if (cancellation != null) cancellation.Cancel(); };
         }
     }

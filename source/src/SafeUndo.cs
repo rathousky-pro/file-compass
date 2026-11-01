@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -23,6 +23,7 @@ namespace FileCompass {
  internal static class SafeUndo {
   static readonly object gate=new object();static readonly List<UndoGroup> groups=new List<UndoGroup>();
   internal static UndoReceipt[] Remaining(UndoGroup group){lock(gate)return group.Items.ToArray();}
+  internal static void Forget(IEnumerable<UndoGroup> forgotten){lock(gate){var removed=new HashSet<UndoGroup>(forgotten);groups.RemoveAll(x=>removed.Contains(x));}}
   internal static UndoGroup[] Groups(){lock(gate)return groups.ToArray();}
   internal static UndoGroup Record(string title,IEnumerable<UndoReceipt> entries){var items=entries.Where(x=>x!=null).Take(5000).ToList();if(items.Count==0)return null;lock(gate){var group=new UndoGroup{Title=title,Items=items,OriginalItems=items.ToList()};groups.Insert(0,group);if(groups.Count>20)groups.RemoveAt(groups.Count-1);return group;}}
   [StructLayout(LayoutKind.Sequential,Pack=4)]internal struct FileInfo{internal uint Attributes;internal long Creation,Access,Write;internal uint Volume,SizeHigh,SizeLow,Links,High,Low;}

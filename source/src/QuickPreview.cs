@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Globalization;
@@ -216,7 +216,7 @@ namespace FileCompass
     internal sealed partial class QuickPreviewPane : Border
     {
         readonly TextBlock title = CopyUi.Label(L.Text("preview.quickTitle")), status = CopyUi.Label("");
-        readonly TextBox text = new TextBox { IsReadOnly = true, AcceptsReturn = true, AcceptsTab = true, FontFamily = new FontFamily("Consolas"), HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+        readonly TextBox text = new TextBox { IsReadOnly = true, AcceptsReturn = true, AcceptsTab = true, FontFamily = new FontFamily("Consolas"), FontSize = 14, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         readonly Image picture = new Image { Stretch = Stretch.Uniform };
         readonly ComboBox encoding = new ComboBox { Width = 150, ItemsSource = new[] { "UTF-8 / podle BOM", "Windows-1250", "UTF-16 LE" }, SelectedIndex = 0 };
         readonly RichFilePreview rich = new RichFilePreview();
@@ -248,12 +248,12 @@ namespace FileCompass
         internal QuickPreviewPane(Action close, bool compact = false)
         {
             Background = CompactTheme.WhiteSurface; BorderBrush = CompactTheme.Line; BorderThickness = new Thickness(1);CornerRadius=new CornerRadius(6);
-            compactPreview=compact;var body = new DockPanel { Margin = new Thickness(compact ? 4 : 8) }; Child = body;
-            var heading = new DockPanel(); DockPanel.SetDock(heading, Dock.Top); body.Children.Add(heading);
-            var exit = CopyUi.Button(L.Text("preview.closeShortcut"), close); DockPanel.SetDock(exit, Dock.Right); heading.Children.Add(exit);
+            compactPreview=compact;Background=CompactTheme.Chrome;BorderBrush=CompactTheme.ThemeBrush("#DCE8F3");Padding=new Thickness(compact?4:12);CornerRadius=new CornerRadius(14);var body = new DockPanel { Margin = new Thickness(compact ? 2 : 8) }; Child = body;
+            var heading = new DockPanel();var headingFrame=new Border{Tag="preview-header-card",Child=heading,Background=CompactTheme.WhiteSurface,CornerRadius=new CornerRadius(8),Padding=new Thickness(9,6,9,6),Margin=new Thickness(0,0,0,8)};DockPanel.SetDock(headingFrame,Dock.Top);body.Children.Add(headingFrame);
+            var exit = CopyUi.Button("×", close);exit.Tag="preview-close";exit.ToolTip=L.Text("preview.closeShortcut");exit.Width=exit.Height=32;exit.MinWidth=exit.MinHeight=0;exit.Padding=new Thickness(0);exit.Margin=new Thickness(6,0,0,0);exit.FontSize=18;exit.FocusVisualStyle=null; DockPanel.SetDock(exit, Dock.Right); heading.Children.Add(exit);
             title.TextTrimming = TextTrimming.CharacterEllipsis; heading.Children.Add(title);
-            title.FontSize=compact?12:16;title.FontWeight=FontWeights.SemiBold;heading.Background=CompactTheme.PanelSurface;heading.Margin=new Thickness(0,0,0,6);
-            if (compact) heading.Visibility = Visibility.Collapsed;
+            title.VerticalAlignment=VerticalAlignment.Center;title.FontSize=compact?14:18;title.FontWeight=FontWeights.SemiBold;heading.Background=CompactTheme.WhiteSurface;heading.Margin=new Thickness(0,0,0,6);
+            if (compact) headingFrame.Visibility = Visibility.Collapsed;
             InitializeSelectionStrip(body,compact);
             DockPanel.SetDock(status, Dock.Bottom); body.Children.Add(status); InitializeDetails(body, compact);
 
@@ -309,7 +309,7 @@ namespace FileCompass
             };
 
             var archiveColumns = new GridView(); archiveColumns.Columns.Add(new GridViewColumn { Header = L.Text("column.name"), DisplayMemberBinding = new System.Windows.Data.Binding("Path"), Width = 380 }); archiveColumns.Columns.Add(new GridViewColumn { Header = L.Text("column.size"), DisplayMemberBinding = new System.Windows.Data.Binding("Bytes"), Width = 100 }); archiveColumns.Columns.Add(new GridViewColumn { Header = L.Text("column.date"), DisplayMemberBinding = new System.Windows.Data.Binding("Modified") { StringFormat = "dd.MM.yyyy HH:mm" }, Width = 150 }); archiveContents.View = archiveColumns;
-            InitializeDocumentPreview(body);InitializeCsvPreview(body);InitializeVideoPreview(body,compact); content.Children.Add(archiveContents); content.Children.Add(text); content.Children.Add(picture); content.Children.Add(rich); rich.Visibility = Visibility.Collapsed; body.Children.Add(new Border{Child=content,Background=CompactTheme.WhiteSurface,BorderBrush=CompactTheme.Line,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(6),Padding=new Thickness(compact?4:10)});
+            InitializeDocumentPreview(body);InitializeCsvPreview(body);InitializeVideoPreview(body,compact); content.Children.Add(archiveContents); content.Children.Add(text); content.Children.Add(picture); content.Children.Add(rich); rich.Visibility = Visibility.Collapsed; body.Children.Add(new Border{Tag="preview-content-card",Child=content,Background=CompactTheme.WhiteSurface,BorderBrush=CompactTheme.Line,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(6),Padding=new Thickness(compact?2:10)});
             encoding.SelectionChanged += delegate { if (current != null) LoadingTask = Load(current, currentOffset); };
         }
 
@@ -439,7 +439,7 @@ namespace FileCompass
             text.Visibility = !showCsv && !ShowingDocument && !showImage && !showRich ? Visibility.Visible : Visibility.Collapsed;
             if(!ShowingDocument)ApplyDocumentExcerpt();
             text.TextWrapping = IsHexOrBinaryActive ? TextWrapping.NoWrap : (wrap.IsChecked == true ? TextWrapping.Wrap : TextWrapping.NoWrap);
-            if (ShowingDocument) status.Text = L.Text("preview.documentReady");
+            if (ShowingDocument) status.Text = String.Empty;
             else if (lastData != null && status.Text == L.Text("preview.loadingStatus")) status.Text = lastData.Status;
             if(showCsv)status.Text=csvStatus;
         }
@@ -459,7 +459,7 @@ namespace FileCompass
             navigationBar.Visibility = showNav ? Visibility.Visible : Visibility.Collapsed;
             offsetInput.Text = useHex ? "0x" + lastData.Offset.ToString("X") : lastData.Offset.ToString();
             UpdateFormat();
-            status.Text = ShowingDocument ? L.Text("preview.documentReady") : WaitingForDocument?L.Text("preview.loadingStatus"):lastData.Status; ApplyDocumentExcerpt();if(CsvGrid.Visibility==Visibility.Visible)status.Text=csvStatus;
+            status.Text = ShowingDocument ? String.Empty : WaitingForDocument?L.Text("preview.loadingStatus"):lastData.Status; ApplyDocumentExcerpt();if(CsvGrid.Visibility==Visibility.Visible)status.Text=csvStatus;
         }
 
         internal void ShowMessage(string message)
@@ -508,7 +508,7 @@ namespace FileCompass
             var token = cancellation.Token; int request = version;
             if (remoteTemplate == null) MetadataLoadingTask = LoadDetails(path, token, request);
             DocumentLoadingTask = LoadDocumentPreview(path, token, request);
-            title.Text = Path.GetFileName(path); title.ToolTip = path;
+            title.Text = Path.GetFileName(path); title.ToolTip = path;ShowBasicInfo(path);bool textControls=FileViewers.Kind(path)=="text";previewTools.Visibility=previewModeRow.Visibility=textControls?Visibility.Visible:Visibility.Collapsed;
             text.Text = ""; picture.Source = null; rich.Clear(); richAvailable = false;
             UpdateFormat(); status.Text = L.Text("preview.loadingStatus");
             var selectedEncoding = SelectedEncoding;
@@ -546,7 +546,8 @@ namespace FileCompass
             var window = new Window(); CopyUi.Style(window, owner, Path.GetFileName(path), 1000); window.Height = 720; window.SizeToContent = SizeToContent.Manual; window.ResizeMode = ResizeMode.CanResize;
             var preview = new QuickPreviewPane(window.Close);
             if (initialMode != PreviewMode.Auto) preview.SetViewMode(initialMode);
-            window.Content = preview; window.Closed += delegate { preview.DisposePreview(); }; preview.ShowFile(path); window.Show();
+            window.Content = preview; window.Closed += delegate { preview.DisposePreview(); }; preview.ShowFile(path);
+            window.Loaded+=async delegate{try{var entries=await Task.Run(()=>Directory.EnumerateFiles(Path.GetDirectoryName(path)).Where(FilePanel.CanPreview).Take(10000).Select(x=>new Entry{FullPath=x,Name=Path.GetFileName(x)}).ToArray());if(window.IsVisible)preview.SetSelection(entries,"local",entry=>preview.ShowFile(entry.FullPath,true),true,path);}catch(IOException){}catch(UnauthorizedAccessException){}};window.Show();
             return window;
         }
         void OpenRichPreview()
@@ -590,11 +591,12 @@ namespace FileCompass
             previewTarget.List.Visibility = previewTarget.Visibility = Visibility.Collapsed;
             UpdateQuickPreview(); UpdateViewToolbarControls();
         }
+        bool selectingPreviewCursor;
         void UpdateQuickPreview()
         {
-            if (quickPreview == null || previewSource.LocalLoading) return;
+            if (quickPreview == null || previewSource.LocalLoading || selectingPreviewCursor) return;
             var entries=previewSource.PreviewEntries();
-            quickPreview.SetSelection(entries,previewSource.PreviewContext,entry=>previewSource.PreviewEntry(quickPreview,entry),!previewSource.IsRemote&&!previewSource.IsArchive&&!previewSource.IsExt);
+            quickPreview.SetSelection(entries,previewSource.PreviewContext,entry=>{selectingPreviewCursor=true;try{if(!quickPreview.UpdatingSelection)previewSource.SelectPreviewCursor(entry);}finally{selectingPreviewCursor=false;}previewSource.PreviewEntry(quickPreview,entry);},!previewSource.IsRemote&&!previewSource.IsArchive&&!previewSource.IsExt,(previewSource.List.SelectedItem as Entry)?.FullPath);
             if(entries.Length==0)quickPreview.ShowMessage(L.Text("preview.selectOtherPanelFile"));
         }
         internal void CloseQuickPreview()

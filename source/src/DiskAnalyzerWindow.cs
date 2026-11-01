@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
@@ -32,8 +32,9 @@ namespace FileCompass {
         readonly Button refresh, stop; readonly ProgressBar progress = new ProgressBar { Height=3, IsIndeterminate=true, Visibility=Visibility.Collapsed };
         readonly TabControl tabs = new TabControl(); readonly string path; readonly Action<string> navigate; CancellationTokenSource cancellation; bool closed; DiskFolder selected;
         internal DiskAnalysis Result;
-        internal Task ScanTask;
+        OperationPause.Ticket dockPause;internal Task ScanTask;
         internal DiskAnalyzerWindow(Window owner,string initial,Action<string> openFolder,bool autoStart=false) {
+   ToolBackdrop.Attach(this);
             path=initial; navigate=openFolder; CopyUi.Style(this,owner,L.Text("analyzer.title"),1160);
             SizeToContent=SizeToContent.Manual; ResizeMode=ResizeMode.CanResize;ConfigureFolderRows();ConfigureVirtualFolders();
             var work=SystemParameters.WorkArea; Width=Math.Min(1160,work.Width-32); Height=Math.Min(820,work.Height-32); MinWidth=Math.Min(780,Width); MinHeight=Math.Min(520,Height);
@@ -69,7 +70,7 @@ namespace FileCompass {
             AddColumn(legend,L.Text("analyzer.category"),"Name",1);AddColumn(legend,L.Text("analyzer.bytes"),"Size",.55);AddColumn(legend,L.Text("analyzer.files"),"Files",.4);AddColumn(legend,"%","Share",.35); legend.Columns[legend.Columns.Count-1].MinWidth=65;
             GroupChoice.Items.Add(L.Text("analyzer.byCategory")); GroupChoice.SelectedIndex=MetricChoice.SelectedIndex=ChartChoice.SelectedIndex=0; InitializeAnalyzerExtensions(header,actions);InitializeAdvancedAnalyzer(header,actions);
             Loaded+=delegate { if(autoStart)ScanTask=Scan(); }; Closed+=delegate { closed=true;if(cancellation!=null)cancellation.Cancel(); DisposeAnalyzerExtensions(); };
-            ToolDock.Attach(this,actions,delegate{return new DockStatus{Title=L.Text("analyzer.title"),Icon="◔",Busy=cancellation!=null,Fraction=cancellation==null&&Result!=null?(double?)1:null,Description=path+" · "+status.Text};});
+            ToolDock.Attach(this,actions,delegate{return new DockStatus{Title=L.Text("analyzer.title"),Icon="◔",Busy=cancellation!=null,Fraction=cancellation==null&&Result!=null?(double?)1:null,Description=path+" · "+status.Text};},delegate{if(dockPause!=null)dockPause.Toggle();},delegate{return dockPause!=null&&dockPause.Paused;},delegate{if(cancellation!=null)cancellation.Cancel();else Close();});
             FooterActions.Analyzer(actions,refresh,stop);
             InitializeAnalyzerWorkspace(body,header,split,controls,chartBody,actions);
             InitializeAnalyzerStart(autoStart);

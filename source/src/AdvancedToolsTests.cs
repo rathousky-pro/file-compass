@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -171,7 +171,7 @@ namespace FileCompass
             check(((SyncRow)action.DataContext).Action==L.Text("action.keep"),"changing a row dropdown updates its planned action");
             action.SelectedItem = "→";
             NextStageTests.Draw(sync,Path.Combine(root,"bidirectional-sync.png"));sync.Close();
-            string image=Path.Combine(root,"images","picture.png");var images=new ImageToolsDialog(this,new[]{image},Path.GetDirectoryName(image)){ShowActivated=false,ShowInTaskbar=false,Left=-18000,Top=-18000,WindowStartupLocation=WindowStartupLocation.Manual};images.Show();images.UpdateLayout();NextStageTests.Draw(images,Path.Combine(root,"image-tools.png"));images.Close();
+            string image=Path.Combine(root,"images","picture.png");var images=new MediaConverterWindow(this,new[]{image},Path.GetDirectoryName(image),true,delegate{},delegate{}){ShowActivated=false,ShowInTaskbar=false,Left=-18000,Top=-18000,WindowStartupLocation=WindowStartupLocation.Manual};images.Show();NavigationTests.Wait(images.AnalysisTask);images.SettingsTabs.SelectedItem=images.GeometryTab;images.UpdateLayout();NextStageTests.Draw(images,Path.Combine(root,"image-tools.png"));images.Close();
             var archive=new ArchivePackDialog(this,1,Path.Combine(root,"options.zip")){ShowActivated=false,ShowInTaskbar=false,Left=-18000,Top=-18000,WindowStartupLocation=WindowStartupLocation.Manual};archive.Show();archive.UpdateLayout();
             check(FluentUiTests.Children<CheckBox>(archive).Single(x=>(x.Content as string)==L.Text("archive.multiVolume")).IsEnabled && FluentUiTests.Children<CheckBox>(archive).Single(x=>(x.Content as string)==L.Text("archive.moveInto")).IsEnabled,"archive dialog enables volume and verified-move options");
             NextStageTests.Draw(archive,Path.Combine(root,"archive-options.png"));archive.Close();

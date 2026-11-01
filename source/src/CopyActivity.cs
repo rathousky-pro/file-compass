@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -13,10 +13,12 @@ namespace FileCompass
         readonly Button cancel = new Button { Content = L.Text("action.cancelOperation"), MinWidth = 70, Margin = new Thickness(8, 0, 0, 0) };
         internal OperationRecord Record;
         internal Action Cancellation;
+        internal Action PauseAction;
+        internal Func<bool> IsPaused;
         internal Func<bool> ConfirmCancellation;
         internal bool Backgrounded = true;
         internal Func<NetworkTransferMetrics> LocalMetrics;
-        internal string TransferTitle, TransferRoute;
+        internal string TransferTitle, TransferRoute;internal bool CompactDock;
         internal Action RestoreDetails;
         internal void RequestCancel() { RequestCancel(true); }
         internal void RequestCancel(bool confirm) { if (finished || (Record != null && Record.CancelRequested)) return; if (confirm && ConfirmCancellation != null && !ConfirmCancellation()) return; if (finished) return; if (Record != null) { Record.CancelRequested = true; Record.State = L.Code("state.cancelling"); } Cancellation(); cancel.IsEnabled = false; label.Text = L.Text("state.cancellingOperation"); if (Changed != null) Changed(); }
@@ -139,7 +141,7 @@ namespace FileCompass
             summaryCancel.Visibility = running.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
             summaryCancel.IsEnabled = running.Any(x => x.Record == null || !x.Record.CancelRequested);
             summaryCancel.ToolTip = L.Text("transfer.cancelSummaryTooltip");
-            copySummary.Visibility = all.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+            // The task dock alone owns visibility, including background tools without copy jobs.
             var primary = running.FirstOrDefault();
             summaryLabel.Text = running.Length == 1 ? primary.TransferTitle ?? L.Text("transfer.filesTitle") : L.Text("transfer.activeOperationsPrefix") + running.Length;
             var transfers = networkJobs.Where(x => !x.Finished && x.Activity != null && !x.Activity.Finished && x.Activity.Backgrounded).Select(x => x.Metrics())

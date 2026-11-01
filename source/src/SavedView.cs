@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using System.Windows;
 namespace FileCompass
@@ -20,7 +20,7 @@ namespace FileCompass
             var bounds = WindowState == WindowState.Normal ? new Rect(Left, Top, ActualWidth, ActualHeight) : RestoreBounds;
             settings.WindowLeft = bounds.Left; settings.WindowTop = bounds.Top; settings.WindowWidth = bounds.Width; settings.WindowHeight = bounds.Height; settings.Maximized = WindowState == WindowState.Maximized || (WindowState == WindowState.Minimized && lastVisibleWindowState == WindowState.Maximized);
             CapturePanelLayout(settings);
-            left.SavePanelView(settings.LeftView); right.SavePanelView(settings.RightView);
+            left.SavePanelView(settings.LeftView); right.SavePanelView(settings.RightView);settings.LeftPanelEmpty=left.EmptyPanel;settings.RightPanelEmpty=right.EmptyPanel;
             settings.ColumnWidths = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Take(settings.LeftView.Widths, 5));
             settings.LeftTabs = left.SaveTabs(); settings.RightTabs = right.SaveTabs();
             settings.LeftTabIndex = left.CurrentTabIndex; settings.RightTabIndex = right.CurrentTabIndex;
@@ -29,8 +29,8 @@ namespace FileCompass
         {
             await Task.WhenAll(left.NavigationTask, right.NavigationTask);
             await Dispatcher.InvokeAsync(delegate {
-            if (left.CurrentPath == null && !left.HasUnavailableTab && !left.IsRemote && !left.LocalLoading) left.Navigate(home, false);
-            if (right.CurrentPath == null && !right.HasUnavailableTab && !right.IsRemote && !right.LocalLoading) right.Navigate(home, false);
+            if (left.CurrentPath == null && !left.EmptyPanel && !left.HasUnavailableTab && !left.IsRemote && !left.LocalLoading) left.Navigate(home, false);
+            if (right.CurrentPath == null && !right.EmptyPanel && !right.HasUnavailableTab && !right.IsRemote && !right.LocalLoading) right.Navigate(home, false);
             });
         }
     }

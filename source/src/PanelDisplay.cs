@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -70,7 +70,7 @@ namespace FileCompass
             if (mode != "Short" && mode != "Thumbnails") mode = "Details";
             displayMode = mode; if (mode != "Thumbnails") { foreach (var old in thumbnailVisible) old.Thumbnail = null; thumbnailVisible.Clear(); } if (displayGrid == null) return;
             var selected = List.SelectedItem;
-            if (mode == "Details") { List.ItemTemplate = null; List.ItemsPanel = new ItemsPanelTemplate(new FrameworkElementFactory(typeof(VirtualizingStackPanel))); List.View = view; List.ItemContainerStyle = RowStyle(); ScrollViewer.SetHorizontalScrollBarVisibility(List,ScrollBarVisibility.Auto); }
+            if (mode == "Details") { List.ItemTemplate = null; List.ItemsPanel = new ItemsPanelTemplate(new FrameworkElementFactory(typeof(VirtualizingStackPanel))); List.View = view; List.ItemContainerStyle = RowStyle(); ScrollViewer.SetHorizontalScrollBarVisibility(List,ScrollBarVisibility.Disabled);FitColumns(); }
             else {
                 List.View = null;
                 var tiles = new FrameworkElementFactory(typeof(VirtualFileTiles)); tiles.SetValue(VirtualFileTiles.TileWidthProperty,mode == "Thumbnails" ? TileWidth : 220.0); tiles.SetValue(VirtualFileTiles.TileHeightProperty,mode == "Thumbnails" ? TileHeight : Math.Max(25, List.FontSize * 1.65 + 6)); List.ItemsPanel = new ItemsPanelTemplate(tiles); ScrollViewer.SetHorizontalScrollBarVisibility(List,ScrollBarVisibility.Disabled); ScrollViewer.SetCanContentScroll(List,true);

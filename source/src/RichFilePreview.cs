@@ -14,7 +14,7 @@ namespace FileCompass
 {
     internal sealed class RichFilePreview : Grid
     {
-        readonly TextEditor code = new TextEditor { IsReadOnly = true, ShowLineNumbers = true, FontFamily = new FontFamily("Consolas"), FontSize = 13, Foreground = FluentTheme.Text, Background = CompactTheme.WhiteSurface, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+        readonly TextEditor code = new TextEditor { IsReadOnly = true, ShowLineNumbers = true, FontFamily = new FontFamily("Consolas"), FontSize = 14, Foreground = FluentTheme.Text, Background = CompactTheme.WhiteSurface, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         readonly FlowDocumentScrollViewer markdown = new FlowDocumentScrollViewer { IsToolBarVisible = false, IsSelectionEnabled = true, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Background = CompactTheme.WhiteSurface };
         static readonly MarkdownPipeline pipeline = new MarkdownPipelineBuilder().DisableHtml().UsePipeTables().Build();
         internal static bool IsMarkdown(string path) { string ext = Path.GetExtension(path).ToLowerInvariant(); return ext == ".md" || ext == ".markdown" || ext == ".mdown"; }

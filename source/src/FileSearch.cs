@@ -46,7 +46,7 @@ namespace FileCompass
             Action<string, int> walk = null;
             walk = delegate(string path, int depth)
             {
-                token.ThrowIfCancellationRequested(); if (count >= 20000) return;
+                OperationPause.Wait(token); if (count >= 20000) return;
                 path = Path.GetFullPath(path); if (!visited.Add(path)) return;
                 try
                 {
@@ -81,7 +81,7 @@ namespace FileCompass
             if(!String.IsNullOrEmpty(options.Text)||options.DocumentText)throw new IOException(L.Text("metaSearch.localOnly")); if(MetadataSearch.Enabled(options))throw new IOException(L.Text("metaSearch.localOnly")); int count = 0; Action<string, int> walk = null;
             walk = delegate(string path, int depth)
             {
-                token.ThrowIfCancellationRequested(); if (count >= 20000) return;
+                OperationPause.Wait(token); if (count >= 20000) return;
                 var file = connection.Session.GetFileInfo(path); if (Char.ToUpperInvariant(file.FileType) == 'L') return;
                 if (Matches(file.Name, options) && SearchAdvanced.Metadata(options,file.LastWriteTime.ToUniversalTime(),0) && (file.IsDirectory || (file.Length >= options.Minimum && file.Length <= options.Maximum)))
                 { found(new SearchHit { Path = path, Name = file.Name, Bytes = file.Length, Directory = file.IsDirectory, Modified = file.LastWriteTime }); count++; }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -27,9 +27,10 @@ namespace FileCompass
 
         [DllImport("kernel32.dll",CharSet=CharSet.Unicode)] static extern uint GetDriveType(string root);
         internal static bool NetworkPath(string path){if(String.IsNullOrEmpty(path))return false;if(path.StartsWith(@"\\",StringComparison.Ordinal))return true;try{return GetDriveType(Path.GetPathRoot(path))==4;}catch(ArgumentException){return false;}}
+        static readonly Lazy<ImageSource> yellowFolder=new Lazy<ImageSource>(delegate{ShellInfo info;SHGetFileInfo("folder",16,out info,(uint)Marshal.SizeOf(typeof(ShellInfo)),0x100|0x1|0x10);if(info.Icon==IntPtr.Zero)return BuildLegacyDrawing("folder");try{var image=Imaging.CreateBitmapSourceFromHIcon(info.Icon,Int32Rect.Empty,System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());image.Freeze();return image;}finally{DestroyIcon(info.Icon);}});
         public static ImageSource FileIcon(string path, bool folder)
         {
-            if (folder) return FluentIcons.Load("folder");
+            if (folder) return yellowFolder.Value;
             {
                 string extension = Path.GetExtension(path ?? "").ToLowerInvariant();
                 // Network files use association icons. Cache locks protect only dictionary access; shell I/O never holds them.

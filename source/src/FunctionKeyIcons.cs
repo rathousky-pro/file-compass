@@ -3,8 +3,21 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System;
+using System.Globalization;
 namespace FileCompass {
  internal static class FunctionKeyIcons {
+    internal static readonly DataTemplate KeyCaption=BuildKeyCaption();
+    sealed class KeyPart:IValueConverter{
+      public object Convert(object value,Type type,object parameter,CultureInfo culture){string text=System.Convert.ToString(value);int split=text.IndexOf(' ');return System.Convert.ToString(parameter)=="key"?(split<0?text:text.Substring(0,split)):(split<0?"":text.Substring(split+1));}
+      public object ConvertBack(object value,Type type,object parameter,CultureInfo culture){throw new NotSupportedException();}
+    }
+    static DataTemplate BuildKeyCaption(){
+      var row=new FrameworkElementFactory(typeof(StackPanel));row.SetValue(StackPanel.OrientationProperty,Orientation.Horizontal);
+      var badge=new FrameworkElementFactory(typeof(Border));badge.SetValue(Border.BackgroundProperty,CompactTheme.PanelSurface);badge.SetValue(Border.BorderBrushProperty,CompactTheme.Line);badge.SetValue(Border.BorderThicknessProperty,new Thickness(1));badge.SetValue(Border.CornerRadiusProperty,new CornerRadius(3));badge.SetValue(Border.PaddingProperty,new Thickness(4,0,4,0));badge.SetValue(FrameworkElement.MarginProperty,new Thickness(0,0,7,0));
+      var key=new FrameworkElementFactory(typeof(TextBlock));key.SetBinding(TextBlock.TextProperty,new Binding{Converter=new KeyPart(),ConverterParameter="key"});key.SetValue(TextBlock.FontSizeProperty,10.0);key.SetValue(TextBlock.ForegroundProperty,FluentTheme.Muted);key.SetValue(FrameworkElement.VerticalAlignmentProperty,VerticalAlignment.Center);badge.AppendChild(key);row.AppendChild(badge);
+      var text=new FrameworkElementFactory(typeof(TextBlock));text.SetBinding(TextBlock.TextProperty,new Binding{Converter=new KeyPart(),ConverterParameter="label"});text.SetValue(FrameworkElement.VerticalAlignmentProperty,VerticalAlignment.Center);row.AppendChild(text);return new DataTemplate{VisualTree=row};
+    }
     internal static DataTemplate Caption(string command){
         string lines;
         switch(command){

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -21,21 +21,23 @@ namespace FileCompass
         }
         internal void ApplyToolbarTheme(ToolbarTheme theme)
         { foreach (var icon in toolbarImages) icon.Source = DesktopIcons.ToolbarDrawing((string)icon.Tag, theme); }
+        internal void RefreshCleanToolbar() { ApplyToolbarTheme(ToolbarThemeSettings.Current); UpdateViewToolbarControls(); ApplyToolbarTileSizes(); }
         readonly TextBox commandLine = new TextBox { Height = 24, VerticalContentAlignment = VerticalAlignment.Center, BorderBrush = CompactTheme.Line, BorderThickness = new Thickness(1) };
         readonly TextBlock commandPrompt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 4, 0), TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 500 };
 
         void AddChrome(DockPanel root, StackPanel bottom)
         {
-            var top = new StackPanel { Background = CompactTheme.Chrome };
+            var top = new StackPanel { Tag="main-toolbar-area", Background = CompactTheme.Chrome };
+            bottom.Tag="main-bottom-area";
             DockPanel.SetDock(top, Dock.Top); root.Children.Insert(0, top);
-            var menuRow = new DockPanel();
-            var help = new Menu { Background = CompactTheme.Chrome };
+            var menuRow = new DockPanel { Tag="main-menu-area" };
+            var help = new Menu { Tag="main-menu-area", Background = CompactTheme.Chrome };
             var helpItem = new MenuItem { Header = L.Text("action.help"), Height = 28 }; help.Items.Add(helpItem);
             AddMenu(helpItem, L.Text("help.open"), delegate { HelpService.Open(this); }, "F1");
             helpItem.Items.Add(new Separator());
             AddMenu(helpItem, L.Text("app.aboutMenu"), delegate { new AboutWindow(this).ShowDialog(); });
             DockPanel.SetDock(help, Dock.Right); menuRow.Children.Add(help);
-            var menus = new Menu { Background = CompactTheme.Chrome, Height = 30 };
+            var menus = new Menu { Tag="main-menu-area", Background = CompactTheme.Chrome, Height = 30 };
             var file = MenuRoot(menus, L.Text("menu.file"));
             AddMenu(file, L.Text("action.properties"), ShowProperties, "Alt+Enter"); AddMenu(file, L.Text("action.openWith"), OpenWith); AddMenu(file, L.Text("action.changeAttributes"), ChangeAttributes); file.Items.Add(new Separator());
             AddArchiveMenu(file, L.Text("action.compress"), CreateArchive, "Alt+F5", "pack");
@@ -52,7 +54,6 @@ namespace FileCompass
             AddMenu(file,L.Text("codeEditor.new"),NewTextFile,"F2 / Ctrl+N");
             AddMenu(file, L.Text("action.batchRename"), MultiRename, "Ctrl+M");
             AddMenu(file, L.Text("tags.edit"), EditTags);
-            AddMenu(file, L.Text("imageTools.title"), QuickImageTools);
             AddMenu(file, L.Text("parts.split"), SplitSelectedFile); AddMenu(file, L.Text("parts.combine"), CombineSelectedFiles);
             AddMenu(file, L.Text("action.delete"), DeleteSelected, "F8 / Delete"); file.Items.Add(new Separator()); AddMenu(file, L.Text("action.exit"), Close, "Alt+F4");
             var select = MenuRoot(menus, L.Text("menu.selection"));
@@ -128,7 +129,6 @@ namespace FileCompass
             Tool(view,"undo",L.Text("undoHistory.title"),ShowSafeUndo);
             var navigation=ToolbarGroup(tools,"navigation");
             Tool(navigation,"search",L.Text("toolbar.findFilesShortcut"),FindFiles,L.Text("action.search"));
-            Tool(navigation,"favorite",L.Text("toolbar.favoritesShortcut"),ShowFavorites);
             var directions=new StackPanel{Orientation=Orientation.Horizontal};
             Tool(directions,"forward",L.Text("toolbar.folderLeftToRight"),delegate{OpenFolderInOtherPanel(left);});
             Tool(directions,"back",L.Text("toolbar.folderRightToLeft"),delegate{OpenFolderInOtherPanel(right);});navigation.Children.Add(directions);
@@ -149,7 +149,7 @@ namespace FileCompass
             Tool(settingsTools,"settings",L.Text("settings.title"),delegate{new ConfigurationDialog(this).ShowDialog();});
             top.Children.Add(new Border { Tag = "main-toolbar-frame", Child = tools, Margin = new Thickness(8, 4, 8, 6), CornerRadius = new CornerRadius(8), Padding = new Thickness(6, 4, 6, 4), Background = CompactTheme.PanelSurface, BorderBrush = CompactTheme.ChromeLine, BorderThickness = new Thickness(1) });
 
-            var commandRow = new DockPanel { Margin = new Thickness(8, 2, 8, 6) };
+            var commandRow = new DockPanel { Margin = new Thickness(8, 2, 8, 6),Background=CompactTheme.Chrome };
             DockPanel.SetDock(commandPrompt, Dock.Left); commandRow.Children.Add(commandPrompt); commandRow.Children.Add(commandLine);
             commandLine.ToolTip = L.Text("commandLine.inputHelp");
             commandLine.KeyDown += delegate(object sender, KeyEventArgs e)

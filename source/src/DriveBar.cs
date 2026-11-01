@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -96,8 +96,10 @@ namespace FileCompass
                 return driveSnapshotTask;
             }
         }
+        StackPanel driveButtonsHost;
         void InitializeDrives(StackPanel drives)
         {
+            driveButtonsHost=drives;
             foreach(var location in CommonLocations.Read())driveSelector.Items.Add(location);
             Action<DriveSnapshot> apply = delegate(DriveSnapshot snapshot)
             {
@@ -119,7 +121,7 @@ namespace FileCompass
                         drives.Children.Insert(position, button); driveButtons[root] = button;
                         button.PreviewMouseRightButtonUp+=delegate(object sender,System.Windows.Input.MouseButtonEventArgs e){if(button.ContextMenu!=null)return;var main=System.Windows.Window.GetWindow(this) as MainWindow;if(main!=null){e.Handled=true;activate(this);main.OpenUsbDriveMenu(root,button);}};
                         var choice = new DriveChoice(root); choice.Update("", driveAddresses[root], network, connected, snapshot.Icons[root]);
-                        driveChoices[root] = choice; driveSelector.Items.Insert(position, choice);
+                        driveChoices[root] = choice;
                     }
                     button.Content = DriveLabel(root, network, connected, snapshot.Icons[root]);
                     var owner = System.Windows.Window.GetWindow(this) as MainWindow;
@@ -129,6 +131,7 @@ namespace FileCompass
                 }
                 foreach (var pair in driveButtons.Where(x => !available.ContainsKey(x.Key) && !remembered.ContainsKey(x.Key)).ToArray())
                 { drives.Children.Remove(pair.Value); driveButtons.Remove(pair.Key); driveSelector.Items.Remove(driveChoices[pair.Key]); driveChoices.Remove(pair.Key); }
+                RefreshCleanDrives();
             };
             int refreshing = 0;
             Action refresh = async delegate
@@ -197,7 +200,7 @@ namespace FileCompass
                     Button current;
                     if (driveButtons.TryGetValue(root, out current) && current == button)
                     {
-                        button.Content = DriveLabel(root, network, ready, icon);
+                        button.Content = DriveLabel(root, network, ready, icon);RefreshCleanDrives();
                         button.ToolTip = DriveTooltip(root, name, address, network, ready);
                         driveChoices[root].Update(name, address, network, ready, icon);
                     }

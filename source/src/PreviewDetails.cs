@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,41 +7,37 @@ using System.Windows.Controls;
 using System.Windows.Media;
 namespace FileCompass {
     internal sealed partial class QuickPreviewPane {
-        readonly Expander detailsExpander=new Expander {IsExpanded=false,Margin=new Thickness(0,4,0,2),Visibility=Visibility.Collapsed};
-        readonly TextBlock detailsHeader=new TextBlock {TextTrimming=TextTrimming.CharacterEllipsis};
-        readonly StackPanel detailsRows=new StackPanel();
         FileDetails detailsData;
         internal Task MetadataLoadingTask {get;private set;}
         internal FileDetails Metadata {get{return detailsData;}}
+        readonly TextBlock basicInfo=new TextBlock{TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,FontSize=12};
+        Button moreDetails;Window detailsPopup;
         void InitializeDetails(DockPanel body,bool compact) {
-            detailsHeader.FontWeight=FontWeights.SemiBold;detailsHeader.Foreground=FluentTheme.Accent;detailsExpander.Header=detailsHeader;
-            var rows=new DockPanel();
-            var copy=CopyUi.Button(L.Text("details.copy"),delegate {if(detailsData!=null)try{Clipboard.SetText(String.Join(Environment.NewLine,detailsData.Rows.Select(x=>x.Label+": "+x.Value)));}catch(System.Runtime.InteropServices.COMException){}});
-            copy.HorizontalAlignment=HorizontalAlignment.Right;DockPanel.SetDock(copy,Dock.Top);rows.Children.Add(copy);
-            rows.Children.Add(new ScrollViewer {Content=detailsRows,MaxHeight=compact?115:190,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled});
-            if(compact) {
-                rows.Children.Remove(copy); detailsExpander.Header=null;
-                var heading=new DockPanel(); copy.Content="⧉";copy.ToolTip=L.Text("details.copy");copy.MinWidth=26;copy.Height=24;copy.Padding=new Thickness(4,0,4,0);copy.Margin=new Thickness(4,0,0,0);copy.Visibility=Visibility.Collapsed;System.Windows.Automation.AutomationProperties.SetName(copy,L.Text("details.copy"));detailsExpander.Width=160;detailsExpander.Margin=new Thickness(8,0,0,0);
-                DockPanel.SetDock(copy,Dock.Right);heading.Children.Add(copy);heading.Children.Add(detailsHeader);detailsExpander.Header=heading;
-                detailsExpander.Expanded+=delegate {copy.Visibility=Visibility.Visible;DockPanel.SetDock(detailsExpander,Dock.Right);detailsExpander.Width=330;detailsExpander.Margin=new Thickness(8,0,0,0);};
-                detailsExpander.Collapsed+=delegate {copy.Visibility=Visibility.Collapsed;DockPanel.SetDock(detailsExpander,Dock.Right);detailsExpander.Width=160;detailsExpander.Margin=new Thickness(8,0,0,0);};
-            }
-            detailsExpander.Content=new Border {Child=rows,Background=CompactTheme.WhiteSurface,BorderBrush=CompactTheme.Line,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(5),Padding=new Thickness(12)};
-            DockPanel.SetDock(detailsExpander,compact?Dock.Right:Dock.Bottom);body.Children.Add(detailsExpander);
+            System.Windows.Automation.AutomationProperties.SetAutomationId(basicInfo,"PreviewBasicInfo");basicInfo.MaxHeight=compact?20:70;basicInfo.TextWrapping=compact?TextWrapping.NoWrap:TextWrapping.Wrap;basicInfo.TextTrimming=TextTrimming.CharacterEllipsis;
+            var info=new DockPanel{Margin=new Thickness(0,6,0,6)};carouselToggle.Margin=new Thickness(0,0,10,0);carouselToggle.VerticalAlignment=VerticalAlignment.Center;DockPanel.SetDock(carouselToggle,Dock.Left);info.Children.Add(carouselToggle);
+            moreDetails=CopyUi.Button(L.Text("preview.details"),ShowDetailsPopup);System.Windows.Automation.AutomationProperties.SetAutomationId(moreDetails,"PreviewMore");moreDetails.MinWidth=65;moreDetails.VerticalAlignment=VerticalAlignment.Center;DockPanel.SetDock(moreDetails,Dock.Right);info.Children.Add(moreDetails);info.Children.Add(basicInfo);
+            DockPanel.SetDock(info,Dock.Bottom);body.Children.Add(info);
         }
-        void ClearDetails(){detailsData=null;detailsRows.Children.Clear();detailsHeader.Text="";detailsExpander.Visibility=Visibility.Collapsed;}
+        void ShowBasicInfo(string path){
+            try{var file=new System.IO.FileInfo(path);basicInfo.Text=(compactPreview?"":System.IO.Path.GetDirectoryName(path)+"\n")+CopyUi.Bytes(file.Length)+" · "+file.LastWriteTime.ToString("g");basicInfo.ToolTip=path;}catch{basicInfo.Text=path;}
+            moreDetails.IsEnabled=true;
+        }
+        internal void ShowDetailsPopup(){
+            if(detailsPopup!=null){detailsPopup.Activate();return;}
+            var popup=new Window();CopyUi.Style(popup,Window.GetWindow(this),L.Text("details.heading"),660);popup.Height=520;popup.SizeToContent=SizeToContent.Manual;popup.ResizeMode=ResizeMode.CanResize;
+            StackPanel actions;var root=SettingsUx.Frame(popup,L.Text("details.heading"),out actions);var rows=new StackPanel{Margin=new Thickness(20,12,20,12)};
+            rows.Children.Add(new TextBlock{Text=Convert.ToString(title.ToolTip),TextWrapping=TextWrapping.Wrap,FontWeight=FontWeights.SemiBold,Margin=new Thickness(0,0,0,12)});
+            var data=detailsData;if(data!=null)foreach(var item in data.Rows){var row=new Grid{Margin=new Thickness(0,6,0,6)};row.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(155)});row.ColumnDefinitions.Add(new ColumnDefinition());row.Children.Add(new TextBlock{Text=item.Label,Foreground=FluentTheme.Muted,TextWrapping=TextWrapping.Wrap});var value=new TextBlock{Text=item.Value,TextWrapping=TextWrapping.Wrap};Grid.SetColumn(value,1);row.Children.Add(value);rows.Children.Add(new Border{Child=row,BorderBrush=CompactTheme.ChromeLine,BorderThickness=new Thickness(0,0,0,1)});}
+            else rows.Children.Add(new TextBlock{Text=basicInfo.Text,TextWrapping=TextWrapping.Wrap});
+            root.Children.Add(new ScrollViewer{Content=rows,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled});var close=CopyUi.Button(L.Text("action.close"),popup.Close);close.IsCancel=true;actions.Children.Add(close);var copy=CopyUi.Button(L.Text("details.copy"),delegate{try{Clipboard.SetText(data==null?basicInfo.Text:String.Join(Environment.NewLine,data.Rows.Select(x=>x.Label+": "+x.Value)));}catch(System.Runtime.InteropServices.COMException){}});actions.Children.Add(copy);detailsPopup=popup;popup.Closed+=delegate{detailsPopup=null;};popup.Show();
+        }
+        void ClearDetails(){if(detailsPopup!=null)detailsPopup.Close();basicInfo.Text="";if(moreDetails!=null)moreDetails.IsEnabled=false;detailsData=null;}
         async Task LoadDetails(string path,CancellationToken token,int request) {
             try {
                 var data=await Task.Run(delegate { return FileMetadataService.Load(path,token); });
                 if(request!=version||token.IsCancellationRequested)return;
-                detailsData=data;detailsHeader.Text=L.Text("details.heading");detailsHeader.ToolTip=L.Text("details.heading")+" · "+data.Summary;
-                detailsRows.Children.Clear();
-                int rowIndex=0;foreach(var item in data.Rows) {
-                    var row=new Grid {Margin=new Thickness(0,3,0,3)};row.ColumnDefinitions.Add(new ColumnDefinition {Width=new GridLength(125)});row.ColumnDefinitions.Add(new ColumnDefinition());
-                    row.Children.Add(new TextBlock {Text=item.Label,TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,0,9,0)});
-                    var value=new TextBlock {Text=item.Value,TextWrapping=TextWrapping.Wrap,ToolTip=item.Value};Grid.SetColumn(value,1);value.FontWeight=FontWeights.SemiBold;row.Children.Add(value);detailsRows.Children.Add(new Border{Child=row,Padding=new Thickness(6,2,6,2),Background=rowIndex++%2==0?CompactTheme.PanelSurface:CompactTheme.WhiteSurface,CornerRadius=new CornerRadius(3)});
-                }
-                detailsExpander.Visibility=Visibility.Visible;ApplyDocumentExcerpt();
+                detailsData=data;var dimensions=data.Rows.FirstOrDefault(x=>x.Key=="dimensions"||x.Key=="resolution");basicInfo.Text+=(dimensions==null?"":" · "+dimensions.Value);basicInfo.ToolTip=Convert.ToString(title.ToolTip)+"\n"+data.Summary;
+                ApplyDocumentExcerpt();
             }catch(OperationCanceledException){}catch(Exception){}
             finally {if(request==version){documentDetailsLoading=false;if(WantsDocument)UpdateFormat();}}
         }

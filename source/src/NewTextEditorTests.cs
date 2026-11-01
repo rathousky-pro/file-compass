@@ -1,4 +1,4 @@
-#if APP_TESTS
+﻿#if APP_TESTS
 using System;using System.IO;using System.Linq;using System.Text;using System.Collections.Generic;using System.Threading.Tasks;using System.Windows;using System.Windows.Controls;using System.Windows.Threading;using FileCompass.NetworkTransport;
 namespace FileCompass {
  internal static class NewTextEditorTests {
@@ -8,12 +8,12 @@ namespace FileCompass {
    try{
     System.Threading.SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));L.ChangeLanguage("cs-CZ");FluentTheme.Ensure();AppearanceTheme.Apply("Light");
     window=new CodeEditorWindow(null){Left=-18000,Top=-18000,ShowActivated=false,ShowInTaskbar=false,WindowStartupLocation=WindowStartupLocation.Manual};window.Show();
-    var doc=window.NewDocument(new EditorSaveLocation{Folder=root});check(doc.File.Path==null&&doc.Editor.Text==""&&doc.EncodingChoice==0&&doc.EolChoice==2&&!window.HasUnsaved,"new document is unnamed, blank, UTF-8 without BOM and LF without creating a file");
+    var doc=window.NewDocument(new EditorSaveLocation{Folder=root});check(doc.File.Path==null&&doc.Editor.Text==""&&doc.EncodingChoice==0&&doc.EolChoice==1&&!window.HasUnsaved,"new document is unnamed, blank, UTF-8 without BOM and Windows CRLF without creating a file");
     doc.Editor.Text="#!/bin/sh\r\necho 'Žluťoučký kůň'\r\n";window.Syntax.SelectedIndex=2;check(doc.Editor.SyntaxHighlighting!=null,"unnamed shell script has syntax highlighting before a filename is chosen");window.Syntax.SelectedIndex=3;check(doc.Editor.SyntaxHighlighting!=null,"RouterOS syntax is available before saving");
-    string target=Path.Combine(root,"router-script.rsc");window.ChooseLocalPath=d=>target;check(Save(window)&&File.ReadAllBytes(target).SequenceEqual(new UTF8Encoding(false,true).GetBytes("#!/bin/sh\necho 'Žluťoučký kůň'\n")),"first save chooses filename and extension and writes exact UTF-8 LF bytes without BOM");
+    string target=Path.Combine(root,"router-script.rsc");window.ChooseLocalPath=d=>target;check(Save(window)&&File.ReadAllBytes(target).SequenceEqual(new UTF8Encoding(false,true).GetBytes("#!/bin/sh\r\necho 'Žluťoučký kůň'\r\n")),"first save chooses filename and extension and writes exact UTF-8 CRLF bytes without BOM");
     check(doc.File.Path==target&&!window.HasUnsaved,"successful first save binds the name and clears dirty state");
     var combos=AdvancedToolsTests.Visual<ComboBox>(window).ToArray();var encoding=combos.Single(x=>x.Items.Count==6);var eol=combos.Single(x=>x.Items.Count==3);
-    eol.SelectedIndex=1;check(window.HasUnsaved&&doc.FormatModified,"changing only line endings is an unsaved document modification");check(Save(window)&&File.ReadAllText(target).Contains("\r\n"),"CRLF choice explicitly converts Linux line endings to Windows format");
+    eol.SelectedIndex=2;check(Save(window)&&!File.ReadAllText(target).Contains("\r"),"LF remains an explicit selectable output format");eol.SelectedIndex=1;check(window.HasUnsaved&&doc.FormatModified,"changing only line endings is an unsaved document modification");check(Save(window)&&File.ReadAllText(target).Contains("\r\n"),"CRLF choice explicitly converts Linux line endings to Windows format");
     encoding.SelectedIndex=1;check(Save(window)&&File.ReadAllBytes(target).Take(3).SequenceEqual(new byte[]{239,187,191}),"UTF-8 BOM choice writes one explicit BOM");
     encoding.SelectedIndex=3;eol.SelectedIndex=2;check(Save(window)&&File.ReadAllBytes(target).SequenceEqual(Encoding.GetEncoding(1250).GetBytes("#!/bin/sh\necho 'Žluťoučký kůň'\n")),"Windows-1250 with LF is saved independently of the Windows host");
     byte[] old=File.ReadAllBytes(target);doc.Editor.Text="emoji 😀";encoding.SelectedIndex=4;check(!Save(window)&&File.ReadAllBytes(target).SequenceEqual(old)&&window.HasUnsaved,"unrepresentable characters reject saving without replacement characters or target damage");
@@ -33,8 +33,8 @@ namespace FileCompass {
       var options=browsing.Options("test-password");if(protocol!=NetworkProtocol.FTP){options.SshHostKeyFingerprint=browsing.Session.ScanFingerprint(options,"SHA-256");browsing.Profile.HostKeyFingerprint=options.SshHostKeyFingerprint;}browsing.Open(options);
       window=new CodeEditorWindow(null){Left=-18000,Top=-18000,ShowActivated=false,ShowInTaskbar=false,WindowStartupLocation=WindowStartupLocation.Manual};window.Show();var remote=window.NewDocument(new EditorSaveLocation{Folder="/sub",Remote=browsing.TransferConnection()});remote.Editor.Text=":local value 42\r\n:put $value\r\n";window.Syntax.SelectedIndex=3;window.ChooseRemoteName=d=>"router.rsc";
       check(Save(window)&&remote.RemotePath=="/sub/router.rsc"&&remote.File.Path==null,protocol+": unnamed document saves to its captured server/folder");
-      string saved=Path.Combine(serverRoot,"sub","router.rsc");check(File.ReadAllBytes(saved).SequenceEqual(new UTF8Encoding(false).GetBytes(":local value 42\n:put $value\n")),protocol+": server receives exact UTF-8 LF bytes");
-      remote.Editor.Text=":put 43\n";check(Save(window)&&File.ReadAllText(saved)==":put 43\n",protocol+": subsequent Save updates the same remote file");
+      string saved=Path.Combine(serverRoot,"sub","router.rsc");check(File.ReadAllBytes(saved).SequenceEqual(new UTF8Encoding(false).GetBytes(":local value 42\r\n:put $value\r\n")),protocol+": server receives exact UTF-8 Windows CRLF bytes");
+      remote.Editor.Text=":put 43\n";check(Save(window)&&File.ReadAllText(saved)==":put 43\r\n",protocol+": subsequent Save updates the same remote file");
       File.WriteAllText(Path.Combine(serverRoot,"sub","occupied.rsc"),"keep");window.ChooseRemoteName=d=>"occupied.rsc";window.ConfirmRemoteOverwrite=p=>false;check(!Save(window,true)&&File.ReadAllText(Path.Combine(serverRoot,"sub","occupied.rsc"))=="keep"&&remote.RemotePath=="/sub/router.rsc",protocol+": refusing overwrite preserves both target and document binding");
       window.ConfirmRemoteOverwrite=p=>true;check(Save(window,true)&&remote.RemotePath=="/sub/occupied.rsc"&&File.ReadAllText(Path.Combine(serverRoot,"sub","occupied.rsc"))==":put 43\n",protocol+": confirmed Save as stages and commits the replacement");
       File.WriteAllText(Path.Combine(serverRoot,"sub","occupied.rsc"),"changed externally, longer");remote.Editor.Text=":put 99\n";check(!Save(window)&&File.ReadAllText(Path.Combine(serverRoot,"sub","occupied.rsc"))=="changed externally, longer"&&remote.Editor.IsModified,protocol+": foreign remote changes reject saving and retain unsaved text");

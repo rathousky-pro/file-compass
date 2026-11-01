@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -24,10 +24,12 @@ namespace FileCompass
         {
             archiveOperations++;
             using (var cancel = new CancellationTokenSource())
+            using (var pause = OperationPause.Create(cancel.Token))
             {
                 var dialog = new ArchiveProgressDialog(this, title, cancel);
-                var activity = AddCopyActivity(title, cancel.Cancel, dialog.RestoreProgress);
+                var activity = AddCopyActivity(title, cancel.Cancel, dialog.RestoreProgress);activity.CompactDock=false;
                 activity.TransferTitle = title; activity.Backgrounded = startBackground;
+                activity.PauseAction=pause.Toggle;activity.IsPaused=delegate{return pause.Paused;};
                 dialog.Backgrounded = delegate { activity.Backgrounded = true; RefreshCopySummary(); };
                 dialog.Foregrounded = delegate { activity.Backgrounded = false; RefreshCopySummary(); };
                 if (!startBackground) dialog.Show(); RefreshCopySummary();
@@ -57,7 +59,7 @@ namespace FileCompass
                 });
                 try
                 {
-                    await Task.Run(delegate { work(cancel.Token, delegate(string text) { if (text.StartsWith("@archive-compression|", StringComparison.Ordinal)) latestCompression = text; ((IProgress<string>)updates).Report(text); }); });
+                    await Task.Run(delegate { OperationPause.Wait(cancel.Token);work(cancel.Token, delegate(string text) { OperationPause.Wait(cancel.Token);if (text.StartsWith("@archive-compression|", StringComparison.Ordinal)) latestCompression = text; ((IProgress<string>)updates).Report(text); }); });
                     ArchiveCompressionProgress completed; string result = ArchiveCompressionProgress.TryParse(latestCompression ?? "", out completed) && completed.Complete ? " · " + completed.Summary() : "";
                     activity.Finish(title + L.Text("state.completedSuffix") + result, true); return true;
                 }

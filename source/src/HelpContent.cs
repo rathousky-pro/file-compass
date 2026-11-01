@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -46,7 +46,6 @@ namespace FileCompass {
             if(name=="CodeEditorWindow")return "editor";
             if(name=="ExtBrowserWindow")return "ext";
             if(name=="MediaConverterWindow")return "media";
-            if(name=="ImageToolsDialog")return "media-images";
             if(name=="MediaNamesWindow")return "metadata";
             if(name=="UndoTransactionsWindow")return "undo";
             if(name.Contains("Conflict"))return "conflicts";

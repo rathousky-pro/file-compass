@@ -1,8 +1,8 @@
-﻿
+
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 & (Join-Path $root 'build-preview.ps1')
-$files = @('7zip\7z.exe', '7zip\7z.dll', 'network\FileCompassNetwork.dll', 'everything\Everything64.dll', 'cloud\rclone.exe')
+$files = @('7zip\7z.exe', '7zip\7z.dll', '7zip\7z.sfx', 'network\FileCompassNetwork.dll', 'everything\Everything64.dll', 'cloud\rclone.exe')
 $files += 'smart\smartctl.exe'
 $files += Get-ChildItem -LiteralPath (Join-Path $root 'plugins\media') -File | Where-Object { $_.Extension -in '.exe','.dll' } | ForEach-Object { 'media\' + $_.Name }
 $sshfs = Join-Path $root 'plugins\sshfs\bin'

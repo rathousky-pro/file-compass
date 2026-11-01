@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Collections;
@@ -78,7 +78,7 @@ namespace FileCompass {
         internal static string Text(object value,string fallback="—") { return value==null?fallback:Convert.ToString(value,CultureInfo.InvariantCulture); }
         internal static decimal? Number(object value) { decimal number;return value!=null&&Decimal.TryParse(Text(value),NumberStyles.Float,CultureInfo.InvariantCulture,out number)?number:(decimal?)null; }
         internal static string Metric(object value,string unit="") { decimal? number=Number(value);return number.HasValue?number.Value.ToString("N0")+unit:L.Text("smart.unavailable"); }
-        internal static string Capacity(object value) { decimal? bytes=Number(value);return bytes.HasValue?(bytes.Value/1000000000m).ToString("N1")+" GB":L.Text("smart.unavailable"); }
+        internal static string Capacity(object value) { decimal? bytes=Number(value);return bytes.HasValue?ByteSize.Format(bytes.Value):L.Text("smart.unavailable"); }
         internal static bool Administrator { get { using(var identity=WindowsIdentity.GetCurrent())return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator); } }
         internal static string ToolPath { get { return UpdateRegistry.Resolve("smart\\smartctl.exe"); } }
         const string ToolHash="B5DB94E5082C042BE44994B7A4FA8F7B5C8E713B2AB1C9A560D8F7A7995EA27D";
@@ -87,7 +87,7 @@ namespace FileCompass {
             using(var trusted=PluginIntegrity.Acquire("smart\\smartctl.exe"))
             using(var process=new Process{StartInfo=new ProcessStartInfo(ToolPath,arguments){UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true}}) {
                 process.Start();var output=process.StandardOutput.ReadToEndAsync();var error=process.StandardError.ReadToEndAsync();var timer=Stopwatch.StartNew();
-                while(!process.WaitForExit(100))if(token.IsCancellationRequested||timer.ElapsedMilliseconds>30000){try{process.Kill();}catch(InvalidOperationException){}token.ThrowIfCancellationRequested();throw new TimeoutException(L.Text("smart.timeout"));}
+                while(!process.WaitForExit(100)){try{OperationPause.HoldChild(process,token,timer);}catch(OperationCanceledException){if(!process.HasExited)process.Kill();throw;}if(token.IsCancellationRequested||timer.ElapsedMilliseconds>30000){try{process.Kill();}catch(InvalidOperationException){}token.ThrowIfCancellationRequested();throw new TimeoutException(L.Text("smart.timeout"));}}
                 process.WaitForExit();string json=output.GetAwaiter().GetResult();string message=error.GetAwaiter().GetResult();
                 if(String.IsNullOrWhiteSpace(json))throw new IOException(message.Length>0?message:L.Text("smart.noData"));return json;
             }

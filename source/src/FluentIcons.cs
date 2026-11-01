@@ -53,7 +53,6 @@ namespace FileCompass
         public static ImageSource Load(string name)
         {
             if (BuildSourceDirectory == null) return IconLibrary.Action(name, ToolbarTheme.Classic);
-            if (name == "folder") return TileFolder(false);
             lock (cache)
             {
                 ImageSource image;

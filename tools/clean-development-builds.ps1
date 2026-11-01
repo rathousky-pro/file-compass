@@ -14,6 +14,11 @@ if (Test-Path -LiteralPath $artifacts) {
     } | ForEach-Object { $_.FullName }
 }
 $targets += Get-ChildItem -LiteralPath (Join-Path $root 'bin') -File -Filter 'File Compass.before-*.exe' | ForEach-Object { $_.FullName }
+$targets += Get-ChildItem -LiteralPath (Join-Path $root 'bin') -Force -File | Where-Object { $_.Name -match '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}_File Compass\.exe$' } | ForEach-Object { $_.FullName }
+$iconFolder = Join-Path $root 'bin\icons'
+if (Test-Path -LiteralPath $iconFolder) {
+    $targets += Get-ChildItem -LiteralPath $iconFolder -Force -File | Where-Object { $_.Name -match '^Actions\.(Fluent|Flat|Outline)\.fvicons\.before-[a-zA-Z0-9-]+$' } | ForEach-Object { $_.FullName }
+}
 if (Test-Path -LiteralPath (Join-Path $root 'source\obj')) {
     $targets += Get-ChildItem -LiteralPath (Join-Path $root 'source\obj') -Directory -Filter 'build-*' | ForEach-Object { $_.FullName }
 }

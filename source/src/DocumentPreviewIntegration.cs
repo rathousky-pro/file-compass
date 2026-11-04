@@ -7,6 +7,7 @@ using System.Windows.Controls;
 namespace FileCompass {
     internal sealed partial class QuickPreviewPane {
         DocumentPreview documentPreview;
+        internal bool ContainsKeyboardFocus { get { return IsKeyboardFocusWithin || documentPreview!=null&&documentPreview.ContainsNativeFocus; } }
         bool documentReady, documentLoading, documentDetailsLoading;
         readonly TextBlock documentLoadingLabel = new TextBlock {Text=L.Text("preview.loadingStatus"),HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center,Visibility=Visibility.Collapsed};
         internal bool WaitingForDocument {get{if(HtmlCodeSelected)return lastData==null;return WantsDocument&&!ShowingDocument&&((documentLoading&&(DocumentPreview.IsHtml(current)||formatted.IsChecked==true))||documentDetailsLoading||lastData==null);}}

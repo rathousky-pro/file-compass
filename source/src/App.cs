@@ -156,7 +156,7 @@ namespace FileCompass
             if (e.Key == Key.Escape && PanelsLoading) { active.CancelNavigation(); e.Handled = true; return; }
             if (e.Key == Key.Q && Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift) && !busy && !PanelsLoading) { OpenRichPreview(); e.Handled = true; return; }
 
-            if (quickPreview != null && quickPreview.IsKeyboardFocusWithin) return;
+            if (quickPreview != null && quickPreview.ContainsKeyboardFocus) return;
             if (HandleWorkflowKeys(e)) return;
             if(e.Key==Key.R&&Keyboard.Modifiers==ModifierKeys.Control&&!busy){RefreshPanels();e.Handled=true;return;}
             if (busy || PanelsLoading || e.OriginalSource is TextBox) return;
@@ -257,6 +257,9 @@ namespace FileCompass
         static int RunVerified(string[] args)
         {
 #if APP_TESTS
+            if(args.Length==3&&args[0]=="--application-package-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[2]),"profile");return ApplicationUpdatesTests.VerifyPackage(Path.GetFullPath(args[1]),Path.GetFullPath(args[2]));}
+            if(args.Length==2&&args[0]=="--application-updates-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return ApplicationUpdatesTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--profile-protocol-ux-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return ProfileProtocolUxTests.Run(args[1]);}
             if(args.Length==2&&args[0]=="--fluent-scene-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return FluentSceneTests.Run(args[1]);}
             if(args.Length==2&&args[0]=="--rename-fluent-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return RenameFluentTests.Run(args[1]);}
             if(args.Length==2&&args[0]=="--task-dock-grouping-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return TaskDockGroupingTests.Run(args[1]);}

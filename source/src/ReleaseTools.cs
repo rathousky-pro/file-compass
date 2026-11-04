@@ -38,8 +38,10 @@ namespace FileCompass {
   void RefreshCommandGestures(){foreach(var c in releaseCommands){c.Item.InputGestureText=Gesture(c);foreach(var item in c.Mirrors)item.InputGestureText=Gesture(c);}}
   internal static KeyGesture ParseGesture(string text){return String.IsNullOrWhiteSpace(text)?null:(KeyGesture)new KeyGestureConverter().ConvertFromInvariantString(text);}
   bool HandleReleaseKeys(KeyEventArgs e) {
+   if(quickPreview!=null&&quickPreview.ContainsKeyboardFocus)return false;
    if(busy||PanelsLoading||Keyboard.FocusedElement is TextBox||Keyboard.FocusedElement is PasswordBox)return false;
    Key key=e.Key==Key.System?e.SystemKey:e.Key;var modifiers=Keyboard.Modifiers;
+   if((key==Key.C||key==Key.X||key==Key.V)&&!active.List.IsKeyboardFocusWithin)return false;
    foreach(var c in releaseCommands){if(MatchesCommand(c,key,modifiers)){e.Handled=true;if(!e.IsRepeat)c.Run();return true;}}
    foreach(var c in releaseCommands.Where(x=>customShortcuts.Items.Any(y=>y.Id==x.Id))){if(DefaultMatches(c,key,modifiers)){e.Handled=true;return true;}}
    return false;

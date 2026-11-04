@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 namespace FileCompass {
  public sealed class VendorUpdate {
-    public string Id,Name,Version,Url,Hash,FileName,Source,Notes,Error;
+    public string Id,Name,Version,Url,Hash,FileName,Source,Notes,Error,Build,Channel;
     public long Size;
  }
  public sealed class UpdateFile {public string Relative,Hash;public long Size;}

@@ -6,7 +6,9 @@ namespace FileCompass {
  }
  public partial class MainWindow {
   internal void VerifyUnifiedSearch(Action<bool,string> check,string root){
+   check(CommandSearchMatches("Přejmenovat","přejmenování")&&CommandSearchMatches("Hromadné přejmenování…","prejmenovani")&&!CommandSearchMatches("Kopírovat","přejmenování"),"command search finds both rename actions with or without accents");
    SetActive(left);left.List.Focus();UpdateLayout();var frame=FluentUiTests.Children<Border>(this).Single(x=>Convert.ToString(x.Tag)=="main-toolbar-frame");var buttons=AdvancedToolsTests.Visual<Button>(frame).Where(x=>Convert.ToString(x.Tag)=="toolbar-action").ToArray();Func<string,Button> button=name=>buttons.Single(x=>FluentUiTests.Children<Image>(x).Any(i=>Convert.ToString(i.Tag)==name));
+   check(!buttons.Any(x=>FluentUiTests.Children<Image>(x).Any(i=>Convert.ToString(i.Tag)=="search"))&&FluentUiTests.Children<Button>(frame).Any(x=>System.Windows.Automation.AutomationProperties.GetAutomationId(x)=="AdvancedSearch"),"advanced search is in the upper search field instead of the toolbar");
    var settings=button("settings");check(settings.TranslatePoint(new Point(),frame).X>button("ftp").TranslatePoint(new Point(),frame).X&&fluentSearchInput.TranslatePoint(new Point(),frame).X>settings.TranslatePoint(new Point(),frame).X,"settings and the single search field are aligned on the right");
    var back=button("back");var sync=button("sync");check(Object.ReferenceEquals(((FrameworkElement)back.Parent).Parent,sync.Parent)&&sync.TranslatePoint(new Point(),frame).X>back.TranslatePoint(new Point(),frame).X,"synchronization is next to the two cross-panel arrows");
    check(buttons.All(x=>!Object.Equals(((SolidColorBrush)x.Background).Color,Colors.White)),"all toolbar buttons have tinted resting backgrounds");

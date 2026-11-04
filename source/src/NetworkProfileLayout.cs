@@ -59,6 +59,7 @@ namespace FileCompass {
                 var area = lastProfileWorkArea = LayoutWorkArea ?? DialogGeometry.WorkArea(this);
                 MinWidth = Math.Min(820, area.Width - 32); MinHeight = Math.Min(350, area.Height - 32); MaxWidth = area.Width - 32; MaxHeight = area.Height - 32;
                 ArrangeGeneralCards(area.Height < 680 ? 3 : 2);
+                FluentDialogUx.Refresh(this);
                 UpdateLayout(); var scroll = ((TabItem)Tabs.SelectedItem).Content as ScrollViewer;
                 var content = (FrameworkElement)scroll.Content;
                 content.Measure(new Size(Math.Max(100, scroll.ActualWidth - SystemParameters.VerticalScrollBarWidth), Double.PositiveInfinity));

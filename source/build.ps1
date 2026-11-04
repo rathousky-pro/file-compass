@@ -35,12 +35,19 @@ if (!$Release -and [String]::Equals($bin.TrimEnd('\'), (Join-Path $projectRoot '
         else { Move-Item -LiteralPath $oldOAuth -Destination (Join-Path $profileRoot ('google-oauth-preserved-' + [Guid]::NewGuid().ToString('N') + '.json')) }
     }
 }
-$references = @('netstandard.dll', 'System.dll', 'System.Management.dll', 'System.Core.dll', 'System.Security.dll', 'System.Xml.dll', 'System.Xaml.dll', 'System.Windows.Forms.dll', 'Microsoft.VisualBasic.dll', 'System.IO.Compression.dll', 'System.Web.Extensions.dll', 'WPF\WindowsBase.dll', 'WPF\PresentationCore.dll', 'WPF\PresentationFramework.dll')
+$references = @('netstandard.dll', 'System.dll', 'System.Management.dll', 'System.Core.dll', 'System.Security.dll', 'System.Xml.dll', 'System.Xaml.dll', 'System.Windows.Forms.dll', 'Microsoft.VisualBasic.dll', 'System.IO.Compression.dll', 'System.IO.Compression.FileSystem.dll', 'System.Web.Extensions.dll', 'WPF\WindowsBase.dll', 'WPF\PresentationCore.dll', 'WPF\PresentationFramework.dll')
 $buildInfoDirectory = Join-Path $PSScriptRoot ('obj\build-' + [Guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $buildInfoDirectory -Force | Out-Null
+$updateWorker = Join-Path $buildInfoDirectory 'FileCompass.Updater.exe'
+& (Join-Path $PSScriptRoot 'build-updater.ps1') -OutputFile $updateWorker
 & (Join-Path $PSScriptRoot 'gen-build-info.ps1') -OutputDirectory $buildInfoDirectory
 $compilerArgs = @('/nologo', '/target:winexe', '/platform:x64', '/optimize+', '/codepage:65001', ('/out:' + (Join-Path $bin 'File Compass.exe')))
 $appIcon = Join-Path $PSScriptRoot 'assets\file-voyager\FileVoyager-FloppyOrbit.ico'
 $compilerArgs += Join-Path $buildInfoDirectory 'BuildInfo.g.cs'
+$compilerArgs += Join-Path $PSScriptRoot 'update\UpdateContract.cs'
+$compilerArgs += '/main:FileCompass.Program'
+if (!$Release) { $compilerArgs += Join-Path $PSScriptRoot 'update\UpdateWorker.cs' }
+$compilerArgs += '/resource:' + $updateWorker + ',FileCompass.UpdateWorker.exe'
 $compilerArgs += '/resource:' + (Join-Path $PSScriptRoot 'assets\branding\rathousky-pro-transparent.png') + ',FileCompass.Branding.RathouskyPro.png'
 $compilerArgs += '/win32icon:' + $appIcon
 $compilerArgs += '/win32manifest:' + (Join-Path $PSScriptRoot 'FileCompass.manifest')
@@ -139,6 +146,7 @@ foreach ($oldImage in Get-ChildItem -LiteralPath (Join-Path $helpRoot 'images') 
     if (Test-Path -LiteralPath (Join-Path $helpRoot ('images\'+$oldImage.Name.Replace('cs-CZ.','cs.')))) { Remove-Item -LiteralPath $oldImage.FullName -Force }
 }
 Copy-Item -Path (Join-Path $documentationRoot '*.md') -Destination $helpRoot -Force
+Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSE') -Destination (Join-Path $helpRoot 'LICENSE.txt') -Force -ErrorAction Stop
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'dependencies.json') -Destination (Join-Path $helpRoot 'dependencies.json') -Force -ErrorAction Stop
 $oldDocumentation = @('README.md','FILE-COMPASS.md','ARCHIVES.md','ADVANCED-TOOLS.md','ARCHIVE-PLUGINS.md','CLOUD-STORAGE.md','DOCUMENT-PREVIEW.md','DUPLICATES-COMPARE.md','FILE-DETAILS.md','FILE-TOOLS.md','FOLDER-VIEWS.md','GOOGLE-OAUTH-PUBLISHER.md','LIBCURL-AUDIT.md','METADATA-SEARCH.md','NETWORK-PLUGINS.md','NETWORK-VALIDATION.md','THIRD-PARTY-NOTICES.md','UI-VALIDATION.md','WORKFLOW-FEATURES.md')
 foreach ($folder in @($bin,$configRoot)) {

@@ -18,9 +18,13 @@ namespace FileCompass {
         internal static async Task<bool> TryWriteAsync(string text,CancellationToken token=default(CancellationToken),Action<string> writer=null,Func<int,Task> pause=null) {
             if(text==null)throw new ArgumentNullException("text");
             writer=writer??Write;pause=pause??(milliseconds=>Task.Delay(milliseconds,token));
+            return await TryExecuteAsync(()=>writer(text),token,pause);
+        }
+        internal static async Task<bool> TryExecuteAsync(Action write,CancellationToken token=default(CancellationToken),Func<int,Task> pause=null) {
+            pause=pause??(milliseconds=>Task.Delay(milliseconds,token));
             for(int attempt=0;attempt<=Delays.Length;attempt++) {
                 token.ThrowIfCancellationRequested();
-                try{writer(text);return true;}
+                try{write();return true;}
                 catch(ExternalException ex){if(!Busy(ex))throw;if(attempt==Delays.Length)return false;}
                 await pause(Delays[attempt]);
             }

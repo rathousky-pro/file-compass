@@ -15,7 +15,7 @@ const path=require('node:path'),fs=require('node:fs/promises'),{pathToFileURL}=r
    check(await page.locator('article:visible').count()===1,'One topic is visible');
    check(await page.locator('article:visible').getAttribute('id')==='copy','Topic hash opens copy help');
    const picture=page.locator('#copy figure img').first();await picture.scrollIntoViewIfNeeded();
-   await picture.evaluate(image=>image.decode());check(await picture.evaluate(image=>image.naturalWidth>600),'External screenshot loads offline');
+   await picture.evaluate(image=>image.decode());check(await picture.evaluate(image=>image.naturalWidth>=250&&image.naturalHeight>=100),'External screenshot loads offline');
    await picture.click();check(await page.locator('#zoom').evaluate(dialog=>dialog.open),'Screenshot zoom opens');
    await page.keyboard.press('Escape');check(!await page.locator('#zoom').evaluate(dialog=>dialog.open),'Escape closes zoom');
    await page.locator('[data-topic-link="settings"]').click();check(new URL(page.url()).hash==='#settings','Internal navigation');

@@ -12,11 +12,11 @@ V **Konfigurace → Aktualizace** najdete instalovanou a dostupnou verzi, výsle
 | smartmontools | [Oficiální vydání](https://github.com/smartmontools/smartmontools/releases). Verze se kontroluje, ale automatická instalace vyžaduje zveřejněný SHA-256. Aktuální starší vydání na GitHubu má místo něj PGP/MD5 soubory; dokud aplikace neověřuje PGP, nabídne stránku výrobce. |
 | Magick.NET / OpenMP | Přehled ukazuje instalovanou verzi. Spravovaná knihovna, nativní OpenMP knihovna a odpovídající runtime se aktualizují společně s File Compass. Samostatná aktualizace FFmpegu je nenahrazuje. |
 | Knihovny a ovladače | Síťové/náhledové knihovny zůstávají součástí vydání File Compass. SSHFS/WinFsp nadále používají instalační postupy výrobce. |
-| File Compass | Řádek je připravený pro vydání na GitHubu. Adresa zatím nebyla určena, proto kontrola a stažení programu nejsou aktivní. |
+| File Compass | [GitHub Releases rathousky-pro/file-compass-web](https://github.com/rathousky-pro/file-compass-web/releases), Windows x64 ZIP; porovnává se verze, kanál i build. |
 
 Zjištění verze a ověření stahovaného balíčku jsou samostatné kroky. Pokud metadata výrobce potvrzují stejnou nebo starší verzi, stav je **Aktuální** i tehdy, když vydavatel neposkytuje SHA-256. U novější verze bez SHA-256 stav nabízí ruční stažení; automatické stažení a instalace zůstávají vypnuté. Podrobnost u řádku vysvětluje chybějící kontrolní součet. Chyba síťové kontroly se nadále zobrazuje jako chyba.
 
-Používají se stabilní vydání. Neexistuje vlastní přebalovací server ani odhadované číslo nejnovější verze. Výpadek sítě nebo chybějící ověření se zobrazí jako chyba, nikoli jako „Aktuální“. GitHub může omezit počet anonymních požadavků; ruční kontrolu lze zopakovat později. FFmpeg se kontroluje proti verzi a SHA-256 zveřejněným přímo na stránkách poskytovatele Windows sestavení.
+Doplňky používají stabilní vydání. File Compass v beta kanálu připouští beta i stabilní vydání; stabilní instalace nepřebírají předběžná vydání. Neexistuje vlastní přebalovací server ani odhadované číslo nejnovější verze. Výpadek sítě nebo chybějící ověření se zobrazí jako chyba, nikoli jako „Aktuální“. GitHub může omezit počet anonymních požadavků; ruční kontrolu lze zopakovat později. FFmpeg se kontroluje proti verzi a SHA-256 zveřejněným přímo na stránkách poskytovatele Windows sestavení.
 
 ## Stažení a použití
 
@@ -46,3 +46,37 @@ Testovací příkazy ve vývojovém sestavení:
 ```
 
 Každý příkaz používá vlastní testovací profil. Živý test navíc načte metadata výrobců a do testovací složky stáhne oficiální 7-Zip, ověří hash, rozbalení a použití nové knihovny archivovacím procesem. Běžná instalace se tím neaktualizuje. Testovací příkazy nejsou součástí distribučního Release sestavení.
+
+## Vydání a vlastní aktualizace File Compass
+
+Kontrola používá `https://api.github.com/repos/rathousky-pro/file-compass-web/releases?per_page=100`. Zdrojový repozitář aplikace zůstává soukromý. Veřejný repozitář webu nese pouze distribuční ZIP a poznámky vydání. Záznam bez vhodného vydání není označen jako aktuální verze.
+
+Tag má tvar `v0.9.5-beta-build.20261104.66`, stabilní verze například `v1.0.0-build.20261105.01`. Soubor se vždy jmenuje `FileCompass-win-x64.zip`. Jednoznačný odkaz je `https://github.com/rathousky-pro/file-compass-web/releases/download/<tag>/FileCompass-win-x64.zip`. Pro poslední stabilní vydání lze použít `https://github.com/rathousky-pro/file-compass-web/releases/latest/download/FileCompass-win-x64.zip`; beta aktualizátor vybírá vydání přes API, protože latest vynechává prerelease.
+
+Porovnává se číselná verze, kanál a build (datum a číselné pořadí). Stejný build ani downgrade se nenabízí. Stabilní verze má přednost před beta verzí stejného čísla. ZIP musí obsahovat `file-compass-release.json` s verzí, kanálem, buildem a SHA-256 všech dodaných souborů; shoda je kontrolována také proti informativní verzi EXE a Windows x64 hlavičce. Kontrolní součet celého ZIP pochází z GitHub asset digest.
+
+**Stáhnout a aktualizovat** připraví balíček v datové složce a při volném programu zahájí restart. Při běžící práci zůstane dostupné **Nainstalovat a restartovat**. Pomocný EXE je součástí zkompilovaného programu, není stahován z jiného zdroje. Při běžném zavření proběhne uložení pohledů a historie; při zrušení zavření se instalace neprovede. Pomocník čeká na skutečný konec původního PID včetně kontroly času jeho vzniku a pak provádí zálohované náhrady souborů. Nezabíjí jiné instance. Zamčené soubory zkouší znovu; při neúspěchu vrací již změněné soubory.
+
+Profilové složky `config`, `data`, `local-profile` a vývojová značka nejsou součástí aktualizačního ZIP a nejsou přepisovány. Povolen je pouze hlavní EXE/konfigurace EXE a adresáře libraries, plugins, preview, icons, languages a help. Instalace do nezapisovatelné složky se odmítne ještě před zavřením aplikace. Každý pokus má samostatnou zálohu, žurnál a výsledek ve složce `data/updates/application/<id>/attempt-<id>`. Starší soubory, které nové vydání neobsahuje, se automaticky nemažou.
+
+Příprava distribučního balíčku bez publikace:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/package-release.ps1 -Build
+```
+
+Skript sestaví čistý Release, vytvoří manifest, ZIP, součet a release-info.json. Volitelné `-Publish` nahraje balíček přímo přes GitHub REST API; GitHub CLI není potřeba. Použije existující GH_TOKEN/GITHUB_TOKEN z prostředí nebo přihlášení uložené u Gitu přes správce přihlašovacích údajů. Git se hledá stejně jako při publikaci webu i v přibaleném vývojovém runtime. Pokud uložené přihlášení chybí, správce Gitu může otevřít přihlášení v prohlížeči. Token se nevypisuje, neukládá do skriptu a není součástí klienta. Přihlášený účet potřebuje oprávnění Contents write v repozitáři webu. Beta vydání se označí jako prerelease.
+
+Již připravený ZIP lze nahrát bez sestavování a přebalení:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools/package-release.ps1 -ReleaseDirectory "E:\Programování\Commander\ai-docs\releases\github-updater-final" -Publish
+```
+
+Bez `-Publish` stejný příkaz pouze ověří připravené soubory a nepřistupuje k přihlášení ani síti. Před nahráním se ověří lokální ZIP, jeho součet a shoda manifestu s tagem. Vydání nejprve vznikne jako koncept, nahraje se ZIP a součet a zkontrolují se hashe vrácené GitHubem; teprve potom se zveřejní. Přerušené nahrávání lze dokončit stejným příkazem. Již zveřejněné totožné vydání se pouze ověří; konfliktní soubory se nepřepisují. Tyto změny samy žádné vydání nepublikují.
+
+Publikační postup lze ověřit offline příkazem `powershell -NoProfile -ExecutionPolicy Bypass -File tools/test-github-release.ps1`. Testy používají simulované GitHub odpovědi a nečtou skutečné přihlašovací údaje.
+
+Test: `--application-updates-test <adresář>` používá vlastní x64 EXE a instalační složku; ověřuje výběr vydání, podvržené balíčky, čekání na konec procesu, výměnu, restart a rollback, aniž by měnil skutečnou instalaci.
+
+Pokud byl pomocník přerušen výpadkem napájení, lze po zavření aplikace spustit `restore.ps1` v příslušné složce attempt. Pomocník ověří zálohy podle žurnálu, vrátí předchozí soubory a spustí aplikaci. Po úspěšné aktualizaci může tentýž postup posloužit jako ruční návrat původního sestavení.

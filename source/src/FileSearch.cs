@@ -28,7 +28,9 @@ namespace FileCompass
         public FileAttributes RequiredAttributes, ExcludedAttributes;
         public int EncodingCodePage = 65001;
         public long MaximumTextBytes = 0;
-        public bool Duplicates; public MetadataSearchCondition[] MetadataConditions = new MetadataSearchCondition[0]; [System.Xml.Serialization.XmlIgnore] public Action<string> MetadataInspecting;
+        public bool Duplicates; public MetadataSearchCondition[] MetadataConditions = new MetadataSearchCondition[0];
+        [System.Xml.Serialization.XmlIgnore, System.Web.Script.Serialization.ScriptIgnore]
+        public Action<string> MetadataInspecting { get; set; }
     }
     public static class FileSearchEngine
     {

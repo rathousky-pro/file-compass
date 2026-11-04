@@ -1,5 +1,13 @@
 # Validation — 4 November 2026
 
+## Current Fluent screenshots
+
+All 28 screenshot scenes were recaptured in Czech and English from development build **20261104.53**, using generated files, fictional connection profiles and synthetic hardware/progress data. The website checkout, source help and installed `bin/help/images` now share the same 56 PNGs; both compatibility audio aliases were refreshed as well. Both contact sheets were visually reviewed. There are no user files or credentials in the capture inputs.
+
+The publication check passed 355 assertions covering hashes, dimensions, all website image references, current bilingual dates and installed-help parity. Native help/About passed 226 checks in verification build **20261104.54**, including all 28 scenes per language and native image enlargement. Compact dialogs are validated by usable image dimensions rather than the obsolete 600-pixel minimum. Release-content, HTML, language and notice checks also passed.
+
+Website sources and generated pages are ready locally, but this session could not publish them: the GitHub integration rejected blob creation with HTTP 403, and the terminal has no working external network access. Live website rendering and browser interaction checks were unavailable in this environment. `tools/publish-website-screenshots.ps1` can publish the reviewed website checkout from a normal terminal; it verifies the remote, branch, incoming changes and all screenshot hashes before a normal commit/push.
+
 ## Fluent workspace promoted to the main application
 
 The approved v19 workspace is now the canonical `source` implementation. Final local Release build **20261104.47** compiled successfully from those sources and replaces the old installation in `bin`. The product version remains **0.9.5 beta**; this promotion does not create a GitHub binary release.
@@ -50,3 +58,33 @@ Cleanup removed 364 obsolete outputs/backups containing 22,553 files (25,029,461
 The existing PdfPig/System.Memory binding warning remains; Release also reports unused test hooks. No claims are made about untested real provider accounts or physical USB operations. Original third-party notices are preserved verbatim. Exact FFmpeg/dependency corresponding sources and applicable Microsoft OpenMP runtime redistribution terms remain public-distribution prerequisites: see [distribution review](DISTRIBUTION-AUDIT.md). No new binary release was published and local profiles/credentials remain excluded from Git.
 
 Czech uses the canonical identifier cs throughout the application, catalog cs.lng, HTML help folder cs and screenshot names. Earlier saved Czech identifiers are accepted and normalized; new saved selections use cs. The locale rename passed 2,878 language assertions, 184 native-help checks, 76 live-language checks, 72 appearance/language checks, 22 smoke checks and 25 offline browser checks.
+
+## GitHub application updates — 4 November 2026
+
+Application updates use the public website repository's GitHub Releases, a fixed ZIP asset name and version/channel/build tags. The separate updater is embedded in the application; no publisher token is bundled. Existing vendor-component installation and its integrity registry retain their separate activation rules.
+
+The dedicated application-updates suite passed 26 checks: numeric build ordering, release channels, GitHub origin/digest validation, full ZIP inventory and EXE identity, rejected profile/traversal/extra payloads, rollback, cancelled handoff, waiting for the previous process, replacing files, restarting the new executable, preserving user state, and journal-based restoration. Both test and Release builds compile successfully. Translation/help/dependency validation passes.
+
+The broader vendor-updates rerun did not complete: one run hit a denied sandbox TEMP directory during archive-worker cleanup; another timed out connecting the archive worker's named pipe. This prevented its later settings assertions from running. The application ZIP updater uses framework ZIP extraction and passed its independent process handoff tests. No GitHub release was published. Logs and generated packages are under ignored ai-docs paths.
+
+## MIT release candidate - 4 November 2026
+
+Original File Compass code is MIT-licensed. Repository LICENSE is copied verbatim
+into help/LICENSE.txt by both build entry points. Source ownership, third-party
+license boundaries and rebuilding with modified LGPL libraries are documented
+in LICENSING.md. No runtime hash check was weakened or disabled.
+
+Validation build 20261104.77 passed smoke (22 checks), integrity (41), native
+help/About (226) and application updates (26), for 315 checks. The About screenshot
+was inspected. Release build 20261104.78 compiled and was packaged with its
+verified update inventory and SHA-256. All 49 pinned runtime binaries and 70
+original notice/provenance files match the reviewed baseline. Translation/help
+validation passed with 2,885 semantic keys and 44 topics in each help language.
+The existing System.Memory binding warning and unused Release test-hook warnings
+remain; these are not new failures introduced by licensing.
+
+The candidate is unsigned. It is not a completed public release or SignPath
+approval. Exact corresponding-source distribution and Microsoft runtime terms
+still need resolution; see DISTRIBUTION-AUDIT.md. GitHub writes failed with 403
+and terminal GitHub access failed DNS resolution. Prepared website links are
+local only and must follow successful verified asset upload.

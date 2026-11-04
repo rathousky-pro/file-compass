@@ -27,9 +27,9 @@ namespace FileCompass {
         var body=new StackPanel();body.Children.Add(details);body.Children.Add(source);body.Children.Add(location);
         var buttons=new WrapPanel{Margin=new Thickness(0,12,0,0)};body.Children.Add(buttons);
         download=CopyUi.Button(L.Text("updates.download"),delegate{var row=Items.SelectedItem as UpdateRow;if(row!=null&&manager!=null){manager.Download(row.Package);Render();}});FluentTheme.Primary(download);buttons.Children.Add(download);
-        apply=CopyUi.Button(L.Text("updates.apply"),delegate{if(manager!=null)manager.ApplyPending();});buttons.Children.Add(apply);
+        apply=CopyUi.Button(L.Text("updates.apply"),async delegate{if(manager!=null){var row=Items.SelectedItem as UpdateRow;if(row!=null&&row.Id=="app")await manager.InstallApplication();else manager.ApplyPending();}});buttons.Children.Add(apply);
         rollback=CopyUi.Button(L.Text("updates.rollback"),delegate{var row=Items.SelectedItem as UpdateRow;if(row!=null&&manager!=null)manager.Rollback(row.Id);});buttons.Children.Add(rollback);
-        vendor=CopyUi.Button(L.Text("updates.vendor"),delegate{var row=Items.SelectedItem as UpdateRow;if(row!=null&&(VendorUpdates.Ids.Contains(row.Id)||row.Id=="imagemagick"))Process.Start(new ProcessStartInfo(row.Id=="imagemagick"?"https://github.com/dlemstra/Magick.NET":VendorUpdates.Home(row.Id)){UseShellExecute=true});});buttons.Children.Add(vendor);
+        vendor=CopyUi.Button(L.Text("updates.vendor"),delegate{var row=Items.SelectedItem as UpdateRow;if(row!=null&&(VendorUpdates.Ids.Contains(row.Id)||row.Id=="imagemagick"||row.Id=="app"))Process.Start(new ProcessStartInfo(row.Id=="app"?ApplicationUpdates.Home:row.Id=="imagemagick"?"https://github.com/dlemstra/Magick.NET":VendorUpdates.Home(row.Id)){UseShellExecute=true});});buttons.Children.Add(vendor);
         Children.Add(new Border{Child=body,Padding=new Thickness(12),CornerRadius=new CornerRadius(6),BorderThickness=new Thickness(1),BorderBrush=CompactTheme.Line,Background=CompactTheme.PanelSurface});
         Children.Add(new TextBlock{Text=L.Text("updates.timing"),TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,12,0,0)});
         daily.IsChecked=UpdateRegistry.State().Daily;Children.Add(daily);
@@ -56,7 +56,9 @@ namespace FileCompass {
         }
         rows.Add(new UpdateRow{Id="imagemagick",Name="Magick.NET / OpenMP",Installed=typeof(ImageMagick.MagickNET).Assembly.GetName().Version.ToString(3),Available="—",Status=L.Text("updates.withApp")});
         rows.Add(new UpdateRow{Id="libraries",Name=L.Text("updates.libraries"),Installed=L.Text("updates.withApp"),Available="—",Status=L.Text("updates.withApp")});
-        rows.Add(new UpdateRow{Id="app",Name="File Compass",Installed=BuildInfo.DisplayVersion+" · "+BuildInfo.Build,Available="—",Status=L.Text("updates.appNotConfigured")});
+        var app=state.Available.FirstOrDefault(x=>x.Id=="app");string appStatus=app==null?L.Text("updates.notChecked"):!String.IsNullOrEmpty(app.Error)?L.Text("updates.unverified"):String.IsNullOrEmpty(app.Version)?L.Text("updates.appNoRelease"):ApplicationUpdates.IsNewer(app)?L.Text("updates.newVersion"):L.Text("updates.currentState");
+        try{if(ApplicationUpdates.Pending()!=null)appStatus=L.Text("updates.appReady");}catch(Exception ex){appStatus=ex.Message;}
+        rows.Add(new UpdateRow{Id="app",Name="File Compass",Installed=BuildInfo.DisplayVersion+" / "+BuildInfo.Build,Available=String.IsNullOrEmpty(app?.Version)?"-":app.Version+(String.IsNullOrEmpty(app.Channel)?"":" "+app.Channel)+" / "+app.Build,Status=appStatus,Package=app});
         Items.ItemsSource=rows;Items.SelectedItem=rows.FirstOrDefault(x=>x.Id==selected)??rows[0];
         check.IsEnabled=manager!=null;check.Content=L.Text(manager!=null&&manager.Checking?"action.cancel":"updates.check");
         feedback.Text=manager!=null&&!String.IsNullOrEmpty(manager.Feedback)?manager.Feedback:state.LastSuccessUtc==DateTime.MinValue?L.Text("updates.notChecked"):L.Text("updates.lastCheck")+state.LastSuccessUtc.ToLocalTime().ToString("g");Selection();
@@ -65,6 +67,12 @@ namespace FileCompass {
     void Selection(){
         if(download==null)return;var row=Items.SelectedItem as UpdateRow;if(row==null)return;
         var state=UpdateRegistry.State();bool supported=VendorUpdates.Ids.Contains(row.Id);
+        if(row.Id=="app"){
+            PendingApplicationUpdate pending=null;string error=null;try{pending=ApplicationUpdates.Pending();}catch(Exception ex){error=ex.Message;}
+            details.Text=error??row.Package?.Error??L.Text("updates.appHelp");source.Text=L.Text("updates.source")+ApplicationUpdates.Home;location.Text=L.Text("updates.location")+AppPaths.ProgramDirectory;details.ToolTip=details.Text+"\n"+source.Text+"\n"+location.Text+"\n"+row.Package?.Notes;
+            download.Content=L.Text("updates.appDownload");download.IsEnabled=error==null&&pending==null&&manager!=null&&manager.CanDownload(row.Package);apply.Content=L.Text("updates.appInstall");apply.IsEnabled=error==null&&pending!=null&&manager!=null&&!manager.Downloading&&!main.UpdateWorkRunning;rollback.IsEnabled=false;vendor.IsEnabled=true;return;
+        }
+        download.Content=L.Text("updates.download");apply.Content=L.Text("updates.apply");
         details.Text=row.Id=="app"?L.Text("updates.appHelp"):row.Id=="imagemagick"?L.Text("updates.imageMagickHelp"):row.Id=="libraries"?L.Text("updates.librariesHelp"):!String.IsNullOrEmpty(row.Package?.Error)?row.Package.Error:row.Id=="ffmpeg"?L.Text("updates.ffmpegSource"):L.Text("updates.packageHelp");
         source.Text=row.Id=="imagemagick"?L.Text("updates.source")+"https://github.com/dlemstra/Magick.NET":supported?L.Text("updates.source")+(row.Package?.Source??VendorUpdates.Home(row.Id)):"";
         location.Text=row.Id=="imagemagick"?L.Text("updates.location")+typeof(ImageMagick.MagickNET).Assembly.Location:supported?L.Text("updates.location")+UpdateRegistry.Resolve(VendorUpdates.Files(row.Id)[0]):"";

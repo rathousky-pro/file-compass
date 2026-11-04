@@ -19,7 +19,7 @@ Czech uses `languages/cs.lng` and `help/cs/index.html`; earlier saved Czech lang
 - [Archives](docs/ARCHIVES.md): browsing, compression/extraction, split archives, passwords and supported SFX creation. Bundled 7-Zip is 26.04; optional vendor updates can differ. External RAR/ARJ/LHA tools retain their own license requirements.
 - [Tools](docs/TOOLS.md): image/audio conversion, metadata, batch rename, search, duplicates and comparison. Image editing is integrated into the converter; images/audio offer Keep original format. Originals are preserved and collisions receive new output names.
 - [Cloud](docs/CLOUD.md) and networking: saved accounts, native FTP/FTPS/SFTP/SCP/SSH and optional SSHFS. Credentials and provider authorization stay local.
-- [Updates](docs/UPDATES.md): official-source version checks, verified downloads, preparation and rollback. Application-update URLs remain unconfigured.
+- [Updates](docs/UPDATES.md): official-source version checks, verified downloads, preparation and rollback. File Compass checks GitHub Releases in the public website repository, compares versions and builds, verifies the full ZIP and restarts through a separate updater with rollback.
 
 Background tools and transfers share one activity strip: tools stay on the left, transfers on the right, with distinct local/network labels. Modal dialogs dim their disabled owner; sending work to the background removes the shade. **About File Compass** is at the bottom of the sidebar and shows version, build ID, build date and developer information. Transaction history presents the operation list beside its selectable details and keeps Undo and other actions in the shared footer.
 
@@ -55,8 +55,8 @@ Development settings/data live separately in ignored `local-profile`. WebView2 c
 
 ## Licenses and maintenance
 
-[Third-party notices](docs/THIRD-PARTY-NOTICES.md) identify the components; `source/dependencies.json` records exact runtime and original-legal-file hashes. No open-source license has been selected for File Compass itself. Component licenses do not license application code. Public binary distribution still requires the FFmpeg corresponding-source bundle and applicable Microsoft runtime terms described in the distribution review.
+[File Compass original code is licensed under MIT](LICENSE), copyright (c) 2026 Jan Rathouský. See [licensing and rebuilding](docs/LICENSING.md) for scope and instructions for modified LGPL libraries. [Third-party notices](docs/THIRD-PARTY-NOTICES.md) identify the components; `source/dependencies.json` records exact runtime and original-legal-file hashes. Third-party components retain their original licenses. Public binary distribution still requires the corresponding-source bundles and applicable Microsoft runtime terms described in the distribution review.
 
-[Public website](https://rathousky-pro.github.io/file-compass-web/) · [Privacy policy](https://rathousky-pro.github.io/file-compass-web/privacy.html). Website sources are in a separate repository; this application repository remains private.
+[Public website](https://rathousky-pro.github.io/file-compass-web/) · [Privacy policy](https://rathousky-pro.github.io/file-compass-web/privacy.html). Website sources are in a separate repository; the application source repository is public.
 
 Generated builds/reports belong in ignored `ai-docs`. `tools/clean-development-builds.ps1` previews removal of obsolete builds, test outputs, build metadata and `File Compass.before-*.exe` backups; `-Apply` removes checked untracked targets and retains compact test results. Sources, profiles, dependency archives, nested repositories and explicitly retained artifacts are protected. Historical reports describe their tested revision.

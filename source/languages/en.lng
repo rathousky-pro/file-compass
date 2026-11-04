@@ -1,4 +1,10 @@
 {
+  "updates.appInstalling": "Preparing installation and restart…",
+  "updates.appWaiting": "Installation waits for running tasks to finish.",
+  "updates.appReady": "Ready to install and restart",
+  "updates.appInstall": "Install and restart",
+  "updates.appDownload": "Download and update",
+  "updates.appNoRelease": "No matching release has been published on GitHub yet.",
   "undoHistory.empty": "No transactions yet.\nCompleted operations will appear here.",
   "undoHistory.selectTransaction": "Select a transaction to view its steps and any reasons it cannot be undone.",
 
@@ -152,7 +158,7 @@
   "updates.libraries": "Libraries and drivers",
   "updates.withApp": "With the application",
   "updates.appNotConfigured": "GitHub – source not configured yet",
-  "updates.appHelp": "File Compass updates will be provided through GitHub. The release address is not defined yet; the application is not downloaded or replaced automatically.",
+  "updates.appHelp": "GitHub Releases: both version and build are compared. After a verified download, the app closes, updates and restarts. Settings and data are preserved; failed replacements restore the backup.",
   "updates.librariesHelp": "Networking and preview libraries are tied to application releases. SSHFS and WinFsp use publisher installers. These components are not overwritten while running.",
   "updates.ffmpegSource": "FFmpeg for Windows: the full static gyan.dev build linked by ffmpeg.org. FFmpeg and FFprobe update together. SHA-256 is checked against the checksum published by the provider.",
   "updates.packageHelp": "The package downloads from the official repository, is verified and stored in a separate version directory. The previous component remains available for rollback.",

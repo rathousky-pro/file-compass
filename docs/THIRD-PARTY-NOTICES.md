@@ -2,6 +2,11 @@
 
 Paths below refer to the installation root unless a source path is stated. Original upstream license/copyright texts are retained with each component; this English inventory does not replace them.
 
+Original File Compass code is MIT-licensed, copyright (c) 2026 Jan Rathouský.
+See [licensing](LICENSING.md) and the complete MIT text in the repository's
+`LICENSE` or the portable package's `help/LICENSE.txt`. This does not change any
+third-party component's license below.
+
 ## libcurl 8.22.0 and libssh2 1.11.1
 
 Network operations use the native `FileCompassNetwork.dll` adapter in `plugins/network`. It statically links libcurl (curl/MIT-like license), libssh2 (BSD-3-Clause) and dependencies from the official curl 8.22.0_3 Windows x64 package. libcurl handles FTP/FTPS; libssh2 handles SFTP/SCP/SSH. LibreSSL 4.3.3 supplies cryptography. Dependencies include zlib-ng, zstd, Brotli, libpsl, the public suffix list, nghttp2, nghttp3 and ngtcp2.
@@ -110,4 +115,4 @@ The internal editor validates YAML using the unmodified YamlDotNet net47 assembl
 
 ## Scope of this inventory
 
-Reviewed against the checked-in runtime layout on 1 November 2026. The shipped 7-Zip remains 26.04 even if a local user has activated a newer vendor package. The inventory covers 49 pinned runtime binaries and 70 original notice/provenance files; exact paths and SHA-256 values are recorded in `source/dependencies.json` and checked by `tools/check-dependency-notices.py`. It also covers the 7z.sfx module and all document-preview JavaScript notices. Original upstream notices have not been rewritten or translated. No open-source license for File Compass application code is granted by this third-party inventory. Optional tool downloads retain their own vendor terms. See [distribution audit](DISTRIBUTION-AUDIT.md) for outstanding public-release requirements and restore constraints.
+Reviewed against the checked-in runtime layout on 1 November 2026. The shipped 7-Zip remains 26.04 even if a local user has activated a newer vendor package. The inventory covers 49 pinned runtime binaries and 70 original notice/provenance files; exact paths and SHA-256 values are recorded in `source/dependencies.json` and checked by `tools/check-dependency-notices.py`. It also covers the 7z.sfx module and all document-preview JavaScript notices. Original upstream notices have not been rewritten or translated. Original File Compass application code is MIT-licensed; this third-party inventory does not relicense the components. Optional tool downloads retain their own vendor terms. See [distribution audit](DISTRIBUTION-AUDIT.md) for outstanding public-release requirements and restore constraints.

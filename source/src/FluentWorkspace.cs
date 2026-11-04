@@ -9,6 +9,7 @@ namespace FileCompass {
   DockPanel fluentLegacyMenu;
   Border fluentDrawer;
   Menu fluentCascadeMenu;
+  TextBox fluentCommandSearch;
   FrameworkElement fluentSearchBox;
   internal void CloseFluentDrawer(){if(fluentCascadeMenu!=null)CascadeNavigation.Close(fluentCascadeMenu);if(fluentDrawer!=null)fluentDrawer.Visibility=Visibility.Collapsed;}
   internal void InstallFluentWorkspace(DockPanel root,Grid split){
@@ -49,11 +50,12 @@ namespace FileCompass {
    link(L.Text("queue.copyTitle"),ShowCopyQueue);
    var drawerBody=new DockPanel();if(about!=null){about.Icon=new TextBlock{Text="\uE946",FontFamily=new FontFamily("Segoe MDL2 Assets"),Foreground=Brushes.White,FontSize=16};System.Windows.Automation.AutomationProperties.SetAutomationId(about,"FluentAbout");var aboutMenu=CascadeNavigation.Build(new[]{about},CloseFluentDrawer);aboutMenu.Tag="cascade-about";var aboutFooter=new Border{Tag="drawer-about-footer",Padding=new Thickness(12,8,12,8),BorderBrush=CompactTheme.ColorBrush("#42617C"),BorderThickness=new Thickness(0,1,0,0),Child=aboutMenu};DockPanel.SetDock(aboutFooter,Dock.Bottom);drawerBody.Children.Add(aboutFooter);}drawerBody.Children.Add(new ScrollViewer{Tag="drawer-scroll",Content=body,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled});
    fluentDrawer=new Border{Tag="fluent-drawer",Width=250,HorizontalAlignment=HorizontalAlignment.Left,VerticalAlignment=VerticalAlignment.Stretch,Margin=new Thickness(8,0,0,8),Background=FluentColors.Navigation,CornerRadius=new CornerRadius(8),Visibility=Visibility.Collapsed,Child=drawerBody};
+   InstallDrawerSearch(drawerBody,roots.Concat(about==null?new MenuItem[0]:new[]{about}).ToArray());
    Panel.SetZIndex(fluentDrawer,20);workspace.Children.Add(fluentDrawer);
    split.PreviewMouseDown+=delegate{CloseFluentDrawer();};
    Deactivated+=delegate{CloseFluentDrawer();};
    PreviewKeyDown+=delegate(object sender,KeyEventArgs e){if(e.Key==Key.Escape&&fluentDrawer.IsVisible){CloseFluentDrawer();menu.Focus();e.Handled=true;}};
   }
-  internal void ToggleFluentDrawer(){if(fluentDrawer.IsVisible)CloseFluentDrawer();else{fluentDrawer.Visibility=Visibility.Visible;fluentDrawer.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));}}
+  internal void ToggleFluentDrawer(){if(fluentDrawer.IsVisible)CloseFluentDrawer();else{fluentDrawer.Visibility=Visibility.Visible;fluentCommandSearch.Clear();fluentCommandSearch.Focus();}}
  }
 }

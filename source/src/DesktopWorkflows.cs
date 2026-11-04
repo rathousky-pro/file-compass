@@ -36,6 +36,8 @@ namespace FileCompass
         {
             Key key = e.Key == Key.System ? e.SystemKey : e.Key; ModifierKeys modifiers = Keyboard.Modifiers;
             bool editing = e.OriginalSource is TextBox || e.OriginalSource is PasswordBox;
+            // Embedded browser controls own their clipboard shortcuts, including native PDF selections.
+            if ((key==Key.C||key==Key.X||key==Key.V)&&!active.List.IsKeyboardFocusWithin)return false;
             if (modifiers == ModifierKeys.Control && key == Key.L) { active.FocusAddress(); e.Handled = true; return true; }
             if (editing || busy || PanelsLoading) return false;
             Action action = null;
@@ -139,19 +141,19 @@ namespace FileCompass
             catch (ExternalException ex) { MessageBox.Show(this, ex.Message, L.Text("clipboard.unavailableTitle")); }
             catch (UnauthorizedAccessException ex) { MessageBox.Show(this, ex.Message, L.Text("clipboard.unavailableTitle")); }
         }
-        internal void CopyClipboard(bool cut)
+        internal async void CopyClipboard(bool cut)
         {
             if(active.IsExt){MessageBox.Show(this,L.Text("ext.copy" )+" (F5)",L.Text("ext.title"));return;}
             if (active.IsRemote || active.IsArchive) {
                 if (cut) { MessageBox.Show(this, L.Text("clipboard.remoteMoveUnsupportedHelp"), L.Text("clipboard.title")); return; }
                 var entries = active.Selected().ToArray(); if (entries.Length == 0) return;
                 virtualClipboardId = Guid.NewGuid().ToString("N"); virtualClipboardEntries = entries; virtualClipboardRemote = active.Remote; virtualClipboardArchive = active.Archive; virtualClipboardDisplay = active.DisplayPath;
-                try { var data = new DataObject(); data.SetData(VirtualClipboardFormat, virtualClipboardId); data.SetText(String.Join(Environment.NewLine, entries.Select(x => active.IsRemote ? active.Remote.Display(x.FullPath) : active.Archive.Display + "\\" + x.FullPath.TrimStart('/')))); Clipboard.SetDataObject(data, true); }
+                try { var data = new DataObject(); data.SetData(VirtualClipboardFormat, virtualClipboardId); data.SetText(String.Join(Environment.NewLine, entries.Select(x => active.IsRemote ? active.Remote.Display(x.FullPath) : active.Archive.Display + "\\" + x.FullPath.TrimStart('/')))); if(!await ClipboardTextWriter.TryExecuteAsync(()=>Clipboard.SetDataObject(data,true)))MessageBox.Show(this,L.Text("smart.clipboardBusy"),L.Text("clipboard.unavailableTitle")); }
                 catch (ExternalException ex) { MessageBox.Show(this, ex.Message, L.Text("clipboard.unavailableTitle")); } catch (UnauthorizedAccessException ex) { MessageBox.Show(this, ex.Message, L.Text("clipboard.unavailableTitle")); }
                 return;
             }
             var paths = active.Selected().Select(x => x.FullPath).ToArray(); if (paths.Length == 0) return;
-            try { Clipboard.SetDataObject(CreateFileClipboard(paths, cut), true); }
+            try { var data=CreateFileClipboard(paths,cut);if(!await ClipboardTextWriter.TryExecuteAsync(()=>Clipboard.SetDataObject(data,true)))MessageBox.Show(this,L.Text("smart.clipboardBusy"),L.Text("clipboard.unavailableTitle")); }
             catch (ExternalException ex) { MessageBox.Show(this, ex.Message, L.Text("clipboard.unavailableTitle")); }
             catch (UnauthorizedAccessException ex) { MessageBox.Show(this, ex.Message, L.Text("clipboard.unavailableTitle")); }
         }

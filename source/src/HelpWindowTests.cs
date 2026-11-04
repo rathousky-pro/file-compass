@@ -47,7 +47,9 @@ namespace FileCompass {
                     check(Links(help.Article.Document.Blocks).All(link=>ids.Contains((string)link.Tag)),"Internal hyperlinks are valid: "+topic.Id);
                 }
                 check(cs.Count>=41,"Detailed workflows are included");check(cs.Where(t=>t.Id!="guide.third-party-notices").All(t=>t.SourceLanguage=="cs"),"Czech user guides no longer fall back to English");
-                foreach(string figure in new[]{"panels","copy","csv","audio","audio-advanced","images","metadata","settings"}){var picture=HelpIllustrations.Load(figure);check(picture.IsFrozen&&picture.PixelWidth>=600&&picture.PixelWidth<=1800,"Embedded Czech illustration "+figure);}
+                var figures=cs.SelectMany(t=>System.Text.RegularExpressions.Regex.Matches(t.Body,"<figure src=\"([a-z0-9-]+)\"").Cast<System.Text.RegularExpressions.Match>().Select(m=>m.Groups[1].Value)).Distinct().ToArray();
+                check(figures.Length==28,"All current screenshot scenes are referenced by help");
+                foreach(string figure in figures){var picture=HelpIllustrations.Load(figure);check(picture.IsFrozen&&picture.PixelWidth>=250&&picture.PixelHeight>=100&&picture.PixelWidth<=1800,"External Czech illustration "+figure);}
                 bool rejected=false;try{HelpIllustrations.Load("../private-file");}catch(ArgumentException){rejected=true;}check(rejected,"Illustrations reject paths and external resources");
                 help.Navigate("media-audio");help.UpdateLayout();var pictureButton=(Button)help.Article.Document.Blocks.OfType<BlockUIContainer>().First().Child;pictureButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));var enlargement=Application.Current.Windows.Cast<Window>().Single(x=>x.Owner==help&&x.Title==L.Text("help.zoom"));check(enlargement.IsVisible&&FluentUiTests.Children<Slider>(enlargement).Any(),"Illustration opens a native zoom window");enlargement.Close();help.UpdateLayout();check(((Image)pictureButton.Content).ActualWidth<=help.Article.ActualWidth-40,"Illustrations fit the article width");NextStageTests.Draw(help,Path.Combine(root,"help-illustrated.png"));
                 check(HelpContent.ContextTopic(typeof(MediaConverterWindow))=="media"&&HelpContent.ContextTopic(typeof(MediaNamesWindow))=="metadata"&&HelpContent.ContextTopic(typeof(UndoTransactionsWindow))=="undo","New workflows have contextual F1 topics");
@@ -70,7 +72,7 @@ namespace FileCompass {
                 help.Navigate("copy");L.ChangeLanguage("en");LiveLanguage.Refresh();
                 check(help.Title==L.Text("help.title")&&help.CurrentTopicId=="copy"&&HelpContent.ContentLanguage=="en","Open help changes language and retains topic");
                 foreach(var topic in HelpContent.Load()){help.Navigate(topic.Id);check(help.Article.Document.Blocks.Count>1,"Render English topic "+topic.Id);}
-                foreach(string figure in new[]{"panels","copy","csv","audio","audio-advanced","images","metadata","settings"})check(HelpIllustrations.Load(figure).PixelWidth>=600,"Embedded English illustration "+figure);
+                foreach(string figure in figures){var picture=HelpIllustrations.Load(figure);check(picture.IsFrozen&&picture.PixelWidth>=250&&picture.PixelHeight>=100,"External English illustration "+figure);}
                 L.ChangeLanguage("de");LiveLanguage.Refresh();check(HelpContent.ContentLanguage=="en"&&help.Title==L.Text("help.title"),"Other UI languages show English help with an explicit content language");
                 L.ChangeLanguage("cs");LiveLanguage.Refresh();help.Navigate("copy");
                 about=new AboutWindow(owner){Left=-18000,Top=-18000,WindowStartupLocation=WindowStartupLocation.Manual,ShowActivated=false};about.Show();

@@ -1,4 +1,10 @@
 {
+  "updates.appInstalling": "Připravuji instalaci a restart…",
+  "updates.appWaiting": "Instalace počká na dokončení probíhajících úloh.",
+  "updates.appReady": "Připraveno k instalaci a restartu",
+  "updates.appInstall": "Nainstalovat a restartovat",
+  "updates.appDownload": "Stáhnout a aktualizovat",
+  "updates.appNoRelease": "Na GitHubu zatím není vhodné vydání.",
   "undoHistory.empty": "Zatím žádné transakce.\nProvedené operace se zobrazí zde.",
   "undoHistory.selectTransaction": "Vyberte transakci ze seznamu. Zobrazí se její kroky a důvody případných omezení.",
 
@@ -152,7 +158,7 @@
   "updates.libraries": "Knihovny a ovladače",
   "updates.withApp": "Společně s programem",
   "updates.appNotConfigured": "GitHub – zdroj zatím není nastaven",
-  "updates.appHelp": "Aktualizace File Compass bude dostupná z GitHubu. Adresa vydání zatím není určená; nyní se program automaticky nestahuje ani nepřepisuje.",
+  "updates.appHelp": "GitHub Releases: porovnává se verze i build. Po ověřeném stažení se program zavře, aktualizuje a znovu spustí. Nastavení a data zůstanou zachována; při chybě se obnoví záloha.",
   "updates.librariesHelp": "Síťové a náhledové knihovny jsou součástí vydání programu. SSHFS a WinFsp používají instalační programy výrobce. Tyto součásti se za běhu nepřepisují.",
   "updates.ffmpegSource": "FFmpeg pro Windows: plné statické sestavení gyan.dev, na které odkazuje ffmpeg.org. FFmpeg a FFprobe se aktualizují společně. SHA-256 se ověřuje proti součtu zveřejněnému výrobcem.",
   "updates.packageHelp": "Balíček se stáhne přímo z oficiálního repozitáře, ověří a uloží do samostatné verze. Původní součást zůstává pro návrat.",

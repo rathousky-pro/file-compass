@@ -128,7 +128,6 @@ namespace FileCompass
             Tool(view,"invert",L.Text("selection.invertMarks")+" (Num *)",delegate{active.InvertMarks();});
             Tool(view,"undo",L.Text("undoHistory.title"),ShowSafeUndo);
             var navigation=ToolbarGroup(tools,"navigation");
-            Tool(navigation,"search",L.Text("toolbar.findFilesShortcut"),FindFiles,L.Text("action.search"));
             var directions=new StackPanel{Orientation=Orientation.Horizontal};
             Tool(directions,"forward",L.Text("toolbar.folderLeftToRight"),delegate{OpenFolderInOtherPanel(left);});
             Tool(directions,"back",L.Text("toolbar.folderRightToLeft"),delegate{OpenFolderInOtherPanel(right);});navigation.Children.Add(directions);
@@ -153,6 +152,9 @@ namespace FileCompass
             search.TextChanged+=delegate{if(!synchronizingFluentSearch&&active!=null)active.SetQuickFilter(search.Text);};
             search.KeyDown+=delegate(object sender,KeyEventArgs e){if(e.Key==Key.Enter||e.Key==Key.Down){active.FocusFiles();e.Handled=true;}if(e.Key==Key.Escape){search.Clear();active.FocusFiles();e.Handled=true;}};
             search.Background=CompactTheme.WhiteSurface;search.Template=CleanFieldTemplates.For(typeof(TextBox));var searchHost=new Grid{Width=240,Margin=new Thickness(16,0,8,0)};search.Width=Double.NaN;search.Margin=new Thickness(0);searchHost.Children.Add(search);var hint=new TextBlock{Text="Hledat soubor…",Foreground=FluentTheme.Muted,Margin=new Thickness(14,0,0,0),VerticalAlignment=VerticalAlignment.Center,IsHitTestVisible=false};searchHost.Children.Add(hint);search.TextChanged+=delegate{hint.Visibility=String.IsNullOrEmpty(search.Text)?Visibility.Visible:Visibility.Collapsed;};fluentSearchBox=searchHost;
+            searchHost.ColumnDefinitions.Add(new ColumnDefinition());searchHost.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(38)});Grid.SetColumnSpan(search,2);search.Padding=new Thickness(10,6,40,6);hint.Margin=new Thickness(14,0,0,0);
+            search.Loaded+=delegate{var textHost=search.Template.FindName("PART_ContentHost",search) as ScrollViewer;if(textHost!=null)textHost.Margin=new Thickness(10,0,40,0);};
+            var advancedSearch=CopyUi.Button("",delegate{if(!busy&&!PanelsLoading)FindFiles();});advancedSearch.Content=new TextBlock{Text="\uE721",FontFamily=new FontFamily("Segoe MDL2 Assets"),FontSize=17,VerticalAlignment=VerticalAlignment.Center,HorizontalAlignment=HorizontalAlignment.Center};advancedSearch.ToolTip=L.Text("toolbar.findFilesShortcut");advancedSearch.Width=32;advancedSearch.Height=30;advancedSearch.MinWidth=0;advancedSearch.Margin=new Thickness(0,4,4,4);advancedSearch.Padding=new Thickness(0);advancedSearch.Background=Brushes.Transparent;advancedSearch.BorderThickness=new Thickness(0);Grid.SetColumn(advancedSearch,1);System.Windows.Automation.AutomationProperties.SetAutomationId(advancedSearch,"AdvancedSearch");System.Windows.Automation.AutomationProperties.SetName(advancedSearch,L.Text("search.title"));searchHost.Children.Add(advancedSearch);
             var bar=new DockPanel{LastChildFill=true};fluentSearchBox.VerticalAlignment=VerticalAlignment.Top;DockPanel.SetDock(fluentSearchBox,Dock.Right);bar.Children.Add(fluentSearchBox);DockPanel.SetDock(settingsTools,Dock.Right);bar.Children.Add(settingsTools);bar.Children.Add(tools);
             top.Children.Add(new Border{Tag="main-toolbar-frame",Child=bar,Padding=new Thickness(12,8,12,8),Background=CompactTheme.PanelSurface,BorderBrush=CompactTheme.Line,BorderThickness=new Thickness(0,1,0,1)});
 

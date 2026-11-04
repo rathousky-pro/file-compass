@@ -17,7 +17,7 @@ namespace FileCompass
             anon = Check(L.Text("nfs.anonymousOption")), compression = Check(L.Text("ssh.compressionOption")),
             agent = Check(L.Text("ssh.useAgentOption")), terminal = Check(L.Text("ssh.useWindowsTerminalOption"));
         readonly CheckBox sshfsStartup = Check(L.Text("sshfs.connectOnStartupOption")), sshfsKeep = Check(L.Text("sshfs.keepMountedOption"));
-        readonly ComboBox protocol = new ComboBox { ItemsSource = Enum.GetValues(typeof(NetworkProtocol)) },
+        readonly ComboBox protocol = new ComboBox { ItemsSource = Enum.GetValues(typeof(NetworkProtocol)), FocusVisualStyle = null },
             tlsMode = Choice(L.Text("ftp.explicitTlsChoice"), L.Text("ftp.implicitTlsChoice")), encoding = Choice(L.Text("network.ansiEncodingChoice"), "UTF-8", L.Text("network.detectUtf8EncodingChoice")),
             mlsd = Choice(L.Text("ftp.disableMlsd"), L.Text("ftp.enableMlsd"), L.Text("network.autoDetectChoice")),
             hidden = Choice(L.Text("ftp.disableListHidden"), L.Text("ftp.enableListHidden"), L.Text("network.autoDetectChoice")),
@@ -109,6 +109,7 @@ namespace FileCompass
             // Detach controls from their old row containers before rebuilding protocol-specific pages.
             Detach(general); Detach(advanced); general.Children.Clear(); advanced.Children.Clear();
             Title = L.Text("network.connectionDetailsTitlePrefix") + type;
+            var title = SettingsUx.HeaderTitle(this); if (title != null) title.Text = Title;
             if (reset) { host.Text = Profile.Host + (ftp ? ":21" : ssh || transfer || sshfs ? ":22" : ""); path.Text = type == NetworkProtocol.SMB ? "" : "/"; }
             var identity = FluentTheme.Section(general, L.Text("toolbar.connections"));
             Row(identity, L.Text("network.sessionNameLabel"), name); Row(identity, L.Text("network.profileProtocolLabel"), protocol); Row(identity, network ? "Hostitel:" : L.Text("network.hostAndPortLabel"), host);
@@ -171,7 +172,11 @@ namespace FileCompass
             var details = new StackPanel();
             foreach (UIElement child in System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Cast<UIElement>(advanced.Children))) { advanced.Children.Remove(child); details.Children.Add(child); }
             advanced.Children.Add(new GroupBox { Header = L.Text("network.protocolOptionsPrefix") + type, Content = details, Margin = new Thickness(0, 0, 0, 8) });
-            ArrangeProfilePages(); QueueProfileFit();
+            ArrangeProfilePages();
+            // Rebuilt groups must receive the same templates and field metrics as
+            // the initial form before they can be measured or rendered.
+            if (IsLoaded) CleanTheme.Refresh(this);
+            QueueProfileFit();
         }
         static void Detach(DependencyObject node)
         {

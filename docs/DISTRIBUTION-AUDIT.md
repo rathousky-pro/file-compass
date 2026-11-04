@@ -1,6 +1,6 @@
 # Source and distribution review — 1 November 2026
 
-This inventory describes the checked-in application, not a new public binary release. Upstream license texts remain unchanged. The application author has not selected an open-source license for File Compass itself; third-party licenses do not grant rights to the application code.
+This inventory describes the checked-in application, not a new public binary release. Upstream license texts remain unchanged. As of 4 November 2026, original File Compass application code is licensed under MIT, copyright (c) 2026 Jan Rathouský; third-party components retain their own licenses. See [licensing](LICENSING.md). Selecting MIT does not clear the outstanding binary-distribution requirements below.
 
 | Area | Retained provenance and notices | Review result |
 |---|---|---|
@@ -20,6 +20,34 @@ This inventory describes the checked-in application, not a new public binary rel
 2. Retain the applicable Microsoft redistribution terms and publisher entitlement for the OpenMP runtime supplied in the official Magick.NET package. It is not relicensed under Apache. Consult [Microsoft's redistribution guidance](https://learn.microsoft.com/en-us/cpp/windows/determining-which-dlls-to-redistribute).
 3. If the user activates a vendor component update, review the license/source obligations for that exact downloaded version. In particular, the FFmpeg updater uses gyan.dev full static builds, which are distinct from the original BtbN LGPL shared package. The shipped-build notice must not be presented as covering arbitrary replacements.
 4. Keep publisher OAuth configuration, account tokens, credentials, user files and local profiles out of Git and release archives. Application update release URLs remain unconfigured; this source upload does not enable automatic application updates or publish a binary release.
+
+## MIT follow-up - 4 November 2026
+
+The original application now has the standard MIT License. Both build entry
+points include its complete text as `help/LICENSE.txt`, and the About window
+identifies the license and author. `LICENSING.md` distinguishes original code
+from dependencies and documents rebuilding with modified LGPL libraries while
+retaining the official build's integrity enforcement.
+
+The following are still unresolved public-binary-release requirements, not
+completed approvals:
+
+- Preserve/distribute the exact corresponding sources and build information for
+  the bundled FFmpeg build and its covered dependencies.
+- Complete source availability for bundled SharpSevenZip, TagLibSharp, 7-Zip and
+  LGPL native ImageMagick dependencies. Existing upstream version/commit links
+  are provenance records; they are not a verified complete source bundle.
+- Verify the applicable Microsoft OpenMP redistribution entitlement/terms.
+- Review the 7-Zip unRAR restriction and Microsoft runtime against SignPath's
+  eligibility rules before applying. The application has no approved signing
+  service or trusted code-signing certificate yet.
+
+The MIT release candidate is built locally as 0.9.5 beta / 20261104.78.
+Publishing was not completed: the GitHub connector rejected writes with HTTP 403
+(`Resource not accessible by integration`), and terminal HTTPS/Git could not
+resolve GitHub. Candidate website changes must not be pushed before the ZIP and
+checksum exist at their advertised URLs. The website publication helper verifies
+the remote release state, asset sizes and SHA-256 digests before committing links.
 
 ## Reproducible development inputs
 

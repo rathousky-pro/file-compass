@@ -16,7 +16,8 @@ namespace FileCompass {
     bool disposed;
     bool inspecting;
     bool automatic;
-    internal UpdateManager(MainWindow owner){main=owner;timer.Tick+=async delegate{ApplyPending();if(automatic&&!Checking&&!Downloading)await Check(true);};timer.Start();}
+    bool wasWorking;
+    internal UpdateManager(MainWindow owner){main=owner;timer.Tick+=async delegate{bool working=main.UpdateWorkRunning;if(working!=wasWorking){wasWorking=working;Notify();}ApplyPending();if(automatic&&!Checking&&!Downloading)await Check(true);};timer.Start();}
     internal async Task StartAutomatic(){automatic=true;await Check(true);}
     internal void Notify(){if(Changed!=null)Changed();}
     internal async Task Inventory(){if(inspecting||disposed)return;inspecting=true;try{await Task.Run(()=>VendorUpdates.InspectInstalled(CancellationToken.None));}catch(Exception ex){Feedback=L.Text("updates.failed")+ex.Message;}finally{inspecting=false;if(!disposed)Notify();}}
@@ -27,16 +28,17 @@ namespace FileCompass {
         try{
             await Inventory();
             UpdateRegistry.Edit(x=>x.LastAttemptUtc=DateTime.UtcNow);
-            bool failed=false;var result=await Task.Run(delegate{var items=new System.Collections.Generic.List<VendorUpdate>();foreach(var id in VendorUpdates.Ids){token.ThrowIfCancellationRequested();try{items.Add(VendorUpdates.Check(id,token));}catch(Exception ex){token.ThrowIfCancellationRequested();failed=true;items.Add(new VendorUpdate{Id=id,Name=VendorUpdates.Name(id),Source=VendorUpdates.Home(id),Error=ex.Message});}}return items;});
+            bool failed=false;var result=await Task.Run(delegate{var items=new System.Collections.Generic.List<VendorUpdate>();foreach(var id in VendorUpdates.Ids.Concat(new[]{"app"})){token.ThrowIfCancellationRequested();try{items.Add(id=="app"?ApplicationUpdates.Check(token):VendorUpdates.Check(id,token));}catch(Exception ex){token.ThrowIfCancellationRequested();failed=true;items.Add(new VendorUpdate{Id=id,Name=VendorUpdates.Name(id),Source=id=="app"?ApplicationUpdates.Home:VendorUpdates.Home(id),Error=ex.Message});}}return items;});
             token.ThrowIfCancellationRequested();UpdateRegistry.Edit(x=>{x.Available=result;if(!failed)x.LastSuccessUtc=DateTime.UtcNow;});Feedback=L.Text(failed?"updates.checkFailed":"updates.checked");
         }catch(OperationCanceledException){Feedback=L.Text("updates.cancelled");}
         catch(Exception ex){Feedback=L.Text("updates.failed")+ex.Message;}
         finally{Checking=false;checkCancellation.Dispose();checkCancellation=null;Notify();}
     }
     internal void CancelCheck(){if(checkCancellation!=null)checkCancellation.Cancel();}
-    internal bool CanDownload(VendorUpdate item){return !Downloading&&String.IsNullOrEmpty(UpdateRegistry.StateError)&&item!=null&&VendorUpdates.ValidOrigin(item)&&String.IsNullOrEmpty(item.Error)&&!String.IsNullOrEmpty(item.Hash);}
+    internal bool CanDownload(VendorUpdate item){return !Downloading&&String.IsNullOrEmpty(UpdateRegistry.StateError)&&item!=null&&(item.Id=="app"?ApplicationUpdates.ValidOrigin(item)&&ApplicationUpdates.IsNewer(item):VendorUpdates.ValidOrigin(item))&&String.IsNullOrEmpty(item.Error)&&!String.IsNullOrEmpty(item.Hash);}
     internal async void Download(VendorUpdate item){
         if(!CanDownload(item))return;
+        if(item.Id=="app"){DownloadApplication(item);return;}
         Downloading=true;Feedback=L.Text("updates.downloading");Notify();
         try{
             bool success=await main.RunUpdateDownload(item,delegate(CancellationToken token,Action<string> report){
@@ -57,6 +59,14 @@ namespace FileCompass {
         try{bool changed=false;foreach(var package in UpdateRegistry.State().Pending.ToArray())if(UpdateRegistry.Activate(package.Id))changed=true;if(changed){Feedback=L.Text("updates.installed");Notify();}}
         catch(Exception ex){Feedback=L.Text("updates.failed")+ex.Message;timer.Stop();Notify();}
     }
+    async void DownloadApplication(VendorUpdate item){
+        Downloading=true;Feedback=L.Text("updates.downloading");Notify();bool success=false;
+        try{success=await main.RunUpdateDownload(item,(token,report)=>ApplicationUpdates.Download(item,token,report));Feedback=success?L.Text("updates.appReady"):L.Text("updates.downloadEnded");}
+        catch(Exception ex){Feedback=L.Text("updates.failed")+ex.Message;}
+        finally{Downloading=false;Notify();}
+        if(success&&!main.UpdateWorkRunning)await InstallApplication();
+    }
+    internal async Task InstallApplication(){if(Downloading||disposed)return;try{if(main.UpdateWorkRunning){Feedback=L.Text("updates.appWaiting");return;}Feedback=L.Text("updates.appInstalling");Notify();if(!await main.InstallApplicationUpdate())Feedback=L.Text("updates.appReady");}catch(Exception ex){Feedback=L.Text("updates.failed")+ex.Message;}finally{Notify();}}
     internal void Rollback(string id){try{if(main.UpdateWorkRunning)throw new IOException(L.Text("updates.waiting"));UpdateRegistry.Rollback(id);Feedback=L.Text("updates.restored");}catch(Exception ex){Feedback=L.Text("updates.failed")+ex.Message;}Notify();}
     public void Dispose(){disposed=true;timer.Stop();CancelCheck();Changed=null;}
  }

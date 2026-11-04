@@ -1,4 +1,10 @@
 {
+  "updates.appInstalling": "A preparar a instalação e o reinício…",
+  "updates.appWaiting": "A instalação aguarda a conclusão das tarefas.",
+  "updates.appReady": "Pronto para instalar e reiniciar",
+  "updates.appInstall": "Instalar e reiniciar",
+  "updates.appDownload": "Transferir e atualizar",
+  "updates.appNoRelease": "Ainda não existe uma versão compatível no GitHub.",
   "undoHistory.empty": "Ainda não existem transações.\nAs operações aparecerão aqui.",
   "undoHistory.selectTransaction": "Selecione uma transação para ver os passos e os motivos de eventuais limitações.",
 
@@ -134,7 +140,7 @@
   "updates.libraries": "Bibliotecas e controladores",
   "updates.withApp": "Com a aplicação",
   "updates.appNotConfigured": "GitHub — origem ainda não configurada",
-  "updates.appHelp": "As atualizações do File Compass serão disponibilizadas pelo GitHub. O endereço das versões ainda não foi definido; a aplicação não é transferida nem substituída automaticamente.",
+  "updates.appHelp": "GitHub Releases: são comparados a versão e o build. Após verificar a transferência, a aplicação fecha, atualiza e reinicia. Os dados e as definições são preservados; em caso de erro, a cópia de segurança é restaurada.",
   "updates.librariesHelp": "As bibliotecas de rede e pré-visualização são atualizadas com a aplicação. SSHFS e WinFsp utilizam os instaladores dos fabricantes. Componentes carregados não são substituídos.",
   "updates.ffmpegSource": "FFmpeg para Windows: compilação estática completa da gyan.dev indicada pelo ffmpeg.org. FFmpeg e FFprobe são atualizados em conjunto. O SHA-256 é comparado com a soma publicada pelo fornecedor.",
   "updates.packageHelp": "O pacote é transferido do repositório oficial, verificado e guardado numa pasta de versão separada. A versão anterior permanece disponível para restauro.",

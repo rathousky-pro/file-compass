@@ -1,4 +1,10 @@
 {
+  "updates.appInstalling": "Préparation de l’installation et du redémarrage…",
+  "updates.appWaiting": "L’installation attend la fin des tâches en cours.",
+  "updates.appReady": "Prêt pour l’installation et le redémarrage",
+  "updates.appInstall": "Installer et redémarrer",
+  "updates.appDownload": "Télécharger et mettre à jour",
+  "updates.appNoRelease": "Aucune version compatible n’est encore publiée sur GitHub.",
   "undoHistory.empty": "Aucune transaction.\nLes opérations apparaîtront ici.",
   "undoHistory.selectTransaction": "Sélectionnez une transaction pour afficher ses étapes et les restrictions éventuelles.",
 
@@ -134,7 +140,7 @@
   "updates.libraries": "Bibliothèques et pilotes",
   "updates.withApp": "Avec l’application",
   "updates.appNotConfigured": "GitHub — source non configurée",
-  "updates.appHelp": "Les mises à jour de File Compass seront proposées via GitHub. L’adresse des versions n’est pas encore définie ; l’application n’est pas téléchargée ni remplacée automatiquement.",
+  "updates.appHelp": "GitHub Releases : la version et le build sont comparés. Après vérification du téléchargement, l’application se ferme, se met à jour et redémarre. Les paramètres et les données sont conservés ; en cas d’échec, la sauvegarde est restaurée.",
   "updates.librariesHelp": "Les bibliothèques réseau et d’aperçu sont mises à jour avec l’application. SSHFS et WinFsp utilisent les installateurs des éditeurs. Les composants chargés ne sont pas écrasés.",
   "updates.ffmpegSource": "FFmpeg pour Windows : compilation statique complète de gyan.dev référencée par ffmpeg.org. FFmpeg et FFprobe sont mis à jour ensemble. SHA-256 est comparé à la somme publiée par le fournisseur.",
   "updates.packageHelp": "Le paquet est téléchargé depuis le dépôt officiel, vérifié et stocké dans un dossier de version séparé. La version précédente reste disponible pour restauration.",

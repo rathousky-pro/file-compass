@@ -1,4 +1,10 @@
 {
+  "updates.appInstalling": "Installatie en herstart voorbereiden…",
+  "updates.appWaiting": "De installatie wacht tot lopende taken klaar zijn.",
+  "updates.appReady": "Klaar voor installatie en herstart",
+  "updates.appInstall": "Installeren en herstarten",
+  "updates.appDownload": "Downloaden en bijwerken",
+  "updates.appNoRelease": "Er is nog geen geschikte versie op GitHub gepubliceerd.",
   "undoHistory.empty": "Nog geen transacties.\nUitgevoerde bewerkingen verschijnen hier.",
   "undoHistory.selectTransaction": "Selecteer een transactie om de stappen en eventuele beperkingen te bekijken.",
 
@@ -134,7 +140,7 @@
   "updates.libraries": "Bibliotheken en stuurprogramma’s",
   "updates.withApp": "Samen met de toepassing",
   "updates.appNotConfigured": "GitHub – bron nog niet ingesteld",
-  "updates.appHelp": "File Compass-updates worden via GitHub aangeboden. Het releaseadres is nog niet ingesteld; de toepassing wordt niet automatisch gedownload of vervangen.",
+  "updates.appHelp": "GitHub Releases: versie en build worden vergeleken. Na een gecontroleerde download sluit de app, werkt deze bij en start opnieuw. Instellingen en gegevens blijven bewaard; bij fouten wordt de reservekopie hersteld.",
   "updates.librariesHelp": "Netwerk- en voorbeeldbibliotheken worden samen met de toepassing bijgewerkt. SSHFS en WinFsp gebruiken installatieprogramma’s van hun uitgevers. Geladen onderdelen worden niet overschreven.",
   "updates.ffmpegSource": "FFmpeg voor Windows: de volledige statische gyan.dev-build waarnaar ffmpeg.org verwijst. FFmpeg en FFprobe worden samen bijgewerkt. SHA-256 wordt vergeleken met de gepubliceerde controlesom.",
   "updates.packageHelp": "Het pakket wordt uit de officiële repository gedownload, gecontroleerd en in een aparte versiemap opgeslagen. De vorige versie blijft beschikbaar voor herstel.",

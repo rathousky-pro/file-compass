@@ -30,6 +30,9 @@ namespace FileCompass {
             try { if(!loaderConfigured){CoreWebView2Environment.SetLoaderDllFolderPath(Assets);loaderConfigured=true;} return !String.IsNullOrEmpty(CoreWebView2Environment.GetAvailableBrowserVersionString()); } catch { return false; }
         }
         internal WebView2 view;
+        [System.Runtime.InteropServices.DllImport("user32.dll")] static extern IntPtr GetFocus();
+        [System.Runtime.InteropServices.DllImport("user32.dll")] static extern bool IsChild(IntPtr parent,IntPtr child);
+        internal bool ContainsNativeFocus { get { if(view==null)return false;IntPtr focused=GetFocus(),handle=view.Handle;return focused!=IntPtr.Zero&&handle!=IntPtr.Zero&&(focused==handle||IsChild(handle,focused)); } }
         bool disposed;
         readonly List<Stream> streams = new List<Stream>();
         internal string Error; internal static string Diagnostic;

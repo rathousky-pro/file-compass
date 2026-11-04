@@ -55,6 +55,10 @@ Development settings/data live separately in ignored `local-profile`. WebView2 c
 
 ## Licenses and maintenance
 
+[Code signing policy](docs/CODE-SIGNING.md): current releases are unsigned.
+The first intended signed version is **0.9.8**, subject to signing-service
+approval and completion of the dependency review.
+
 [File Compass original code is licensed under MIT](LICENSE), copyright (c) 2026 Jan Rathouský. See [licensing and rebuilding](docs/LICENSING.md) for scope and instructions for modified LGPL libraries. [Third-party notices](docs/THIRD-PARTY-NOTICES.md) identify the components; `source/dependencies.json` records exact runtime and original-legal-file hashes. Third-party components retain their original licenses. Public binary distribution still requires the corresponding-source bundles and applicable Microsoft runtime terms described in the distribution review.
 
 [Public website](https://rathousky-pro.github.io/file-compass-web/) · [Privacy policy](https://rathousky-pro.github.io/file-compass-web/privacy.html). Website sources are in a separate repository; the application source repository is public.

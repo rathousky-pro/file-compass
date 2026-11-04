@@ -21,8 +21,20 @@ jobs:
         shell: powershell
         run: |
           $exe = Join-Path $env:RUNNER_TEMP 'out\File Compass.exe'
+          $failures = @()
           foreach ($test in 'self-test', 'copy-test', 'archive-test', 'preview-refresh-test', 'toolbar-dialog-test', 'language-test', 'help-window-test', 'vendor-updates-test', 'disk-analyzer-test', 'disk-smart-test', 'integrity-test', 'fluent-preview-test', 'rename-fluent-test', 'undo-history-test', 'cascade-navigation-test', 'unified-search-test', 'task-dock-grouping-test') {
             $work = Join-Path $env:RUNNER_TEMP "w-$test"; New-Item -ItemType Directory $work -Force | Out-Null
             $process = Start-Process $exe -ArgumentList "--$test", "`"$work`"" -Wait -PassThru
-            if ($process.ExitCode -ne 0) { throw "$test failed ($($process.ExitCode))" }
+            if ($process.ExitCode -ne 0) {
+              Get-ChildItem -LiteralPath $work -File -Filter '*result*.txt' | ForEach-Object { Get-Content -LiteralPath $_.FullName }
+              $failures += "$test ($($process.ExitCode))"
+            }
           }
+          if ($failures.Count) { throw ('Failed tests: ' + ($failures -join ', ')) }
+      - name: Retain test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: ${{ runner.temp }}/w-*/*result*.txt
+          if-no-files-found: ignore

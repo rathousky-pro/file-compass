@@ -85,8 +85,18 @@ namespace FileCompass
                 assert(result.Errors.Count == 1 && (File.GetAttributes(da) & FileAttributes.ReadOnly) != 0, "read-only target protected by default");
                 result = Run(new[] { a }, new CopyOptions { Target = output, Rule = CopyRule.OverwriteAll, ReadOnly = true });
                 assert(result.Copied == 1 && result.Errors.Count == 0 && File.ReadAllText(da) == "NEW", "explicit read-only overwrite");
+                // Give the fixture an explicit protected DACL so inherited runner
+                // permissions cannot change its meaning at the destination.
+                var permissions = File.GetAccessControl(a, AccessControlSections.Access);
+                permissions.SetAccessRuleProtection(true, true); File.SetAccessControl(a, permissions);
                 result = Run(new[] { a }, new CopyOptions { Target = output, Rule = CopyRule.OverwriteAll, Permissions = true });
-                assert(result.Copied == 1 && result.Errors.Count == 0 && File.GetAccessControl(a, AccessControlSections.Access).GetSecurityDescriptorSddlForm(AccessControlSections.Access) == File.GetAccessControl(da, AccessControlSections.Access).GetSecurityDescriptorSddlForm(AccessControlSections.Access), "NTFS access permissions");
+                assert(result.Copied == 1 && result.Errors.Count == 0 && File.GetAccessControl(a, AccessControlSections.Access).GetSecurityDescriptorSddlForm(AccessControlSections.Access) == File.GetAccessControl(da, AccessControlSections.Access).GetSecurityDescriptorSddlForm(AccessControlSections.Access), "NTFS access permissions; copied="+result.Copied+"; errors="+String.Join(" | ",result.Errors));
+                string permissionsOutput=Directory.CreateDirectory(Path.Combine(root,"permissions-output")).FullName;
+                result=Run(new[]{a},new CopyOptions{Target=permissionsOutput,Permissions=true});
+                assert(result.Copied==1&&result.Errors.Count==0&&File.GetAccessControl(a,AccessControlSections.Access).GetSecurityDescriptorSddlForm(AccessControlSections.Access)==File.GetAccessControl(Path.Combine(permissionsOutput,Path.GetFileName(a)),AccessControlSections.Access).GetSecurityDescriptorSddlForm(AccessControlSections.Access),"protected file DACL is copied to a new destination as well as a replaced file");
+                string permissionFolder=Directory.CreateDirectory(Path.Combine(root,"protected-folder")).FullName;File.WriteAllText(Path.Combine(permissionFolder,"child.txt"),"ACL fixture");var folderSecurity=Directory.GetAccessControl(permissionFolder,AccessControlSections.Access);folderSecurity.SetAccessRuleProtection(true,true);Directory.SetAccessControl(permissionFolder,folderSecurity);
+                result=Run(new[]{permissionFolder},new CopyOptions{Target=permissionsOutput,Permissions=true});
+                assert(result.Copied==1&&result.Errors.Count==0&&Directory.GetAccessControl(permissionFolder,AccessControlSections.Access).GetSecurityDescriptorSddlForm(AccessControlSections.Access)==Directory.GetAccessControl(Path.Combine(permissionsOutput,"protected-folder"),AccessControlSections.Access).GetSecurityDescriptorSddlForm(AccessControlSections.Access),"protected directory DACL is copied after its children");
                 string nested = Directory.CreateDirectory(Path.Combine(input, "folder")).FullName;
                 File.WriteAllText(Path.Combine(nested, "keep.txt"), "MATCH"); File.WriteAllText(Path.Combine(nested, "skip.tmp"), "SKIP");
                 result = Run(new[] { nested }, new CopyOptions { Target = output, Filter = "*.* | *.tmp" });

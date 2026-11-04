@@ -3,7 +3,7 @@ using System;using System.IO;using System.Linq;using System.Collections.Generic;
 namespace FileCompass {
  internal static class RenameFluentTests {
   static void Pump(){NavigationTests.Wait(Task.Delay(120));}
-  static void Open(Window w){w.Left=-18000;w.Top=-18000;w.ShowActivated=false;w.Show();Pump();w.UpdateLayout();}
+  static void Open(Window w){if(w is BatchRenameWindow){w.MaxWidth=Double.PositiveInfinity;w.MaxHeight=Double.PositiveInfinity;}w.Left=-18000;w.Top=-18000;w.ShowActivated=false;w.Show();Pump();w.UpdateLayout();}
   static bool OutlineVisible(Window window,Border frame,double scale){
    var bitmap=new System.Windows.Media.Imaging.RenderTargetBitmap((int)Math.Ceiling(window.ActualWidth*scale),(int)Math.Ceiling(window.ActualHeight*scale),96*scale,96*scale,System.Windows.Media.PixelFormats.Pbgra32);bitmap.Render((System.Windows.Media.Visual)window.Content);int stride=bitmap.PixelWidth*4;var pixels=new byte[stride*bitmap.PixelHeight];bitmap.CopyPixels(pixels,stride,0);var origin=frame.TranslatePoint(new Point(),window);var ink=FluentColors.SectionLine.Color;var surface=((System.Windows.Media.SolidColorBrush)CompactTheme.PanelSurface).Color;double maxDistance=(Math.Abs(surface.B-ink.B)+Math.Abs(surface.G-ink.G)+Math.Abs(surface.R-ink.R))*.52;
    Func<double,double,bool> matches=delegate(double x,double y){int px=(int)Math.Floor(x*scale),py=(int)Math.Floor(y*scale);if(px<0||py<0||px>=bitmap.PixelWidth||py>=bitmap.PixelHeight)return false;int at=py*stride+px*4;return pixels[at+3]>240&&Math.Abs(pixels[at]-ink.B)+Math.Abs(pixels[at+1]-ink.G)+Math.Abs(pixels[at+2]-ink.R)<=maxDistance;};

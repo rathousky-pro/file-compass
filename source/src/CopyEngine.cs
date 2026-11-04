@@ -64,6 +64,21 @@ namespace FileCompass
 
     public sealed class CopyEngine
     {
+        // .NET persists only modified security sections. A descriptor loaded
+        // directly from another path is unchanged; each write needs a fresh,
+        // explicitly populated Access section, including the post-Replace write.
+        static void SetFileAccess(string path, FileSecurity captured)
+        {
+            var security = new FileSecurity();
+            security.SetSecurityDescriptorBinaryForm(captured.GetSecurityDescriptorBinaryForm(), AccessControlSections.Access);
+            File.SetAccessControl(path, security);
+        }
+        static void SetDirectoryAccess(string path, DirectorySecurity captured)
+        {
+            var security = new DirectorySecurity();
+            security.SetSecurityDescriptorBinaryForm(captured.GetSecurityDescriptorBinaryForm(), AccessControlSections.Access);
+            Directory.SetAccessControl(path, security);
+        }
         internal static bool NetworkPath(string path)
         {
             if (path.StartsWith("\\\\", StringComparison.Ordinal)) return true;
@@ -255,7 +270,7 @@ namespace FileCompass
                     if (!stamp.Exists)
                     {
                         if (options.Times) Directory.SetLastWriteTimeUtc(target, Directory.GetLastWriteTimeUtc(node.Source));
-                        if (options.Permissions) Directory.SetAccessControl(target, Directory.GetAccessControl(node.Source, AccessControlSections.Access));
+                        if (options.Permissions) SetDirectoryAccess(target, Directory.GetAccessControl(node.Source, AccessControlSections.Access));
                     }
                     if (options.Move && !Directory.EnumerateFileSystemEntries(node.Source).Any()) { Directory.Delete(node.Source); FileAssociations.Moved(node.Source, target); }
                     result.Items.Add(new OperationItem { Source = node.Source, Target = target, Directory = true, State = options.Move && Directory.Exists(node.Source) ? L.Text("state.partiallyMoved") : L.Code("state.completed") });
@@ -383,7 +398,7 @@ namespace FileCompass
                 control.Check(); RejectLinks(target);
                 AttachmentSecurity.WriteZone(temp, AttachmentSecurity.ReadZone(node.Source));
                 if (options.Times) File.SetLastWriteTimeUtc(temp, sourceTime);
-                if (security != null) File.SetAccessControl(temp, security);
+                if (security != null) SetFileAccess(temp, security);
                 if (!expected.Matches(target)) throw new IOException(L.Text("copy.targetChangedOverwriteStopped"));
                 if (expected.Exists)
                 {
@@ -397,7 +412,7 @@ namespace FileCompass
                 if(!expected.Exists)File.Move(temp, target); // Fails if another process created the target.
                 committed = true;
                 // No cancellation between commit and metadata/rollback.
-                if (security != null) File.SetAccessControl(target, security);
+                if (security != null) SetFileAccess(target, security);
                 if (options.Attributes) File.SetAttributes(target, sourceAttributes & (FileAttributes.ReadOnly | FileAttributes.Hidden | FileAttributes.System | FileAttributes.Archive));
                 else if (changedReadOnly) File.SetAttributes(target, oldAttributes);
                 if (backup != null) { File.SetAttributes(backup, FileAttributes.Normal); File.Delete(backup); backup = null; }

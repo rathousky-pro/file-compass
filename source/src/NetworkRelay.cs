@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -91,6 +91,7 @@ namespace FileCompass
                 job = new NetworkTransferJob(source.Profile,false,target.Profile) { Move = move }; job.Reserve(); networkJobs.Add(job); networkCopies++; var captured = job;
                 job.ResolveError = delegate(CopyFailure failure) { captured.Cancellation.Token.ThrowIfCancellationRequested(); return Dispatcher.Invoke(new Func<CopyErrorChoice>(delegate { var error = new CopyErrorDialog(this,failure); error.ShowDialog(); return error.Choice; })); };
                 job.Activity = AddCopyActivity(L.Text("transfer.serverRelayTitlePrefix") + job.Caption,job.Cancel,delegate { ShowNetworkQueue(captured); });
+                job.Activity.Kind=DockActivityKind.NetworkTransfer;
                 job.Activity.ConfirmCancellation = delegate { return ConfirmNetworkCancellation(new[] { captured }); };
                 job.Activity.Record.RetryInterrupted = true;
                 job.Activity.Record.Retry = async delegate {

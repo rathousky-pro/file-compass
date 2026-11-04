@@ -10,7 +10,7 @@ namespace FileCompass
     public sealed class RenameOptions
     {
         public string Name = "[N]", Extension = "[E]", Find = "", Replace = "";
-        public bool Regex, CaseSensitive, IncludeExtension = true;
+        public bool Regex, CaseSensitive, FirstOnly, IncludeExtension = true;
         public int Start = 1, Step = 1, Digits = 1, LetterCase;
     }
     public sealed class RenameRow : System.ComponentModel.INotifyPropertyChanged
@@ -69,7 +69,8 @@ namespace FileCompass
                 Func<string, string> replace = delegate(string input)
                 {
                     if (options.Find.Length == 0) return input;
-                    return Regex.Replace(input, options.Regex ? options.Find : Regex.Escape(options.Find), options.Regex ? options.Replace : options.Replace.Replace("$", "$$"), options.CaseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
+                    var pattern = new Regex(options.Regex ? options.Find : Regex.Escape(options.Find), options.CaseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
+                    return pattern.Replace(input, options.Regex ? options.Replace : options.Replace.Replace("$", "$$"), options.FirstOnly ? 1 : Int32.MaxValue);
                 };
                 string combined = stem + (extension.Length == 0 ? "" : "." + extension);
                 if (options.IncludeExtension) combined = replace(combined); else combined = replace(stem) + (extension.Length == 0 ? "" : "." + extension);

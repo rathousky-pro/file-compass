@@ -21,6 +21,7 @@ namespace FileCompass
     {
         internal void ApplyDisplaySettings(ProgramSettings settings)
         {
+            FluentColors.Select(settings.FluentColor);
             ByteSize.Mode=ByteSize.Normalize(settings.SizeUnits);
             buttonTileIconSize=FilePanel.IconSize(settings.ButtonIconSize,20);
             FontFamily = DisplayPreferences.Font(settings.InterfaceFontFamily); FontSize = DisplayPreferences.Size(settings.InterfaceFontSize);

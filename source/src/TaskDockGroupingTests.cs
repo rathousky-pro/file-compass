@@ -1,0 +1,24 @@
+#if APP_TESTS
+using System;using System.IO;using System.Linq;using System.Collections.Generic;using System.Windows;using System.Windows.Controls;using System.Windows.Media;
+namespace FileCompass {
+ internal static class TaskDockGroupingTests {
+  internal static int Run(string root){Directory.CreateDirectory(root);var log=new List<string>();MainWindow main=null;try{L.ChangeLanguage("cs");main=new MainWindow(root,new ProgramSettings{AutoRefresh=false}){Width=1740,Height=900,Left=-18000,Top=-18000,ShowActivated=false};main.Show();NavigationTests.WaitPanels(main);main.VerifyDockGrouping(root,delegate(bool ok,string text){if(!ok)throw new Exception(text);log.Add(text);});main.Close();main=null;File.WriteAllLines(Path.Combine(root,"result.txt"),log.Concat(new[]{"PASS: "+log.Count}));return 0;}catch(Exception ex){File.WriteAllLines(Path.Combine(root,"result.txt"),log.Concat(new[]{"FAIL: "+ex}));return 1;}finally{if(main!=null)main.Close();}}
+ }
+ public partial class MainWindow {
+  internal void VerifyDockGrouping(string root,Action<bool,string> check){
+   var network=AddDockTransferForTests("Přenos souborů",delegate{});network.Kind=DockActivityKind.NetworkTransfer;network.TransferRoute="FTP · Ukázkový server · Video.mp4";network.PauseAction=delegate{};network.IsPaused=delegate{return true;};RefreshTaskDock();UpdateLayout();var originalNetwork=dockTiles[network];check(taskTilePanel.Children[0]==originalNetwork,"network transfer can appear before any tool is opened");
+   var fakeWindows=new List<Window>();var items=new List<ToolDockItem>();foreach(string title in new[]{"Stav disků / SMART","Analyzátor místa"}){var w=new Window{Title=title};fakeWindows.Add(w);var item=new ToolDockItem{Window=w,Background=true,Read=()=>new DockStatus{Title=w.Title,Description="Ukázková úloha na pozadí",Busy=false}};items.Add(item);RegisterDockTool(item);RefreshTaskDock();UpdateLayout();check(taskTilePanel.Children.OfType<ActivityTile>().Last()==originalNetwork,"later tool is inserted to the left of the existing transfer: "+title);}
+   var local=AddDockTransferForTests("Kopírování 4 položek",delegate{});local.Kind=DockActivityKind.LocalTransfer;local.TransferRoute=@"F:\Videa → D:\Záloha";local.PauseAction=delegate{};local.IsPaused=delegate{return true;};RefreshTaskDock();UpdateLayout();var originalLocal=dockTiles[local];
+   var converter=new MediaConverterWindow(this,new string[0],root,true,delegate{},delegate{});var converterItem=dockTools.Single(x=>x.Window==converter);converterItem.Background=true;RefreshTaskDock();UpdateLayout();
+   var ordered=taskTilePanel.Children.OfType<ActivityTile>().ToArray();check(ordered.Length==5&&ordered.Take(3).All(x=>x.Kind==DockActivityKind.Tool)&&ordered.Skip(3).All(x=>x.Kind!=DockActivityKind.Tool),"SMART, analyzer and converter all precede the local/network transfers");
+   check(dockTiles[network]==originalNetwork&&dockTiles[local]==originalLocal,"reordering keeps original transfer cards and their controls");
+   var networkText=FluentUiTests.Children<TextBlock>(originalNetwork).Select(x=>x.Text).ToArray();var localText=FluentUiTests.Children<TextBlock>(originalLocal).Select(x=>x.Text).ToArray();check(networkText.Contains(L.Text("taskDock.network"))&&localText.Contains(L.Text("taskDock.local")),"paused transfers retain explicit Network and Local labels");
+   var networkIcon=FluentUiTests.Children<Image>(originalNetwork).Single();var localIcon=FluentUiTests.Children<Image>(originalLocal).Single();check(!Object.ReferenceEquals(networkIcon.Source,localIcon.Source),"local and network transfers have different semantic icons");
+   var networkBar=FluentUiTests.Children<ProgressBar>(originalNetwork).Single();var localBar=FluentUiTests.Children<ProgressBar>(originalLocal).Single();check(!Equals(((SolidColorBrush)networkBar.Foreground).Color,((SolidColorBrush)localBar.Foreground).Color),"local and network progress colors differ even while paused");
+   NextStageTests.Draw(this,Path.Combine(root,"grouped-dock.png"));for(int i=0;i<6;i++){network.Update("Aktualizace "+i,.4,.56);RefreshTaskDock();UpdateLayout();check(taskTilePanel.Children.OfType<ActivityTile>().SequenceEqual(ordered),"progress update retains card order and instances: "+i);}
+   network.Finish("Hotovo",true);RefreshTaskDock();UpdateLayout();check(taskTilePanel.Children.OfType<ActivityTile>().Take(3).All(x=>x.Kind==DockActivityKind.Tool)&&taskTilePanel.Children.OfType<ActivityTile>().Last()==originalLocal,"finishing a transfer leaves tools on the left");
+   converter.Close();foreach(var item in items)RemoveDockTool(item);foreach(var w in fakeWindows)w.Close();RefreshTaskDock();UpdateLayout();check(taskTilePanel.Children.Count==1&&taskTilePanel.Children[0]==originalLocal,"closing background tools leaves the remaining transfer intact");local.Finish("Hotovo",true);RefreshTaskDock();
+  }
+ }
+}
+#endif

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Globalization;
 using System.Linq;
 using System.Windows;
@@ -10,7 +10,7 @@ namespace FileCompass
     {
         internal readonly ComboBox Family = new ComboBox { MinWidth = 160, Margin = new Thickness(0, 3, 8, 3) };
         internal readonly TextBox Points = new TextBox { Width = 56, VerticalContentAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 3, 4, 3) };
-        readonly TextBlock preview = new TextBlock { Text = L.Text("settings.fontSample"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 10) };
+        readonly TextBlock preview = new TextBlock { Tag="font-preview",Text = L.Text("settings.fontSample"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 10) };
         readonly double maximumPoints;
         internal FontChoiceControl(string label, string family, double size, double maximum)
         {

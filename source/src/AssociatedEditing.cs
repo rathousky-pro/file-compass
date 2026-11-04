@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -11,7 +11,15 @@ namespace FileCompass {
             ".webp",".avif",".heic",".heif",".svg",".svgz",".jfif",".jpe",".dib",".cur",".ani",".psd",".psb",".ai",".eps",".raw",".dng",".cr2",".cr3",".nef",".nrw",".arw",".orf",".raf",".rw2",
             ".aif",".aiff",".alac",".ape",".mid",".midi",".m4b",".m4v",".m2ts",".mts",".vob",".ogv",".3gp",".3g2",".mxf",".flv"
         };
-        internal static bool CanEditInternally(string file){string name=Path.GetFileName(file),ext=Path.GetExtension(file).ToLowerInvariant();return new[]{".txt",".text",".log",".csv",".tsv",".json",".jsonc",".lng",".yaml",".yml",".xml",".xaml",".config",".ini",".cfg",".conf",".toml",".md",".markdown",".rst",".html",".htm",".css",".scss",".sass",".less",".js",".mjs",".cjs",".jsx",".ts",".tsx",".cs",".csx",".vb",".fs",".fsx",".c",".cpp",".cc",".cxx",".h",".hpp",".java",".kt",".go",".rs",".py",".pyw",".rb",".php",".sql",".ps1",".psm1",".psd1",".bat",".cmd",".sh",".bash",".zsh",".sln",".csproj",".vbproj",".fsproj",".props",".targets",".resx",".reg",".srt",".vtt",".ass",".svg",".asp",".aspx",".vue",".svelte",".dart",".tex",".vbs",".wsf"}.Contains(ext)||new[]{"Dockerfile","Makefile","LICENSE","README",".gitignore",".gitattributes",".editorconfig"}.Contains(name,StringComparer.OrdinalIgnoreCase);}
+        internal static bool CanEditInternally(string file){string name=Path.GetFileName(file),ext=Path.GetExtension(file).ToLowerInvariant();return new[]{".patch",".diff",".rsc",".txt",".text",".log",".csv",".tsv",".json",".jsonc",".lng",".yaml",".yml",".xml",".xaml",".config",".ini",".cfg",".conf",".toml",".md",".markdown",".rst",".html",".htm",".css",".scss",".sass",".less",".js",".mjs",".cjs",".jsx",".ts",".tsx",".cs",".csx",".vb",".fs",".fsx",".c",".cpp",".cc",".cxx",".h",".hpp",".java",".kt",".go",".rs",".py",".pyw",".rb",".php",".sql",".ps1",".psm1",".psd1",".bat",".cmd",".sh",".bash",".zsh",".sln",".csproj",".vbproj",".fsproj",".props",".targets",".resx",".reg",".srt",".vtt",".ass",".svg",".asp",".aspx",".vue",".svelte",".dart",".tex",".vbs",".wsf"}.Contains(ext)||new[]{"Dockerfile","Makefile","LICENSE","README",".gitignore",".gitattributes",".editorconfig"}.Contains(name,StringComparer.OrdinalIgnoreCase)||IsUnknownText(file);}
+        // Known binary/document formats retain their registered applications. Unknown
+        // formats are opened as data only after strict bounded text decoding.
+        static bool IsUnknownText(string file){
+            string ext=Path.GetExtension(file).ToLowerInvariant();
+            if(ExecutableEditTarget(file)||Kind(file)!="text"||AdditionalEditFormats.Contains(ext)||new[]{".zip",".7z",".rar",".gz",".bz2",".xz",".tar",".accdb",".mdb",".db",".sqlite",".dwg",".iso",".bin"}.Contains(ext)||!File.Exists(file))return false;
+            try {var text=EditorTextFile.Load(file).Text;return !text.Any(c=>Char.IsControl(c)&&c!='\r'&&c!='\n'&&c!='\t'&&c!='\f');}
+            catch(IOException){return false;}catch(UnauthorizedAccessException){return false;}catch(DecoderFallbackException){return false;}
+        }
         static bool ExecutableEditTarget(string file){return new[]{".exe",".dll",".com",".scr",".msi",".msp",".cpl",".lnk",".url",".appref-ms",".appx",".msix",".hta"}.Contains(Path.GetExtension(file).ToLowerInvariant());}
         internal static bool UsesAssociatedEditor(string file){return !ExecutableEditTarget(file)&&!CanEditInternally(file);}
         internal static ProcessStartInfo AssociatedOpenInfo(string file,Func<string,int,string,string> query=null){query=query??QueryAssociation;string extension=Path.GetExtension(file).ToLowerInvariant();bool open=!String.IsNullOrWhiteSpace(query(extension,1,"open"))||!String.IsNullOrWhiteSpace(query(extension,18,"open"))||!String.IsNullOrWhiteSpace(query(extension,4,"open"));return new ProcessStartInfo(Path.GetFullPath(file)){UseShellExecute=true,Verb=open?"open":"openas"};}

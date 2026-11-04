@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -75,7 +75,7 @@ namespace FileCompass
         {
             FluentTheme.Ensure(); InitializeOperations(initialDirectory);
             StateChanged += delegate { if (WindowState != WindowState.Minimized) lastVisibleWindowState = WindowState; };
-            Title = ApplicationBrand.Name; Width = 1440; Height = 800; MinWidth = 850; MinHeight = 450;
+            Title = ApplicationBrand.Name + " · Fluent Preview"; Width = 1440; Height = 800; MinWidth = 850; MinHeight = 450;
             FontFamily = new FontFamily("Segoe UI"); FontSize = 12; Background = CompactTheme.Chrome; Foreground = FluentTheme.Text;
             SourceInitialized += delegate { AppearanceTheme.TitleBar(this); }; AppearanceTheme.RegisterShell(this);
             ApplicationBrand.Attach(this); UseLayoutRounding = true;
@@ -98,7 +98,7 @@ namespace FileCompass
             left.ArchiveFileRequested += OpenArchiveFile; right.ArchiveFileRequested += OpenArchiveFile;
             split.Children.Add(left); Grid.SetColumn(right, 2); split.Children.Add(right);
             var splitter = panelSplitter = new GridSplitter { Width = 6, Background = Brushes.Transparent, HorizontalAlignment = HorizontalAlignment.Stretch }; Grid.SetColumn(splitter, 1); split.Children.Add(splitter);
-            root.Children.Add(split);
+            InstallFluentWorkspace(root,split);
             string home = initialDirectory ?? Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ".."));
             preferences = preferences ?? ProgramSettings.Load();
             if (initialDirectory == null)
@@ -136,20 +136,22 @@ namespace FileCompass
             };
             Closed += delegate { CloudRuntime.StopAll(); durableQueue.Dispose(); windowClosed = true; left.CancelNavigation(); right.CancelNavigation(); left.DisposeArchives(); right.DisposeArchives(); left.DisposeConnections(); right.DisposeConnections(); SshfsMount.CloseTemporaryMounts(); foreach (var job in networkJobs) { job.Changed = null; job.Cancellation.Dispose(); } };
         }
-        void SetActive(FilePanel panel) { if (panel.Visibility == Visibility.Collapsed || (quickPreview != null && panel == previewTarget)) return; active = panel; if (left != null) left.Highlight(panel == left); if (right != null) right.Highlight(panel == right); UpdatePrompt(); UpdateViewToolbarControls(); }
+        void SetActive(FilePanel panel) { if (panel.Visibility == Visibility.Collapsed || (quickPreview != null && panel == previewTarget)) return; active = panel; if (left != null) left.Highlight(panel == left); if (right != null) right.Highlight(panel == right); UpdatePrompt(); UpdateViewToolbarControls(); SyncFluentSearch(); }
         void AddAction(Panel panel, string label, Action action,string icon)
         {
             var button = CompactTheme.Button(label, label, delegate { if (!busy && !PanelsLoading) action(); });
             button.ContentTemplate=FunctionKeyIcons.Caption(icon);
             button.Tag="function-key";
-            button.Height = 30; button.Padding = new Thickness(6, 2, 6, 2);
+            button.Height = 34; button.FontSize=14;button.Padding = new Thickness(16, 8, 16, 8);
             button.Background = CompactTheme.WhiteSurface; button.BorderBrush = CompactTheme.Line;
             panel.Children.Add(button); actions.Add(button);
         }
         void HandleKeys(object sender, KeyEventArgs e)
         {
+            if(active!=null&&active.List.IsKeyboardFocusWithin&&active.HandleQuickSearchKey(e))return;
             if (HandleReleaseKeys(e)) return;
             if (e.Key == Key.Q && Keyboard.Modifiers == ModifierKeys.Control) { ToggleQuickPreview(); e.Handled = true; return; }
+            if(e.Key==Key.Escape&&active!=null&&!String.IsNullOrEmpty(active.QuickFilterText)&&(active.List.IsKeyboardFocusWithin||fluentSearchInput!=null&&fluentSearchInput.IsKeyboardFocusWithin)){active.SetQuickFilter("");active.FocusFiles();e.Handled=true;return;}
             if (e.Key == Key.Escape && FilePreviewOpen) { ToggleQuickPreview(); e.Handled = true; return; }
             if (e.Key == Key.Escape && PanelsLoading) { active.CancelNavigation(); e.Handled = true; return; }
             if (e.Key == Key.Q && Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift) && !busy && !PanelsLoading) { OpenRichPreview(); e.Handled = true; return; }
@@ -255,6 +257,18 @@ namespace FileCompass
         static int RunVerified(string[] args)
         {
 #if APP_TESTS
+            if(args.Length==2&&args[0]=="--fluent-scene-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return FluentSceneTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--rename-fluent-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return RenameFluentTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--task-dock-grouping-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return TaskDockGroupingTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--tool-dialogs-polish-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return ToolDialogsPolishTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--unified-search-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return UnifiedSearchTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--workspace-polish-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return WorkspacePolishTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--cascade-navigation-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return CascadeNavigationTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--column-fill-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return ColumnFillTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--program-ux-audit-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return ProgramUxAuditTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--settings-revision-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return SettingsRevisionTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--compact-ux-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return CompactUxTests.Run(args[1]);}
+            if(args.Length==2&&args[0]=="--fluent-preview-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return FluentPreviewTests.Run(args[1]);}
             if(args.Length==2&&args[0]=="--appearance-language-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return AppearanceLanguageTests.Run(args[1]);}
             if(args.Length==2&&args[0]=="--field-border-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return FieldBorderTests.Run(args[1]);}
             if(args.Length==2&&args[0]=="--web-gallery-video-screenshots-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"isolated-video-profile");return WebGalleryScreenshots.RunVideo(args[1]);}

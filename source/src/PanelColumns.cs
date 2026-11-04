@@ -8,7 +8,7 @@ namespace FileCompass {
  public partial class FilePanel {
   static readonly string[] BaseColumnKeys={"Name","Extension","Size","Modified","Attributes"};
   bool? sizeColumn,modifiedColumn;
-  double cleanSizeWidth=90,cleanModifiedWidth=130;
+  double cleanSizeWidth=90,cleanModifiedWidth=150;
   static string ColumnKey(GridViewColumn column){return Convert.ToString(((GridViewColumnHeader)column.Header).Tag);}
   GridViewColumn BaseColumn(int index){return view.Columns.FirstOrDefault(x=>ColumnKey(x)==BaseColumnKeys[index]);}
   IEnumerable<GridViewColumn> LogicalColumns {get{return BaseColumnKeys.Select(key=>view.Columns.FirstOrDefault(x=>ColumnKey(x)==key)).Where(x=>x!=null).Concat(view.Columns.Where(x=>MetadataColumn.IsSort(ColumnKey(x))));}}

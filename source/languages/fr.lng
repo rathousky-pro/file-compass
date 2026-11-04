@@ -1,4 +1,26 @@
-﻿{
+{
+  "undoHistory.empty": "Aucune transaction.\nLes opérations apparaîtront ici.",
+  "undoHistory.selectTransaction": "Sélectionnez une transaction pour afficher ses étapes et les restrictions éventuelles.",
+
+  "rename.firstOnly": "Première occurrence seulement (1×)",
+  "rename.swap": "Inverser recherche et remplacement",
+  "rename.savePreset": "Enregistrer le modèle…",
+  "rename.loadPreset": "Charger le modèle…",
+  "rename.namePart": "Partie du nom…",
+  "rename.extensionPart": "Partie de l’extension…",
+  "rename.partRange": "Choisir une plage",
+  "rename.rangeHelp": "Les positions commencent à 1. Le dernier caractère est inclus. Les noms plus courts sont tronqués sans risque.",
+  "rename.rangeStart": "Du caractère",
+  "rename.rangeEnd": "Au caractère",
+  "rename.time": "Heure",
+
+  "rename.letterCaseLabel": "Casse",
+  "rename.includeExtensionLabel": "Inclure extension",
+  "rename.caseSensitiveLabel": "Respecter la casse",
+  "rename.insertToken": "Insérer un champ…",
+  "taskDock.local": "Local",
+  "taskDock.network": "Réseau",
+  "toolbar.editor": "Éditeur",
   "help.openBrowser": "Ouvrir dans le navigateur",
   "help.unavailable": "L’aide est absente ou endommagée. Restaurez le dossier help à côté du programme depuis le paquet d’installation.",
   "help.browserFailed": "Impossible d’ouvrir l’aide dans le navigateur. Vous pouvez ouvrir help/index.html manuellement.",

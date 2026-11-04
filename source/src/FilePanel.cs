@@ -137,7 +137,7 @@ namespace FileCompass
             List.FontFamily = new FontFamily("Segoe UI"); List.FontSize = 12;
             ScrollViewer.SetHorizontalScrollBarVisibility(List, ScrollBarVisibility.Disabled);
             List.ItemContainerStyle = RowStyle();InitializeSelectionBrackets();
-            List.SizeChanged += delegate { ResizeColumns(); };
+            List.SizeChanged += delegate { ResizeColumns(); };List.Loaded+=delegate{ObserveColumnViewport();};
             List.PreviewMouseLeftButtonDown += delegate(object sender, MouseButtonEventArgs e)
             {
                 if (windowsSelection) return;
@@ -156,6 +156,7 @@ namespace FileCompass
             // Handle file-manager commands on the tunnelling route instead.
             List.PreviewKeyDown += delegate(object sender, KeyEventArgs e)
             {
+                if(HandleQuickSearchKey(e))return;
                 if (e.Key == Key.Insert || e.Key == Key.Space)
                 {
                     var item = List.SelectedItem as Entry; ToggleMark(item);
@@ -280,7 +281,7 @@ namespace FileCompass
             text.SetValue(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center);
             text.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);
             text.SetValue(FrameworkElement.MarginProperty, new Thickness(0, 0, 3, 0));
-            if (property == "Size" || property == "Modified") {var alignment=new Style(typeof(TextBlock));alignment.Setters.Add(new Setter(TextBlock.TextAlignmentProperty,TextAlignment.Right));var cleanAlign=new DataTrigger{Binding=new Binding("Clean"){Source=InterfaceTheme.State},Value=true};cleanAlign.Setters.Add(new Setter(TextBlock.TextAlignmentProperty,TextAlignment.Left));alignment.Triggers.Add(cleanAlign);text.SetValue(FrameworkElement.StyleProperty,alignment);}
+            if (property == "Size" || property == "Modified") {var alignment=new Style(typeof(TextBlock));alignment.Setters.Add(new Setter(TextBlock.TextAlignmentProperty,TextAlignment.Right));var cleanAlign=new DataTrigger{Binding=new Binding("Clean"){Source=InterfaceTheme.State},Value=true};cleanAlign.Setters.Add(new Setter(TextBlock.TextAlignmentProperty,TextAlignment.Right));alignment.Triggers.Add(cleanAlign);text.SetValue(FrameworkElement.StyleProperty,alignment);}
             if (property == "Name")
             {
                 text.SetBinding(FrameworkElement.ToolTipProperty, new Binding("NameToolTip"));
@@ -336,7 +337,7 @@ namespace FileCompass
             foreach (GridViewColumn column in view.Columns)
             {
                 var header = (GridViewColumnHeader)column.Header;
-                string label = MetadataColumn.IsSort((string)header.Tag) ? MetadataColumn.Caption(((string)header.Tag).Substring(5)) : (string)header.Tag == "Name" ? L.Text("column.name") : (string)header.Tag == "Extension" ? L.Text("column.extension") : (string)header.Tag == "Size" ? L.Text("column.size") : (string)header.Tag == "Modified" ? L.Text(AppearanceTheme.IsClean?"details.modified":"column.date") : L.Text("attributes.title");
+                string label = MetadataColumn.IsSort((string)header.Tag) ? MetadataColumn.Caption(((string)header.Tag).Substring(5)) : (string)header.Tag == "Name" ? L.Text("column.name") : (string)header.Tag == "Extension" ? L.Text("column.extension") : (string)header.Tag == "Size" ? L.Text("column.size") : (string)header.Tag == "Modified" ? L.Text("column.date") : L.Text("attributes.title");
                 header.Content = AppearanceTheme.IsClean ? label.ToUpper(System.Globalization.CultureInfo.CurrentCulture)+((string)header.Tag==sortProperty?(descending?" ↓":" ↑"):"") : ((string)header.Tag == sortProperty ? (descending ? "▼ " : "▲ ") : "") + label;
                 header.ToolTip=label;
                 header.Background = !AppearanceTheme.IsClean && IsActivePanel && (string)header.Tag == sortProperty ? CompactTheme.SortedHeader : CompactTheme.WhiteSurface;

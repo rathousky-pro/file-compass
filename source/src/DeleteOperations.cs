@@ -72,8 +72,12 @@ namespace FileCompass
             bool cancelled = false, skipErrors = false; int done = 0, skipped = 0;
             var pauseControl=new CopyControl();
             deletions++;
-            var activity = AddCopyActivity(L.Text("delete.operationTitlePrefix") + directory, delegate { cancelled = true;pauseControl.Cancel(); if (worker != null) worker.Session.Abort(); });
-            activity.PauseAction=delegate{pauseControl.Pause(!pauseControl.Paused);};activity.IsPaused=delegate{return pauseControl.Paused;};
+            Action cancelDelete=delegate{cancelled=true;pauseControl.Cancel();if(worker!=null)worker.Session.Abort();};
+            var progressDialog=new FluentDeleteProgress(this,pauseControl,cancelDelete);
+            var activity = AddCopyActivity(L.Text("delete.operationTitlePrefix") + directory,cancelDelete,progressDialog.Restore);
+            activity.Backgrounded=false;progressDialog.Backgrounded=delegate{activity.Backgrounded=true;RefreshCopySummary();};progressDialog.Foregrounded=delegate{activity.Backgrounded=false;RefreshCopySummary();};
+            progressDialog.Update(directory,0,selected.Count,permanent);progressDialog.Show();
+            activity.PauseAction=delegate{pauseControl.Pause(!pauseControl.Paused);progressDialog.RefreshPause();};activity.IsPaused=delegate{return pauseControl.Paused;};
             activity.Record.Retry = delegate { var failed = activity.Record.Items.Where(x => x.State == L.Code("state.error")).Select(x => new Entry { FullPath = x.Source, Name = Path.GetFileName(x.Source) }).ToList(); if (failed.Count > 0) { var retryTask = DeleteBatch(failed, connection, remote, permanent, directory); } };
             try
             {
@@ -83,6 +87,7 @@ namespace FileCompass
                 {
                     try{await Task.Run(pauseControl.Check);}catch(OperationCanceledException){cancelled=true;break;}
                     if (cancelled) break;
+                    progressDialog.Update(entry.FullPath,done+skipped,selected.Count,permanent);
                     activity.Update(L.Text("delete.statusPrefix") + entry.FullPath + " · " + done + " / " + selected.Count, 0, (double)(done + skipped) / selected.Count);
                     bool retry;
                     do
@@ -113,7 +118,7 @@ namespace FileCompass
             catch (Exception ex) { activity.Finish(L.Text("delete.failedPrefix") + ex.Message, false); MessageBox.Show(this, ex.Message, L.Text("delete.failedTitle"), MessageBoxButton.OK, MessageBoxImage.Warning); }
             finally
             {
-                pauseControl.Dispose();
+                progressDialog.Finish();pauseControl.Dispose();
                 if (worker != null) worker.Dispose();
                 deletions--;
                 // Refresh only the original location; the user may have navigated elsewhere.

@@ -11,6 +11,7 @@ namespace FileCompass {
         internal static ImageSource Get(string name,ToolbarTheme theme){
             if(name=="hidden-files")name="hidden-files-hidden";
             if(Array.IndexOf(Names,name)<0)return null;
+            if(name.StartsWith("panels-",StringComparison.Ordinal))return PanelLayoutSymbols.Get(name,theme);
             if(theme==ToolbarTheme.Classic)return FluentIcons.Load(name);
             string key=theme+":"+name;lock(cache){ImageSource result;if(cache.TryGetValue(key,out result))return result;result=Draw(name,theme);cache[key]=result;return result;}
         }

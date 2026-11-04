@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
@@ -14,8 +14,8 @@ namespace FileCompass {
     }
     static DataTemplate BuildKeyCaption(){
       var row=new FrameworkElementFactory(typeof(StackPanel));row.SetValue(StackPanel.OrientationProperty,Orientation.Horizontal);
-      var badge=new FrameworkElementFactory(typeof(Border));badge.SetValue(Border.BackgroundProperty,CompactTheme.PanelSurface);badge.SetValue(Border.BorderBrushProperty,CompactTheme.Line);badge.SetValue(Border.BorderThicknessProperty,new Thickness(1));badge.SetValue(Border.CornerRadiusProperty,new CornerRadius(3));badge.SetValue(Border.PaddingProperty,new Thickness(4,0,4,0));badge.SetValue(FrameworkElement.MarginProperty,new Thickness(0,0,7,0));
-      var key=new FrameworkElementFactory(typeof(TextBlock));key.SetBinding(TextBlock.TextProperty,new Binding{Converter=new KeyPart(),ConverterParameter="key"});key.SetValue(TextBlock.FontSizeProperty,10.0);key.SetValue(TextBlock.ForegroundProperty,FluentTheme.Muted);key.SetValue(FrameworkElement.VerticalAlignmentProperty,VerticalAlignment.Center);badge.AppendChild(key);row.AppendChild(badge);
+      var badge=new FrameworkElementFactory(typeof(Border));badge.SetValue(Border.BorderBrushProperty,CompactTheme.FieldLine);badge.SetValue(Border.BorderThicknessProperty,new Thickness(0,0,1,0));badge.SetValue(Border.PaddingProperty,new Thickness(4,0,12,0));badge.SetValue(FrameworkElement.MarginProperty,new Thickness(0,0,12,0));
+      var key=new FrameworkElementFactory(typeof(TextBlock));key.SetBinding(TextBlock.TextProperty,new Binding{Converter=new KeyPart(),ConverterParameter="key"});key.SetValue(TextBlock.FontSizeProperty,11.0);key.SetValue(TextBlock.ForegroundProperty,FluentTheme.Text);key.SetValue(FrameworkElement.VerticalAlignmentProperty,VerticalAlignment.Center);badge.AppendChild(key);row.AppendChild(badge);
       var text=new FrameworkElementFactory(typeof(TextBlock));text.SetBinding(TextBlock.TextProperty,new Binding{Converter=new KeyPart(),ConverterParameter="label"});text.SetValue(FrameworkElement.VerticalAlignmentProperty,VerticalAlignment.Center);row.AppendChild(text);return new DataTemplate{VisualTree=row};
     }
     internal static DataTemplate Caption(string command){

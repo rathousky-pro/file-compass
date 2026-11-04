@@ -1,4 +1,4 @@
-﻿#if APP_TESTS
+#if APP_TESTS
 using System;using System.IO;using System.Linq;using System.Collections.Generic;using System.Threading;using System.Threading.Tasks;using System.Windows;using System.Windows.Controls;using System.Windows.Threading;
 namespace FileCompass {
  public partial class MainWindow {
@@ -10,7 +10,7 @@ namespace FileCompass {
      var archive=AddDockTransferForTests("Compression",delegate{});RefreshTaskDock();UpdateLayout();for(int i=0;i<10;i++){archive.Update("Progress "+i,.1,.2);RefreshCopySummary();UpdateLayout();}
      check(flashes==0&&Math.Abs(copySummary.ActualHeight-height)<1,"copy/archive progress cannot blink or increase the fixed dock height");check(existing.All(x=>dockTiles.Values.Contains(x)),"updating transfers retains the same tool tile instances");archive.Finish("done",true);copySummary.IsVisibleChanged-=changed;
     }
-    internal CopyActivity AddDockTransferForTests(string title,Action open){var activity=AddCopyActivity(title,delegate{},open);activity.TransferTitle=title;activity.TransferRoute="Dokumenty → Záloha";activity.Update("6 / 10",.6,.54);return activity;}
+    internal CopyActivity AddDockTransferForTests(string title,Action open){var activity=AddCopyActivity(title,delegate{},open);activity.Kind=DockActivityKind.LocalTransfer;activity.TransferTitle=title;activity.TransferRoute="Dokumenty → Záloha";activity.Update("6 / 10",.6,.54);return activity;}
  }
  internal static class TaskDockTests {
     [System.Runtime.InteropServices.DllImport("user32.dll")]static extern IntPtr SendMessage(IntPtr handle,int message,IntPtr first,IntPtr second);
@@ -45,7 +45,7 @@ namespace FileCompass {
             bool restored=false;var copy=main.AddDockTransferForTests("Kopírování",delegate{restored=true;});var ftp=main.AddDockTransferForTests("FTP · testovací přenos",delegate{});main.RefreshTaskDock();main.UpdateLayout();
             var tiles=FluentUiTests.Children<ActivityTile>(main).ToArray();check(tiles.Length==5,"two transfer activities coexist with three background tools");
             check(tiles.Select(x=>x.TranslatePoint(new Point(),main).Y).Distinct().Count()==1&&tiles.Count(x=>x.ActualWidth>250)==3,"transfers share the same row with compact SMART/analyzer tiles and use remaining width");
-            check(tiles.All(x=>x.ActualWidth>=230&&x.ActualHeight>=56&&x.ActualHeight<=72),"dock tiles retain usable width and compact height");
+            check(tiles.All(x=>x.ActualWidth>=230&&x.ActualHeight>=76&&x.ActualHeight<=88),"dock tiles retain usable width and enough height for larger text");
             check(tiles.All(x=>Convert.ToString(x.Background)=="#FFFFFFFF"),"background task tiles retain white card surfaces on the blue-grey base");var first=tiles[0];var scroll=FluentUiTests.Children<ScrollViewer>(main).First(x=>FluentUiTests.Children<ActivityTile>(x).Any());check(scroll.ComputedHorizontalScrollBarVisibility!=Visibility.Visible,"dock rows and compact tool tiles do not require horizontal scrolling");
             NextStageTests.Draw(main,Path.Combine(root,"five-activity-tiles.png"));
             var local=tiles.Single(x=>FluentUiTests.Children<TextBlock>(x).Any(t=>t.Text=="Kopírování"));FluentUiTests.Children<Button>(local).Single(x=>Convert.ToString(x.Content).StartsWith("↗")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));check(restored,"each transfer tile opens its own details action");

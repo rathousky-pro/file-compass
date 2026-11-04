@@ -25,7 +25,9 @@ namespace FileCompass
             if(developerLogo!=null)return developerLogo;
             using(var stream=typeof(ApplicationBrand).Assembly.GetManifestResourceStream("FileCompass.Branding.RathouskyPro.png")) {
                 if(stream==null)throw new IOException("Missing developer logo resource.");
-                var image=new BitmapImage();image.BeginInit();image.CacheOption=BitmapCacheOption.OnLoad;image.StreamSource=stream;image.EndInit();image.Freeze();developerLogo=image;return image;
+                var image=new BitmapImage();image.BeginInit();image.CacheOption=BitmapCacheOption.OnLoad;image.StreamSource=stream;image.EndInit();image.Freeze();
+                // Exclude the transparent outer padding of the extracted branding asset.
+                var cropped=new CroppedBitmap(image,new Int32Rect(8,120,2140,500));cropped.Freeze();developerLogo=cropped;return cropped;
             }
         } }
         internal static ApplicationIcon Current = Valid(ToolbarThemeSettings.Load().ApplicationIcon);

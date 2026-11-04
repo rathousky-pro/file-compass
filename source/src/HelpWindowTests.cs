@@ -74,7 +74,8 @@ namespace FileCompass {
                 L.ChangeLanguage("de");LiveLanguage.Refresh();check(HelpContent.ContentLanguage=="en"&&help.Title==L.Text("help.title"),"Other UI languages show English help with an explicit content language");
                 L.ChangeLanguage("cs");LiveLanguage.Refresh();help.Navigate("copy");
                 about=new AboutWindow(owner){Left=-18000,Top=-18000,WindowStartupLocation=WindowStartupLocation.Manual,ShowActivated=false};about.Show();
-                var bitmap=about.DeveloperLogo.Source as BitmapSource;check(bitmap!=null&&bitmap.PixelWidth==685&&bitmap.PixelHeight==161,"Exact attached developer logo is embedded");
+                var bitmap=about.DeveloperLogo.Source as BitmapSource;check(bitmap!=null&&bitmap.PixelWidth==2140&&bitmap.PixelHeight==500,"Cropped transparent developer logo is embedded");
+                var rgba=new FormatConvertedBitmap(bitmap,System.Windows.Media.PixelFormats.Bgra32,null,0);var pixels=new byte[rgba.PixelWidth*rgba.PixelHeight*4];rgba.CopyPixels(pixels,rgba.PixelWidth*4,0);check(Enumerable.Range(0,pixels.Length/4).Any(i=>pixels[i*4+3]==0),"Developer branding retains transparent pixels instead of an opaque backing");
                 check(about.Logo.Source!=null&&about.Repository.NavigateUri.AbsoluteUri==ApplicationBrand.GitHubUrl,"Application logo and repository remain present");
                 check(about.VersionText.Text.Contains(BuildInfo.DisplayVersion)&&about.BuildText.Text.Contains(BuildInfo.Build),"About displays generated version and build");
                 check(BuildInfo.BuiltAtUtc.Kind==DateTimeKind.Utc&&BuildInfo.Build.StartsWith(BuildInfo.BuiltAtUtc.ToString("yyyyMMdd")+"."),"Build ID matches actual UTC build date");

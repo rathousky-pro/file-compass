@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -164,7 +164,7 @@ namespace FileCompass
         public static void Dialog(Window window)
         {
             DialogOwnerActivation.Attach(window);
-            Ensure(); window.FontFamily = window.Owner == null ? new FontFamily("Segoe UI") : window.Owner.FontFamily; window.FontSize = window.Owner == null ? 12 : window.Owner.FontSize;
+            Ensure();window.WindowStyle=WindowStyle.None;window.AllowsTransparency=true;window.Background=Brushes.Transparent; window.FontFamily = window.Owner == null ? new FontFamily("Segoe UI") : window.Owner.FontFamily; window.FontSize = window.Owner == null ? 12 : window.Owner.FontSize;
             window.Foreground = Text; window.Background = CompactTheme.Chrome;
             window.SourceInitialized += delegate { AppearanceTheme.TitleBar(window); }; window.Loaded += delegate { Prepare(window); };
         }
@@ -172,7 +172,7 @@ namespace FileCompass
         {
             if (window is MainWindow) return;
             var body = window.Content as FrameworkElement;
-            if (body != null) body.Margin = new Thickness(0);
+            if (body != null && Convert.ToString(body.Tag)!="fluent-stage") body.Margin = new Thickness(0);
             Normalize(window);
         }
         static void Normalize(DependencyObject parent)

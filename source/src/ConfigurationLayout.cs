@@ -23,7 +23,7 @@ namespace FileCompass {
         }
         void InitializeSettingsSize() {
             var area = SettingsWorkArea();
-            Width = Math.Min(1080, area.Width - 32); Height = Math.Min(640, area.Height - 32);
+            Width = Math.Min(980, area.Width - 32); Height = Math.Min(760, area.Height - 32);
             MinWidth = Math.Min(820, Width); MinHeight = Math.Min(350, Height);
             SizeToContent = SizeToContent.Manual; ResizeMode = ResizeMode.CanResize;
             Loaded += delegate { QueueSettingsFit(); };
@@ -36,8 +36,7 @@ namespace FileCompass {
         }
         internal void FitSettingsPage() {
             if (!IsLoaded || fitting) return;
-            var scroller = page.Content as ScrollViewer;
-            var panel = scroller == null ? null : scroller.Content as FrameworkElement;
+            var panel = page.Content as FrameworkElement;
             if (panel == null) return;
             fitting = true;
             try {
@@ -45,12 +44,12 @@ namespace FileCompass {
                 MinWidth = Math.Min(820, area.Width - 32); MinHeight = Math.Min(350, area.Height - 32);
                 MaxWidth = area.Width - 32; MaxHeight = area.Height - 32;
                 UpdateLayout();
-                if (applicationIconGrid != null) applicationIconGrid.Columns = scroller.ActualWidth < 720 ? 3 : 4;
+                if (applicationIconGrid != null) applicationIconGrid.Columns = panel.ActualWidth < 720 ? 3 : 4;
                 // Measure the attached, styled page at its available width. Reserve scrollbar
                 // space even when hidden so a bounded fit cannot oscillate between widths.
-                panel.Measure(new Size(Math.Max(100, scroller.ActualWidth - SystemParameters.VerticalScrollBarWidth), Double.PositiveInfinity));
-                double chrome = ActualHeight - scroller.ActualHeight;
-                Height = Math.Min(MaxHeight, Math.Max(MinHeight, Math.Ceiling(panel.DesiredSize.Height + chrome + 6)));
+                panel.Measure(new Size(Math.Max(100, panel.ActualWidth - SystemParameters.VerticalScrollBarWidth), Double.PositiveInfinity));
+                double chrome = ActualHeight - panel.ActualHeight;
+                Height = Math.Min(MaxHeight, 700);
                 // Keep deliberately offscreen test windows offscreen.
                 if (new Rect(Left, Top, ActualWidth, ActualHeight).IntersectsWith(area)) {
                     Left = Math.Max(area.Left + 16, Math.Min(Left, area.Right - Width - 16));
@@ -65,11 +64,11 @@ namespace FileCompass {
         static Grid Row(params UIElement[] items) {
             var grid = new Grid { Margin = new Thickness(0, 0, 0, 10) };
             for (int i = 0; i < items.Length; i++) {
-                grid.ColumnDefinitions.Add(new ColumnDefinition());
+                grid.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});
                 var item = (FrameworkElement)items[i];
-                item.Margin = new Thickness(i == 0 ? 0 : 6, 0, i == items.Length - 1 ? 0 : 6, 0);
+                item.Margin = new Thickness(0,0,0,18);
                 item.VerticalAlignment = VerticalAlignment.Stretch;
-                Grid.SetColumn(item, i); grid.Children.Add(item);
+                Grid.SetColumn(item, 0);Grid.SetRow(item,i); grid.Children.Add(item);
             }
             return grid;
         }
@@ -118,16 +117,9 @@ namespace FileCompass {
         void ArrangeArchiveLimits() {
             archiveLimits.SetResourceReference(StyleProperty, typeof(GroupBox));
             var grid = (Grid)archiveLimits.Content; var fields = Take(grid);
-            grid.RowDefinitions.Clear(); grid.ColumnDefinitions.Clear();
-            grid.ColumnDefinitions.Add(new ColumnDefinition()); grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(84) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition()); grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(84) });
-            for (int row = 0; row < 4; row++) grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            for (int i = 0; i < fields.Length; i++) {
-                int field = i / 2; Grid.SetRow(fields[i], field % 4); Grid.SetColumn(fields[i], (field / 4) * 3 + i % 2);
-                var label = fields[i] as TextBlock; if (label != null) label.TextWrapping = TextWrapping.Wrap;
-                grid.Children.Add(fields[i]);
-            }
+            grid.RowDefinitions.Clear();grid.ColumnDefinitions.Clear();
+            grid.ColumnDefinitions.Add(new ColumnDefinition());grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(120)});
+            for(int i=0;i<fields.Length;i++){int row=i/2;if(i%2==0)grid.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});Grid.SetRow(fields[i],row);Grid.SetColumn(fields[i],i%2);var label=fields[i] as TextBlock;if(label!=null)label.TextWrapping=TextWrapping.Wrap;grid.Children.Add(fields[i]);}
         }
         static void ArrangeBehavior(FileBehaviorEditor editor) {
             var children = Take(editor);

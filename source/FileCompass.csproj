@@ -18,7 +18,7 @@
   <ItemGroup>
     <Compile Include="src\*.cs" Exclude="src\*Tests.cs" />
     <Compile Include="obj\BuildInfo.g.cs" />
-    <EmbeddedResource Include="assets\branding\rathousky-pro.png" LogicalName="FileCompass.Branding.RathouskyPro.png" />
+    <EmbeddedResource Include="assets\branding\rathousky-pro-transparent.png" LogicalName="FileCompass.Branding.RathouskyPro.png" />
     <Content Include="help\site\**\*" Link="help\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="help\images\*.png" Link="help\images\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Compile Include="src\*Tests.cs" Condition="'$(Configuration)' == 'Debug'" />

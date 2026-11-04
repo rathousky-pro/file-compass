@@ -15,6 +15,12 @@ namespace FileCompass {
         Grid pageHost;
         Grid workspace;
         Border navigationFrame;
+        StackPanel navigationActions;
+        internal void AddNavigationAction(string label,Action action){
+            if(navigationFrame==null)return;
+            if(navigationActions==null){navigationFrame.Child=null;var dock=new DockPanel();navigationActions=new StackPanel{Margin=new Thickness(8,18,8,8)};DockPanel.SetDock(navigationActions,Dock.Bottom);dock.Children.Add(navigationActions);dock.Children.Add(Navigation);navigationFrame.Child=dock;}
+            var button=CopyUi.Button(label,action);button.HorizontalContentAlignment=HorizontalAlignment.Left;button.Margin=new Thickness(0,3,0,3);navigationActions.Children.Add(button);
+        }
         bool fitQueued,compact;
         readonly List<ScrollViewer> pages=new List<ScrollViewer>();
         internal readonly ListBox Navigation=new ListBox { Background=CompactTheme.PanelSurface, BorderThickness=new Thickness(0), Padding=new Thickness(7) };
@@ -31,18 +37,19 @@ namespace FileCompass {
         internal StackPanel AddPage(string title){
             if(pageHost==null){
                 root.Children.Remove(plainCard);
-                workspace=new Grid {Tag="dialog-workspace",Margin=new Thickness(16,0,16,0),Height=Math.Min(390,Math.Max(160,window.MaxHeight-220))};workspace.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(155)});workspace.ColumnDefinitions.Add(new ColumnDefinition());
+                workspace=new Grid {Tag="dialog-workspace",Margin=new Thickness(0),Height=Math.Min(390,Math.Max(160,window.MaxHeight-220))};workspace.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(210)});workspace.ColumnDefinitions.Add(new ColumnDefinition());
                 Navigation.ItemTemplate=NavigationIcons.Template();
                 navigationFrame=new Border{Tag="dialog-navigation",Child=Navigation,Background=CompactTheme.ToolbarSurface,CornerRadius=new CornerRadius(10),Margin=new Thickness(0,0,8,0)};workspace.Children.Add(navigationFrame);
                 pageHost=new Grid();var pageCard=new Border{Tag="operation-page-card",Child=pageHost,Background=CompactTheme.WhiteSurface,CornerRadius=new CornerRadius(11),Margin=new Thickness(0)};Grid.SetColumn(pageCard,1);workspace.Children.Add(pageCard);root.Children.Add(workspace);
                 Navigation.SelectionChanged+=delegate{for(int i=0;i<pages.Count;i++)pages[i].Visibility=i==Navigation.SelectedIndex?Visibility.Visible:Visibility.Collapsed;};
-                CleanOptions.Register(window, Actions, delegate(bool visible) { navigationFrame.Visibility=visible?Visibility.Visible:Visibility.Collapsed;Navigation.ItemContainerStyle=AppearanceTheme.IsClean?NavigationIcons.ItemStyle():null;workspace.ColumnDefinitions[0].Width=new GridLength(visible?174:0);navigationFrame.Background=Navigation.Background=CompactTheme.ToolbarSurface;navigationFrame.VerticalAlignment=VerticalAlignment.Stretch;navigationFrame.Margin=new Thickness(0,0,8,0);navigationFrame.CornerRadius=new CornerRadius(10);if(!visible)Navigation.SelectedIndex=0;QueueFit(); }, delegate { return Navigation.Items.Count>1; });
+                CleanOptions.Register(window, Actions, delegate(bool visible) { navigationFrame.Visibility=visible?Visibility.Visible:Visibility.Collapsed;Navigation.ItemContainerStyle=AppearanceTheme.IsClean?NavigationIcons.ItemStyle():null;workspace.ColumnDefinitions[0].Width=new GridLength(visible?210:0);navigationFrame.Background=Navigation.Background=CompactTheme.ToolbarSurface;navigationFrame.VerticalAlignment=VerticalAlignment.Stretch;navigationFrame.Margin=new Thickness(0,0,8,0);navigationFrame.CornerRadius=new CornerRadius(10);if(!visible)Navigation.SelectedIndex=0;QueueFit(); }, delegate { return Navigation.Items.Count>1; });
             }
-            var page=new StackPanel{Margin=new Thickness(18,14,18,14)};
+            var page=new StackPanel{Margin=new Thickness(30,30,30,24)};
             var scroll=new ScrollViewer{Content=page,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled,Visibility=Visibility.Collapsed};pages.Add(scroll);pageHost.Children.Add(scroll);Navigation.Items.Add(title);if(Navigation.SelectedIndex<0)Navigation.SelectedIndex=0;return page;
         }
         internal void SelectPage(int index){CleanOptions.Reveal(window);Navigation.SelectedIndex=index;}
         internal void Compact(double height){compact=true;if(workspace!=null)workspace.Height=height;}
+        internal void Refit(){QueueFit();}
         void QueueFit(){
             if(fitQueued||compact||!window.IsLoaded)return;fitQueued=true;
             window.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded,new Action(delegate{fitQueued=false;FitPages();}));

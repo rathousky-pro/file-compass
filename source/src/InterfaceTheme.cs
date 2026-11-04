@@ -26,7 +26,7 @@ namespace FileCompass {
             foreach(Window window in app.Windows.Cast<Window>().ToArray())if(window.IsLoaded){Prepare(window);CleanTheme.Refresh(window);CleanOptions.Refresh(window);}
         }
         internal static void Prepare(Window window){
-            if(window is MainWindow||IsFramed(window))return;
+            if(window is MainWindow||IsFramed(window))return;var stage=window.Content as FrameworkElement;if(stage!=null&&Convert.ToString(stage.Tag)=="fluent-stage"){window.SetValue(FramedProperty,true);return;}var fluentShell=window.Content as Border;if(fluentShell!=null&&Convert.ToString(fluentShell.Tag)=="fluent-shell"){window.SetValue(FramedProperty,true);return;}
             var content=window.Content as FrameworkElement;if(content==null)return;
             var grid=content as Grid;var existing=grid!=null&&grid.Children.Count==1?grid.Children[0] as Border:null;
             if(existing!=null){

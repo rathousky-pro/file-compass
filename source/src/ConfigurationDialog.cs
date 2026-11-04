@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,6 +28,7 @@ namespace FileCompass
         ToolbarTheme originalTheme;
         ApplicationIcon originalApplicationIcon;
         bool appearanceSaved;
+        string originalColor=FluentColors.Current.Id; string selectedColor=FluentColors.Current.Id;
         internal readonly ComboBox LanguageChoice = new ComboBox { MinWidth = 180 };
 
         readonly MainWindow main;
@@ -54,8 +55,9 @@ namespace FileCompass
             var apply=CopyUi.Button(L.Text("action.apply"),delegate{Save(false);});System.Windows.Automation.AutomationProperties.SetAutomationId(apply,"ConfigurationApply");actions.Children.Add(apply);
             var ok=CopyUi.Button(L.Text("action.save"),delegate{Save(true);});ok.IsDefault=true;FluentTheme.Primary(ok);actions.Children.Add(ok);
             var navigation=new Border{Tag="dialog-navigation",Width=170,Background=CompactTheme.ToolbarSurface,CornerRadius=new CornerRadius(10),Margin=new Thickness(0,0,8,0),Padding=new Thickness(7,10,7,10),Child=Sections};DockPanel.SetDock(navigation,Dock.Left);body.Children.Add(navigation);SettingsUx.Navigation(Sections);
-            body.Children.Add(new Border{Tag="settings-page-card",Child=page,Background=CompactTheme.WhiteSurface,CornerRadius=new CornerRadius(11),Padding=new Thickness(18,14,18,14)});
+            body.Children.Add(new Border{Tag="settings-page-card",Child=page,Background=CompactTheme.WhiteSurface,CornerRadius=new CornerRadius(11),Padding=new Thickness(24,18,24,18)});
             var appearance = Page(L.Text("settings.appearanceSection"), L.Text("settings.compactInterfaceDescription"));
+
             var fonts = FluentTheme.Section(appearance, L.Text("settings.fontTitle"));
             interfaceFont = new FontChoiceControl(L.Text("settings.interfaceFont"), settings.InterfaceFontFamily, settings.InterfaceFontSize, 12);
             fileListFont = new FontChoiceControl(L.Text("settings.fileListFont"), settings.FileListFontFamily, settings.FileListFontSize, 24);
@@ -143,26 +145,24 @@ namespace FileCompass
             }); remember.IsEnabled = main != null; view.Children.Add(remember);
             view.Children.Add(new TextBlock { Text = L.Text("settings.saveViewHelp"), TextWrapping = TextWrapping.Wrap, Foreground = FluentTheme.Muted, Margin = new Thickness(0, 16, 0, 0) });
             var network = Page(L.Text("network.connectionsTitle"), L.Text("connections.settingsDescription"));
-            try {
-                Connections = new ConnectionsView(this, main, connectionsStore ?? (main == null ? new NetworkSettingsStore(NetworkSettingsStore.DefaultPath) : main.ConnectionSettings), true) { Height = 380 };
-                network.Children.Add(Connections);
-                Connections.BusyChanged += delegate(bool busy) { Sections.IsEnabled = !busy; ok.IsEnabled = apply.IsEnabled = !busy; QueueSettingsFit(); };
-                Connections.Tabs.SelectionChanged += delegate { QueueSettingsFit(); };
-            } catch (Exception ex) { network.Children.Add(new TextBlock { Text = ex.Message, TextWrapping = TextWrapping.Wrap, Foreground = CompactTheme.ThemeBrush("#B92331") }); }
-            network.Children.Add(new TextBlock { Text = L.Text("connections.immediateSave"), TextWrapping = TextWrapping.Wrap, Foreground = FluentTheme.Muted, Margin = new Thickness(0, 10, 0, 0) });
-            Closing += delegate(object sender, System.ComponentModel.CancelEventArgs e) { if (Connections != null && !Connections.AllowHostClose()) e.Cancel = true; };
-            Closed += delegate { if (!appearanceSaved) { ApplicationBrand.Apply(originalApplicationIcon); PreviewToolbar(originalTheme); } if (Connections != null) Connections.DisposeManagers(); };
+            Connections=null;
+            network.Children.Add(new TextBlock{Text="Profily a cloudové účty spravujte v samostatném okně. Nastavení vzhledu a chování připojení je oddělené od připojování.",TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,12,0,18)});
+            foreach(bool cloud in new[]{false,true}){bool selectedCloud=cloud;network.Children.Add(CopyUi.Button(cloud?L.Text("connections.cloudTab"):L.Text("network.connectionsTitle"),delegate{new ConnectionsDialog(this,main,connectionsStore??(main==null?new NetworkSettingsStore(NetworkSettingsStore.DefaultPath):main.ConnectionSettings),null,selectedCloud).ShowDialog();}));}
+
+            Closed += delegate { if (!appearanceSaved) { FluentColors.Select(originalColor); ApplicationBrand.Apply(originalApplicationIcon); PreviewToolbar(originalTheme); } if (Connections != null) Connections.DisposeManagers(); };
             var behavior = Page(L.Text("settings.fileOperations"), L.Text("settings.fileOperationsDescription"));
             fileBehavior = new FileBehaviorEditor(settings); behavior.Children.Add(fileBehavior);
             var updates=Page(L.Text("updates.title"),L.Text("updates.description"));UpdatePage=new UpdatesView(main);updates.Children.Add(UpdatePage);Closed+=delegate{UpdatePage.Dispose();};
             var panelsPage=Page(L.Text("settings.panelsSection"),L.Text("settings.panelsDescription"));
             var names = new[] { L.Text("settings.appearanceSection"), L.Text("settings.iconsSection"), L.Text("settings.archivesSection"), L.Text("settings.viewersTitle"), L.Text("settings.startupViewTitle"), L.Text("network.connectionsTitle"), L.Text("settings.fileOperations"),L.Text("updates.title"),L.Text("settings.panelsSection") };
             var pages = new[] { appearance, icons, archivePage, viewers, view, network, behavior,updates,panelsPage };
-            var iconSizesGroup=(GroupBox)sizes.Parent;icons.Children.Remove(iconSizesGroup);ArrangeSettingsPages(pages);Action<GroupBox> detachGroup=delegate(GroupBox group){var parent=group.Parent as Panel;if(parent==null)return;parent.Children.Remove(group);if(parent.Children.Count==0)appearance.Children.Remove(parent);else foreach(UIElement remaining in parent.Children){Grid.SetColumn(remaining,0);Grid.SetColumnSpan(remaining,2);}};
+            var iconSizesGroup=(GroupBox)sizes.Parent;icons.Children.Remove(iconSizesGroup);ArrangeSettingsPages(pages);FluentColors.Choices(appearance,delegate(string id){selectedColor=id;});var paletteCard=appearance.Children[appearance.Children.Count-1];appearance.Children.Remove(paletteCard);appearance.Children.Insert(2,paletteCard);Action<GroupBox> detachGroup=delegate(GroupBox group){var parent=group.Parent as Panel;if(parent==null)return;parent.Children.Remove(group);if(parent.Children.Count==0)appearance.Children.Remove(parent);else foreach(UIElement remaining in parent.Children){Grid.SetColumn(remaining,0);Grid.SetColumnSpan(remaining,2);}};
             var visibilityGroup=(GroupBox)visibility.Parent;var folderGroup=(GroupBox)folderViews.Parent;var refreshGroup=(GroupBox)refreshing.Parent;detachGroup(visibilityGroup);detachGroup(folderGroup);detachGroup(refreshGroup);panelsPage.Children.Add(Row(sizeUnitsGroup,visibilityGroup));panelsPage.Children.Add(Row(folderGroup,refreshGroup));icons.Children.Insert(3,iconSizesGroup);
             AddAppearanceChoices(appearance);
+            names=new[]{names[0],names[1],names[8],names[2],names[3],names[4],names[5],names[6],names[7]};pages=new[]{pages[0],pages[1],pages[8],pages[2],pages[3],pages[4],pages[5],pages[6],pages[7]};
+            OrganizeSettings(pages);var boundedPages=pages.Select(x=>new SettingsPager(x)).ToArray();
             foreach (string name in names) Sections.Items.Add(name);
-            Sections.SelectionChanged += delegate { if (Sections.SelectedIndex >= 0) { page.Content = new ScrollViewer { Content = pages[Sections.SelectedIndex], VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled }; QueueSettingsFit(); } };
+            Sections.SelectionChanged += delegate { if (Sections.SelectedIndex >= 0) { page.Content = boundedPages[Sections.SelectedIndex]; QueueSettingsFit(); Dispatcher.BeginInvoke(new Action(delegate{CleanTheme.Refresh(this);})); } };
             Sections.SelectedIndex = Math.Max(0, Array.IndexOf(names, section));
         }
         StackPanel Page(string title, string description)
@@ -191,7 +191,7 @@ namespace FileCompass
         }
         void Save(bool close)
         {
-            try { SaveChanges(); originalTheme=selectedTheme;originalApplicationIcon=selectedApplicationIcon;if(close){appearanceSaved = true; DialogResult = true;} }
+            try { SaveChanges(); originalColor=selectedColor; originalTheme=selectedTheme;originalApplicationIcon=selectedApplicationIcon;if(close){appearanceSaved = true; DialogResult = true;} }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, L.Text("menu.configuration"), MessageBoxButton.OK, MessageBoxImage.Warning); }
         }
         internal void SaveChanges()
@@ -205,7 +205,7 @@ namespace FileCompass
                 settings.SizeUnits=new[]{"SI","IEC","Bytes"}[Math.Max(0,sizeUnits.SelectedIndex)];
                 settings.ShowHiddenFiles = showHidden.IsChecked == true; settings.ShowSystemFiles = showSystem.IsChecked == true;
                 fileBehavior.Apply(); startupPreferences.Apply();
-                settings.WindowBackdrop = "None"; settings.ColorTheme = "Light";
+                settings.FluentColor=selectedColor; settings.WindowBackdrop = "None"; settings.ColorTheme = "Light";
                 settings.InterfaceMotif = "Clean";
                 string language = L.SupportedLanguages[LanguageChoice.SelectedIndex];
                 settings.ButtonIconSize=(double)buttonIconSize.SelectedItem;settings.DriveIconSize=(double)driveIconSize.SelectedItem;

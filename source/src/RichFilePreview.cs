@@ -18,7 +18,7 @@ namespace FileCompass
         readonly FlowDocumentScrollViewer markdown = new FlowDocumentScrollViewer { IsToolBarVisible = false, IsSelectionEnabled = true, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Background = CompactTheme.WhiteSurface };
         static readonly MarkdownPipeline pipeline = new MarkdownPipelineBuilder().DisableHtml().UsePipeTables().Build();
         internal static bool IsMarkdown(string path) { string ext = Path.GetExtension(path).ToLowerInvariant(); return ext == ".md" || ext == ".markdown" || ext == ".mdown"; }
-        internal static bool Supports(string path) { return IsMarkdown(path) || DocumentPreview.IsHtml(path) || HighlightingManager.Instance.GetDefinitionByExtension(Path.GetExtension(path)) != null || Path.GetExtension(path).Equals(".lng", StringComparison.OrdinalIgnoreCase); }
+        internal static bool Supports(string path) { return IsMarkdown(path) || DocumentPreview.IsHtml(path) || CodeSyntax.ForExtension(Path.GetExtension(path)) != null || Path.GetExtension(path).Equals(".lng", StringComparison.OrdinalIgnoreCase); }
         internal RichFilePreview() { Children.Add(code); Children.Add(markdown); ICSharpCode.AvalonEdit.Search.SearchPanel.Install(code); }
         internal static MarkdownDocument Parse(string source) { return Markdown.Parse(source, pipeline); }
         internal void Show(string path, string source, MarkdownDocument parsed)
@@ -26,7 +26,7 @@ namespace FileCompass
             bool md = IsMarkdown(path); code.Visibility = md ? Visibility.Collapsed : Visibility.Visible; markdown.Visibility = md ? Visibility.Visible : Visibility.Collapsed;
             if (!md)
             {
-                code.SyntaxHighlighting = DocumentPreview.IsHtml(path)?HighlightingManager.Instance.GetDefinition("HTML"):HighlightingManager.Instance.GetDefinitionByExtension(Path.GetExtension(path)) ?? (Path.GetExtension(path).Equals(".lng", StringComparison.OrdinalIgnoreCase) ? HighlightingManager.Instance.GetDefinition("JavaScript") : null);
+                code.SyntaxHighlighting = CodeSyntax.ForExtension(Path.GetExtension(path));
                 code.Text = source; code.ScrollToHome(); markdown.Document = null; return;
             }
             code.Text = "";

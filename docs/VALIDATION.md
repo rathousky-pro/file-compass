@@ -1,4 +1,16 @@
-# Validation — 1 November 2026
+# Validation — 4 November 2026
+
+## Fluent workspace promoted to the main application
+
+The approved v19 workspace is now the canonical `source` implementation. Final local Release build **20261104.41** compiled successfully from those sources and replaces the old installation in `bin`. The product version remains **0.9.5 beta**; this promotion does not create a GitHub binary release.
+
+The verification build passed all 18 exercised suites: smoke, copy, archive, preview refresh, toolbar/dialog, language, help/About, vendor updates, disk analyzer, SMART, integrity, Fluent dialogs, rename, transaction history, cascading navigation, unified search, background-task grouping and editor/analyzer. Smoke and help/About were rerun after updating old layout/logo assertions; the checks still exercise real file operations and verify transparent branding. CI retains its existing suites and additionally exercises the new Fluent workflows.
+
+Rename tests include actual rename/undo, bounded layout and pixel checks on all four card edges at 100%, 125% and 150% rendering scales. Transaction history tests cover eligibility changes, partial undo, file preservation, selection details and clearing the journal. These are local/synthetic checks, not a substitute for physical SMART hardware, remote servers or every historical test command.
+
+Offline publication checks passed: **2,879 matching semantic keys in eight languages**, 44 help topics in both maintained help languages, generated HTML and links, and retained dependency notices/source files. Compiler warnings about System.Memory/PdfPig and unused optional hooks remain. No user profile, credentials or test fixtures are included in Git.
+
+## Historical maintenance record — 1 November 2026
 
 File Compass remains **0.9.5 beta**. The current maintenance development build is `20261101.66`; clean Release build `20261101.67` also compiled successfully. This is repository/installation maintenance, not a new public binary release or a claim that every historical test was rerun.
 

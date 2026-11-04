@@ -14,23 +14,23 @@ namespace FileCompass
             if(move)summary+=" · "+L.Text("transfer.moveSourceDeletionHelp");
             var layout=new OperationDialogLayout(this,L.Text(move?"network.moveTitle":"network.copyTitle"),summary);
             var panel=layout.AddPage(L.Text("operation.basic"));var details=layout.AddPage(L.Text("transfer.progressDetails"));
+            panel.Children.Add(new TextBlock{Text=summary,Foreground=FluentTheme.Muted,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,0,0,16)});
             AddLocation(panel,L.Text("transfer.sourceLabel").Trim().TrimEnd(':'),source,sourceProfile);AddLocation(panel,L.Text("transfer.targetLabel").Trim().TrimEnd(':'),target,targetProfile);
             var collisions=OperationDialogLayout.Group(panel,L.Text("transfer.existingFilesLabel").TrimEnd(':'));
-            bool scp = (sourceProfile != null && sourceProfile.Protocol == NetworkProtocol.SCP) || (targetProfile != null && targetProfile.Protocol == NetworkProtocol.SCP) || source.StartsWith("scp://", StringComparison.OrdinalIgnoreCase) || target.StartsWith("scp://", StringComparison.OrdinalIgnoreCase);
-            bool relay = sourceProfile != null && targetProfile != null;
-            var resume = CopyUi.Button(L.Text("transfer.copyAndResume"), delegate { Rule = NetworkCopyRule.Resume; DialogResult = true; });
-            bool cloudUpload=targetProfile!=null&&!String.IsNullOrEmpty(targetProfile.CloudAccountId); if(cloudUpload)resume.Content=L.Text("cloud.restartTransfer"); resume.ToolTip = L.Text(cloudUpload?"cloud.restartHelp":"transfer.resumeVerificationHelp");
-            collisions.Children.Add(resume);
-            if (relay) resume.ToolTip = scp ? L.Text("transfer.scpResumeUnsupportedHelp") : L.Text("transfer.partialResumeChecksHelp");
-            collisions.Children.Add(new TextBlock { Text = cloudUpload?L.Text("cloud.restartHelp"):relay ? L.Text("transfer.serverRelayBufferHelp") + (scp ? L.Text("transfer.scpRestartHint") : L.Text("transfer.ftpSftpResumeHint")) : scp ? L.Text("transfer.scpSkipCompletedHint") : L.Text("transfer.quickResumeHint"), TextWrapping = TextWrapping.Wrap, Foreground = FluentTheme.Muted, Margin = new Thickness(4, 2, 4, 6) });
+            bool scp=(sourceProfile!=null&&sourceProfile.Protocol==NetworkProtocol.SCP)||(targetProfile!=null&&targetProfile.Protocol==NetworkProtocol.SCP)||source.StartsWith("scp://",StringComparison.OrdinalIgnoreCase)||target.StartsWith("scp://",StringComparison.OrdinalIgnoreCase);
+            bool relay=sourceProfile!=null&&targetProfile!=null,cloudUpload=targetProfile!=null&&!String.IsNullOrEmpty(targetProfile.CloudAccountId);
+            string resumeHint=cloudUpload?L.Text("cloud.restartHelp"):relay?(scp?L.Text("transfer.scpResumeUnsupportedHelp"):L.Text("transfer.partialResumeChecksHelp")):scp?L.Text("transfer.scpSkipCompletedHint"):L.Text("transfer.quickResumeHint");
+            RulePicker.Items.Add(new ComboBoxItem{Content=L.Text("action.overwrite"),Tag=NetworkCopyRule.Overwrite});RulePicker.Items.Add(new ComboBoxItem{Content=L.Text("action.skip"),Tag=NetworkCopyRule.Skip});RulePicker.Items.Add(new ComboBoxItem{Content=L.Text(cloudUpload?"cloud.restartTransfer":"action.resumeTransfer"),Tag=NetworkCopyRule.Resume});
+            RulePicker.MinHeight=32;RulePicker.HorizontalAlignment=HorizontalAlignment.Stretch;System.Windows.Automation.AutomationProperties.SetName(RulePicker,L.Text("transfer.existingFilesLabel"));collisions.Children.Add(RulePicker);
+            var hint=new TextBlock{Text=resumeHint,TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,10,0,0),Visibility=Visibility.Collapsed};collisions.Children.Add(hint);RulePicker.SelectionChanged+=delegate{var selected=RulePicker.SelectedItem as ComboBoxItem;if(selected!=null)Rule=(NetworkCopyRule)selected.Tag;hint.Visibility=Rule==NetworkCopyRule.Resume?Visibility.Visible:Visibility.Collapsed;layout.Refit();};SelectRule(NetworkCopyRule.Skip);
             var explanation=OperationDialogLayout.Group(details,L.Text("transfer.existingFilesLabel").TrimEnd(':'));
             explanation.Children.Add(new TextBlock{Text=cloudUpload?L.Text("cloud.restartHelp"):relay?(scp?L.Text("transfer.scpResumeUnsupportedHelp"):L.Text("transfer.partialResumeChecksHelp")):L.Text("transfer.resumeVerificationHelp"),TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted});
-            var buttons=layout.Actions;
-            var cancel = CopyUi.Button(L.Text("action.cancel"), delegate { DialogResult = false; }); cancel.IsCancel = true;buttons.Children.Add(cancel);
-            var overwrite = CopyUi.Button(L.Text("transfer.copyAndOverwrite"), delegate { Rule = NetworkCopyRule.Overwrite; DialogResult = true; });buttons.Children.Add(overwrite);
-            var skip = CopyUi.Button(L.Text("transfer.copyAndSkip"), delegate { Rule = NetworkCopyRule.Skip; DialogResult = true; });skip.IsDefault=true;FluentTheme.Primary(skip);buttons.Children.Add(skip);CopyUi.EnterDefault(this,skip);
-
+            var buttons=layout.Actions;var cancel=CopyUi.Button(L.Text("action.cancel"),delegate{DialogResult=false;});cancel.IsCancel=true;buttons.Children.Add(cancel);
+            Start=CopyUi.Button(L.Text(move?"action.move":"action.copy"),delegate{DialogResult=true;});Start.IsDefault=true;FluentTheme.Primary(Start);buttons.Children.Add(Start);CopyUi.EnterDefault(this,Start);
         }
+        internal readonly ComboBox RulePicker=new ComboBox();
+        internal readonly Button Start;
+        internal void SelectRule(NetworkCopyRule rule){foreach(ComboBoxItem item in RulePicker.Items)if((NetworkCopyRule)item.Tag==rule){RulePicker.SelectedItem=item;return;}}
         static void AddLocation(StackPanel panel, string direction, string location, NetworkProfile profile)
         {
             Uri uri;

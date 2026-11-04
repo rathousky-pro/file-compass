@@ -242,6 +242,7 @@ namespace FileCompass
                     { var error = new CopyErrorDialog(this, failure); error.ShowDialog(); return error.Choice; }));
                 };
                 job.Activity = AddCopyActivity((move ? L.Text("network.moveTitlePrefix") : L.Text("network.copyTitlePrefix")) + job.Profile.Protocol + " · " + job.Profile.Name, job.Cancel, delegate { ShowNetworkQueue(captured); });
+                job.Activity.Kind=DockActivityKind.NetworkTransfer;
                 job.Activity.Record.RetryInterrupted = true;
                 job.Activity.Record.Retry = async delegate
                 {

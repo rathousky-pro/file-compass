@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
@@ -40,7 +40,7 @@ namespace FileCompass {
             window.Width=1120;window.Height=790;NavigationTests.Wait(System.Threading.Tasks.Task.Delay(180));window.UpdateLayout();
             NextStageTests.Draw(window,Path.Combine(root,"smart-30-compact.png"));
             check(window.SplitAttributes&&window.Attributes.Items.Count==15&&window.AttributesRight.Items.Count==15,"Standard-width view balances attributes across two tables; split="+window.SplitAttributes+"; width="+window.Attributes.ActualWidth+"; height="+window.Attributes.ActualHeight);
-            check(NoScroll(window.Attributes)&&NoScroll(window.AttributesRight),"Two tables show thirty SATA attributes without scrolling at 1120 by 790");
+            foreach(var grid in new[]{window.Attributes,window.AttributesRight}){var scroll=AdvancedToolsTests.Visual<ScrollViewer>(grid).First();scroll.ScrollToEnd();NavigationTests.Wait(System.Threading.Tasks.Task.Delay(70));grid.UpdateLayout();var finalAttributeRow=grid.ItemContainerGenerator.ContainerFromIndex(grid.Items.Count-1) as DataGridRow;check(finalAttributeRow!=null&&finalAttributeRow.TranslatePoint(new Point(0,finalAttributeRow.ActualHeight),grid).Y<=grid.ActualHeight+1,"last SMART attribute remains reachable at compact size with the disk picker visible");}
             NextStageTests.Draw(window,Path.Combine(root,"smart-30-compact.png"));
             AppearanceTheme.Apply("Dark");check(Contrast(window.HealthValue)>=4.5&&Contrast(window.TemperatureValue)>=4.5,"Status cards retain contrast in dark theme");NextStageTests.Draw(window,Path.Combine(root,"smart-30-dark.png"));
             var snapshot=window.Snapshot;var report=SmartReports.Build(snapshot);

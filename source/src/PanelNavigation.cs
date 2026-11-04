@@ -311,7 +311,7 @@ namespace FileCompass
             string query = quickText.Text; if (query.StartsWith("#")) return item.TagNames.Any(x => x.IndexOf(query.Substring(1), StringComparison.CurrentCultureIgnoreCase) >= 0); return query.IndexOfAny(new[] { '*', '?' }) >= 0 ? MaskMatches(EntryName(item), query) : EntryName(item).IndexOf(query, StringComparison.CurrentCultureIgnoreCase) >= 0;
         }
         internal static bool MaskMatches(string name, string mask) { return mask.Split(';').Any(x => System.Text.RegularExpressions.Regex.IsMatch(name, "^" + System.Text.RegularExpressions.Regex.Escape(x.Trim() == "*.*" ? "*" : x.Trim()).Replace("\\*", ".*").Replace("\\?", ".") + "$", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant)); }
-        internal void SetQuickFilter(string text) { quickText.Text = text ?? ""; quickBar.Visibility = String.IsNullOrEmpty(text) ? Visibility.Collapsed : Visibility.Visible; }
+        internal void SetQuickFilter(string text) { quickText.Text = text ?? ""; quickBar.Visibility = UnifiedQuickSearch||String.IsNullOrEmpty(text) ? Visibility.Collapsed : Visibility.Visible;if(QuickFilterChanged!=null)QuickFilterChanged(this); }
         void ApplyQuickFilter()
         {
             if (List.ItemsSource == null) return;
@@ -321,7 +321,7 @@ namespace FileCompass
             else if (List.Items.Count > 0) List.SelectedItem = String.IsNullOrEmpty(quickText.Text)?List.Items[0]:List.Items.Cast<Entry>().FirstOrDefault(x=>!x.IsParent)??List.Items[0];
             if (List.SelectedItem != null) List.ScrollIntoView(List.SelectedItem); UpdateStatus();
         }
-        internal void FocusFilter() { quickBar.Visibility = Visibility.Visible; quickText.Focus(); quickText.SelectAll(); }
+        internal void FocusFilter() { if(UnifiedQuickSearch&&QuickFilterFocusRequested!=null){QuickFilterFocusRequested(this);return;}quickBar.Visibility = Visibility.Visible; quickText.Focus(); quickText.SelectAll(); }
         string NavigationPrompt(string title, string label, string initial)
         {
             var window = new Window(); CopyUi.Style(window, Window.GetWindow(this), title, 420); var stack = new StackPanel { Margin = new Thickness(12) }; window.Content = stack;

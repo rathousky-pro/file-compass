@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,7 +19,7 @@ namespace FileCompass
         {
             var main = window as MainWindow; if (main != null) Wait(main.StartupRestoration);
             var root = window.Content as DockPanel; if (root == null) return;
-            foreach (var grid in root.Children.OfType<Grid>()) foreach (var panel in grid.Children.OfType<FilePanel>()) Wait(panel.NavigationTask);
+            foreach (var panel in FluentUiTests.Children<FilePanel>(root)) Wait(panel.NavigationTask);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -104,7 +104,7 @@ namespace FileCompass
         readonly bool moving, single;
         public CopySetupDialog(Window owner, IList<Entry> entries, string target, IEnumerable<string> recent, bool move = false, ProgramSettings defaults = null)
         {
-            CopyUi.Style(this, owner, move ? L.Text("copy.moveDialogTitle") : L.Text("copy.copyDialogTitle"), 780);
+            CopyUi.Style(this, owner, move ? L.Text("copy.moveDialogTitle") : L.Text("copy.copyDialogTitle"), 650);
             defaults = defaults ?? ProgramSettings.Load();
             verify.IsChecked = defaults.DefaultCopyVerify; permissions.IsChecked = defaults.DefaultCopyPermissions; times.IsChecked = defaults.DefaultCopyTimes;
             attributes.IsChecked = defaults.DefaultCopyAttributes; empty.IsChecked = defaults.DefaultCopyEmptyFolders; hidden.IsChecked = defaults.DefaultCopySkipHidden;
@@ -114,34 +114,34 @@ namespace FileCompass
             var layout=new OperationDialogLayout(this,L.Text(move?"copy.designMove":"copy.designCopy"),summary);
             var buttons=layout.Actions;
             var cancel = CopyUi.Button(L.Text("action.cancel"), delegate { DialogResult = false; }); cancel.IsCancel = true; buttons.Children.Add(cancel);
-            buttons.Children.Add(CopyUi.Button(L.Text("functionKey.enqueue"), delegate { Accept(true); }));
+            var enqueue=CopyUi.Button(L.Text("functionKey.enqueue"), delegate { Accept(true); });
             var ok = CopyUi.Button(L.Text(move ? "copy.designMove" : "copy.designCopy"), delegate { Accept(false); }); ok.IsDefault = true; FluentTheme.Primary(ok); ok.Background = FluentTheme.Accent; ok.Foreground = Brushes.White; ok.BorderBrush = FluentTheme.Accent; buttons.Children.Add(ok);
             CopyUi.EnterDefault(this, ok);
-            var body=layout.AddPage(L.Text("operation.basic"));
+            var body=layout.AddPage(L.Text("operation.basic"));body.Children.Add(new TextBlock{Text=summary,Foreground=FluentTheme.Muted,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,0,0,8)});body.Children.Add(new PathTextBlock{FullPath=entries.Count==1?entries[0].FullPath:Path.GetDirectoryName(entries[0].FullPath),Foreground=FluentTheme.Muted,Margin=new Thickness(0,0,0,24)});
             var selection=layout.AddPage(L.Text("operation.selection"));
             var properties=layout.AddPage(L.Text("operation.properties"));
             var security=layout.AddPage(L.Text("operation.verification"));
             var presets=layout.AddPage(L.Text("tools1.presets"));
             var destinationSection=OperationDialogLayout.Group(body,L.Text("copy.designDestination"));
 
-            destination.Text = target.TrimEnd('\\') + "\\*.*"; foreach (string path in recent) destination.Items.Add(path);
+            destination.Text = target.TrimEnd('\\') + "\\"; foreach (string path in recent) destination.Items.Add(path);
             destination.Height = filter.Height = 32;
             destinationSection.Children.Add(destination);
             var pathActions = new WrapPanel { Margin = new Thickness(0,5,0,12) };
             pathActions.Children.Add(CopyUi.Button(L.Text("copy.designBrowse"), Browse));
-            pathActions.Children.Add(CopyUi.Button(L.Text("copy.designNewFolder"), NewFolder)); destinationSection.Children.Add(pathActions);
+            pathActions.Children.Add(CopyUi.Button(L.Text("copy.designNewFolder"), NewFolder)); layout.AddNavigationAction(L.Text("copy.designBrowse"),Browse);layout.AddNavigationAction(L.Text("copy.designNewFolder"),NewFolder);
             if (moving && single) destinationSection.Children.Add(new TextBlock { Text = L.Text("copy.destinationRenameHelp"), Foreground = FluentTheme.Muted, Margin = new Thickness(2,0,2,10), TextWrapping = TextWrapping.Wrap });
             var filterSection = OperationDialogLayout.Group(selection,L.Text("copy.designFilterOptions"));
             filterSection.Children.Add(new TextBlock { Text = L.Text("copy.fileMaskLabel"), FontWeight = FontWeights.SemiBold, Margin = new Thickness(2,0,2,5) });
             foreach (string mask in new[] { "*.*", "*.txt;*.md", "*.jpg;*.jpeg;*.png;*.webp", "*.pdf;*.docx;*.xlsx", "*.mp4;*.mkv;*.avi", "*.* | *.tmp;*.bak" }) filter.Items.Add(mask);
             filter.ToolTip = L.Text("copy.maskSyntaxHelp"); filterSection.Children.Add(filter);
-            var verification=OperationDialogLayout.Group(security,L.Text("operation.verification"));verification.Children.Add(verify);verification.Children.Add(permissions);verification.Children.Add(readOnly);
+            var verification=OperationDialogLayout.Group(security,L.Text("operation.verification"));verification.Children.Add(permissions);verification.Children.Add(readOnly);
             var collisions=OperationDialogLayout.Group(body,L.Text("copy.existingDestinationLabel"));
             foreach (string text in new[] { L.Text("conflict.ask"), L.Text("conflict.overwriteAll"), L.Text("conflict.overwriteOlderTargets"), L.Text("conflict.skipAll"), L.Text("conflict.overwriteDifferent"), L.Text("conflict.overwriteIfSourceLarger"), L.Text("conflict.overwriteIfSourceSmaller"), L.Text("conflict.autoRenameCopies") }) rule.Items.Add(text);
             rule.SelectedIndex = 0; collisions.Children.Add(rule);
             var fileSelection=OperationDialogLayout.Group(selection,L.Text("operation.selection"));fileSelection.Children.Add(hidden);fileSelection.Children.Add(empty);
             var metadata=OperationDialogLayout.Group(properties,L.Text("operation.properties"));metadata.Children.Add(times);metadata.Children.Add(attributes);
-            destinationSection.Children.Add(fileTarget);fileTarget.IsEnabled=single;
+            properties.Children.Add(fileTarget);fileTarget.IsEnabled=single;body.Children.Add(verify);presets.Children.Add(enqueue);
             AddPresets(presets);
             Loaded += delegate { destination.Focus(); var textBox = destination.Template.FindName("PART_EditableTextBox", destination) as TextBox; if (textBox != null) textBox.SelectAll(); };
             PreviewKeyDown += delegate(object sender, System.Windows.Input.KeyEventArgs e)
@@ -202,7 +202,7 @@ namespace FileCompass
         {
             this.conflict = conflict; CopyUi.Style(this, owner, L.Text("conflict.fileExistsTitle"), 900);
             var layout=new OperationDialogLayout(this,L.Text("conflict.compareTitle"),Path.GetFileName(conflict.Target));var panel=layout.AddPage(L.Text("operation.basic"));var extras=layout.AddPage(L.Text("conflict.rulesTab"));
-            if(AppearanceTheme.IsClean){Width=760;layout.Compact(230);}
+            if(AppearanceTheme.IsClean){Width=800;layout.Compact(330);}
             var thumbs=new List<Image>();var comparison=new Grid();comparison.ColumnDefinitions.Add(new ColumnDefinition());comparison.ColumnDefinitions.Add(new ColumnDefinition());
             var existing=Info(L.Text("conflict.existingVersion"),conflict.Target,conflict.TargetDirectory,conflict.TargetSize,conflict.TargetTime,thumbs);existing.Margin=new Thickness(0,0,6,0);comparison.Children.Add(existing);
             var incoming=Info(L.Text("conflict.incomingVersion"),conflict.Source,conflict.SourceDirectory,conflict.SourceSize,conflict.SourceTime,thumbs);incoming.Margin=new Thickness(6,0,0,0);Grid.SetColumn(incoming,1);comparison.Children.Add(incoming);panel.Children.Add(comparison);
@@ -210,7 +210,7 @@ namespace FileCompass
             string note=!compatible?L.Text("conflict.fileFolderHelp"):conflict.SourceTime>conflict.TargetTime?L.Text("conflict.incomingNewer"):conflict.SourceTime<conflict.TargetTime?L.Text("conflict.incomingOlder"):conflict.SourceSize==conflict.TargetSize?L.Text("conflict.sameMetadata"):L.Text("conflict.sameTimeDifferentSize");
             panel.Children.Add(new TextBlock{Text=note,TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,12,0,0)});
             panel.Children.Add(ApplyToAll);if(conflict.IsReadOnly)panel.Children.Add(readOnly);
-            var extraActions=new WrapPanel{Margin=new Thickness(0,8,0,0)};(AppearanceTheme.IsClean?extras:panel).Children.Add(extraActions);
+            var extraActions=new WrapPanel{Margin=new Thickness(0,8,0,0)};panel.Children.Add(extraActions);
             extraActions.Children.Add(CopyUi.Button(L.Text("action.rename"),delegate{
                 string name=CopyUi.Prompt(this,L.Text("conflict.newCopyNameTitle"),Path.GetFileName(conflict.Target));if(name==null)return;
                 try{FileOperations.ValidateName(name);if(String.Equals(name,Path.GetFileName(conflict.Target),StringComparison.OrdinalIgnoreCase))throw new IOException(L.Text("conflict.differentNameRequired"));Decision=new CopyDecision(CopyChoice.Rename,name){AllowReadOnly=readOnly.IsChecked==true};DialogResult=true;}catch(Exception ex){MessageBox.Show(this,ex.Message);}

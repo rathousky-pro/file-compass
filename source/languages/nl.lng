@@ -1,4 +1,26 @@
-﻿{
+{
+  "undoHistory.empty": "Nog geen transacties.\nUitgevoerde bewerkingen verschijnen hier.",
+  "undoHistory.selectTransaction": "Selecteer een transactie om de stappen en eventuele beperkingen te bekijken.",
+
+  "rename.firstOnly": "Alleen eerste overeenkomst (1×)",
+  "rename.swap": "Zoeken en vervangen omwisselen",
+  "rename.savePreset": "Voorinstelling opslaan…",
+  "rename.loadPreset": "Voorinstelling laden…",
+  "rename.namePart": "Deel van naam…",
+  "rename.extensionPart": "Deel van extensie…",
+  "rename.partRange": "Tekstbereik selecteren",
+  "rename.rangeHelp": "Posities beginnen bij 1. Het laatste teken is inbegrepen. Kortere namen worden veilig afgekapt.",
+  "rename.rangeStart": "Vanaf teken",
+  "rename.rangeEnd": "Tot en met teken",
+  "rename.time": "Tijd",
+
+  "rename.letterCaseLabel": "Hoofdletters",
+  "rename.includeExtensionLabel": "Extensie opnemen",
+  "rename.caseSensitiveLabel": "Hoofdlettergevoelig",
+  "rename.insertToken": "Veld invoegen…",
+  "taskDock.local": "Lokaal",
+  "taskDock.network": "Netwerk",
+  "toolbar.editor": "Editor",
   "help.openBrowser": "Openen in browser",
   "help.unavailable": "De help ontbreekt of is beschadigd. Herstel de map help naast het programma vanuit het installatiepakket.",
   "help.browserFailed": "De help kon niet in de browser worden geopend. U kunt help/index.html handmatig openen.",

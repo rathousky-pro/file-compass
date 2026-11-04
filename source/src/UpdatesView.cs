@@ -34,8 +34,13 @@ namespace FileCompass {
         Children.Add(new TextBlock{Text=L.Text("updates.timing"),TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,12,0,0)});
         daily.IsChecked=UpdateRegistry.State().Daily;Children.Add(daily);
         Children.Add(new TextBlock{Text=L.Text("updates.immediate"),TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,8,0,0)});
+        body.Children.Remove(buttons);body.Children.Remove(details);Children.Clear();
+        Items.Height=232;Items.RowHeight=26;var compactRow=new Style(typeof(DataGridRow),Application.Current.Resources[typeof(DataGridRow)] as Style);compactRow.Setters.Add(new Setter(FrameworkElement.MinHeightProperty,0.0));compactRow.Setters.Add(new Setter(FrameworkElement.HeightProperty,26.0));Items.RowStyle=compactRow;Items.Margin=new Thickness(0,6,0,6);ScrollViewer.SetVerticalScrollBarVisibility(Items,ScrollBarVisibility.Disabled);ScrollViewer.SetHorizontalScrollBarVisibility(Items,ScrollBarVisibility.Disabled);
+        details.TextWrapping=TextWrapping.NoWrap;details.TextTrimming=TextTrimming.CharacterEllipsis;details.Margin=new Thickness(0,4,0,4);source.Visibility=location.Visibility=Visibility.Collapsed;
+        buttons.Margin=new Thickness(0,4,0,4);daily.Margin=new Thickness(0,4,0,0);daily.ToolTip=L.Text("updates.timing")+"\n"+L.Text("updates.immediate");
+        Children.Add(actions);Children.Add(Items);Children.Add(buttons);Children.Add(details);Children.Add(daily);
         if(manager!=null)manager.Changed+=Render;Render();
-        Loaded+=async delegate{if(manager!=null)await manager.Inventory();};
+        Items.Loaded+=async delegate{if(manager!=null)await manager.Inventory();};
     }
     static TextBlock Text(){return new TextBlock{TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,3,0,3)};}
     internal static string ReleaseStatus(VendorUpdate item,string current){Version installed=null,available=null;bool versionKnown=Version.TryParse(current,out installed)&&Version.TryParse(item.Version,out available);bool metadataOnly=!String.IsNullOrEmpty(item.Error)&&String.IsNullOrEmpty(item.Hash)&&VendorUpdates.ValidOrigin(item);if(!String.IsNullOrEmpty(item.Error)&&!metadataOnly)return L.Text("updates.unverified");if(versionKnown&&installed>=available)return L.Text("updates.currentState");return L.Text(metadataOnly?"updates.manualRelease":"updates.newVersion");}
@@ -63,7 +68,7 @@ namespace FileCompass {
         details.Text=row.Id=="app"?L.Text("updates.appHelp"):row.Id=="imagemagick"?L.Text("updates.imageMagickHelp"):row.Id=="libraries"?L.Text("updates.librariesHelp"):!String.IsNullOrEmpty(row.Package?.Error)?row.Package.Error:row.Id=="ffmpeg"?L.Text("updates.ffmpegSource"):L.Text("updates.packageHelp");
         source.Text=row.Id=="imagemagick"?L.Text("updates.source")+"https://github.com/dlemstra/Magick.NET":supported?L.Text("updates.source")+(row.Package?.Source??VendorUpdates.Home(row.Id)):"";
         location.Text=row.Id=="imagemagick"?L.Text("updates.location")+typeof(ImageMagick.MagickNET).Assembly.Location:supported?L.Text("updates.location")+UpdateRegistry.Resolve(VendorUpdates.Files(row.Id)[0]):"";
-        details.ToolTip=row.Package?.Notes;
+        details.ToolTip=details.Text+"\n"+source.Text+"\n"+location.Text+"\n"+row.Package?.Notes;
         download.IsEnabled=supported&&manager!=null&&manager.CanDownload(row.Package)&&row.Status!=L.Text("updates.currentState")&&!state.Pending.Any(x=>x.Id==row.Id);
         apply.IsEnabled=supported&&manager!=null&&!main.UpdateWorkRunning&&state.Pending.Any(x=>x.Id==row.Id)&&!UpdateRegistry.RequiresRestart(row.Id);
         rollback.IsEnabled=supported&&manager!=null&&!main.UpdateWorkRunning&&state.Active.Any(x=>x.Id==row.Id)&&!state.RestoreBundled.Contains(row.Id);

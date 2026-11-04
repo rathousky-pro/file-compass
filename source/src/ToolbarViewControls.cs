@@ -8,10 +8,10 @@ namespace FileCompass
 {
     public partial class MainWindow
     {
-        Button toolbarLayoutButton, toolbarAllFilesButton, toolbarPreviewButton, toolbarThumbnailsButton;
+        Button toolbarLayoutButton, toolbarAllFilesButton, toolbarPreviewButton, toolbarThumbnailsButton=null;
         bool toolbarAllFiles = true;
         string toolbarHiddenSymbol="hidden-files-visible";
-        Action updateDirectionTools;
+        Action updateDirectionTools=null;
 
         void AddViewToolbarControls(Panel tools)
         {
@@ -60,9 +60,7 @@ namespace FileCompass
                 foreach (var mark in row.Children.OfType<Border>().Where(x => (string)x.Tag == "toggle-state").ToArray()) row.Children.Remove(mark);
             }
             System.Windows.Automation.AutomationProperties.SetItemStatus(button, L.Text(enabled ? "toolbar.enabled" : "toolbar.disabled"));
-            button.Background = enabled && !AppearanceTheme.IsClean ? CompactTheme.ThemeBrush("#E4F0FF") : CompactTheme.WhiteSurface;
-            button.BorderBrush = enabled ? FluentTheme.Accent : CompactTheme.Line;
-            button.Foreground = enabled && !AppearanceTheme.IsClean ? FluentTheme.Accent : FluentTheme.Text;
+            button.SetValue(FluentToolbarUx.ActiveProperty,enabled);FluentToolbarUx.Refresh(button);
         }
 
         static void SetToolbarLabel(Button button, string label)

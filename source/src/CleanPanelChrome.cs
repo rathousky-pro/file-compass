@@ -34,7 +34,7 @@ namespace FileCompass {
         internal void RefreshCleanChrome(){
             bool clean=AppearanceTheme.IsClean;if(cleanChrome==clean)return;cleanChrome=clean;
             if(cleanPaneGrid!=null){cleanPaneGrid.RowDefinitions[4].Height=new GridLength(clean?30:24);}
-            BorderThickness=new Thickness(2);CornerRadius=new CornerRadius(12);Padding=new Thickness(5);Background=clean?CompactTheme.WhiteSurface:Brushes.Transparent;
+            BorderThickness=new Thickness(2);CornerRadius=new CornerRadius(7);Padding=new Thickness(5);Background=clean?CompactTheme.WhiteSurface:Brushes.Transparent;
             if(cleanFileFrame!=null){cleanFileFrame.Background=clean?CompactTheme.WhiteSurface:CompactTheme.PanelSurface;cleanFileFrame.BorderThickness=clean?new Thickness(0):new Thickness(1);cleanFileFrame.CornerRadius=new CornerRadius(clean?0:6);}
             if(cleanDriveFrame!=null){cleanDriveFrame.Background=clean?CompactTheme.WhiteSurface:CompactTheme.PanelSurface;cleanDriveFrame.BorderThickness=clean?new Thickness(0):new Thickness(1);cleanDriveFrame.CornerRadius=new CornerRadius(clean?0:6);cleanDriveFrame.Padding=clean?new Thickness(0):new Thickness(2);cleanDriveFrame.Margin=clean?new Thickness(0):new Thickness(0,0,0,6);}
             if(cleanBreadcrumbFrame!=null)cleanBreadcrumbFrame.Visibility=clean?Visibility.Visible:Visibility.Collapsed;

@@ -19,11 +19,6 @@ namespace FileCompass {
   void FormatChanged(){var doc=Current;if(syncingOptions||doc==null||doc.Saving)return;if(doc.EncodingChoice!=encoding.SelectedIndex||doc.EolChoice!=eol.SelectedIndex){doc.EncodingChoice=encoding.SelectedIndex;doc.EolChoice=eol.SelectedIndex;doc.FormatModified=true;doc.Editor.IsModified=true;RefreshStatus();}}
   internal static string EolKind(string text){bool crlf=text.Contains("\r\n");string rest=text.Replace("\r\n","");bool lf=rest.Contains("\n"),cr=rest.Contains("\r");int kinds=(crlf?1:0)+(lf?1:0)+(cr?1:0);return kinds>1?L.Text("codeEditor.mixedEol"):crlf?"CRLF":lf?"LF":cr?"CR":"—";}
   internal static string SyntaxPath(EditorDocument doc){if(doc.SyntaxChoice>0)return "document"+SyntaxExtensions[doc.SyntaxChoice];string path=doc.RemotePath??doc.File.Path;if(!String.IsNullOrEmpty(path))return path;string text=doc.Editor.Text.TrimStart();return text.StartsWith("#!")?"document.sh":text.StartsWith("{")||text.StartsWith("[")?"document.json":text.StartsWith("<")?"document.xml":"";}
-  internal static void ScriptHighlight(EditorDocument doc,string ext){
-   if(ext!=".sh"&&ext!=".bash"&&ext!=".rsc")return;
-   string keywords=ext==".rsc"?@"\b(local|global|if|else|foreach|for|while|do|set|get|put|add|remove|find|return|true|false)\b":@"\b(if|then|else|elif|fi|for|in|do|done|while|case|esac|function|return|export|echo|exit)\b";
-   string xml="<SyntaxDefinition xmlns='http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008'><Color name='Comment' foreground='#6A9955'/><Color name='Keyword' foreground='#2879B0' fontWeight='bold'/><Color name='String' foreground='#A45D28'/><Color name='Variable' foreground='#9064AF'/><RuleSet><Span color='Comment' begin='#'/><Span color='String' begin='&quot;' end='&quot;'/><Span color='String' begin=\"'\" end=\"'\"/><Rule color='Variable'>\\$[A-Za-z_][A-Za-z0-9_]*</Rule><Rule color='Keyword'>"+keywords+"</Rule></RuleSet></SyntaxDefinition>";
-   using(var reader=System.Xml.XmlReader.Create(new StringReader(xml)))doc.Editor.SyntaxHighlighting=ICSharpCode.AvalonEdit.Highlighting.Xshd.HighlightingLoader.Load(reader,HighlightingManager.Instance);
-  }
+
  }
 }

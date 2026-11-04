@@ -1,4 +1,26 @@
-﻿{
+{
+  "undoHistory.empty": "No transactions yet.\nCompleted operations will appear here.",
+  "undoHistory.selectTransaction": "Select a transaction to view its steps and any reasons it cannot be undone.",
+
+  "rename.firstOnly": "First occurrence only (1×)",
+  "rename.swap": "Swap find and replacement",
+  "rename.savePreset": "Save preset…",
+  "rename.loadPreset": "Load preset…",
+  "rename.namePart": "Part of name…",
+  "rename.extensionPart": "Part of extension…",
+  "rename.partRange": "Select text range",
+  "rename.rangeHelp": "Positions start at 1. The last character is included. Shorter names are safely truncated.",
+  "rename.rangeStart": "From character",
+  "rename.rangeEnd": "Through character",
+  "rename.time": "Time",
+
+  "rename.letterCaseLabel": "Letter case",
+  "rename.includeExtensionLabel": "Include extension",
+  "rename.caseSensitiveLabel": "Case sensitive",
+  "rename.insertToken": "Insert token…",
+  "taskDock.local": "Local",
+  "taskDock.network": "Network",
+  "toolbar.editor": "Editor",
   "help.openBrowser": "Open in browser",
   "help.unavailable": "Help is missing or damaged. Restore the help folder beside the program from the installation package.",
   "help.browserFailed": "Help could not be opened in your browser. You can open help/index.html manually.",

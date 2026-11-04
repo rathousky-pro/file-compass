@@ -14,8 +14,8 @@ namespace FileCompass {
         static readonly Brush tint=Tint();
         static Brush Tint(){var brush=new SolidColorBrush(Color.FromArgb(190,207,222,236));brush.Freeze();return brush;}
         internal static bool Enabled(Window window){return (bool)window.GetValue(EnabledProperty);}
-        internal static Brush Background(Window window){return Enabled(window)?tint:CompactTheme.Chrome;}
-        internal static Brush Layer(Window window){return Enabled(window)?Brushes.Transparent:CompactTheme.Chrome;}
+        internal static Brush Background(Window window){return window.AllowsTransparency?Brushes.Transparent:CompactTheme.Chrome;}
+        internal static Brush Layer(Window window){return window.AllowsTransparency||Enabled(window)?Brushes.Transparent:CompactTheme.Chrome;}
 #if APP_TESTS
         internal static bool ForceOpaqueForTests;
 #endif
@@ -28,7 +28,7 @@ namespace FileCompass {
             catch(System.Security.SecurityException){return false;}
         }
         internal static void Apply(Window window,bool force=false){
-            var handle=new WindowInteropHelper(window).Handle;if(handle==IntPtr.Zero)return;
+            if(window.AllowsTransparency){window.Background=Brushes.Transparent;return;}var handle=new WindowInteropHelper(window).Handle;if(handle==IntPtr.Zero)return;
             bool requested=Allowed();var previous=window.GetValue(NativeProperty) as NativeState;
             if(!force&&previous!=null&&previous.Handle==handle&&previous.Requested==requested){window.Background=Background(window);return;}
             bool enabled=false;
@@ -38,7 +38,7 @@ namespace FileCompass {
                 var margins=new Margins{Left=enabled?-1:0,Right=enabled?-1:0,Top=enabled?-1:0,Bottom=enabled?-1:0};
                 if(DwmExtendFrameIntoClientArea(handle,ref margins)!=0)enabled=false;
                 if(!enabled){kind=1;DwmSetWindowAttribute(handle,38,ref kind,sizeof(int));}
-                int caption=enabled?-1:0x00ECDECF;DwmSetWindowAttribute(handle,35,ref caption,sizeof(int));
+                var c=(Color)ColorConverter.ConvertFromString(FluentColors.Current.Frame);int caption=c.R|(c.G<<8)|(c.B<<16);DwmSetWindowAttribute(handle,35,ref caption,sizeof(int));
             }catch(DllNotFoundException){}catch(EntryPointNotFoundException){}
             window.SetValue(NativeProperty,new NativeState{Handle=handle,Requested=requested});window.SetValue(EnabledProperty,enabled);
             var source=HwndSource.FromHwnd(handle);if(source!=null&&source.CompositionTarget!=null)source.CompositionTarget.BackgroundColor=enabled?Colors.Transparent:Color.FromRgb(207,222,236);

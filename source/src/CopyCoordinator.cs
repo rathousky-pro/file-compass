@@ -52,6 +52,7 @@ namespace FileCompass
                         copyControl = control;
                         var dialog = new CopyProgressDialog(this, control); copyProgress = dialog;
                         var activity = AddCopyActivity((job.Options.Move ? L.Text("copy.preparingMovePrefix") : L.Text("copy.preparingCopyPrefix")) + job.Options.Target, control.Cancel, ShowCopyProgress, job.Record);
+                        activity.Kind=DesktopIcons.NetworkPath(job.Options.Target)||job.Sources.Any(DesktopIcons.NetworkPath)?DockActivityKind.NetworkTransfer:DockActivityKind.LocalTransfer;
                         activity.TransferTitle = (job.Options.Move ? L.Text("copy.movingStatus") : L.Text("copy.copyingStatus")) + (job.Sources.Length == 1 ? System.IO.Path.GetFileName(job.Sources[0].TrimEnd('\\')) : job.Sources.Length + L.Text("common.itemCountSuffix"));
                         activity.TransferRoute = String.Join("; ", job.Sources) + L.Text("common.routeArrow") + job.Options.Target;
                         activity.LocalMetrics = dialog.Metrics;

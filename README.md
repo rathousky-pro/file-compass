@@ -8,7 +8,7 @@ Start **bin/File Compass.exe** with all supporting directories beside it. Requir
 
 **F1** opens context-sensitive offline help. Help is external HTML, independent of the EXE and interface translations: open `help/index.html` in a browser, or choose **Open in browser** in the help window. Czech and English versions each contain 44 topics and 28 synthetic-demo screenshot scenes. Replace the complete `help` folder to update it independently. See the [user guide](docs/README.md).
 
-There is one appearance: a blue-grey shell, rounded white cards and pale option groups. Windows Acrylic has a solid fallback. Colored Fluent toolbar icons are the default; Flat and monochrome Outline sets, button/drive sizes and fonts remain configurable. Folders use yellow Windows icons. English is the default; Czech, German, Spanish, Dutch, Polish, French and Portuguese remain selectable. **Apply** saves settings without closing; **Save** also closes.
+The Fluent workspace has rounded dialogs, clearly outlined cards and fifteen selectable color palettes. The cascading sidebar groups file commands, tools, media and connections vertically. Colored Fluent toolbar icons and the drive appearance are retained; icon sets, button/drive sizes and fonts remain configurable. The top-right search field also displays typing from the active file panel. English is the default; Czech, German, Spanish, Dutch, Polish, French and Portuguese remain selectable. **Apply** saves settings without closing; **Save** also closes.
 
 Czech uses `languages/cs.lng` and `help/cs/index.html`; earlier saved Czech language identifiers are normalized automatically.
 
@@ -21,7 +21,7 @@ Czech uses `languages/cs.lng` and `help/cs/index.html`; earlier saved Czech lang
 - [Cloud](docs/CLOUD.md) and networking: saved accounts, native FTP/FTPS/SFTP/SCP/SSH and optional SSHFS. Credentials and provider authorization stay local.
 - [Updates](docs/UPDATES.md): official-source version checks, verified downloads, preparation and rollback. Application-update URLs remain unconfigured.
 
-Background tools and transfers share one fixed-height activity strip. Tool windows block input to their owner until closed or sent to the background, without blurring panels. **Help → About File Compass** shows version, build ID, build date and developer information.
+Background tools and transfers share one activity strip: tools stay on the left, transfers on the right, with distinct local/network labels. Modal dialogs dim their disabled owner; sending work to the background removes the shade. **About File Compass** is at the bottom of the sidebar and shows version, build ID, build date and developer information. Transaction history presents the operation list beside its selectable details and keeps Undo and other actions in the shared footer.
 
 ## Build and verify
 

@@ -16,7 +16,7 @@ namespace FileCompass {
         internal static string NormalizeMotif(string value) { return "Clean"; }
         internal static void SetMotif(string value) { Apply("Light"); }
         static readonly Dictionary<string,string> palette = new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase) {
-            {"#FFFFFF","#FFFFFF"},{"#20242A","#203E5C"},{"#596572","#5C7791"},{"#0067C0","#087BBB"},
+            {"#D3E2EF","#E4EFFD"},{"#1457A2","#075DCE"},{"#85C5F4","#CFE3FF"},{"#EEEEEE","#E4EFFD"},{"#FFFFFF","#FFFFFF"},{"#20242A","#203E5C"},{"#596572","#5C7791"},{"#0067C0","#087BBB"},
             {"#D5D9DF","#CFDEEC"},{"#E4E7EB","#DBE7F2"},{"#F0F2F5","#EDF3F9"},
             {"#98A5B5","#A9C3DC"},{"#BCC3CD","#A8BFD5"},{"#F3F4F7","#EDF3F9"},{"#DDDFE5","#B7CCE0"},
             {"#C4D9EE","#E2EDF7"},{"#E3EEF9","#EDF3F9"},{"#E9EDF4","#E5EFF9"},
@@ -25,7 +25,7 @@ namespace FileCompass {
             {"#79A9DF","#B7CCE0"},{"#89BFE5","#7FA9CD"},{"#DCE8F3","#CFDEEC"},{"#ECF3FA","#EDF3F9"},
             {"#EAF2FF","#CFDEEC"},{"#F6F9FE","#EDF3F9"},{"#EFF5FF","#CFDEEC"},{"#C6D8F5","#B7CCE0"}
         };
-        static Color Resolve(string value) { string mapped;return (Color)ColorConverter.ConvertFromString(palette.TryGetValue(value,out mapped)?mapped:value); }
+        static Color Resolve(string value) { string mapped;return (Color)ColorConverter.ConvertFromString(palette.TryGetValue(value,out mapped)?FluentColors.Map(value,mapped):value); }
         internal static string Backdrop = "None";
         internal static string Mode { get { return "Light"; } }
         internal static bool IsDark { get { return false; } }
@@ -53,7 +53,7 @@ namespace FileCompass {
         internal static void Apply(string mode) {
             var app=Application.Current;if(app==null)return;
             Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Light,Wpf.Ui.Controls.WindowBackdropType.None,false);
-            Wpf.Ui.Appearance.ApplicationAccentColorManager.Apply(Color.FromRgb(8,123,187),Wpf.Ui.Appearance.ApplicationTheme.Light,false,false);
+            Wpf.Ui.Appearance.ApplicationAccentColorManager.Apply((Color)ColorConverter.ConvertFromString(FluentColors.Current.Accent),Wpf.Ui.Appearance.ApplicationTheme.Light,false,false);
             foreach(var item in brushes)item.Value.Value=Resolve(item.Key);
             foreach(Window window in app.Windows)TitleBar(window);
             InterfaceTheme.Refresh();

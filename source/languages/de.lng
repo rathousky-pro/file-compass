@@ -1,4 +1,26 @@
-﻿{
+{
+  "undoHistory.empty": "Noch keine Transaktionen.\nAusgeführte Aktionen erscheinen hier.",
+  "undoHistory.selectTransaction": "Wählen Sie eine Transaktion, um ihre Schritte und mögliche Einschränkungen anzuzeigen.",
+
+  "rename.firstOnly": "Nur erster Treffer (1×)",
+  "rename.swap": "Suchen und Ersetzen tauschen",
+  "rename.savePreset": "Vorlage speichern…",
+  "rename.loadPreset": "Vorlage laden…",
+  "rename.namePart": "Teil des Namens…",
+  "rename.extensionPart": "Teil der Erweiterung…",
+  "rename.partRange": "Textbereich wählen",
+  "rename.rangeHelp": "Positionen beginnen bei 1. Das letzte Zeichen ist eingeschlossen. Kürzere Namen werden sicher gekürzt.",
+  "rename.rangeStart": "Ab Zeichen",
+  "rename.rangeEnd": "Bis Zeichen",
+  "rename.time": "Zeit",
+
+  "rename.letterCaseLabel": "Schreibweise",
+  "rename.includeExtensionLabel": "Erweiterung einbeziehen",
+  "rename.caseSensitiveLabel": "Groß-/Kleinschreibung",
+  "rename.insertToken": "Platzhalter einfügen…",
+  "taskDock.local": "Lokal",
+  "taskDock.network": "Netzwerk",
+  "toolbar.editor": "Editor",
   "help.openBrowser": "Im Browser öffnen",
   "help.unavailable": "Die Hilfe fehlt oder ist beschädigt. Stellen Sie den Ordner help neben dem Programm aus dem Installationspaket wieder her.",
   "help.browserFailed": "Die Hilfe konnte nicht im Browser geöffnet werden. Öffnen Sie help/index.html manuell.",

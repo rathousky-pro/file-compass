@@ -2,6 +2,10 @@
 
 ## Search and batch rename
 
+The compact Fluent rename dialog keeps a live file preview below its options. Find/replace supports replacing the first occurrence only and swapping the two fields. Save/load a complete `.fcrename` preset to retain masks, counter settings, replacement options and letter case. Name substrings remain available through the name token menu; extension actions are next to the extension field. Collision checks and undo remain active.
+
+The internal editor and code preview share syntax definitions, including distinct JSON keys and values. F4 supports `.patch`/`.diff`; unknown extensions are checked for text content before internal editing. Binary formats retain external handling. Shift+F4 remains available for external editing.
+
 Commands → Find files, the magnifier or Alt+F7 supports semicolon-separated masks, regular expressions, selected items, recursion depth and size ranges. Double-click a result to open its location. Name/size search supports local/SMB/NFS, open archives and FTP/SFTP/SCP through an independent connection. Content search supports local/SMB/NFS files up to 64 MB, using BOM or UTF-8. Results are capped at 20,000.
 
 File/Commands → Batch rename, the A/B icon or Ctrl+M supports local/SMB/NFS files/folders. Archives and direct remote panels support individual rename instead. Masks include `[N]` name, `[E]` extension, `[C]` counter, `[N1-3]` name substring, `[E1]` extension character, `[RMD]` modification date and `[hms]` time. Find/replace supports regex and case sensitivity. Numeric fields include increment/decrement arrows.

@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Markup;
@@ -24,13 +24,13 @@ namespace FileCompass {
             var outer = (Border)((Grid)window.Content).Children[0]; outer.Padding = new Thickness(0);
             Heading = new TextBlock { Text=title, FontSize=20, FontWeight=FontWeights.SemiBold, TextWrapping=TextWrapping.Wrap };
             var headingBody=new StackPanel();headingBody.Children.Add(Heading);headingBody.Children.Add(Route);
-            var header = new Border { Background=CompactTheme.PanelSurface, BorderBrush=CompactTheme.Line, BorderThickness=new Thickness(0,0,0,1), Padding=new Thickness(20,16,20,16), CornerRadius=new CornerRadius(8,8,0,0), Child=headingBody };
+            var header = new Border { Tag="dialog-header", Background=CompactTheme.PanelSurface, BorderBrush=CompactTheme.Line, BorderThickness=new Thickness(0,0,0,1), Padding=new Thickness(20,16,20,16), CornerRadius=new CornerRadius(8,8,0,0), Child=headingBody };
             DockPanel.SetDock(header,Dock.Top);root.Children.Add(header);
-            var footer = new Border { Background=CompactTheme.PanelSurface, BorderBrush=CompactTheme.Line, BorderThickness=new Thickness(0,1,0,0), Padding=new Thickness(14,12,14,12), CornerRadius=new CornerRadius(0,0,8,8), Child=Actions };
+            var footer = new Border { Tag="dialog-footer", Background=CompactTheme.PanelSurface, BorderBrush=CompactTheme.Line, BorderThickness=new Thickness(0,1,0,0), Padding=new Thickness(14,12,14,12), CornerRadius=new CornerRadius(0,0,8,8), Child=Actions };
             DockPanel.SetDock(footer,Dock.Bottom);root.Children.Add(footer);
-            var body = new StackPanel { Margin=new Thickness(20,18,20,18) };root.Children.Add(new ScrollViewer{Content=body,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled,MaxHeight=System.Math.Max(160,window.MaxHeight-190)});
+            var body = new StackPanel { Margin=new Thickness(30,30,30,30) };root.Children.Add(new Border{Tag="dialog-content-card",Background=CompactTheme.WhiteSurface,Child=new ScrollViewer{Content=body,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled,MaxHeight=System.Math.Max(160,window.MaxHeight-190)}});
             var top=new DockPanel{Margin=new Thickness(0,0,0,14)};Remaining.HorizontalAlignment=HorizontalAlignment.Right;DockPanel.SetDock(Remaining,Dock.Right);top.Children.Add(Remaining);
-            Percent.FontSize=32;Percent.FontWeight=FontWeights.SemiBold;Percent.Foreground=FluentTheme.Text;top.Children.Add(Percent);body.Children.Add(top);body.Children.Add(Overall);
+            Percent.FontSize=32;Percent.FontWeight=FontWeights.SemiBold;Percent.Foreground=FluentTheme.Accent;top.Children.Add(Percent);body.Children.Add(top);body.Children.Add(Overall);
             var counts=new DockPanel{Margin=new Thickness(0,10,0,22)};Count.HorizontalAlignment=HorizontalAlignment.Right;DockPanel.SetDock(Count,Dock.Right);counts.Children.Add(Count);counts.Children.Add(Totals);body.Children.Add(counts);
             var current=new DockPanel{Margin=new Thickness(0,0,0,7)};FilePercent.Width=58;FilePercent.TextAlignment=TextAlignment.Right;DockPanel.SetDock(FilePercent,Dock.Right);current.Children.Add(FilePercent);current.Children.Add(CurrentFile);body.Children.Add(current);body.Children.Add(File);
             Details.Content=DetailBody;body.Children.Add(Details);body.Children.Add(Supplement);

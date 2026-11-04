@@ -1,4 +1,26 @@
-﻿{
+{
+  "undoHistory.empty": "Todavía no hay transacciones.\nLas operaciones aparecerán aquí.",
+  "undoHistory.selectTransaction": "Seleccione una transacción para ver sus pasos y los motivos de las limitaciones.",
+
+  "rename.firstOnly": "Solo primera coincidencia (1×)",
+  "rename.swap": "Intercambiar búsqueda y sustitución",
+  "rename.savePreset": "Guardar ajuste…",
+  "rename.loadPreset": "Cargar ajuste…",
+  "rename.namePart": "Parte del nombre…",
+  "rename.extensionPart": "Parte de la extensión…",
+  "rename.partRange": "Seleccionar rango",
+  "rename.rangeHelp": "Las posiciones empiezan en 1. Se incluye el último carácter. Los nombres más cortos se recortan de forma segura.",
+  "rename.rangeStart": "Desde carácter",
+  "rename.rangeEnd": "Hasta carácter",
+  "rename.time": "Hora",
+
+  "rename.letterCaseLabel": "Mayúsculas y minúsculas",
+  "rename.includeExtensionLabel": "Incluir extensión",
+  "rename.caseSensitiveLabel": "Distinguir mayúsculas",
+  "rename.insertToken": "Insertar campo…",
+  "taskDock.local": "Local",
+  "taskDock.network": "Red",
+  "toolbar.editor": "Editor",
   "help.openBrowser": "Abrir en el navegador",
   "help.unavailable": "La ayuda falta o está dañada. Restaure la carpeta help junto al programa desde el paquete de instalación.",
   "help.browserFailed": "No se pudo abrir la ayuda en el navegador. Puede abrir help/index.html manualmente.",

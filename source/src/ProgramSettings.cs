@@ -19,6 +19,7 @@ namespace FileCompass
     }
     public sealed class ProgramSettings
     {
+        public string FluentColor = "azure"; public bool FluentNavigationPinned;
         public string ColorTheme = "Light"; public string WindowBackdrop = "None";
         public string InterfaceMotif = "Clean";
         public string LeftFolder = "", RightFolder = "";
@@ -55,7 +56,7 @@ namespace FileCompass
             try
             {
                 path = path ?? ConfigPath; if (!File.Exists(path)) return new ProgramSettings();
-                var saved=ConfigurationIntegrity.Read<ProgramSettings>(path); saved.InterfaceMotif="Clean";saved.ColorTheme="Light";saved.WindowBackdrop="None"; saved.ImageViewerPath=AppPaths.ResolveLegacyResourceFile(saved.ImageViewerPath); saved.MediaPlayerPath=AppPaths.ResolveLegacyResourceFile(saved.MediaPlayerPath); saved.TextEditorPath=AppPaths.ResolveLegacyResourceFile(saved.TextEditorPath); return saved;
+                var saved=ConfigurationIntegrity.Read<ProgramSettings>(path); saved.FluentColor=FluentColors.Normalize(saved.FluentColor); saved.InterfaceMotif="Clean";saved.ColorTheme="Light";saved.WindowBackdrop="None"; saved.ImageViewerPath=AppPaths.ResolveLegacyResourceFile(saved.ImageViewerPath); saved.MediaPlayerPath=AppPaths.ResolveLegacyResourceFile(saved.MediaPlayerPath); saved.TextEditorPath=AppPaths.ResolveLegacyResourceFile(saved.TextEditorPath); return saved;
             }
             catch (Exception ex) { if (ex is ConfigurationIntegrityException || !(ex is IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException || ex is XmlException)) throw; return new ProgramSettings(); }
         }

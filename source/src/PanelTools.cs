@@ -39,8 +39,6 @@ namespace FileCompass
             };
             List.PreviewKeyDown += delegate(object s, KeyEventArgs e) {
                 if (e.Key == Key.Apps || (e.Key == Key.F10 && Keyboard.Modifiers == ModifierKeys.Shift)) { ShowFileContextMenu(false); e.Handled = true; return; }
-                if (e.Key == Key.Escape && quickBar.Visibility == Visibility.Visible) { SetQuickFilter(""); e.Handled = true; }
-                if (e.Key == Key.Back && quickBar.Visibility == Visibility.Visible && quickText.Text.Length > 0) { SetQuickFilter(quickText.Text.Substring(0, quickText.Text.Length - 1)); e.Handled = true; }
                 if ((Keyboard.Modifiers & ModifierKeys.Shift) != 0 && (e.Key == Key.Up || e.Key == Key.Down || e.Key == Key.Home || e.Key == Key.End || e.Key == Key.PageUp || e.Key == Key.PageDown)) {
                     int old = List.SelectedIndex, next = old;
                     if (e.Key == Key.Up) next -= DisplayColumns; if (e.Key == Key.Down) next += DisplayColumns; if (e.Key == Key.Home) next = 0; if (e.Key == Key.End) next = List.Items.Count - 1;

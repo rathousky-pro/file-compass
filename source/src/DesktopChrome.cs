@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -30,7 +30,7 @@ namespace FileCompass
             var top = new StackPanel { Tag="main-toolbar-area", Background = CompactTheme.Chrome };
             bottom.Tag="main-bottom-area";
             DockPanel.SetDock(top, Dock.Top); root.Children.Insert(0, top);
-            var menuRow = new DockPanel { Tag="main-menu-area" };
+            var menuRow = fluentLegacyMenu = new DockPanel { Tag="main-menu-area" };
             var help = new Menu { Tag="main-menu-area", Background = CompactTheme.Chrome };
             var helpItem = new MenuItem { Header = L.Text("action.help"), Height = 28 }; help.Items.Add(helpItem);
             AddMenu(helpItem, L.Text("help.open"), delegate { HelpService.Open(this); }, "F1");
@@ -123,7 +123,7 @@ namespace FileCompass
             AddMenu(commands,L.Text("ext.title"),delegate{new ExtBrowserWindow(this).Show();});
             OrganizeMainMenus(file, select, edit, commands, network, display);
             menuRow.Children.Add(menus); top.Children.Add(menuRow);
-            var tools = new WrapPanel { Orientation = Orientation.Horizontal };
+                        var tools = new WrapPanel { Orientation = Orientation.Horizontal };
             var view=ToolbarGroup(tools,"view");AddViewToolbarControls(view);
             Tool(view,"invert",L.Text("selection.invertMarks")+" (Num *)",delegate{active.InvertMarks();});
             Tool(view,"undo",L.Text("undoHistory.title"),ShowSafeUndo);
@@ -132,22 +132,29 @@ namespace FileCompass
             var directions=new StackPanel{Orientation=Orientation.Horizontal};
             Tool(directions,"forward",L.Text("toolbar.folderLeftToRight"),delegate{OpenFolderInOtherPanel(left);});
             Tool(directions,"back",L.Text("toolbar.folderRightToLeft"),delegate{OpenFolderInOtherPanel(right);});navigation.Children.Add(directions);
+            Tool(navigation,"sync",L.Text("action.synchronizeFolders"),delegate{CompareFolders(true);},L.Text("action.synchronize"));
             updateDirectionTools=delegate{directions.Visibility=panelLayout=="Single"?Visibility.Collapsed:Visibility.Visible;};
             var files=ToolbarGroup(tools,"files");
             toolbarPreviewButton=Tool(files,"view",L.Text("toolbar.filePreviewHelp"),ToggleQuickPreview,L.Text("toolbar.filePreview"));
+            Tool(files,"edit",L.Text("toolbar.editHelp"),EditSelected,L.Text("toolbar.editor"));
             toolbarThumbnailsButton=Tool(files,"picture",L.Text("media.tilesHelp"),delegate{active.SetDisplay(active.DisplayMode=="Thumbnails"?"Details":"Thumbnails");},L.Text("action.preview"));
-            Tool(files,"edit",L.Text("toolbar.editHelp"),EditSelected,L.Text("toolbar.edit"));
             var utilities=ToolbarGroup(tools,"utilities");
             AddToolsToolbarButton(utilities);
-            Tool(utilities,"sync",L.Text("action.synchronizeFolders"),delegate{CompareFolders(true);},L.Text("action.synchronize"));
             var archives=ToolbarGroup(tools,"archives");
             Tool(archives,"pack",L.Text("toolbar.compressShortcut"),CreateArchive,L.Text("action.compressArchive"));
             Tool(archives,"unpack",L.Text("toolbar.extractShortcut"),ExtractArchives,L.Text("action.extractArchive"));
             var connections=ToolbarGroup(tools,"connections");
             Tool(connections,"ftp",L.Text("connections.title"),delegate{ManageConnections();},L.Text("toolbar.connections"));
-            var settingsTools=new StackPanel{Orientation=Orientation.Horizontal};tools.Children.Add(settingsTools);
+            var settingsTools=new StackPanel{Orientation=Orientation.Horizontal,VerticalAlignment=VerticalAlignment.Top};
             Tool(settingsTools,"settings",L.Text("settings.title"),delegate{new ConfigurationDialog(this).ShowDialog();});
-            top.Children.Add(new Border { Tag = "main-toolbar-frame", Child = tools, Margin = new Thickness(8, 4, 8, 6), CornerRadius = new CornerRadius(8), Padding = new Thickness(6, 4, 6, 4), Background = CompactTheme.PanelSurface, BorderBrush = CompactTheme.ChromeLine, BorderThickness = new Thickness(1) });
+            var search=new TextBox{Width=220,Height=38,VerticalContentAlignment=VerticalAlignment.Center,Margin=new Thickness(16,0,8,0),ToolTip="Hledat soubor v aktivním panelu · Enter: přejít na nalezené soubory"};
+            System.Windows.Automation.AutomationProperties.SetName(search,"Hledat soubor");
+            fluentSearchInput=search;
+            search.TextChanged+=delegate{if(!synchronizingFluentSearch&&active!=null)active.SetQuickFilter(search.Text);};
+            search.KeyDown+=delegate(object sender,KeyEventArgs e){if(e.Key==Key.Enter||e.Key==Key.Down){active.FocusFiles();e.Handled=true;}if(e.Key==Key.Escape){search.Clear();active.FocusFiles();e.Handled=true;}};
+            search.Background=CompactTheme.WhiteSurface;search.Template=CleanFieldTemplates.For(typeof(TextBox));var searchHost=new Grid{Width=240,Margin=new Thickness(16,0,8,0)};search.Width=Double.NaN;search.Margin=new Thickness(0);searchHost.Children.Add(search);var hint=new TextBlock{Text="Hledat soubor…",Foreground=FluentTheme.Muted,Margin=new Thickness(14,0,0,0),VerticalAlignment=VerticalAlignment.Center,IsHitTestVisible=false};searchHost.Children.Add(hint);search.TextChanged+=delegate{hint.Visibility=String.IsNullOrEmpty(search.Text)?Visibility.Visible:Visibility.Collapsed;};fluentSearchBox=searchHost;
+            var bar=new DockPanel{LastChildFill=true};fluentSearchBox.VerticalAlignment=VerticalAlignment.Top;DockPanel.SetDock(fluentSearchBox,Dock.Right);bar.Children.Add(fluentSearchBox);DockPanel.SetDock(settingsTools,Dock.Right);bar.Children.Add(settingsTools);bar.Children.Add(tools);
+            top.Children.Add(new Border{Tag="main-toolbar-frame",Child=bar,Padding=new Thickness(12,8,12,8),Background=CompactTheme.PanelSurface,BorderBrush=CompactTheme.Line,BorderThickness=new Thickness(0,1,0,1)});
 
             var commandRow = new DockPanel { Margin = new Thickness(8, 2, 8, 6),Background=CompactTheme.Chrome };
             DockPanel.SetDock(commandPrompt, Dock.Left); commandRow.Children.Add(commandPrompt); commandRow.Children.Add(commandLine);
@@ -168,7 +175,7 @@ namespace FileCompass
                 }
             };
             InitializeCopySummary(); bottom.Children.Add(copySummary);
-            bottom.Children.Add(commandRow);
+            // The command prompt is intentionally omitted from the visible workspace.
             var keys = new UniformGrid { Rows = 1, Columns = 8, Margin = new Thickness(6, 0, 6, 7) };
             AddAction(keys,"F2 "+L.Text("codeEditor.new"),NewTextFile,"newFile");
             AddAction(keys, L.Text("functionKey.view"), delegate { active.ViewSelected(); },"view"); AddAction(keys, L.Text("functionKey.edit"), EditSelected,"edit");
@@ -204,6 +211,7 @@ namespace FileCompass
             var button = CompactTheme.Button(content, tooltip, delegate { if (!busy && (!PanelsLoading||allowDuringLoading) && action != null) action(); });
             if(allowDuringLoading)refreshActions.Add(button);
             CompactTheme.ToolbarTile(button);
+            button.Tag="toolbar-action";FluentToolbarUx.Refresh(button);
             System.Windows.Automation.AutomationProperties.SetName(button, label ?? tooltip);
             if (action == null) { button.IsEnabled = false; button.ToolTip = tooltip + L.Text("common.notImplementedSuffix"); } else actions.Add(button);
             ToolTipService.SetShowOnDisabled(button, true); panel.Children.Add(button);

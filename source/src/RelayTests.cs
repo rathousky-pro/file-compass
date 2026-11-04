@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -59,7 +59,7 @@ namespace FileCompass
                 var metricsBatch = new NetworkCopyBatch { Entry = new Entry { FullPath = "/same" }, Destination = "/", Bytes = 20 };
                 metricsBatch.Items.Add(new NetworkQueueItem { Source = "/same", Destination = "/first", Bytes = 10, Relay = true, State = "Ve frontě" }); metricsBatch.Items.Add(new NetworkQueueItem { Source = "/same", Destination = "/second", Bytes = 10, Relay = true, State = "Ve frontě" });
                 math.AddPrepared(new[] { metricsBatch }); math.Progress("/same",.5,100,"Stahování ze zdroje","/first"); check(math.Update().Total == .25,"relay progress accounts for both legs"); math.RelayFileDone("/same","/first",false); math.Progress("/same",.5,100,"Stahování ze zdroje","/second"); check(math.Update().Total == .75,"same source with different destinations has separate progress accounting");
-                var dialog = new NetworkCopyDialog(null,1,source.Display("/tree"),target.Display("/relay"),source.Profile,target.Profile); NetworkTests.Render(dialog,Path.Combine(directory,"relay-dialog.png")); check(FluentUiTests.Children<System.Windows.Controls.Button>(dialog).Single(x => (string)x.Content == "Kopírovat a navázat").IsEnabled,"relay dialog enables safe resume and displays both endpoints"); dialog.Close();
+                var dialog = new NetworkCopyDialog(null,1,source.Display("/tree"),target.Display("/relay"),source.Profile,target.Profile); NetworkTests.Render(dialog,Path.Combine(directory,"relay-dialog.png")); check(dialog.RulePicker.IsEnabled,"relay dialog enables safe resume and displays both endpoints"); dialog.Close();
                 string input = Path.Combine(directory,"český [soubor].txt"); File.WriteAllText(input,"Příliš žluťoučký kůň"); source.Session.CreateDirectory("/tree"); source.Session.CreateDirectory("/tree/empty"); source.Session.PutFiles(input,"/tree/český [soubor].txt").Check();
                 target.Session.CreateDirectory("/relay"); sftp.Session.CreateDirectory("/relay");
                 var job = Planned(source,target,new[] { new Entry { FullPath = "/tree", IsDirectory = true } },"/relay",NetworkCopyRule.Skip);

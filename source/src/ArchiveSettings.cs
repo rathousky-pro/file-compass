@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -129,7 +129,7 @@ namespace FileCompass
             string[] labels = { L.Text("archive.maximumItemsLabel"), L.Text("archive.workerMemoryMiBLabel"), L.Text("archive.stepTimeoutSecondsLabel"), L.Text("archive.expandedSizeMiBLabel"), L.Text("archive.freeSpaceReserveMiBLabel"), L.Text("archive.listingSizeMiBLabel"), L.Text("archive.nestingDepthLabel") };
             long[] values = { settings.MaximumItems, settings.MaximumMemoryMiB, settings.MaximumSeconds, settings.MaximumExtractedMiB, settings.MinimumFreeMiB, settings.MaximumListingMiB, settings.MaximumNesting };
             inputs = new TextBox[labels.Length];
-            for (int i = 0; i < labels.Length; i++) { grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); var label = CopyUi.Label(labels[i]); Grid.SetRow(label, i); grid.Children.Add(label); var input = inputs[i] = new TextBox { Text = values[i].ToString(), Margin = new Thickness(3) }; Grid.SetRow(input, i); Grid.SetColumn(input, 1); grid.Children.Add(input); }
+            for (int i = 0; i < labels.Length; i++) { grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); var label = CopyUi.Label(labels[i]); Grid.SetRow(label, i); grid.Children.Add(label); var input = inputs[i] = new TextBox { Tag="archive-limit-value",Text = values[i].ToString(), Margin = new Thickness(1), Height=28,MinHeight=28 }; Grid.SetRow(input, i); Grid.SetColumn(input, 1); grid.Children.Add(input); }
         }
         internal void Apply(ArchiveSettings settings)
         {

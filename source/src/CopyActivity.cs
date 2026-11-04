@@ -18,7 +18,7 @@ namespace FileCompass
         internal Func<bool> ConfirmCancellation;
         internal bool Backgrounded = true;
         internal Func<NetworkTransferMetrics> LocalMetrics;
-        internal string TransferTitle, TransferRoute;internal bool CompactDock;
+        internal string TransferTitle, TransferRoute;internal bool CompactDock;internal DockActivityKind Kind;
         internal Action RestoreDetails;
         internal void RequestCancel() { RequestCancel(true); }
         internal void RequestCancel(bool confirm) { if (finished || (Record != null && Record.CancelRequested)) return; if (confirm && ConfirmCancellation != null && !ConfirmCancellation()) return; if (finished) return; if (Record != null) { Record.CancelRequested = true; Record.State = L.Code("state.cancelling"); } Cancellation(); cancel.IsEnabled = false; label.Text = L.Text("state.cancellingOperation"); if (Changed != null) Changed(); }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -60,7 +60,7 @@ namespace FileCompass {
         internal static void Refresh(Window window){
             WindowGlass.Apply(window);var state=State(window);Set(state,window,Control.BackgroundProperty,WindowGlass.Background(window));RefreshPanels(window);
             var seen=new HashSet<DependencyObject>();Walk(window,state,window,seen);
-            var main=window as MainWindow;if(main!=null){main.RefreshCleanToolbar();main.RefreshCleanPanelAppearance();}
+            var main=window as MainWindow;if(main!=null){main.RefreshCleanToolbar();main.RefreshCleanPanelAppearance();}else FluentDialogUx.Refresh(window);
         }
         static void RefreshPanels(DependencyObject root){var panel=root as FilePanel;if(panel!=null){panel.RefreshCleanChrome();return;}foreach(object child in LogicalTreeHelper.GetChildren(root)){var node=child as DependencyObject;if(node!=null)RefreshPanels(node);}}
         static void Set(WindowState state,DependencyObject target,DependencyProperty property,object value){
@@ -72,6 +72,7 @@ namespace FileCompass {
         static bool Surface(Brush brush){return Object.ReferenceEquals(brush,CompactTheme.Chrome)||Object.ReferenceEquals(brush,CompactTheme.PanelSurface)||Object.ReferenceEquals(brush,CompactTheme.ToolbarSurface)||Object.ReferenceEquals(brush,CompactTheme.Surface)||Object.ReferenceEquals(brush,CompactTheme.WhiteSurface);}
         static void Walk(DependencyObject node,WindowState state,Window window,HashSet<DependencyObject> seen){
             if(!seen.Add(node))return;
+            if(node is FrameworkElement && (Convert.ToString(((FrameworkElement)node).Tag)=="editor-workspace"||Convert.ToString(((FrameworkElement)node).Tag)=="fluent-drawer"||Convert.ToString(((FrameworkElement)node).Tag)=="fluent-title"||Convert.ToString(((FrameworkElement)node).Tag)=="fluent-shadow"))return;
             var element=node as FrameworkElement;
             if(element!=null&&element.TemplatedParent==null){
                 if((node is TextBox||node is PasswordBox||node is ComboBox)&&Convert.ToString(element.Tag)!="drive-selector"){var input=(Control)node;Set(state,input,Control.TemplateProperty,CleanFieldTemplates.For(node is ComboBox?typeof(ComboBox):node is PasswordBox?typeof(PasswordBox):typeof(TextBox)));Set(state,input,FrameworkElement.UseLayoutRoundingProperty,true);Set(state,input,UIElement.SnapsToDevicePixelsProperty,true);}
@@ -82,7 +83,7 @@ namespace FileCompass {
                     Set(state,button,Control.TemplateProperty,buttonTemplate);
                     Set(state,button,PrimaryProperty,primary);Set(state,button,DestructiveProperty,DestructiveCaption(Convert.ToString(button.Content))||DestructiveCaption(Convert.ToString(button.ToolTip)));
                     Set(state,button,FrameworkElement.UseLayoutRoundingProperty,true);
-                    if(Convert.ToString(button.Tag).StartsWith("drive:",StringComparison.Ordinal)||Convert.ToString(button.Tag)=="panel-breadcrumb"){} else if(toolbar||!primary){Set(state,button,Control.BackgroundProperty,CompactTheme.WhiteSurface);Set(state,button,Control.ForegroundProperty,FluentTheme.Text);Set(state,button,Control.BorderBrushProperty,CompactTheme.Line);}
+                    if(Convert.ToString(button.Tag).StartsWith("drive:",StringComparison.Ordinal)||Convert.ToString(button.Tag)=="panel-breadcrumb"){} else if(toolbar||!primary){Set(state,button,Control.BackgroundProperty,toolbar&&Convert.ToString(button.Tag)!="function-key"?CompactTheme.PanelSurface:CompactTheme.WhiteSurface);Set(state,button,Control.ForegroundProperty,FluentTheme.Text);Set(state,button,Control.BorderBrushProperty,CompactTheme.Line);}
                     else{Set(state,button,Control.BackgroundProperty,FluentTheme.Accent);Set(state,button,Control.ForegroundProperty,Brushes.White);}
                     if((bool)button.GetValue(DestructiveProperty))Set(state,button,Control.ForegroundProperty,Brushes.White);
                     Set(state,button,Control.BorderThicknessProperty,new Thickness(1));Set(state,button,Control.FocusVisualStyleProperty,null);Set(state,button,UIElement.SnapsToDevicePixelsProperty,true);Set(state,button,FrameworkElement.UseLayoutRoundingProperty,true);
@@ -93,6 +94,7 @@ namespace FileCompass {
                     if(System.Windows.Automation.AutomationProperties.GetAutomationId(button)=="CleanMore"){
                         Set(state,button,Control.BackgroundProperty,CompactTheme.ThemeBrush("#ECF3FA"));Set(state,button,Control.ForegroundProperty,FluentTheme.Accent);Set(state,button,Control.BorderBrushProperty,CompactTheme.Line);Set(state,button,FrameworkElement.HeightProperty,30.0);Set(state,button,Control.PaddingProperty,new Thickness(12,3,12,3));
                     }
+                    if(Convert.ToString(button.Tag)=="toolbar-action")FluentToolbarUx.Refresh(button);
                     var ui=button as Wpf.Ui.Controls.Button;if(ui!=null)Set(state,ui,Wpf.Ui.Controls.Button.CornerRadiusProperty,new CornerRadius(6));
                     if(toolbar&&Convert.ToString(button.Tag)!="panel-breadcrumb"&&!Convert.ToString(button.Tag).StartsWith("drive:",StringComparison.Ordinal)&&Convert.ToString(button.Tag)!="preview-close"){Set(state,button,FrameworkElement.MarginProperty,new Thickness(3,3,3,3));}
                 }
@@ -108,12 +110,12 @@ namespace FileCompass {
                         var frameBody=border.Child as Panel;
                         if(frameBody!=null){bool composed=frameBody.Children.OfType<FrameworkElement>().Any(x=>Convert.ToString(x.Tag).StartsWith("dialog-",StringComparison.Ordinal)||Convert.ToString(x.Tag)=="dialog-workspace");Set(state,frameBody,Panel.BackgroundProperty,composed?WindowGlass.Layer(window):CompactTheme.WhiteSurface);if(!composed){Set(state,border,Border.PaddingProperty,new Thickness(8));Set(state,frameBody,FrameworkElement.MarginProperty,new Thickness(6));}}
                     }
-                    else if(border.BorderThickness.Left>0&&border.BorderThickness.Top>0)Set(state,border,Border.BorderBrushProperty,CompactTheme.Line);
+                    else if(border.BorderThickness.Left>0&&border.BorderThickness.Top>0)Set(state,border,Border.BorderBrushProperty,window is MainWindow?CompactTheme.Line:FluentColors.SectionLine);
                 }
                 if(border!=null){string role=Convert.ToString(border.Tag);
-                    if(role=="main-toolbar-frame"){Set(state,border,Border.BackgroundProperty,CompactTheme.WhiteSurface);Set(state,border,Border.BorderThicknessProperty,new Thickness(0));Set(state,border,Border.CornerRadiusProperty,new CornerRadius(12));Set(state,border,FrameworkElement.MarginProperty,new Thickness(8,4,8,8));Set(state,border,Border.PaddingProperty,new Thickness(6,4,6,4));}
+                    if(role=="main-toolbar-frame"){Set(state,border,Border.BackgroundProperty,CompactTheme.PanelSurface);Set(state,border,Border.BorderThicknessProperty,new Thickness(0,1,0,1));Set(state,border,Border.CornerRadiusProperty,new CornerRadius(0));Set(state,border,FrameworkElement.MarginProperty,new Thickness(0));Set(state,border,Border.PaddingProperty,new Thickness(12,10,12,10));}
                     if(role=="dialog-header"||role=="dialog-footer"||role=="dialog-content-card"||role=="operation-page-card"||role=="settings-page-card"){
-                        Set(state,border,Border.BackgroundProperty,CompactTheme.WhiteSurface);Set(state,border,Border.BorderThicknessProperty,new Thickness(0));Set(state,border,Border.CornerRadiusProperty,new CornerRadius(11));Set(state,border,FrameworkElement.MarginProperty,role=="dialog-header"?new Thickness(8,8,8,6):role=="dialog-footer"?new Thickness(8,6,8,8):role=="operation-page-card"?new Thickness(0):role=="settings-page-card"?new Thickness(0):new Thickness(8,0,8,0));
+                        Set(state,border,Border.BackgroundProperty,role=="dialog-header"||role=="dialog-footer"?CompactTheme.PanelSurface:CompactTheme.WhiteSurface);Set(state,border,Border.BorderThicknessProperty,new Thickness(0));Set(state,border,Border.CornerRadiusProperty,new CornerRadius(6));Set(state,border,FrameworkElement.MarginProperty,new Thickness(0));
                     }
                     if(role=="preview-header-card"||role=="preview-content-card"||border is ActivityTile){Set(state,border,Border.BackgroundProperty,CompactTheme.WhiteSurface);Set(state,border,Border.CornerRadiusProperty,new CornerRadius(10));}
                     if(role=="dialog-split-card"){Set(state,border,Border.BackgroundProperty,WindowGlass.Layer(window));Set(state,border,Border.BorderThicknessProperty,new Thickness(0));Set(state,border,FrameworkElement.MarginProperty,new Thickness(8,0,8,0));}

@@ -1,4 +1,4 @@
-﻿#if APP_TESTS
+#if APP_TESTS
 using System;using System.Collections.Generic;using System.Diagnostics;using System.IO;using System.IO.Compression;using System.Linq;using System.Text;using System.Threading;using System.Threading.Tasks;using System.Web.Script.Serialization;using System.Windows;using System.Windows.Controls;using System.Windows.Threading;
 namespace FileCompass {
  internal static class VendorUpdatesTests {
@@ -40,7 +40,7 @@ namespace FileCompass {
             main=new MainWindow(root,new ProgramSettings{AutoRefresh=false}){WindowStartupLocation=WindowStartupLocation.Manual,Left=-18000,Top=-18000};main.Show();NavigationTests.WaitPanels(main);
             var checkedAt=DateTime.UtcNow;UpdateRegistry.Edit(state=>{state.Daily=false;state.LastAttemptUtc=checkedAt;});NavigationTests.Wait(main.Updates.Check(true));check(UpdateRegistry.State().LastAttemptUtc==checkedAt&&!main.Updates.Checking,"disabled daily checks do not fetch metadata");UpdateRegistry.Edit(state=>state.Daily=true);NavigationTests.Wait(main.Updates.Check(true));check(UpdateRegistry.State().LastAttemptUtc==checkedAt&&!main.Updates.Checking,"recent daily check is not repeated before its interval expires");
             settings=new ConfigurationDialog(main,L.Text("updates.title")){WindowStartupLocation=WindowStartupLocation.Manual,Left=-18000,Top=-18000};settings.Show();NavigationTests.Wait(Task.Delay(120));settings.UpdateLayout();
-            check(settings.Sections.Items.Count==9&&settings.Sections.SelectedIndex==7,"updates remains directly accessible after the new Panels settings section was added");
+            check(settings.Sections.Items.Count==9&&Convert.ToString(settings.Sections.SelectedItem)==L.Text("updates.title")&&settings.UpdatePage.IsVisible,"updates remains directly accessible after the new Panels settings section was added");
             check(settings.UpdatePage.Items.Items.Count==7,"settings inventories four vendor components, OpenMP image engine, libraries and application");
             settings.UpdatePage.Items.SelectedItem=settings.UpdatePage.Items.Items.Cast<UpdateRow>().Single(x=>x.Id=="imagemagick");check(!FluentUiTests.Children<Button>(settings.UpdatePage).Single(x=>Convert.ToString(x.Content)==L.Text("updates.download")).IsEnabled&&FluentUiTests.Children<TextBlock>(settings.UpdatePage).Any(x=>x.Text==L.Text("updates.imageMagickHelp")),"OpenMP engine is versioned and updated with its runtime as part of the application, not as an FFmpeg hot update");
             check(!FluentUiTests.Children<ScrollViewer>(settings.UpdatePage.Items).Any(x=>x.ComputedHorizontalScrollBarVisibility==Visibility.Visible),"update inventory fits without a horizontal scrollbar");

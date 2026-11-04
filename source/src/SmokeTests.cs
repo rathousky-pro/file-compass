@@ -58,8 +58,7 @@ namespace FileCompass
                 Check(panel.Selected().Count == 2 && ((Entry)panel.List.SelectedItem).FullPath == source, "refresh preserves marking and cursor"); checks++;
                 var window = new MainWindow(root); NavigationTests.WaitPanels(window); Check(window.Title.Contains(ApplicationBrand.Name), "WPF window creation");
                 var content = (System.Windows.FrameworkElement)window.Content;
-                var split = ((DockPanel)content).Children.OfType<Grid>().Single();
-                var previewPanel = split.Children.OfType<FilePanel>().First();
+                var previewPanel = FluentUiTests.Children<FilePanel>(window).First();
                 var previewItems = previewPanel.List.Items.Cast<Entry>().Where(x => !x.IsParent).Take(3).ToArray();
                 foreach (var entry in previewItems) previewPanel.ToggleMark(entry);
                 previewPanel.List.SelectedItem = previewItems.Last();

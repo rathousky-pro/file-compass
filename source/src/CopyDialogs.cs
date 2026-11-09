@@ -100,7 +100,7 @@ namespace FileCompass
         readonly CheckBox hidden = new CheckBox { Content = L.Text("copy.skipHiddenAndSystem"), Margin = new Thickness(2, 4, 2, 4) };
         readonly CheckBox empty = new CheckBox { Content = L.Text("copy.copyEmptyFolders"), IsChecked = true, Margin = new Thickness(2, 4, 2, 4) };
         readonly CheckBox fileTarget = new CheckBox { Content = L.Text("copy.destinationIncludesNewName"), Margin = new Thickness(2, 4, 2, 4) };
-        readonly string sourceDirectory;
+        readonly string sourceDirectory, initialMoveTarget;
         readonly bool moving, single;
         public CopySetupDialog(Window owner, IList<Entry> entries, string target, IEnumerable<string> recent, bool move = false, ProgramSettings defaults = null)
         {
@@ -124,7 +124,8 @@ namespace FileCompass
             var presets=layout.AddPage(L.Text("tools1.presets"));
             var destinationSection=OperationDialogLayout.Group(body,L.Text("copy.designDestination"));
 
-            destination.Text = target.TrimEnd('\\') + "\\"; foreach (string path in recent) destination.Items.Add(path);
+            initialMoveTarget = moving && single ? Path.Combine(target, Path.GetFileName(entries[0].FullPath.TrimEnd('\\', '/'))) : null;
+            destination.Text = initialMoveTarget ?? target.TrimEnd('\\') + "\\"; foreach (string path in recent) destination.Items.Add(path);
             destination.Height = filter.Height = 32;
             destinationSection.Children.Add(destination);
             var pathActions = new WrapPanel { Margin = new Thickness(0,5,0,12) };
@@ -143,7 +144,7 @@ namespace FileCompass
             var metadata=OperationDialogLayout.Group(properties,L.Text("operation.properties"));metadata.Children.Add(times);metadata.Children.Add(attributes);
             properties.Children.Add(fileTarget);fileTarget.IsEnabled=single;body.Children.Add(verify);presets.Children.Add(enqueue);
             AddPresets(presets);
-            Loaded += delegate { destination.Focus(); var textBox = destination.Template.FindName("PART_EditableTextBox", destination) as TextBox; if (textBox != null) textBox.SelectAll(); };
+            ContentRendered += delegate { Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, new Action(delegate { destination.ApplyTemplate(); var textBox = destination.Template.FindName("PART_EditableTextBox", destination) as TextBox; if (textBox != null) { textBox.Focus(); System.Windows.Input.Keyboard.Focus(textBox); textBox.SelectAll(); } })); };
             PreviewKeyDown += delegate(object sender, System.Windows.Input.KeyEventArgs e)
             {
                 if (e.Key == System.Windows.Input.Key.F2) { Accept(true); e.Handled = true; }
@@ -173,7 +174,8 @@ namespace FileCompass
         {
             string target = Target(); if (filter.Text.Split('|').Length > 2) throw new IOException(L.Text("copy.multipleExclusionSeparators"));
             string raw = destination.Text.Trim();
-            bool folder = raw.EndsWith("\\") || raw.EndsWith("/") || raw.EndsWith("\\*.*") || Directory.Exists(target);
+            bool namedMove = moving && single && !raw.EndsWith("\\") && !raw.EndsWith("/") && (String.Equals(target, initialMoveTarget, StringComparison.OrdinalIgnoreCase) || !Path.IsPathRooted(raw));
+            bool folder = !namedMove && (raw.EndsWith("\\") || raw.EndsWith("/") || raw.EndsWith("\\*.*") || Directory.Exists(target));
             bool exact = fileTarget.IsChecked == true || (moving && single && !folder);
             return new CopyOptions { Target = target, Filter = filter.Text, Queue = queue, Move = moving, Verify = verify.IsChecked == true, Permissions = permissions.IsChecked == true,
                 ReadOnly = readOnly.IsChecked == true, Times = times.IsChecked == true, Attributes = attributes.IsChecked == true, SkipHidden = hidden.IsChecked == true,

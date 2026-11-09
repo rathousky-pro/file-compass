@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -157,7 +157,7 @@ namespace FileCompass
             detailMetadata.Text = entry.FullName + "  ·  " + (entry.IsDirectory ? L.Text("layout.folder") : entry.Size + L.Text("layout.bytesSuffix")) + "  ·  " + entry.Modified + (entry.TagNames.Length == 0 ? "" : "  ·  " + entry.TagsLabel);
             detailMetadata.ToolTip = entry.FullPath + "\n" + detailMetadata.Text;
             if (entry.IsDirectory) { fileDetail.ShowMessage(L.Text("layout.folderDetails")); return; }
-            if (IsRemote && Remote.Profile.Protocol != NetworkProtocol.FTP && Remote.Profile.Protocol != NetworkProtocol.SFTP) { fileDetail.ShowMessage(L.Text("preview.scpArchiveUseF3")); return; }
+
             if(IsArchive)fileDetail.ShowArchiveFile(Archive,entry.FullPath);
             else if (IsRemote) fileDetail.ShowRemoteFile(entry.FullPath, Remote); else fileDetail.ShowFile(entry.FullPath, true);
             if (fileDetail.LoadingTask != null) await fileDetail.LoadingTask;

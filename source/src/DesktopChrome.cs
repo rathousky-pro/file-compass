@@ -279,7 +279,7 @@ namespace FileCompass
         {
             if(RejectExtWrite())return;
             if (active.IsArchive) { var item = active.List.SelectedItem as Entry; if (item != null && !item.IsDirectory) OpenArchiveFile(active, item, true); return; }
-            if (active.IsRemote) { EditRemoteSelected(); return; }
+            if (active.IsRemote) { EditRemoteSelected(true); return; }
             var entry = active.List.SelectedItem as Entry; if (entry == null || entry.IsDirectory) return;
             try { if(ProgramSettings.Load().InternalTextEditor&&FileViewers.CanEditInternally(entry.FullPath))OpenInternalEditor(entry.FullPath);else FileViewers.Open(this, entry.FullPath, true); }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, L.Text("editor.openFailed")); }

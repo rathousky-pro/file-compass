@@ -11,7 +11,7 @@ namespace FileCompass.NetworkTransport
         internal byte[] ReadSlice(string path,long offset,int length)
         {
             if (length < 0 || length > 16 * 1024 * 1024 || offset < 0) throw new IOException(L.Text("remotePreview.invalidRange"));
-            CheckAbort(); if (options.Protocol == Protocol.Scp) throw new IOException(L.Text("remotePreview.ftpSftpRequired"));
+            CheckAbort(); if (options.Protocol == Protocol.Scp) { var info = GetFileInfo(path); if (info.Length > 16 * 1024 * 1024 || offset + length > info.Length) throw new IOException(L.Text("remotePreview.imageSizeLimitHelp")); using (var full = new MemoryStream((int)info.Length)) { ssh.Transfer(path, full, info.Length, false, delegate(long done) { CheckAbort(); }); var bytes = full.ToArray(); var result = new byte[length]; Buffer.BlockCopy(bytes, (int)offset, result, 0, length); return result; } }
             using (var stream = new MemoryStream(length)) {
                 if (length > 0) { if (options.Protocol == Protocol.Ftp) Curl.ReadRange(path,stream,offset,length); else ssh.Transfer(path,stream,offset + length,false,delegate { CheckAbort(); },offset); }
                 CheckAbort(); if (stream.Length != length) throw new IOException(L.Text("remotePreview.fileChangedDuringRead")); return stream.ToArray();

@@ -59,10 +59,10 @@ namespace FileCompass
     }
     public partial class MainWindow
     {
-        async void EditRemoteSelected()
+        async void EditRemoteSelected(bool preferInternal = false)
         {
             var entry = active.List.SelectedItem as Entry; if (entry == null || entry.IsDirectory || entry.IsParent) return;
-            var browsing = active.Remote; var document = new RemoteEditDocument(browsing,entry.FullPath);
+            var panel = active; var browsing = panel.Remote; var document = new RemoteEditDocument(browsing,entry.FullPath);
             var window = new Window(); CopyUi.Style(window,this,L.Text("remoteEditor.title"),650); var body = new StackPanel { Margin = new Thickness(12) }; window.Content = body;
             var location = new TextBox { Text = document.LocalPath,IsReadOnly = true,Margin = new Thickness(0,4,0,8) };
             body.Children.Add(FluentThemeSection(browsing.Profile.Name + " · " + entry.FullPath,location));
@@ -81,7 +81,14 @@ namespace FileCompass
             body.Children.Add(CopyUi.Button(L.Text("transfer.cancelActiveTransfer"),delegate { cancellation.Cancel(); }));
             window.Closing += delegate(object s,System.ComponentModel.CancelEventArgs e) { if (working) { cancellation.Cancel(); e.Cancel = true; status.Text = L.Text("transfer.cancellingStatus"); } else if(document.HasLocalChanges&&MessageBox.Show(window,L.Text("archive.confirmDiscardEditorChanges"),L.Text("archive.unsavedChangesTitle"),MessageBoxButton.YesNo,MessageBoxImage.Warning,MessageBoxResult.No)!=MessageBoxResult.Yes)e.Cancel=true; };
             window.Closed += delegate { document.Dispose(); cancellation.Dispose(); }; window.Show(); networkCopies++;
-            try { await Task.Run(delegate { document.Download(cancellation.Token); }); open.IsEnabled = save.IsEnabled = true; status.Text = L.Text("remoteEditor.readyWithConflictChecks"); FileViewers.Open(window,document.LocalPath,true); }
+            try { await Task.Run(delegate { document.Download(cancellation.Token); });
+                if (preferInternal && ProgramSettings.Load().InternalTextEditor && FileViewers.CanEditInternally(document.LocalPath)) {
+                    var file = await Task.Run(delegate { return EditorTextFile.Load(document.LocalPath); }); file.Path = null;
+                    var editLocation = new EditorSaveLocation { Folder = RemoteConnection.Parent(entry.FullPath), Remote = browsing.TransferConnection(), Saved = delegate { if (panel.IsRemote) panel.Refresh(); } };
+                    try { OpenInternalEditorForRemote(file, editLocation, entry.FullPath, document.Expected); } catch { editLocation.Dispose(); throw; }
+                    working = false; window.Close();
+                } else { open.IsEnabled = save.IsEnabled = true; status.Text = L.Text("remoteEditor.readyWithConflictChecks"); FileViewers.Open(window,document.LocalPath,true); }
+            }
             catch (Exception ex) { status.Text = L.Text("remoteEditor.openFailedPrefix") + ex.Message; }
             finally { working = false; networkCopies--; }
         }

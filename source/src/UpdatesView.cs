@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Markup;
 namespace FileCompass {
  internal sealed class UpdateRow {
     public string Id{get;set;}public string Name{get;set;}public string Installed{get;set;}public string Available{get;set;}public string Status{get;set;}
@@ -35,7 +36,13 @@ namespace FileCompass {
         daily.IsChecked=UpdateRegistry.State().Daily;Children.Add(daily);
         Children.Add(new TextBlock{Text=L.Text("updates.immediate"),TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,8,0,0)});
         body.Children.Remove(buttons);body.Children.Remove(details);Children.Clear();
-        Items.Height=232;Items.RowHeight=26;var compactRow=new Style(typeof(DataGridRow),Application.Current.Resources[typeof(DataGridRow)] as Style);compactRow.Setters.Add(new Setter(FrameworkElement.MinHeightProperty,0.0));compactRow.Setters.Add(new Setter(FrameworkElement.HeightProperty,26.0));Items.RowStyle=compactRow;Items.Margin=new Thickness(0,6,0,6);ScrollViewer.SetVerticalScrollBarVisibility(Items,ScrollBarVisibility.Disabled);ScrollViewer.SetHorizontalScrollBarVisibility(Items,ScrollBarVisibility.Disabled);
+        Items.Height=232;Items.RowHeight=26;Items.SelectionUnit=DataGridSelectionUnit.FullRow;Items.GridLinesVisibility=DataGridGridLinesVisibility.None;
+        var compactRow=new Style(typeof(DataGridRow));compactRow.Setters.Add(new Setter(FrameworkElement.MinHeightProperty,0.0));compactRow.Setters.Add(new Setter(FrameworkElement.HeightProperty,26.0));compactRow.Setters.Add(new Setter(Control.BackgroundProperty,System.Windows.Media.Brushes.Transparent));compactRow.Setters.Add(new Setter(Control.ForegroundProperty,FluentTheme.Text));
+        compactRow.Setters.Add(new Setter(Control.TemplateProperty,(ControlTemplate)XamlReader.Parse(@"<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' TargetType='DataGridRow'><Border Background='{TemplateBinding Background}' BorderBrush='{StaticResource CompassLine}' BorderThickness='0,0,0,1' SnapsToDevicePixels='True'><DataGridCellsPresenter/></Border></ControlTemplate>")));
+        var hover=new Trigger{Property=UIElement.IsMouseOverProperty,Value=true};hover.Setters.Add(new Setter(Control.BackgroundProperty,CompactTheme.ThemeBrush("#F0F5FB")));compactRow.Triggers.Add(hover);
+        var selectedRow=new Trigger{Property=DataGridRow.IsSelectedProperty,Value=true};selectedRow.Setters.Add(new Setter(Control.BackgroundProperty,CompactTheme.ThemeBrush("#DCEBFF")));selectedRow.Setters.Add(new Setter(Control.ForegroundProperty,FluentTheme.Text));compactRow.Triggers.Add(selectedRow);Items.RowStyle=compactRow;
+        var cellStyle=new Style(typeof(DataGridCell));cellStyle.Setters.Add(new Setter(Control.BorderThicknessProperty,new Thickness(0)));cellStyle.Setters.Add(new Setter(Control.BackgroundProperty,System.Windows.Media.Brushes.Transparent));cellStyle.Setters.Add(new Setter(Control.ForegroundProperty,FluentTheme.Text));cellStyle.Setters.Add(new Setter(Control.TemplateProperty,(ControlTemplate)XamlReader.Parse(@"<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' TargetType='DataGridCell'><Border Background='Transparent' Padding='{TemplateBinding Padding}'><ContentPresenter VerticalAlignment='Center'/></Border></ControlTemplate>")));Items.CellStyle=cellStyle;
+        Items.Margin=new Thickness(0,6,0,6);ScrollViewer.SetVerticalScrollBarVisibility(Items,ScrollBarVisibility.Disabled);ScrollViewer.SetHorizontalScrollBarVisibility(Items,ScrollBarVisibility.Disabled);
         details.TextWrapping=TextWrapping.NoWrap;details.TextTrimming=TextTrimming.CharacterEllipsis;details.Margin=new Thickness(0,4,0,4);source.Visibility=location.Visibility=Visibility.Collapsed;
         buttons.Margin=new Thickness(0,4,0,4);daily.Margin=new Thickness(0,4,0,0);daily.ToolTip=L.Text("updates.timing")+"\n"+L.Text("updates.immediate");
         Children.Add(actions);Children.Add(Items);Children.Add(buttons);Children.Add(details);Children.Add(daily);

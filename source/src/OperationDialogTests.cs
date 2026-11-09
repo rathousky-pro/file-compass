@@ -4,6 +4,14 @@ namespace FileCompass {
  internal static class OperationDialogTests {
   static void Open(Window w){SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));w.WindowStartupLocation=WindowStartupLocation.Manual;w.Left=-18000;w.Top=-18000;w.ShowActivated=false;w.ShowInTaskbar=false;w.Show();NavigationTests.Wait(Task.Delay(120));w.UpdateLayout();}
   internal static int Run(string root){Directory.CreateDirectory(root);var checks=new List<string>();var windows=new List<Window>();string old=AppearanceTheme.Motif;Action<bool,string> check=(yes,text)=>{if(!yes)throw new Exception(text);checks.Add(text);};try{L.ChangeLanguage("cs");FluentTheme.Ensure();AppearanceTheme.Apply("Light");WorkflowStore.TestRoot=Path.Combine(root,"workflow");string sample=Path.Combine(root,"Nabídka.txt");File.WriteAllText(sample,"demo");var entries=new List<Entry>{new Entry{FullPath=sample,Name="Nabídka.txt",Bytes=4}};
+   string other=Path.Combine(root,"other-panel");Directory.CreateDirectory(other);string folderSource=Path.Combine(root,"source-folder");Directory.CreateDirectory(folderSource);
+   foreach(var item in new[]{entries[0],new Entry{FullPath=folderSource,Name="source-folder",IsDirectory=true}}){
+    var move=new CopySetupDialog(null,new List<Entry>{item},other,new string[0],true,new ProgramSettings());windows.Add(move);Open(move);
+    var destination=FluentUiTests.Children<ComboBox>(move).First(x=>x.IsEditable&&x.Text!="*.*");string expected=Path.Combine(other,Path.GetFileName(item.FullPath));
+    check(destination.Text==expected,"move defaults to other panel and original name");var original=move.CreateOptions(false);check(original.Target==expected&&original.TargetIsFile,"unchanged move targets the named item");
+    destination.Text="Test";var renamed=move.CreateOptions(false);check(renamed.Target==Path.Combine(root,"Test")&&renamed.TargetIsFile,"relative name renames in source folder");
+    destination.Text=other+Path.DirectorySeparatorChar;var intoFolder=move.CreateOptions(false);check(intoFolder.Target.TrimEnd('\\')==other&&!intoFolder.TargetIsFile,"trailing separator targets a folder");move.Close();windows.Remove(move);
+   }
    foreach(string motif in new[]{"Classic","Clean"}){
     AppearanceTheme.SetMotif(motif);
     var copy=new CopySetupDialog(null,entries,root,new string[0],false,new ProgramSettings());windows.Add(copy);Open(copy);CheckPages(copy,motif+"-copy",root,check);var options=copy.CreateOptions(true);check(options.Queue&&!options.Move&&options.Rule==CopyRule.Ask&&options.Filter=="*.*",motif+": cleaned copy dialog preserves queue and default conflict policy");Shot(copy,motif+"-copy",root,check);

@@ -1,4 +1,4 @@
-﻿using System;using System.Linq;using System.IO;using System.Collections.Generic;using System.ComponentModel;using System.Threading.Tasks;using System.Windows;using System.Windows.Controls;using System.Windows.Input;using System.Windows.Media;using System.Windows.Media.Imaging;using System.Windows.Data;
+using System;using System.Linq;using System.IO;using System.Collections.Generic;using System.ComponentModel;using System.Threading.Tasks;using System.Windows;using System.Windows.Controls;using System.Windows.Input;using System.Windows.Media;using System.Windows.Media.Imaging;using System.Windows.Data;
 namespace FileCompass {
  internal sealed partial class QuickPreviewPane {
   sealed class PreviewChoice:INotifyPropertyChanged {internal Entry Entry;ImageSource image;public string Caption{get{return Path.GetFileName(Entry.FullPath);}}public string PathLabel{get{return Entry.FullPath;}}public bool Thumbnail{get;set;}public ImageSource Image{get{return image;}set{image=value;if(PropertyChanged!=null){PropertyChanged(this,new PropertyChangedEventArgs("Image"));PropertyChanged(this,new PropertyChangedEventArgs("Thumbnail"));}}}public event PropertyChangedEventHandler PropertyChanged;}
@@ -42,6 +42,6 @@ namespace FileCompass {
    var actual=List.Items.Cast<Entry>().FirstOrDefault(x=>String.Equals(x.FullPath,entry.FullPath,StringComparison.OrdinalIgnoreCase));if(actual==null||Object.ReferenceEquals(List.SelectedItem,actual))return;
    bool previous=synchronizingSelection;synchronizingSelection=true;try{List.SelectedItem=actual;if(windowsSelection)foreach(var marked in List.Items.Cast<Entry>().Where(x=>x.IsMarked&&!x.IsParent&&x!=actual))if(!List.SelectedItems.Contains(marked))List.SelectedItems.Add(marked);List.ScrollIntoView(actual);}finally{synchronizingSelection=previous;}
   }
-  internal void PreviewEntry(QuickPreviewPane pane,Entry entry){if(IsArchive)pane.ShowArchiveFile(Archive,entry.FullPath);else if(IsExt)pane.ShowExtFile(entry.FullPath);else if(IsRemote){if(Remote.Profile.Protocol==NetworkProtocol.FTP||Remote.Profile.Protocol==NetworkProtocol.SFTP)pane.ShowRemoteFile(entry.FullPath,Remote,entry.Bytes+"|"+entry.ModifiedTime.Ticks);else pane.ShowMessage(L.Text("remotePreview.ftpSftpRequired"));}else pane.ShowFile(entry.FullPath,true);}
+  internal void PreviewEntry(QuickPreviewPane pane,Entry entry){if(IsArchive)pane.ShowArchiveFile(Archive,entry.FullPath);else if(IsExt)pane.ShowExtFile(entry.FullPath);else if(IsRemote){pane.ShowRemoteFile(entry.FullPath,Remote,entry.Bytes+"|"+entry.ModifiedTime.Ticks);}else pane.ShowFile(entry.FullPath,true);}
  }
 }

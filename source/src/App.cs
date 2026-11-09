@@ -240,7 +240,7 @@ namespace FileCompass
             var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right }; stack.Children.Add(buttons);
             var ok = CopyUi.Button("OK", delegate { dialog.DialogResult = true; }); ok.IsDefault = true; buttons.Children.Add(ok);
             var close = CopyUi.Button(L.Text("action.cancel"), delegate { dialog.DialogResult = false; }); close.IsCancel = true; buttons.Children.Add(close);
-            dialog.Loaded += delegate { input.Focus(); input.Select(0, renameFile && ProgramSettings.Load().RenameWithoutExtension ? FileBehavior.NameSelectionLength(initial) : initial.Length); };
+            dialog.ContentRendered += delegate { dialog.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, new Action(delegate { input.Focus(); System.Windows.Input.Keyboard.Focus(input); input.Select(0, renameFile && ProgramSettings.Load().RenameWithoutExtension ? FileBehavior.NameSelectionLength(initial) : initial.Length); })); };
             return dialog.ShowDialog() == true ? input.Text : null;
         }
     }

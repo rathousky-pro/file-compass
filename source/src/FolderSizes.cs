@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Threading;
+using System.Web.Script.Serialization;
 
 namespace FileCompass
 {
@@ -17,16 +19,34 @@ namespace FileCompass
             var archive = Archive; RemoteConnection connection = null;
             try
             {
-                connection = IsRemote ? Remote.TransferConnection() : null;
+                string cloudId = IsRemote ? Remote.Profile.CloudAccountId : null;
+                if (String.IsNullOrEmpty(cloudId)) connection = IsRemote ? Remote.TransferConnection() : null;
                 long bytes = await Task.Run(delegate
                 {
                     if (archive != null) { string prefix = entry.FullPath.TrimStart('/').TrimEnd('/') + "/"; return archive.Items.Where(x => !x.Directory && x.Path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)).Sum(x => x.Bytes); }
+                    if (!String.IsNullOrEmpty(cloudId)) return CloudFolderBytes(cloudId, entry.FullPath);
                     if (connection != null) { using (connection) { connection.OpenTransfer(); return RemoteFolderBytes(connection, entry.FullPath); } }
                     return LocalFolderBytes(entry.FullPath);
                 });
                 await Dispatcher.InvokeAsync(new Action(delegate { entry.FolderSize(bytes, false); if (List.Items.Contains(entry)) UpdateStatus(); })).Task;
             }
             catch (Exception ex) { Dispatcher.Invoke(new Action(delegate { entry.FolderSize(null, false); MessageBox.Show(System.Windows.Window.GetWindow(this), L.Text("folderSize.incompleteWarningPrefix") + ex.Message, L.Text("folderSize.title")); })); }
+        }
+        internal static long ParseCloudFolderSize(string json)
+        {
+            var data = new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(json);
+            object value; long bytes;
+            if (data == null || !data.TryGetValue("bytes", out value) || !Int64.TryParse(Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture), out bytes) || bytes < 0)
+                throw new IOException(L.Text("cloud.commandFailed"));
+            return bytes;
+        }
+        internal static long CloudFolderBytes(string accountId, string path)
+        {
+            var account = CloudStore.Find(accountId);
+            if (!account.Ready) throw new IOException(L.Text("cloud.signInRequired"));
+            string remotePath = "remote:" + RemoteConnection.Normalize(path).TrimStart('/');
+            string result = CloudStore.Run(account, new[] { "size", remotePath, "--json" }, CancellationToken.None, 600000).GetAwaiter().GetResult();
+            return ParseCloudFolderSize(result);
         }
         internal static long LocalFolderBytes(string path)
         {

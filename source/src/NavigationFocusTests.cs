@@ -40,6 +40,10 @@ namespace FileCompass {
             check(IsActive&&active.List.IsKeyboardFocusWithin,"Initial active file list receives focus after loading without a click; active="+IsActive+"; focus="+(Keyboard.FocusedElement==null?"null":Keyboard.FocusedElement.GetType().Name));
             int cursor=active.List.SelectedIndex;NavigationKey(active,Key.Down);check(active.List.SelectedIndex==cursor+1,"Down works immediately after startup without explicitly focusing the panel");
             NavigationKey(active,Key.Up);check(active.List.SelectedIndex==cursor,"Up works immediately after startup");
+            var first=active;var second=active==left?right:left;
+            NavigationKey(first,Key.Tab,true);check(active==second&&second.List.IsKeyboardFocusWithin,"Tab switches active panel and focuses its selected row");
+            int before=second.List.SelectedIndex;NavigationKey(second,Key.Down);check(second.List.SelectedIndex==Math.Min(before+1,second.List.Items.Count-1),"Down works after Tab without clicking a row");
+            NavigationKey(second,Key.Tab,true);check(active==first&&first.List.IsKeyboardFocusWithin,"Tab returns focus to the original panel");
         }
         static void NavigationKey(FilePanel panel,Key key,bool preview=false) {
             var target=Keyboard.FocusedElement as UIElement;if(target==null)throw new Exception("No focused element before "+key);

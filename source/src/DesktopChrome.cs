@@ -146,8 +146,8 @@ namespace FileCompass
             Tool(connections,"ftp",L.Text("connections.title"),delegate{ManageConnections();},L.Text("toolbar.connections"));
             var settingsTools=new StackPanel{Orientation=Orientation.Horizontal,VerticalAlignment=VerticalAlignment.Top};
             Tool(settingsTools,"settings",L.Text("settings.title"),delegate{new ConfigurationDialog(this).ShowDialog();});
-            var search=new TextBox{Width=220,Height=38,VerticalContentAlignment=VerticalAlignment.Center,Margin=new Thickness(16,0,8,0),ToolTip="Hledat soubor v aktivním panelu · Enter: přejít na nalezené soubory"};
-            System.Windows.Automation.AutomationProperties.SetName(search,"Hledat soubor");
+            var search=new TextBox{Width=220,Height=38,VerticalContentAlignment=VerticalAlignment.Center,Margin=new Thickness(16,0,8,0),ToolTip=L.Text("newui.3")};
+            System.Windows.Automation.AutomationProperties.SetName(search,L.Text("newui.15"));
             fluentSearchInput=search;
             search.TextChanged+=delegate{if(!synchronizingFluentSearch&&active!=null)active.SetQuickFilter(search.Text);};
             search.KeyDown+=delegate(object sender,KeyEventArgs e){if(e.Key==Key.Enter||e.Key==Key.Down){active.FocusFiles();e.Handled=true;}if(e.Key==Key.Escape){search.Clear();active.FocusFiles();e.Handled=true;}};
@@ -238,7 +238,7 @@ namespace FileCompass
             add("media.convertAudio",delegate{OpenMediaConverter(false);});
         }
         void ToolSeparator(Panel panel) { panel.Children.Add(new Border { Width = 1, Height = 22, Background = CompactTheme.Line, Margin = new Thickness(5, 7, 5, 7) }); }
-        void OpenExplorer() {
+        internal void OpenExplorer() {
             if(active.IsRemote){MessageBox.Show(this,L.Text("network.directPanelConnectionHelp"),L.Text("network.connectionTitle"));return;}
             string path=active.IsArchive?Path.GetDirectoryName(active.Archive.Root.FilePath):active.CurrentPath;if(path==null)return;
             if(path==NetworkBrowser.Root)path="shell:::{F02C1A0D-BE21-4350-88B0-7367FC96EF3C}";
@@ -251,7 +251,7 @@ namespace FileCompass
             try { Process.Start(PowerShellStartInfo(active.CurrentPath)); }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, L.Text("shell.powerShellTitle")); }
         }
-        void OpenCommandPrompt()
+        internal void OpenCommandPrompt()
         {
             if(active.IsRemote||active.IsArchive||active.IsVirtualBrowser||active.CurrentPath==null){MessageBox.Show(this,L.Text("shell.localFolderRequired"),L.Text("commandLine.title"));return;}
             try{Process.Start(CommandPromptStartInfo(active.CurrentPath));}catch(Exception ex){MessageBox.Show(this,ex.Message,L.Text("commandLine.title"));}

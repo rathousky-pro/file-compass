@@ -82,7 +82,7 @@ namespace FileCompass {
             if(!File.Exists(Rclone))throw new IOException(L.Text("cloud.pluginMissing")); using(PluginIntegrity.Acquire("cloud\\rclone.exe")){}
             var info=new ProcessStartInfo(Rclone,String.Join(" ",args.Concat(new[]{"--config",Config(account),"--log-level",browserFlow?"NOTICE":"ERROR"}).Select(Quote))){UseShellExecute=false,CreateNoWindow=true,WindowStyle=ProcessWindowStyle.Hidden,RedirectStandardOutput=true,RedirectStandardError=true,RedirectStandardInput=true};
             foreach(string variable in info.EnvironmentVariables.Keys.Cast<string>().Where(x=>x.StartsWith("RCLONE_",StringComparison.OrdinalIgnoreCase)).ToArray())info.EnvironmentVariables.Remove(variable);
-            if(!args.Any(x=>x=="serve"))CloudApplicationOAuth.Apply(account,info);
+            CloudApplicationOAuth.Apply(account,info);
             string keyFile=File.Exists(AccountKeyFile(account))?AccountKeyFile(account):KeyFile;
             info.Arguments+=" --password-command "+Quote(Quote(Process.GetCurrentProcess().MainModule.FileName)+" --cloud-config-key "+Quote(keyFile))+" --ask-password=false";
             if(browserFlow)info.EnvironmentVariables["RCLONE_AUTH_NO_OPEN_BROWSER"]="true";
@@ -95,31 +95,43 @@ namespace FileCompass {
                 var output=process.StandardOutput.ReadToEndAsync();var error=ReadError(process.StandardError,openBrowser);var clock=Stopwatch.StartNew();
                 try{
                     while(!process.HasExited){token.ThrowIfCancellationRequested();if(clock.ElapsedMilliseconds>timeout)throw new IOException(L.Text("cloud.timeout"));await Task.Delay(50,token).ConfigureAwait(false);}
-                    string result=await output.ConfigureAwait(false);await error.ConfigureAwait(false);
-                    if(process.ExitCode!=0||result.Length>1048576)throw new IOException(L.Text("cloud.commandFailed"));
+                    string result=await output.ConfigureAwait(false);string detail=await error.ConfigureAwait(false);
+                    if(process.ExitCode!=0||result.Length>1048576){
+                        string stage=command.Length>1&&command[0]=="rc"?"OAuth configuration update":command.Length>1&&command[0]=="config"?"Cloud configuration":command.Length>0&&command[0]=="lsjson"?"Cloud account verification":"Cloud operation";
+                        throw new IOException(L.Text("cloud.commandFailed")+"\n["+stage+"; exit code "+process.ExitCode+(String.IsNullOrEmpty(detail)?"":"; "+detail)+"]");
+                    }
                     return result;
                 }finally{if(!process.HasExited){try{process.Kill();process.WaitForExit(1000);}catch{}}}
             }
         }
-        internal static async Task PersistPublisherIdentity(CloudAccount account){
-            if(account.Provider!="drive"||account.AuthorizationClient!=CloudApplicationOAuth.FileCompass)return;
-            var client=CloudApplicationOAuth.LoadGoogle();
-            // RCLONE_JSON supplies the rc --json flag only to this short-lived configuration command.
-            // The loopback rc mode invokes the API in-process; it opens no listening socket.
-            string json=new JavaScriptSerializer().Serialize(new{name="remote",parameters=new{client_id=client.client_id,client_secret=client.client_secret},opt=new{nonInteractive=true,noObscure=true}});
-            await Run(account,new[]{"rc","--loopback","config/update","--no-output"},CancellationToken.None,30000,new Dictionary<string,string>{{"RCLONE_JSON",json}}).ConfigureAwait(false);
-            var diskOnly=new CloudAccount{Id=account.Id,Provider=account.Provider};
-            string dump=await Run(diskOnly,new[]{"config","dump"},CancellationToken.None,30000).ConfigureAwait(false);
-            var data=new JavaScriptSerializer().Deserialize<Dictionary<string,Dictionary<string,object>>>(dump);Dictionary<string,object> remote;object id,secret;
-            if(data==null||!data.TryGetValue("remote",out remote)||!remote.TryGetValue("client_id",out id)||!remote.TryGetValue("client_secret",out secret)||Convert.ToString(id)!=client.client_id||Convert.ToString(secret)!=client.client_secret)throw new IOException(L.Text("cloud.identityNotSaved"));
+        internal static string ErrorCategory(string line){
+            // Only allow fixed labels: rclone errors can contain credentials, paths and file names.
+            string s=(line??"").ToLowerInvariant();
+            if(s.Contains("invalid_grant"))return "invalid_grant";
+            if(s.Contains("invalid_client"))return "invalid_client";
+            if(s.Contains("access_denied"))return "access_denied";
+            if(s.Contains("accessnotconfigured")||s.Contains("service_disabled"))return "API disabled";
+            if(s.Contains("insufficientpermissions")||s.Contains("insufficient authentication scopes"))return "insufficient permissions";
+            if(s.Contains("permission denied")||s.Contains("permissiondenied"))return "permission denied";
+            if(s.Contains("unauthorized_client"))return "unauthorized_client";
+            if(s.Contains("invalid json")||s.Contains("invalid character")||s.Contains("unexpected end of json"))return "invalid JSON";
+            if(s.Contains("unknown flag"))return "unsupported command option";
+            if(s.Contains("connection refused"))return "connection refused";
+            if(s.Contains("no such host")||s.Contains("server misbehaving"))return "DNS resolution failed";
+            if(s.Contains("deadline exceeded")||s.Contains("timed out"))return "connection timeout";
+            if(s.Contains("certificate")||s.Contains("x509"))return "TLS certificate error";
+            var status=System.Text.RegularExpressions.Regex.Match(s,@"\b(?:http(?: status)?|status(?: code)?|error)[: ]+([45][0-9]{2})\b");
+            return status.Success?"HTTP "+status.Groups[1].Value:null;
         }
-        internal static async Task ReadError(StreamReader reader,Action<string> openBrowser){
-            string line;var opened=new HashSet<string>();
+        internal static async Task<string> ReadError(StreamReader reader,Action<string> openBrowser){
+            string line,category=null;var opened=new HashSet<string>();
             while((line=await reader.ReadLineAsync().ConfigureAwait(false))!=null){
+                category=category??ErrorCategory(line);
                 if(openBrowser==null)continue;
                 var match=System.Text.RegularExpressions.Regex.Match(line,@"http://(?:127\.0\.0\.1|localhost):\d+/auth\?[^\s]+");
                 if(match.Success&&opened.Add(match.Value))openBrowser(match.Value);
             }
+            return category;
         }
         internal static async Task Initialize(CloudAccount a,CancellationToken token){
             SecureDirectory(AccountPath(a));
@@ -215,7 +227,6 @@ namespace FileCompass {
                 var account=CloudStore.Find(id);if(!account.Ready)throw new IOException(L.Text("cloud.signInRequired"));
                 account.Port=FreePort(); // A persisted port or an unrelated listener never proves ownership.
                 var accounts=CloudStore.Load();var saved=accounts.Accounts.FirstOrDefault(x=>x.Id==id);if(saved==null)throw new IOException(L.Text("cloud.accountMissing"));saved.Port=account.Port;CloudStore.Save(accounts);
-                CloudStore.PersistPublisherIdentity(account).GetAwaiter().GetResult();
                 CloudKeys.EnsureClient(account);
                 var info=CloudStore.StartInfo(account,new[]{"serve","sftp","remote:","--addr","127.0.0.1:"+account.Port,"--key",Path.Combine(CloudStore.AccountPath(account),"host-key.pem"),"--user","compass","--authorized-keys",Path.Combine(CloudStore.AccountPath(account),"authorized_keys"),"--vfs-cache-mode","off","--dir-cache-time","5s"});
                 var job=new ArchiveProcessJob(512);var process=new Process{StartInfo=info};

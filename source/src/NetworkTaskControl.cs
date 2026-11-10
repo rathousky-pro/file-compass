@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -25,7 +25,7 @@ namespace FileCompass
     }
     internal sealed class NetworkFlow
     {
-        readonly NetworkTransferJob job; readonly Stopwatch timer = Stopwatch.StartNew(); long charged; int version = -1;
+        readonly NetworkTransferJob job; readonly Stopwatch timer = Stopwatch.StartNew(); long charged; long previousRate = -1; int version = -1;
         internal NetworkFlow(NetworkTransferJob transfer) { job = transfer; }
         internal void Check()
         {
@@ -35,8 +35,12 @@ namespace FileCompass
         internal void Consume(int bytes)
         {
             Check(); job.MeasureTraffic(bytes); int current = job.FlowVersion; if (version != current) { version = current; charged = 0; timer.Restart(); }
-            long rate = job.SpeedLimit; if (rate == 0) return; charged += bytes;
-            while (1000.0 * charged / rate > timer.Elapsed.TotalMilliseconds) { Check(); if (version != job.FlowVersion) { version = job.FlowVersion; charged = 0; timer.Restart(); return; } job.ItemToken.WaitHandle.WaitOne(25); }
+            long rate = NetworkSchedule.Effective(job.SpeedLimit, DateTime.Now); if (rate != previousRate) { previousRate = rate; charged = 0; timer.Restart(); } if (rate == 0) return; charged += bytes;
+            while (1000.0 * charged / rate > timer.Elapsed.TotalMilliseconds) {
+                Check(); long next = NetworkSchedule.Effective(job.SpeedLimit, DateTime.Now);
+                if (version != job.FlowVersion || next != rate) { version = job.FlowVersion; charged = 0; timer.Restart(); return; }
+                job.ItemToken.WaitHandle.WaitOne(25);
+            }
         }
     }
     public sealed partial class NetworkTransferJob

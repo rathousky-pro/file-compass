@@ -50,12 +50,16 @@ namespace FileCompass
         public bool IsParent { get; set; }
         public long Bytes { get; set; }
         internal bool SizeKnown, SizeLoading;
-        public string Size { get { return IsParent ? "" : IsLink ? "<LNK>" : SizeLoading ? L.Text("common.ellipsis") : IsDirectory && !SizeKnown ? "<DIR>" : ByteSize.Format(Bytes); } }
+        int sizeAnimationFrame;
+        System.Windows.Threading.DispatcherTimer sizeAnimation;
+        public bool IsSizeLoading { get { return SizeLoading; } }
+        public string Size { get { return IsParent ? "" : IsLink ? "<LNK>" : SizeLoading ? new string('.', 1 + sizeAnimationFrame % 3) : IsDirectory && !SizeKnown ? "<DIR>" : ByteSize.Format(Bytes); } }
         internal void FolderSize(long? bytes, bool loading)
         {
-            if (loading) { SizeKnown = false; Bytes = 0; }
+            if (loading) { SizeKnown = false; Bytes = 0; sizeAnimationFrame = 0; if (sizeAnimation == null) { sizeAnimation = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) }; sizeAnimation.Tick += delegate { sizeAnimationFrame++; if (PropertyChanged != null) PropertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs("Size")); }; } sizeAnimation.Start(); }
+            else if (sizeAnimation != null) { sizeAnimation.Stop(); sizeAnimation = null; }
             SizeLoading = loading; if (bytes.HasValue) { Bytes = bytes.Value; SizeKnown = true; }
-            if (PropertyChanged != null) { PropertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs("Size")); PropertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs("Bytes")); }
+            if (PropertyChanged != null) { PropertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs("IsSizeLoading")); PropertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs("Size")); PropertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs("Bytes")); }
         }
         public string Modified { get; set; }
     }
@@ -177,7 +181,7 @@ namespace FileCompass
             else if (e.Key == Key.F3) { active.ViewSelected(); e.Handled = true; }
             else if (e.Key == Key.F4 && Keyboard.Modifiers == ModifierKeys.Shift) { HandleExternalEditorShortcut(e.Key,Keyboard.Modifiers); e.Handled = true; }
             else if (e.Key == Key.F4 && Keyboard.Modifiers == ModifierKeys.None) { EditSelected(); e.Handled = true; }
-            else if (e.Key == Key.Tab && Keyboard.Modifiers == ModifierKeys.None && panelLayout != "Single") { (active == left ? right : left).List.Focus(); e.Handled = true; }
+            else if (e.Key == Key.Tab && Keyboard.Modifiers == ModifierKeys.None && panelLayout != "Single") { (active == left ? right : left).FocusFiles(); e.Handled = true; }
             else if (e.Key == Key.R && Keyboard.Modifiers == ModifierKeys.Control) { left.Refresh(); right.Refresh(); e.Handled = true; }
         }
         void Transfer(bool move)

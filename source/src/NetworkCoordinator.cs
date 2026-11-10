@@ -171,7 +171,7 @@ namespace FileCompass
             finally
             {
                 if (connection != null) connection.Dispose();
-                NetworkBusy(false, null); panel.List.Focus();
+                NetworkBusy(false, null); panel.FocusFiles();
             }
         }
         void DisconnectNetwork() { DisconnectNetworkPanel(active); }
@@ -320,6 +320,7 @@ namespace FileCompass
             try
             {
                 RemoteConnection.ValidateRemoteName(name); string destination = RemoteConnection.Combine(panel.CurrentPath, name);
+                if (String.Equals(destination, entries[0].FullPath, StringComparison.Ordinal)) return;
                 NetworkBusy(true, L.Text("rename.operationTitle"));
                 await Task.Run(delegate { if (panel.Remote.Session.FileExists(destination)) throw new IOException(L.Text("error.itemAlreadyExists")); panel.Remote.Session.MoveFile(entries[0].FullPath, destination); });
             }

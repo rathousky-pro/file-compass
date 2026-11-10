@@ -28,6 +28,9 @@ namespace FileCompass {
                 a.Port=CloudRuntime.FreePort();a.BridgePassword=NetworkSettingsStore.Protect(Guid.NewGuid().ToString("N"));a.Ready=true;CloudKeys.Create(a);
                 var accounts=new CloudAccounts();accounts.Accounts.Add(a);CloudStore.Save(accounts);var loaded=CloudStore.Find(a.Id);
                 check(loaded.Port==a.Port&&loaded.Ready&&loaded.Fingerprint.StartsWith("SHA256:"),"Cloud account endpoint and pinned host key survive serialization");
+                string measure=Path.Combine(files,"size test");Directory.CreateDirectory(Path.Combine(measure,"nested"));File.WriteAllBytes(Path.Combine(measure,"first.bin"),new byte[11]);File.WriteAllBytes(Path.Combine(measure,"nested","second.bin"),new byte[17]);
+                check(FilePanel.CloudFolderBytes(a.Id,"/size test")==28,"Cloud size recursively adds files without downloading through the cloud backend");
+                bool invalidSize=false;try{FilePanel.ParseCloudFolderSize("{}");}catch(IOException){invalidSize=true;}check(invalidSize,"Missing size output is rejected instead of reporting zero");
                 check(!File.ReadAllText(Path.Combine(CloudStore.Root,"accounts.xml")).Contains(NetworkSettingsStore.Unprotect(a.BridgePassword)),"Internal session password is DPAPI-protected");
                 CloudRuntime.Ensure(a.Id);var profile=CloudRuntime.Profile(a);profile.Validate();
                 check(profile.Host=="127.0.0.1"&&profile.IsSshTransfer&&!profile.SshAgent,"Bridge binds exclusively to loopback and uses authenticated SFTP");
@@ -63,6 +66,9 @@ namespace FileCompass {
                 }
                 var urls=new List<string>();using(var memory=new MemoryStream(Encoding.UTF8.GetBytes("visit https://evil.example/auth?state=x\nvisit http://127.0.0.1:53682/auth?state=test\nvisit http://127.0.0.1:53682/auth?state=test\n"))){using(var reader=new StreamReader(memory))CloudStore.ReadError(reader,urls.Add).GetAwaiter().GetResult();}
                 check(urls.Count==1&&urls[0].StartsWith("http://127.0.0.1:"),"Browser launcher accepts only the local authorization endpoint and ignores repeats");
+                check(CloudStore.ErrorCategory("oauth2: invalid_grant token=private-value")=="invalid_grant","Cloud diagnostics classify OAuth failures without exposing credentials");
+                check(CloudStore.ErrorCategory("failed to open confidential-file.txt token=private-value")==null,"Cloud diagnostics never display unrecognized raw errors");
+                check(CloudStore.ErrorCategory("googleapi: Error 403: hidden private details")=="HTTP 403","Cloud diagnostics classify API status without including provider details");
                 check(CloudRuntime.SavedProfile(Guid.NewGuid().ToString("N"))==null,"Removed cloud accounts are reported as missing when restoring saved views");
                 SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));
                 main=new MainWindow(root,new ProgramSettings{AutoRefresh=false}){ShowActivated=false,ShowInTaskbar=false,Left=-18000,Top=-18000,WindowStartupLocation=WindowStartupLocation.Manual};main.Show();NavigationTests.WaitPanels(main);

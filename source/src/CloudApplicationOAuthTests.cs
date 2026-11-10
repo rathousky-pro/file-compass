@@ -28,6 +28,9 @@ namespace FileCompass {
                 CloudStore.Initialize(account,CancellationToken.None).GetAwaiter().GetResult();
                 var info=CloudStore.StartInfo(account,new[]{"config","create","remote","drive","config_is_local","false","--non-interactive"});
                 check(info.EnvironmentVariables["RCLONE_CONFIG_REMOTE_CLIENT_ID"]==client&&info.EnvironmentVariables["RCLONE_CONFIG_REMOTE_CLIENT_SECRET"]==secret,"OAuth identity is provided to the helper process environment");
+                var serve=CloudStore.StartInfo(account,new[]{"serve","sftp","remote:"});
+                check(serve.EnvironmentVariables["RCLONE_CONFIG_REMOTE_CLIENT_ID"]==client&&serve.EnvironmentVariables["RCLONE_CONFIG_REMOTE_CLIENT_SECRET"]==secret,"Cloud bridge receives the same OAuth identity as browser sign-in");
+                check(!serve.Arguments.Contains(client)&&!serve.Arguments.Contains(secret),"Cloud bridge credentials are not placed in command-line arguments");
                 check(!info.Arguments.Contains(client)&&!info.Arguments.Contains(secret),"Publisher credentials are not placed in the parent command line");
                 // Local-only wizard step: no browser, no Google account, no token exchange.
                 string response=CloudStore.Run(account,new[]{"config","create","remote","drive","config_is_local","false","--non-interactive"},CancellationToken.None,15000).GetAwaiter().GetResult();

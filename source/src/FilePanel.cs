@@ -157,6 +157,10 @@ namespace FileCompass
             List.PreviewKeyDown += delegate(object sender, KeyEventArgs e)
             {
                 if(HandleQuickSearchKey(e))return;
+                if (List.IsKeyboardFocused && displayMode == "Details" && Keyboard.Modifiers == ModifierKeys.None && (e.Key == Key.Up || e.Key == Key.Down) && List.Items.Count > 0) {
+                    int index = List.SelectedIndex; int next = index < 0 ? 0 : Math.Max(0, Math.Min(List.Items.Count - 1, index + (e.Key == Key.Down ? 1 : -1)));
+                    List.SelectedIndex = next; FocusFiles(); e.Handled = true; return;
+                }
                 if (e.Key == Key.Insert || e.Key == Key.Space)
                 {
                     var item = List.SelectedItem as Entry; ToggleMark(item);

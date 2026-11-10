@@ -28,6 +28,7 @@ namespace FileCompass {
             var visited=new HashSet<DependencyObject>();
             foreach(var window in windows){Visit(window,visited);var help=window as HelpWindow;if(help!=null)help.RefreshLanguage();var smart=window as DiskSmartWindow;if(smart!=null)smart.RefreshLanguage();var main=window as MainWindow;if(main!=null)main.RefreshLanguageLabels();}
         }
+        internal static void RefreshElement(DependencyObject node) { Visit(node,new HashSet<DependencyObject>()); }
         static void Visit(DependencyObject node,HashSet<DependencyObject> visited) {
             if(node==null||!visited.Add(node))return;
             var properties=new List<DependencyProperty>();var values=node.GetLocalValueEnumerator();while(values.MoveNext())properties.Add(values.Current.Property);

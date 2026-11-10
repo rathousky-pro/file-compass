@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Xml;
 using System.Xml.Serialization;
@@ -40,6 +40,8 @@ namespace FileCompass
         public int LeftTabIndex, RightTabIndex;
         public System.Collections.Generic.List<FavoriteLocation> Favorites = new System.Collections.Generic.List<FavoriteLocation>();
         public bool AutoRefresh = true, WatchNetworkFolders;
+        public bool NetworkScheduleEnabled; public int NetworkScheduleDays = 127, NetworkScheduleStart = 480, NetworkScheduleEnd = 1320; public long NetworkScheduleKiB = 1024;
+        public System.Collections.Generic.List<NetworkScheduleRule> NetworkScheduleRules;
         public bool InternalCodePreview; public bool AutomaticFolderViews;
         public bool ShowHiddenFiles = true, ShowSystemFiles = true;
         public bool FoldersAlwaysByName, DriveAlwaysRoot, WindowsMouseSelection, ArchiveNewestFileDate;

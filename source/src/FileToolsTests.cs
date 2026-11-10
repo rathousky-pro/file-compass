@@ -51,6 +51,7 @@ namespace FileCompass
                 BatchRenameEngine.Apply(swaps.Select(x => new RenameRow { Path = x.NewPath, OldName = x.NewName, NewName = x.OldName }).ToArray(), CancellationToken.None);
                 File.Delete(occupied);
                 var panel = new FilePanel(delegate { }); panel.Navigate(root, false); NavigationTests.Wait(panel.NavigationTask); var entry = panel.List.Items.Cast<Entry>().Single(x => x.FullPath == folder);
+                entry.FolderSize(null,true);var sizeConverter=new PanelValueConverter();check(Convert.ToString(sizeConverter.Convert(new object[]{entry.Size,DateTime.MinValue,0L,true,true},typeof(string),"size",System.Globalization.CultureInfo.InvariantCulture))==".","Clean view preserves the folder size animation instead of displaying zero");entry.FolderSize(null,false);
                 panel.ToggleMark(entry); Wait(panel.CalculateFolderSize(entry)); check(entry.IsMarked && entry.SizeKnown && entry.Bytes == bytes && entry.Size != "<DIR>", "folder size updates row and preserves red marking");
                 var preview = new Window { Width = 1050, Height = 260, Content = panel }; NetworkTests.Render(preview, Path.Combine(workspace, "folder-size.png")); preview.Content = null; preview.Close();
                 string archive = Path.Combine(root, "folders.zip"); ArchiveEngine.Create(archive, new[] { folder }, new ArchiveSettings(), CancellationToken.None);

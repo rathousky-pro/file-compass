@@ -13,6 +13,7 @@ namespace FileCompass
     {
         internal readonly ListBox Sections = new ListBox();
         readonly ContentControl page = new ContentControl();
+        SettingsPager[] languagePages;
         readonly ProgramSettings settings;
         internal readonly UpdatesView UpdatePage;
         readonly ArchiveSettings archives;
@@ -31,6 +32,7 @@ namespace FileCompass
         string originalColor=FluentColors.Current.Id; string selectedColor=FluentColors.Current.Id;
         internal readonly ComboBox LanguageChoice = new ComboBox { MinWidth = 180 };
 
+        readonly NetworkScheduleEditor networkSchedule;
         readonly MainWindow main;
         internal readonly ConnectionsView Connections;
         readonly FontChoiceControl interfaceFont, fileListFont;
@@ -145,9 +147,12 @@ namespace FileCompass
             }); remember.IsEnabled = main != null; view.Children.Add(remember);
             view.Children.Add(new TextBlock { Text = L.Text("settings.saveViewHelp"), TextWrapping = TextWrapping.Wrap, Foreground = FluentTheme.Muted, Margin = new Thickness(0, 16, 0, 0) });
             var network = Page(L.Text("network.connectionsTitle"), L.Text("connections.settingsDescription"));
-            Connections=null;
-            network.Children.Add(new TextBlock{Text="Profily a cloudové účty spravujte v samostatném okně. Nastavení vzhledu a chování připojení je oddělené od připojování.",TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,12,0,18)});
-            foreach(bool cloud in new[]{false,true}){bool selectedCloud=cloud;network.Children.Add(CopyUi.Button(cloud?L.Text("connections.cloudTab"):L.Text("network.connectionsTitle"),delegate{new ConnectionsDialog(this,main,connectionsStore??(main==null?new NetworkSettingsStore(NetworkSettingsStore.DefaultPath):main.ConnectionSettings),null,selectedCloud).ShowDialog();}));}
+            Connections = new ConnectionsView(this, main, connectionsStore ?? (main == null ? new NetworkSettingsStore(NetworkSettingsStore.DefaultPath) : main.ConnectionSettings), true);
+            networkSchedule = new NetworkScheduleEditor(settings);
+            var scheduleTab = new TabItem { Header = L.Text("schedule.tab"), Content = networkSchedule }; Connections.Tabs.Items.Add(scheduleTab);
+            Connections.BusyChanged += delegate(bool busy) { Sections.IsEnabled = !busy; apply.IsEnabled = !busy; ok.IsEnabled = !busy; scheduleTab.IsEnabled = !busy; };
+            network.Children.Add(Connections);
+            Closing += delegate(object sender, System.ComponentModel.CancelEventArgs e) { if (!Connections.AllowHostClose()) e.Cancel = true; };
 
             Closed += delegate { if (!appearanceSaved) { FluentColors.Select(originalColor); ApplicationBrand.Apply(originalApplicationIcon); PreviewToolbar(originalTheme); } if (Connections != null) Connections.DisposeManagers(); };
             var behavior = Page(L.Text("settings.fileOperations"), L.Text("settings.fileOperationsDescription"));
@@ -160,7 +165,7 @@ namespace FileCompass
             var visibilityGroup=(GroupBox)visibility.Parent;var folderGroup=(GroupBox)folderViews.Parent;var refreshGroup=(GroupBox)refreshing.Parent;detachGroup(visibilityGroup);detachGroup(folderGroup);detachGroup(refreshGroup);panelsPage.Children.Add(Row(sizeUnitsGroup,visibilityGroup));panelsPage.Children.Add(Row(folderGroup,refreshGroup));icons.Children.Insert(3,iconSizesGroup);
             AddAppearanceChoices(appearance);
             names=new[]{names[0],names[1],names[8],names[2],names[3],names[4],names[5],names[6],names[7]};pages=new[]{pages[0],pages[1],pages[8],pages[2],pages[3],pages[4],pages[5],pages[6],pages[7]};
-            OrganizeSettings(pages);var boundedPages=pages.Select(x=>new SettingsPager(x)).ToArray();
+            OrganizeSettings(pages);var boundedPages=languagePages=pages.Select(x=>new SettingsPager(x)).ToArray();
             foreach (string name in names) Sections.Items.Add(name);
             Sections.SelectionChanged += delegate { if (Sections.SelectedIndex >= 0) { page.Content = boundedPages[Sections.SelectedIndex]; QueueSettingsFit(); Dispatcher.BeginInvoke(new Action(delegate{CleanTheme.Refresh(this);})); } };
             Sections.SelectedIndex = Math.Max(0, Array.IndexOf(names, section));
@@ -204,7 +209,7 @@ namespace FileCompass
                 settings.InternalCodePreview = internalCodePreview.IsChecked == true; settings.AutomaticFolderViews = automaticFolderViews.IsChecked == true;
                 settings.SizeUnits=new[]{"SI","IEC","Bytes"}[Math.Max(0,sizeUnits.SelectedIndex)];
                 settings.ShowHiddenFiles = showHidden.IsChecked == true; settings.ShowSystemFiles = showSystem.IsChecked == true;
-                fileBehavior.Apply(); startupPreferences.Apply();
+                fileBehavior.Apply(); startupPreferences.Apply(); networkSchedule.Apply(settings);
                 settings.FluentColor=selectedColor; settings.WindowBackdrop = "None"; settings.ColorTheme = "Light";
                 settings.InterfaceMotif = "Clean";
                 string language = L.SupportedLanguages[LanguageChoice.SelectedIndex];
@@ -220,10 +225,10 @@ namespace FileCompass
                 if(Object.ReferenceEquals(input,rarPath))approvals.Add(archives.RarExecutable());
             }
             foreach(string tool in approvals.Distinct(StringComparer.OrdinalIgnoreCase))ToolTrust.Approve(tool);
-            UpdatePage.SavePreferences(); settings.Save(); archives.Save(); new ToolbarThemeSettings { Theme = selectedTheme, ApplicationIcon = selectedApplicationIcon }.Save();
+            UpdatePage.SavePreferences(); settings.Save(); NetworkSchedule.Update(settings); archives.Save(); new ToolbarThemeSettings { Theme = selectedTheme, ApplicationIcon = selectedApplicationIcon }.Save();
                 L.SaveSelection(language);
                 ApplicationBrand.Apply(selectedApplicationIcon); ToolbarThemeSettings.Current = selectedTheme; if (main != null) { main.ApplyRefreshSettings(settings.AutoRefresh, settings.WatchNetworkFolders); main.ApplyDisplaySettings(settings); main.ApplyToolbarTheme(selectedTheme); }
-                if(L.Language!=language){L.ChangeLanguage(language);LiveLanguage.Refresh(main);}
+                if(L.Language!=language){L.ChangeLanguage(language);LiveLanguage.Refresh(main); LiveLanguage.RefreshElement(this); foreach(var p in languagePages) p.RefreshLanguage(); networkSchedule.RefreshLanguage();}
                 foreach(var input in new[]{imagePath,mediaPath,editorPath,rarPath,arjPath,lhaPath})savedProgramPaths[input]=CleanPath(input.Text);
                 explicitProgramSelections.Clear();
         }

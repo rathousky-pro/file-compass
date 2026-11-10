@@ -206,7 +206,7 @@ namespace FileCompass
                 }
                 SetQuickFilter(tab.Saved.Filter); history.Clear(); forwardHistory.Clear(); foreach (var path in tab.History.Reverse()) history.Push(path); foreach (var path in tab.Forward.Reverse()) forwardHistory.Push(path);
             } catch (Exception ex) { ShowTabUnavailable(tab,L.Text("tabs.openFailedPrefix")+ex.Message); }
-            finally { Loading(false); switchingTabs = false; RenderTabs(); ConfigureWatcher(); activate(this); List.Focus(); }
+            finally { Loading(false); switchingTabs = false; RenderTabs(); ConfigureWatcher(); activate(this); FocusFiles(); }
         }
         internal void CloseTab(int index)
         {
@@ -247,6 +247,7 @@ namespace FileCompass
                 AddTabAction(menu, saved.Locked ? L.Text("action.unlock") : L.Text("tabs.lockHomeFolder"), delegate { LockTab(index); });
                 AddTabAction(menu, L.Text("tabs.moveLeft"), delegate { MoveTab(index, -1); }); AddTabAction(menu, L.Text("tabs.moveRight"), delegate { MoveTab(index, 1); });
                 AddTabAction(menu, L.Text("tabs.renameMenu"), delegate { string label = NavigationPrompt(L.Text("tabs.title"), L.Text("tabs.nameLabel"), saved.Label); if (label != null) { saved.Label = label; RenderTabs();NotifyTabsChanged(); } });
+                AddTabStartMenu(menu,index);
                 var tabPath=new PathTextBlock{FullPath=TabPath(i),Prefix=TabPrefix(i),Width=Math.Max(20,widths[i]-24),Foreground=button.Foreground};button.Content=tabPath;
                 button.ContextMenu = menu;
                 if(i==tabIndex){
@@ -259,6 +260,22 @@ namespace FileCompass
                 if(AppearanceTheme.IsClean){menu.Items.Add(new Separator());AddTabAction(menu,L.Text("navigation.editPathShortcutTooltip"),FocusAddress);AddTabAction(menu,L.Text("favorites.title"),delegate{if(BookmarksRequested!=null)BookmarksRequested(this);});var recent=new MenuItem{Header=L.Text("navigation.folderHistory")};foreach(string path in history.Distinct(StringComparer.OrdinalIgnoreCase).Take(20)){string captured=path;AddTabActionTo(recent,captured,delegate{Navigate(captured,true);});}recent.IsEnabled=recent.Items.Count>0;menu.Items.Add(recent);}
                 cleanBreadcrumbFrame.ContextMenu=menu;
             }
+        }
+        void AddTabStartMenu(ContextMenu menu,int index) {
+            var start=new MenuItem{Header=L.Text("menu.start"),Tag="tab-start-menu"};
+            Action<string,Action<MainWindow>,string> add=(key,action,shortcut)=>{
+             var item=new MenuItem{Header=L.Text(key),InputGestureText=shortcut};
+             item.Click+=async delegate{
+                if(index!=tabIndex){SwitchTab(index);if(TabNavigationTask!=null)await TabNavigationTask;}
+                if(index!=tabIndex || LocalLoading || IsLoading)return;
+                var owner=Window.GetWindow(this) as MainWindow;if(owner==null)return;
+                activate(this);action(owner);
+             };start.Items.Add(item);
+            };
+            add("action.openExplorer",w=>w.OpenExplorer(),"");
+            add("action.runCommandPromptHere",w=>w.OpenCommandPrompt(),"");
+            add("action.runPowerShellHere",w=>w.OpenPowerShell(),"Ctrl+Alt+P");
+            menu.Items.Add(new Separator());menu.Items.Add(start);
         }
         static void AddTabActionTo(MenuItem parent,string title,Action action){var item=new MenuItem{Header=title};item.Click+=delegate{action();};parent.Items.Add(item);}
         string TabPath(int index){return index==tabIndex&&CurrentPath!=null?CurrentPath:tabs[index].Saved.Path??"";}

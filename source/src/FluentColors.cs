@@ -44,10 +44,10 @@ new FluentPalette("silver","Světlá šedá","Neutrální stříbrný rám","#53
    }
   }
   internal static void Choices(Panel parent,Action<string> selected){
-   var group=FluentTheme.Section(parent,"Barevný motiv · Fluent Contrast");
-   group.Children.Add(new TextBlock{Text="Náhled se projeví ihned. Použít změnu uloží; Zrušit vrátí předchozí motiv.",TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,0,0,10)});
+   var group=FluentTheme.Section(parent,L.Text("settings.colorTheme"));
+   group.Children.Add(new TextBlock{Text=L.Text("newui.11"),TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,0,0,10)});
    var grid=new WrapPanel();group.Children.Add(grid);
-   foreach(var p in All){var palette=p;var label=new StackPanel{Orientation=Orientation.Horizontal};label.Children.Add(new Border{Width=24,Height=24,CornerRadius=new CornerRadius(6),Background=CompactTheme.ColorBrush(p.Accent),Margin=new Thickness(0,0,10,0)});label.Children.Add(new TextBlock{Text=p.Name,VerticalAlignment=VerticalAlignment.Center});var choice=new RadioButton{GroupName="FluentColor",Content=label,ToolTip=p.Note,IsChecked=Current.Id==p.Id,MinWidth=150,Margin=new Thickness(0,5,12,9)};choice.Checked+=delegate{Select(palette.Id);selected(palette.Id);};grid.Children.Add(choice);}
+   foreach(var p in All){var palette=p;var label=new StackPanel{Orientation=Orientation.Horizontal};label.Children.Add(new Border{Width=24,Height=24,CornerRadius=new CornerRadius(6),Background=CompactTheme.ColorBrush(p.Accent),Margin=new Thickness(0,0,10,0)});label.Children.Add(new TextBlock{Text=L.Text("palette."+p.Id),VerticalAlignment=VerticalAlignment.Center});var choice=new RadioButton{GroupName="FluentColor",Content=label,ToolTip=L.Text("palette."+p.Id),IsChecked=Current.Id==p.Id,MinWidth=150,Margin=new Thickness(0,5,12,9)};choice.Checked+=delegate{Select(palette.Id);selected(palette.Id);};grid.Children.Add(choice);}
   }
  }
 }

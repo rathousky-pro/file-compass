@@ -14,6 +14,7 @@ namespace FileCompass
         readonly ListBox jobs = new ListBox { Height = 95 };
         readonly ListView files = new ListView();
         readonly ComboBox speedLimit;
+        readonly TextBlock speedLimitStatus = new TextBlock { Margin = new Thickness(0, 10, 0, 0), TextWrapping = TextWrapping.Wrap, Foreground = FluentTheme.Accent };
         readonly TransferProgressLayout presentation;
         readonly PathTextBlock sourcePath=new PathTextBlock(), targetPath=new PathTextBlock();
         readonly TextBlock rate=new TextBlock{Foreground=FluentTheme.Muted,Margin=new Thickness(0,8,0,6)};
@@ -41,6 +42,7 @@ namespace FileCompass
             presentation=new TransferProgressLayout(this,L.Text("queue.networkCopyTitle"));SizeToContent=SizeToContent.Height;
             files.MaxHeight=Math.Max(80,Math.Min(150,MaxHeight-550));
             empty=QueuePresentation.Empty(L.Text("queue.designEmpty"),L.Text("queue.designNetworkHelp"));presentation.Supplement.Children.Add(empty);
+            System.Windows.Automation.AutomationProperties.SetAutomationId(speedLimitStatus, "NetworkEffectiveLimit"); presentation.Supplement.Children.Add(speedLimitStatus);
             sourcePath.Margin=targetPath.Margin=new Thickness(0,3,0,3);presentation.DetailBody.Children.Add(sourcePath);presentation.DetailBody.Children.Add(targetPath);
             presentation.DetailBody.Children.Add(rate);
             presentation.DetailBody.Children.Add(new TextBlock{Text=L.Text("transfer.speedHistory"),Foreground=FluentTheme.Muted,Margin=new Thickness(0,4,0,4)});presentation.DetailBody.Children.Add(speedTrend);
@@ -53,9 +55,9 @@ namespace FileCompass
             controls.Children.Add(CopyUi.Button(L.Text("queue.cancelItem"),delegate { var job = jobs.SelectedItem as NetworkTransferJob; var file = files.SelectedItem as NetworkQueueItem; if (job != null && file != null) job.CancelItem(file); }));
             controls.Children.Add(CopyUi.Button(L.Text("action.moveUp"),delegate { var job = jobs.SelectedItem as NetworkTransferJob; var file = files.SelectedItem as NetworkQueueItem; if (job != null && file != null) job.Reorder(file,-1); }));
             controls.Children.Add(CopyUi.Button(L.Text("action.moveDown"),delegate { var job = jobs.SelectedItem as NetworkTransferJob; var file = files.SelectedItem as NetworkQueueItem; if (job != null && file != null) job.Reorder(file,1); }));
-            var limit = speedLimit = new ComboBox { IsEditable=true, Width=150, Height=30, Text="0", VerticalContentAlignment=VerticalAlignment.Center, ToolTip=L.Text("transfer.speedLimitHelp"), Margin=new Thickness(6,3,3,3) };
+            var limit = speedLimit = new ComboBox { IsEditable=true, Width=150, Height=30, Text="0", VerticalContentAlignment=VerticalAlignment.Center, ToolTip=L.Text("transfer.manualLimitHelp"), Margin=new Thickness(6,3,3,3) };
             foreach (string preset in new[] { "0", "512", "1024", "5120", "10240", "25600", "51200", "102400" }) limit.Items.Add(preset);
-            controls.Children.Add(new TextBlock { Text=L.Text("queue.designSpeedTitle")+" (KiB/s):", VerticalAlignment=VerticalAlignment.Center, Margin=new Thickness(12,0,0,0) }); controls.Children.Add(limit);
+            controls.Children.Add(new TextBlock { Text=L.Text("transfer.manualLimit")+" (KiB/s):", VerticalAlignment=VerticalAlignment.Center, Margin=new Thickness(12,0,0,0) }); controls.Children.Add(limit);
             Action applyLimit=delegate { long value; var job=jobs.SelectedItem as NetworkTransferJob; if(job==null)return;
                 if(Int64.TryParse(limit.Text.Trim(),out value)&&value>=0&&value<=1048576)job.Limit(value*1024);else MessageBox.Show(this,L.Text("transfer.speedLimitRangeRequired"),L.Text("transfer.speedLimitTitle")); };
             controls.Children.Add(CopyUi.Button(L.Text("action.set"),applyLimit));
@@ -107,6 +109,13 @@ namespace FileCompass
             files.Height = Math.Min(files.MaxHeight, Math.Max(64, 32 + Math.Min(4, files.Items.Count) * 28));
             if (selectedFile != null) files.SelectedItem = files.Items.Cast<NetworkQueueItem>().FirstOrDefault(x => x.Source == selectedFile.Source && x.Destination == selectedFile.Destination);
             presentation.ShowProgress(any);presentation.Details.Visibility=any?Visibility.Visible:Visibility.Collapsed;presentation.CurrentFile.Visibility=any?Visibility.Visible:Visibility.Collapsed;
+            long planned = job == null ? 0 : NetworkSchedule.Planned(DateTime.Now), manual = job == null ? 0 : job.SpeedLimit;
+            long effective = manual == 0 ? planned : planned == 0 ? manual : Math.Min(manual, planned);
+            speedLimitStatus.Visibility = effective > 0 ? Visibility.Visible : Visibility.Collapsed;
+            if (effective > 0) {
+                string reason = planned > 0 && manual > 0 && planned == manual ? L.Text("transfer.limitBoth") : planned > 0 && (manual == 0 || planned < manual) ? L.Text("transfer.limitSchedule") : L.Text("transfer.limitManual");
+                speedLimitStatus.Text = L.Format("transfer.effectiveLimit", effective / 1024, reason);
+            }
             if(job!=null){
                 var update=job.Update();var metrics=job.Metrics();
                 presentation.Heading.Text=job.Move?L.Text("transfer.moveStatusPrefix"):L.Text("copy.title");

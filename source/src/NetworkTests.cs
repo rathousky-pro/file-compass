@@ -38,6 +38,11 @@ namespace FileCompass
             Action<bool, string> assert = delegate(bool value, string text) { Check(value, text); passed.Add(text); };
             try
             {
+                var schedule = new ProgramSettings { NetworkScheduleEnabled = true, NetworkScheduleDays = 1, NetworkScheduleStart = 22 * 60, NetworkScheduleEnd = 6 * 60, NetworkScheduleKiB = 512 };
+                assert(NetworkSchedule.Scheduled(schedule, new DateTime(2026, 11, 9, 23, 0, 0)) == 512 * 1024, "Monday overnight schedule starts on selected day");
+                assert(NetworkSchedule.Scheduled(schedule, new DateTime(2026, 11, 10, 5, 59, 0)) == 512 * 1024 && NetworkSchedule.Scheduled(schedule, new DateTime(2026, 11, 10, 6, 0, 0)) == 0, "overnight schedule ends on next day at exclusive boundary");
+                assert(NetworkSchedule.Scheduled(schedule, new DateTime(2026, 11, 10, 23, 0, 0)) == 0, "unselected weekday is unlimited");
+                NetworkSchedule.Update(schedule); assert(NetworkSchedule.Effective(100 * 1024, new DateTime(2026, 11, 9, 23, 0, 0)) == 100 * 1024, "stricter manual speed wins"); NetworkSchedule.Update(new ProgramSettings());
                 var store = new NetworkSettingsStore(Path.Combine(root, "connections.xml"));
                 foreach (NetworkProtocol type in Enum.GetValues(typeof(NetworkProtocol)))
                 {

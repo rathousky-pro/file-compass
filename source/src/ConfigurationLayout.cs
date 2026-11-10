@@ -123,8 +123,10 @@ namespace FileCompass {
         }
         static void ArrangeBehavior(FileBehaviorEditor editor) {
             var children = Take(editor);
-            var general = Card(L.Text("settings.listControls"), children.Take(9).ToArray());
-            var copy = Card(((TextBlock)children[9]).Text, children.Skip(10).Take(6).ToArray());
+            int copyHeader = Array.FindIndex(children, item => item is TextBlock);
+            int deleteHeader = Array.FindIndex(children, copyHeader + 1, item => item is TextBlock);
+            var general = Card(L.Text("settings.listControls"), children.Take(copyHeader).ToArray());
+            var copy = Card(((TextBlock)children[copyHeader]).Text, children.Skip(copyHeader + 1).Take(deleteHeader - copyHeader - 1).ToArray());
             var options = Row(general, copy); Grid.SetIsSharedSizeScope(options, true);
             foreach (var card in new[] { general, copy }) {
                 var content = (StackPanel)card.Content; var checks = Take(content); var rows = new Grid();
@@ -136,8 +138,9 @@ namespace FileCompass {
                 content.Children.Add(rows);
             }
             editor.Children.Add(options);
-            editor.Children.Add(Row(Card(((TextBlock)children[16]).Text, children[17])));
-            editor.Children.Add(children[18]);
+            int helpIndex = Array.FindIndex(children, deleteHeader + 1, item => item is TextBlock);
+            editor.Children.Add(Row(Card(((TextBlock)children[deleteHeader]).Text, children.Skip(deleteHeader + 1).Take(helpIndex - deleteHeader - 1).ToArray())));
+            foreach (var item in children.Skip(helpIndex)) editor.Children.Add(item);
         }
     }
 }

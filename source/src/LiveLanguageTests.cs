@@ -75,6 +75,18 @@ namespace FileCompass {
                     settings.Dispatcher.BeginInvoke(new Action(()=>FluentUiTests.Children<Button>(settings).First(x=>Convert.ToString(x.Content)==L.Text("action.cancel")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent))));
                     check(settings.ShowDialog()==false&&L.Language=="cs"&&L.PreferredLanguage=="cs","cancel keeps the active and saved language unchanged");
                 }
+                {
+                    var settings = new ConfigurationDialog(main) { Left=-18000, Top=-18000, ShowActivated=false, WindowStartupLocation=WindowStartupLocation.Manual };
+                    settings.Show(); settings.UpdateLayout();
+                    foreach (string language in new[] { "en", "de", "es", "nl", "pl", "fr", "pt", "cs" }) {
+                        settings.LanguageChoice.SelectedIndex = Array.IndexOf(L.SupportedLanguages, language); settings.SaveChanges(); settings.UpdateLayout();
+                        check(settings.IsVisible && settings.Title == L.Text("menu.configuration"), "open settings title switches to " + language);
+                        check(AdvancedToolsTests.Visual<Button>(settings).Any(x => Convert.ToString(x.Content) == L.Text("action.apply")), "apply button switches to " + language);
+                        check(settings.Connections.Tabs.Items.Cast<TabItem>().Select(x => Convert.ToString(x.Header)).SequenceEqual(new[] { L.Text("network.connectionsTitle"), L.Text("connections.cloudTab"), L.Text("schedule.tab") }), "hidden network page switches to " + language);
+                        check(settings.Sections.SelectedIndex == 0, "language change preserves selected page " + language);
+                    }
+                    settings.Close();
+                }
                 ExternalToolsRegression(root,main,check);
                 File.WriteAllText(Path.Combine(root,"result.txt"),"PASS: "+checks+" checks");return 0;
             }catch(Exception ex){File.WriteAllText(Path.Combine(root,"result.txt"),"FAIL after "+checks+" checks: "+ex);return 1;}

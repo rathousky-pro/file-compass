@@ -22,9 +22,18 @@ namespace FileCompass
         string localReturnPath;
         public string DisplayPath { get { return IsExt ? ExtLocations.Get(CurrentPath).Label+" / "+ExtLocations.Relative(CurrentPath) : IsArchive ? Archive.Display + "\\" + (ArchivePrefix ?? "").Replace('/', '\\') : IsRemote ? Remote.Display(CurrentPath) : IsShellBrowser ? ShellLocationName : CurrentPath; } }
         public event EventHandler LoadingChanged;
+        bool restoreRemoteListFocus;
+        System.Windows.IInputElement focusAfterRemoteDisable;
         void Loading(bool value)
         {
+            if (value) restoreRemoteListFocus = List.IsKeyboardFocusWithin;
             IsLoading = value; IsEnabled = !value;
+            if (value) focusAfterRemoteDisable = System.Windows.Input.Keyboard.FocusedElement;
+            else if (restoreRemoteListFocus) {
+                restoreRemoteListFocus = false;
+                var owner = Window.GetWindow(this); var focused = System.Windows.Input.Keyboard.FocusedElement;
+                if (IsActivePanel && (owner == null || owner.IsActive) && (focused == null || focused == owner || focused == focusAfterRemoteDisable || List.IsKeyboardFocusWithin)) FocusFiles();
+            }
             if (LoadingChanged != null) LoadingChanged(this, EventArgs.Empty);
         }
         List<Entry> RemoteRows(RemoteDirectoryInfo directory, string path)

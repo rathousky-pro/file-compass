@@ -5,7 +5,7 @@ namespace FileCompass {
   internal void VerifyReferenceStrip(string root,Action<bool,string> check){
    var main=Window.GetWindow(this);Action pump=()=>{NavigationTests.Wait(Task.Delay(150));main.UpdateLayout();};pump();
    check(cleanBreadcrumbFrame.IsVisible&&cleanBreadcrumbFrame.Height==46,"navigation and tabs use one compact rounded row");
-   check(cleanBreadcrumbDock.Children.OfType<Button>().Count()==2&&cleanRootButton.Content.Equals("\\")&&cleanParentButton.Content.Equals("↑"),"combined row retains root and parent actions");
+   check(cleanBreadcrumbDock.Children.OfType<Button>().Count()==2&&cleanRootButton.Content.Equals("\\")&&cleanParentButton.Content.Equals(".."),"combined row retains root and parent actions");
    check(cleanBreadcrumbDock.Children.Contains(tabRow)&&((FrameworkElement)cleanBreadcrumbFrame.Parent).ActualHeight<60,"tabs share the navigation row instead of adding a second line");
    var face=activeTabFace;check(face.BorderThickness==new Thickness(0)&&face.CornerRadius.TopLeft==8&&face.CornerRadius.BottomLeft==0,"active tab has rounded upper corners and joins the file panel");
    check(FluentUiTests.Children<Button>(face).Any(x=>Convert.ToString(x.Tag)=="panel-tab-close"),"each tab has a visible close button");

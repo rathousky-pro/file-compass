@@ -37,7 +37,7 @@ namespace FileCompass
                 settings.FoldersAlwaysByName = false; panel.ApplyDisplaySettings(settings);
                 check(panel.List.Items.Cast<Entry>().Where(x => x.IsDirectory && !x.IsParent).First().FullPath == zulu, "normal folder sorting follows date column");
                 string disk = Path.GetPathRoot(data); panel.DriveFolderResolver = delegate { return data; }; panel.SelectDrive(disk); NavigationTests.Wait(panel.NavigationTask);
-                check(panel.CurrentPath == disk, "root preference overrides remembered drive folder");
+                check(panel.CurrentPath == data, "other panel folder takes precedence over the old root preference");
                 settings.DriveAlwaysRoot = false; panel.ApplyDisplaySettings(settings); panel.SelectDrive(disk); NavigationTests.Wait(panel.NavigationTask);
                 check(panel.CurrentPath == data, "last-folder preference uses remembered drive folder");
                 settings.WindowsMouseSelection = false; panel.ApplyDisplaySettings(settings); check(panel.List.SelectionMode == SelectionMode.Single, "File Compass selection can be restored");

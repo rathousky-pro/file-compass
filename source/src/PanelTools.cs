@@ -30,6 +30,7 @@ namespace FileCompass
         internal bool WatcherActive { get { return folderWatcher != null; } }
         internal void InitializePanelTools()
         {
+            InitializeRightScroll();
             List.AllowDrop = true;
             List.PreviewTextInput += delegate(object s, TextCompositionEventArgs e) {
                 var modifiers=Keyboard.Modifiers;

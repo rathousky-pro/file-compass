@@ -5,11 +5,11 @@ namespace FileCompass
     public partial class FilePanel
     {
         internal static double IconSize(double value,double fallback){return Double.IsNaN(value)||Double.IsInfinity(value)?fallback:Math.Max(8,Math.Min(32,value));}
-        bool showHiddenFiles = true, showSystemFiles = true, naturalSorting = true, foldersAlwaysByName, driveAlwaysRoot, maskIncludesFolders = true, folderBrackets, fullNameTooltips = true;
+        bool showHiddenFiles = true, showSystemFiles = true, naturalSorting = true, foldersAlwaysByName, maskIncludesFolders = true, folderBrackets, fullNameTooltips = true;
         internal void ApplyDisplaySettings(ProgramSettings settings)
         {
             driveIconSize=IconSize(settings.DriveIconSize,10);
-            SetAutomaticFolderViews(settings.AutomaticFolderViews); foldersAlwaysByName = settings.FoldersAlwaysByName; driveAlwaysRoot = settings.DriveAlwaysRoot; maskIncludesFolders = settings.MaskIncludesFolders; ApplySelectionMode(settings.WindowsMouseSelection);
+            SetAutomaticFolderViews(settings.AutomaticFolderViews); foldersAlwaysByName = settings.FoldersAlwaysByName; maskIncludesFolders = settings.MaskIncludesFolders; ApplySelectionMode(settings.WindowsMouseSelection);
             naturalSorting = settings.NaturalSorting; folderBrackets = settings.FolderBrackets; fullNameTooltips = settings.FullNameTooltips;
             showHiddenFiles = settings.ShowHiddenFiles; showSystemFiles = settings.ShowSystemFiles;
             System.Windows.Documents.TextElement.SetFontFamily(this, DisplayPreferences.Font(settings.InterfaceFontFamily)); System.Windows.Documents.TextElement.SetFontSize(this, DisplayPreferences.Size(settings.InterfaceFontSize));

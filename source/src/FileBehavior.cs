@@ -42,7 +42,6 @@ namespace FileCompass
             Add("settings.renameWithoutExtension", settings.RenameWithoutExtension, delegate(bool value) { settings.RenameWithoutExtension = value; });
             Add("settings.naturalSorting", settings.NaturalSorting, delegate(bool value) { settings.NaturalSorting = value; });
             Add("settings.foldersAlwaysByName", settings.FoldersAlwaysByName, delegate(bool value) { settings.FoldersAlwaysByName = value; });
-            Add("settings.driveAlwaysRoot", settings.DriveAlwaysRoot, delegate(bool value) { settings.DriveAlwaysRoot = value; });
             Add("settings.windowsMouseSelection", settings.WindowsMouseSelection, delegate(bool value) { settings.WindowsMouseSelection = value; });
             Add("settings.maskIncludesFolders", settings.MaskIncludesFolders, delegate(bool value) { settings.MaskIncludesFolders = value; });
             Add("settings.archiveNewestFileDate", settings.ArchiveNewestFileDate, delegate(bool value) { settings.ArchiveNewestFileDate = value; });

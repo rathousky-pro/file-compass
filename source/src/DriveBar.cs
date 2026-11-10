@@ -18,7 +18,7 @@ namespace FileCompass
         {
             if (IsLoading) return;
             if(ExtLocations.IsPath(root)){activate(this);Navigate(root,true);return;}
-            string path = driveAlwaysRoot || DriveFolderResolver == null ? root : DriveFolderResolver(root);
+            string path = DriveFolderResolver == null ? root : DriveFolderResolver(root);
             activate(this); FocusFiles(); Navigate(path ?? root, true);
         }
         readonly DispatcherTimer driveTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(10) };

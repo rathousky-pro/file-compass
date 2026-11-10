@@ -1,14 +1,42 @@
-﻿using System;using System.Collections.Generic;using System.Linq;using System.Windows;using System.Windows.Controls;using System.Windows.Input;
+﻿using System;using System.Collections.Generic;using System.Linq;using System.Windows;using System.Windows.Controls;using System.Windows.Input;using System.Windows.Media;using System.Windows.Threading;
 namespace FileCompass {
  public partial class FilePanel {
   bool contextPending;Entry contextPressedEntry;int contextPressTimestamp;
+  readonly DispatcherTimer rightScrollTimer=new DispatcherTimer(DispatcherPriority.Input){Interval=TimeSpan.FromMilliseconds(30)};
+#if APP_TESTS
+  internal Func<bool> RightPressedForTests;
+  internal Func<Point> RightPositionForTests;
+#endif
+  void InitializeRightScroll(){rightScrollTimer.Tick+=delegate{
+   bool pressed=Mouse.RightButton==MouseButtonState.Pressed;Point point=Mouse.GetPosition(List);
+#if APP_TESTS
+   if(RightPressedForTests!=null)pressed=RightPressedForTests();if(RightPositionForTests!=null)point=RightPositionForTests();
+#endif
+   if(!contextPending){rightScrollTimer.Stop();return;}if(!pressed){FinishContextEntry(rightHoldClock.Elapsed);return;}ContinueRightGesture(point);if(rightDragging)RightAutoScroll(point);
+  };}
+  internal void RightAutoScroll(Point point){
+   if(!rightDragging||rightDragLast==null)return;
+   // Keep the scroll target tied to the marked item. ScrollIntoView handles both
+   // virtualized logical scrolling and pixel-based panel layouts asynchronously.
+   int direction=point.Y<45?-1:point.Y>List.ActualHeight-30?1:0;
+   if(direction==0)return;
+   double outside=direction<0?Math.Max(0,-point.Y):Math.Max(0,point.Y-List.ActualHeight);
+   int speed=1+Math.Min(23,(int)(outside/12));
+   int current=List.Items.IndexOf(rightDragLast),next=Math.Max(0,Math.Min(List.Items.Count-1,current+direction*speed*Math.Max(1,DisplayColumns)));
+   if(current<0||next==current)return;
+   var entry=List.Items[next] as Entry;if(entry==null)return;
+   ContinueRightMark(entry);List.ScrollIntoView(entry);
+  }
+
   internal static bool IsContextHold(TimeSpan elapsed,bool moved){return !moved && elapsed>=TimeSpan.FromMilliseconds(600);}
   internal bool CanShowWindowsMenu {get{return !IsRemote&&!IsArchive&&!IsVirtualBrowser && ShellFileMenu.Compatible(Selected().Where(x=>!x.IsParent).Select(x=>x.FullPath).ToArray());}}
   internal void SelectContextEntry(Entry entry){if(entry==null)return;activate(this);if(windowsSelection){if(!List.SelectedItems.Contains(entry))List.SelectedItem=entry;}else{if(!entry.IsMarked&&List.Items.Cast<Entry>().Any(x=>x.IsMarked))MarkAll(false);List.SelectedItem=entry;}}
   internal void FocusRightEntry(Entry entry){if(entry==null)return;bool previous=synchronizingSelection;synchronizingSelection=true;try{List.SelectedItem=entry;}finally{synchronizingSelection=previous;}SyncWindowsSelection();}
-  internal void BeginContextEntry(Entry entry,Point point){contextPressedEntry=entry;activate(this);FocusRightEntry(entry);contextPressTimestamp=Environment.TickCount;rightStart=point;rightMoved=false;contextPending=true;StartRightHoldIndicator(point);}
+  internal void BeginContextEntry(Entry entry,Point point){contextPressedEntry=entry;activate(this);FocusRightEntry(entry);contextPressTimestamp=Environment.TickCount;rightStart=point;rightMoved=false;contextPending=true;StartRightHoldIndicator(point);rightScrollTimer.Start();}
   void BeginFileContextGesture(MouseButtonEventArgs e){var row=RowAt(e.GetPosition(List));if(row==null)return;BeginContextEntry((Entry)row.Content,e.GetPosition(List));contextPressTimestamp=e.Timestamp;bool previous=synchronizingSelection;synchronizingSelection=true;try{row.Focus();}finally{synchronizingSelection=previous;}SyncWindowsSelection();Mouse.Capture(List,CaptureMode.SubTree);e.Handled=true;}
-  void ContinueFileContextGesture(MouseEventArgs e){if(!contextPending||e.RightButton!=MouseButtonState.Pressed)return;var delta=e.GetPosition(List)-rightStart;if(!rightMoved&&(Math.Abs(delta.X)>=SystemParameters.MinimumHorizontalDragDistance||Math.Abs(delta.Y)>=SystemParameters.MinimumVerticalDragDistance)){rightMoved=true;HideRightHoldIndicator();BeginRightMark(contextPressedEntry);}if(rightDragging){var row=RowAt(e.GetPosition(List));if(row!=null)ContinueRightMark((Entry)row.Content);}}
+  void ContinueFileContextGesture(MouseEventArgs e){if(e.RightButton==MouseButtonState.Pressed)ContinueRightGesture(e.GetPosition(List));}
+  void ContinueRightGesture(Point point){if(!contextPending)return;var delta=point-rightStart;if(!rightMoved&&(Math.Abs(delta.X)>=SystemParameters.MinimumHorizontalDragDistance||Math.Abs(delta.Y)>=SystemParameters.MinimumVerticalDragDistance)){rightMoved=true;HideRightHoldIndicator();BeginRightMark(contextPressedEntry);}if(rightDragging&&point.Y>=0&&point.Y<List.ActualHeight){var row=RowAt(point);if(row!=null)ContinueRightMark((Entry)row.Content);}}
+
   internal void FinishContextEntry(TimeSpan elapsed){if(!contextPending)return;if(!rightMoved&&IsContextHold(elapsed,false)){CompleteProgramContextHold();return;}var entry=contextPressedEntry;bool moved=rightMoved;contextPending=false;HideRightHoldIndicator();EndRightMark();Mouse.Capture(null);if(!moved&&entry!=null)ToggleMark(entry);}
   void EndFileContextGesture(MouseButtonEventArgs e){if(!contextPending){if(holdMenuShown)e.Handled=true;return;}FinishContextEntry(TimeSpan.FromMilliseconds(unchecked((uint)(e.Timestamp-contextPressTimestamp))));e.Handled=true;}
   internal async void ShowFileContextMenu(bool native){if(LocalLoading||IsLoading)return;activate(this);if(native&&CanShowWindowsMenu){try{await ShellMenuWorker.Show(Window.GetWindow(this),Selected().Where(x=>!x.IsParent).Select(x=>x.FullPath).ToArray());if(IsLoaded)Refresh();}catch(OperationCanceledException){}catch(Exception ex){if(IsLoaded)MessageBox.Show(Window.GetWindow(this),ex.Message,L.Text("context.windows"));}return;}if(List.ContextMenu!=null){List.ContextMenu.PlacementTarget=List;List.ContextMenu.IsOpen=true;}}

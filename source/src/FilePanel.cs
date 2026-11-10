@@ -118,9 +118,9 @@ namespace FileCompass
             InitializeAddress(pathRow);pathRow.Height=40;tabRow.Height=40;tabRow.VerticalAlignment=VerticalAlignment.Bottom;
             var pathStack=new StackPanel();cleanBreadcrumbDock=new DockPanel{Tag="panel-breadcrumb-actions",LastChildFill=true};
             cleanRootButton=CompactTheme.Button("\\",L.Text("navigation.driveRootTooltip"),delegate{if(CurrentPath!=null)Navigate(IsShellBrowser?WindowsShell.Computer:IsNetworkBrowser?NetworkBrowser.Root:IsExt?ExtLocations.Root(CurrentPath):IsRemote||IsArchive?"/":Path.GetPathRoot(CurrentPath),true);});
-            cleanParentButton=CompactTheme.Button("↑",L.Text("navigation.parentShortcutTooltip"),delegate{Up();});
+            cleanParentButton=CompactTheme.Button("..",L.Text("navigation.parentShortcutTooltip"),delegate{Up();});
             System.Windows.Automation.AutomationProperties.SetAutomationId(cleanRootButton,"PanelRoot");System.Windows.Automation.AutomationProperties.SetAutomationId(cleanParentButton,"PanelUp");
-            foreach(var action in new[]{cleanRootButton,cleanParentButton}){action.Tag="panel-breadcrumb";action.Width=30;action.Height=30;action.MinWidth=0;action.Margin=new Thickness(1,0,3,0);action.Padding=new Thickness(0);action.Background=CompactTheme.WhiteSurface;action.BorderBrush=CompactTheme.Line;action.BorderThickness=new Thickness(1);action.Foreground=FluentTheme.Accent;DockPanel.SetDock(action,Dock.Right);cleanBreadcrumbDock.Children.Add(action);}
+            foreach(var action in new[]{cleanRootButton,cleanParentButton}){action.Tag="panel-breadcrumb";action.Width=30;action.Height=30;action.MinWidth=0;action.Margin=new Thickness(1,0,3,0);action.Padding=new Thickness(0);action.Background=CompactTheme.WhiteSurface;action.BorderBrush=CompactTheme.Line;action.BorderThickness=new Thickness(1);action.Foreground=FluentTheme.Accent;action.FontWeight=FontWeights.Bold;action.FontSize=16;DockPanel.SetDock(action,Dock.Right);cleanBreadcrumbDock.Children.Add(action);}
             pathRow.Children.Clear();cleanBreadcrumbDock.Children.Add(tabRow);
             var pathEditor=new Grid();pathEditor.Children.Add(cleanBreadcrumbDock);pathEditor.Children.Add(address);
             cleanBreadcrumbFrame=new Border{Tag="panel-path",Child=pathEditor,Background=CompactTheme.PanelSurface,BorderThickness=new Thickness(0),CornerRadius=new CornerRadius(10),Margin=new Thickness(8,5,8,0),Padding=new Thickness(7,1,7,0),Height=46};
@@ -151,7 +151,7 @@ namespace FileCompass
             List.PreviewMouseRightButtonDown+=delegate(object sender,MouseButtonEventArgs e){var header=FileColumnHeader(e.OriginalSource as DependencyObject);if(header!=null){CancelFileContextGesture();if(header.ContextMenu==null)header.ContextMenu=MetadataColumnMenu("Name");header.ContextMenu.PlacementTarget=header;header.ContextMenu.IsOpen=true;e.Handled=true;return;}BeginFileContextGesture(e);};
             List.PreviewMouseMove+=delegate(object sender,MouseEventArgs e){ContinueFileContextGesture(e);};
             List.PreviewMouseRightButtonUp+=delegate(object sender,MouseButtonEventArgs e){if(FileColumnHeader(e.OriginalSource as DependencyObject)!=null){e.Handled=true;return;}EndFileContextGesture(e);};
-            List.LostMouseCapture+=delegate{CancelFileContextGesture();};
+            // The gesture timer keeps tracking the button outside the list even if WPF releases capture.
             // ListViewItem handles Space before a bubbling KeyDown reaches the list.
             // Handle file-manager commands on the tunnelling route instead.
             List.PreviewKeyDown += delegate(object sender, KeyEventArgs e)
@@ -176,7 +176,7 @@ namespace FileCompass
             List.MouseDoubleClick += delegate(object sender, MouseButtonEventArgs e) { if (windowsSelection && e.ChangedButton == MouseButton.Left && RowAt(e.GetPosition(List)) != null) { OpenSelected(); e.Handled = true; } };
             Grid.SetRow(List, 3); grid.Children.Add(List);
             status.Margin = new Thickness(9, 3, 5, 0); status.Foreground = FluentTheme.Muted; status.FontSize = 11;
-            System.Windows.Automation.AutomationProperties.SetAutomationId(status,"PanelStatus");System.Windows.Automation.AutomationProperties.SetAutomationId(panelRole,"PanelRole");var statusRow=new Grid();statusRow.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star)});statusRow.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(2,GridUnitType.Star)});capacity.Margin=new Thickness(8,0,12,0);capacity.VerticalAlignment=VerticalAlignment.Center;capacity.HorizontalAlignment=HorizontalAlignment.Right;capacity.TextTrimming=TextTrimming.CharacterEllipsis;Grid.SetColumn(capacity,1);status.TextTrimming=TextTrimming.CharacterEllipsis;statusRow.Children.Add(capacity);statusRow.Children.Add(status);Grid.SetRow(statusRow,4);grid.Children.Add(statusRow);
+            System.Windows.Automation.AutomationProperties.SetAutomationId(status,"PanelStatus");System.Windows.Automation.AutomationProperties.SetAutomationId(panelRole,"PanelRole");var statusRow=new Grid();statusRow.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star)});statusRow.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(2,GridUnitType.Star)});capacity.Margin=new Thickness(8,0,12,0);capacity.VerticalAlignment=VerticalAlignment.Center;capacity.HorizontalAlignment=HorizontalAlignment.Right;capacity.TextTrimming=TextTrimming.CharacterEllipsis;Grid.SetColumn(capacity,1);status.TextTrimming=TextTrimming.CharacterEllipsis;statusRow.Children.Add(capacity);statusRow.Children.Add(status);var statusSeparator=new Border{Tag="panel-status-separator",BorderBrush=CompactTheme.Line,BorderThickness=new Thickness(0,1,0,0),Child=statusRow};Grid.SetRow(statusSeparator,4);grid.Children.Add(statusSeparator);
             PreviewGotKeyboardFocus += delegate { activate(this); };
             PreviewMouseDown += delegate { activate(this); };
             InitializePanelTools();
@@ -231,7 +231,7 @@ namespace FileCompass
         }
         internal void BeginRightMark(Entry entry)
         {
-            RememberSelection();rightDragging = true; dragMark = !entry.IsMarked; dragVisited.Clear(); MarkDragged(entry);
+            RememberSelection();rightDragging = true; dragMark = !entry.IsMarked; dragVisited.Clear(); MarkDragged(entry);if(contextPending){rightMoved=true;HideRightHoldIndicator();rightScrollTimer.Start();}
         }
         internal void ContinueRightMark(Entry entry)
         {
@@ -241,7 +241,7 @@ namespace FileCompass
                 for (int i = Math.Min(from, to); i <= Math.Max(from, to); i++) MarkDragged((Entry)List.Items[i]);
             MarkDragged(entry);
         }
-        internal void EndRightMark() { rightDragging = false; rightDragLast=null;dragVisited.Clear(); }
+        internal void EndRightMark() { rightScrollTimer.Stop(); rightDragging = false; rightDragLast=null;dragVisited.Clear(); }
         public void ToggleMark(Entry entry) { RememberSelection(); if (entry != null && !entry.IsParent) entry.IsMarked = !entry.IsMarked; SyncWindowsSelection(); UpdateStatus(); }
         public void MarkAll(bool marked) { RememberSelection(); foreach (Entry entry in List.Items) entry.IsMarked = marked; SyncWindowsSelection(); UpdateStatus(); }
         public void InvertMarks() { RememberSelection(); foreach (Entry entry in List.Items) if (!entry.IsParent) entry.IsMarked = !entry.IsMarked; SyncWindowsSelection(); UpdateStatus(); }

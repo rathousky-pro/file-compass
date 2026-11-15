@@ -34,7 +34,7 @@ The gallery images are hosted in the official [website repository](https://githu
 2. Extract the ZIP, keeping all support directories alongside `File Compass.exe`.
 3. Launch `File Compass.exe` on Windows x64. **.NET Framework 4.8** is required; some previews also need **Microsoft Edge WebView2 Runtime**.
 
-The website currently lists **0.9.5 beta, build 20261110.44**. Check the Releases page for newer builds, release notes and checksums. There is no signed installer yet.
+Check the Releases page for the current build, release notes and checksums. There is no signed installer yet.
 
 ## Feedback and community
 
@@ -50,7 +50,7 @@ Start **bin/File Compass.exe** with all supporting directories beside it. Requir
 
 **F1** opens context-sensitive offline help. Help is external HTML, independent of the EXE and interface translations: open `help/index.html` in a browser, or choose **Open in browser** in the help window. Czech and English versions each contain 44 topics and 28 synthetic-demo screenshot scenes. Replace the complete `help` folder to update it independently. See the [user guide](docs/README.md).
 
-The Fluent workspace has rounded dialogs, clearly outlined cards and fifteen selectable color palettes. The cascading sidebar groups file commands, tools, media and connections vertically. Colored Fluent toolbar icons and the drive appearance are retained; icon sets, button/drive sizes and fonts remain configurable. The top-right search field also displays typing from the active file panel. English is the default; Czech, German, Spanish, Dutch, Polish, French and Portuguese remain selectable. **Apply** saves settings without closing; **Save** also closes.
+The Fluent workspace has rounded dialogs, clearly outlined cards and fifteen selectable color palettes. The cascading sidebar groups file commands, tools, media and connections vertically. Colored Fluent toolbar icons and the drive appearance are retained; icon sets, button/drive sizes and fonts remain configurable. The top-right search field also displays typing from the active file panel. English is the default; Czech, German, Spanish, Dutch, Polish, French, Portuguese and Italian remain selectable. **Apply** saves settings without closing; **Save** also closes.
 
 Czech uses `languages/cs.lng` and `help/cs/index.html`; earlier saved Czech language identifiers are normalized automatically.
 
@@ -78,7 +78,7 @@ Runtime dependencies are versioned. A normal build does not download rotating ve
 
 Use `-OutputDirectory ai-docs/artifacts/build` for an isolated build. `-Release` requires an empty output directory and excludes test commands. `source/version.json` sets version/channel; generated build IDs use the UTC date and a per-version daily sequence in ignored `source/obj`.
 
-After editing help catalogs, run `python tools/build-help.py`. `python tools/check-release-content.py` verifies eight translation catalogs, generated HTML, links, screenshot hashes and dependency notices. See [validation](docs/VALIDATION.md) for tested scope and [distribution review](docs/DISTRIBUTION-AUDIT.md) for release requirements.
+After editing help catalogs, run `python tools/build-help.py`. `python tools/check-release-content.py` verifies nine translation catalogs, generated HTML, links, screenshot hashes and dependency notices. See [validation](docs/VALIDATION.md) for tested scope and [distribution review](docs/DISTRIBUTION-AUDIT.md) for release requirements.
 
 ## Installation and local data
 

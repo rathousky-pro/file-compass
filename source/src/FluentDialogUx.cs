@@ -12,7 +12,7 @@ namespace FileCompass {
  internal static class FluentDialogUx {
   static readonly DependencyProperty Installed=DependencyProperty.RegisterAttached("Installed",typeof(bool),typeof(FluentDialogUx));
   static readonly Brush contentSurface=CreateContentSurface();
-  static Brush CreateContentSurface(){var last=new GradientStop{Offset=1};System.Windows.Data.BindingOperations.SetBinding(last,GradientStop.ColorProperty,new System.Windows.Data.Binding("Color"){Source=CompactTheme.PanelSurface});var brush=new LinearGradientBrush{StartPoint=new Point(0,0),EndPoint=new Point(1,1)};brush.GradientStops.Add(new GradientStop(Colors.White,0));brush.GradientStops.Add(last);return brush;}
+  static Brush CreateContentSurface(){var last=new GradientStop{Offset=1};System.Windows.Data.BindingOperations.SetBinding(last,GradientStop.ColorProperty,new System.Windows.Data.Binding("Color"){Source=CompactTheme.PanelSurface});var brush=new LinearGradientBrush{StartPoint=new Point(0,0),EndPoint=new Point(1,1)};var first=new GradientStop{Offset=0};System.Windows.Data.BindingOperations.SetBinding(first,GradientStop.ColorProperty,new System.Windows.Data.Binding("Color"){Source=CompactTheme.WhiteSurface});brush.GradientStops.Add(first);brush.GradientStops.Add(last);return brush;}
   static readonly ControlTemplate groupTemplate=(ControlTemplate)XamlReader.Parse(@"<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' TargetType='GroupBox'><StackPanel><ContentPresenter ContentSource='Header' Margin='0,0,0,10' TextElement.FontWeight='SemiBold' TextElement.Foreground='{StaticResource CompassText}'/><ContentPresenter ContentSource='Content'/></StackPanel></ControlTemplate>");
   internal static void Refresh(Window w){
    if(w is MainWindow)return;

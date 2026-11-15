@@ -2311,7 +2311,7 @@
   "settings.notepadDefaultHint": "Prázdná cesta = Poznámkový blok",
   "settings.outlineIconDescription": "Tmavě modré obrysy s vysokou čitelností na světlém pozadí.",
   "settings.outlineIcons": "Jednoduché obrysové",
-  "settings.panelColorsDescription": "Barevný motiv, písmo a čitelnost pracovního prostoru.",
+  "settings.panelColorsDescription": "Zvolte světlý nebo tmavý vzhled a nezávisle na něm barevnou paletu.",
   "settings.panelRefreshGroup": "Obnovování obsahu panelů",
   "settings.portableArchiveLibraryPrefix": "7-Zip · přenosná knihovna\n",
   "settings.programNotFound": "Program nebyl nalezen. Vyberte soubor nebo zadejte cestu ručně.",

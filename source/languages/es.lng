@@ -2293,7 +2293,7 @@
   "settings.notepadDefaultHint": "Ruta vacía = Bloc de notas",
   "settings.outlineIconDescription": "Contornos de color azul oscuro muy legibles sobre un fondo claro.",
   "settings.outlineIcons": "Esquema sencillo",
-  "settings.panelColorsDescription": "Aspecto uniforme: fondo gris azulado, tarjetas blancas y grupos de opciones claros.",
+  "settings.panelColorsDescription": "Elija un aspecto claro u oscuro y una paleta de colores independiente.",
   "settings.panelRefreshGroup": "Actualización del panel",
   "settings.portableArchiveLibraryPrefix": "7-Zip · biblioteca portátil\n",
   "settings.programNotFound": "Programa no encontrado. Seleccione un archivo o ingrese la ruta manualmente.",

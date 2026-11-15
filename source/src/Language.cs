@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -36,8 +36,8 @@ namespace FileCompass
         }
         public static string Language { get; private set; }
         internal const string DefaultLanguage = "en";
-        internal static readonly string[] SupportedLanguages = { "cs", "en", "de", "es", "nl", "pl", "fr", "pt" };
-        internal static readonly string[] LanguageNames = { "Čeština", "English", "Deutsch", "Español", "Nederlands", "Polski", "Français", "Português" };
+        internal static readonly string[] SupportedLanguages = { "cs", "en", "de", "es", "nl", "pl", "fr", "pt", "it" };
+        internal static readonly string[] LanguageNames = { "Čeština", "English", "Deutsch", "Español", "Nederlands", "Polski", "Français", "Português", "Italiano" };
         // Accept the previous persisted identifier without exposing a second Czech language.
         internal static string NormalizeLanguage(string name) {
             name=name==null?null:name.Trim();

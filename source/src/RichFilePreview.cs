@@ -26,7 +26,7 @@ namespace FileCompass
             bool md = IsMarkdown(path); code.Visibility = md ? Visibility.Collapsed : Visibility.Visible; markdown.Visibility = md ? Visibility.Visible : Visibility.Collapsed;
             if (!md)
             {
-                code.SyntaxHighlighting = CodeSyntax.ForExtension(Path.GetExtension(path));
+                code.SyntaxHighlighting = CodeSyntax.ForExtension(Path.GetExtension(path)); DarkSyntaxContrast.Attach(code);
                 code.Text = source; code.ScrollToHome(); markdown.Document = null; return;
             }
             code.Text = "";

@@ -2293,7 +2293,7 @@
   "settings.notepadDefaultHint": "Chemin vide = Bloc-notes",
   "settings.outlineIconDescription": "Contours bleu foncé très lisibles sur fond clair.",
   "settings.outlineIcons": "Aperçu simple",
-  "settings.panelColorsDescription": "Aspect uniforme : fond bleu-gris, cartes blanches et groupes d’options clairs.",
+  "settings.panelColorsDescription": "Choisissez une apparence claire ou sombre et une palette de couleurs indépendante.",
   "settings.panelRefreshGroup": "Actualisation du panneau",
   "settings.portableArchiveLibraryPrefix": "7-Zip · bibliothèque portable\n",
   "settings.programNotFound": "Programme introuvable. Sélectionnez un fichier ou entrez le chemin manuellement.",

@@ -2311,7 +2311,7 @@
   "settings.notepadDefaultHint": "Empty path = Notepad",
   "settings.outlineIconDescription": "Dark blue highly readable outlines on a light background.",
   "settings.outlineIcons": "Simple outline",
-  "settings.panelColorsDescription": "One consistent appearance: blue-grey base, white cards and softly toned option groups.",
+  "settings.panelColorsDescription": "Choose a light or dark appearance and an independent color palette.",
   "settings.panelRefreshGroup": "Panel refresh",
   "settings.portableArchiveLibraryPrefix": "7-Zip · portable library\n",
   "settings.programNotFound": "Program not found. Select a file or enter the path manually.",

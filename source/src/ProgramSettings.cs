@@ -59,13 +59,13 @@ namespace FileCompass
             try
             {
                 path = path ?? ConfigPath; if (!File.Exists(path)) return new ProgramSettings();
-                var saved=ConfigurationIntegrity.Read<ProgramSettings>(path); saved.FluentColor=FluentColors.Normalize(saved.FluentColor); saved.InterfaceMotif="Clean";saved.ColorTheme="Light";saved.WindowBackdrop="None"; saved.ImageViewerPath=AppPaths.ResolveLegacyResourceFile(saved.ImageViewerPath); saved.MediaPlayerPath=AppPaths.ResolveLegacyResourceFile(saved.MediaPlayerPath); saved.TextEditorPath=AppPaths.ResolveLegacyResourceFile(saved.TextEditorPath); return saved;
+                var saved=ConfigurationIntegrity.Read<ProgramSettings>(path); saved.FluentColor=FluentColors.Normalize(saved.FluentColor); saved.InterfaceMotif="Clean";saved.ColorTheme=AppearanceTheme.Normalize(saved.ColorTheme);saved.WindowBackdrop="None"; saved.ImageViewerPath=AppPaths.ResolveLegacyResourceFile(saved.ImageViewerPath); saved.MediaPlayerPath=AppPaths.ResolveLegacyResourceFile(saved.MediaPlayerPath); saved.TextEditorPath=AppPaths.ResolveLegacyResourceFile(saved.TextEditorPath); return saved;
             }
             catch (Exception ex) { if (ex is ConfigurationIntegrityException || !(ex is IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException || ex is XmlException)) throw; return new ProgramSettings(); }
         }
         public void Save(string path = null)
         {
-            InterfaceMotif = "Clean"; ColorTheme="Light"; WindowBackdrop="None";
+            InterfaceMotif = "Clean"; ColorTheme=AppearanceTheme.Normalize(ColorTheme); WindowBackdrop="None";
             path = path ?? ConfigPath; Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path)));
             string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
             try

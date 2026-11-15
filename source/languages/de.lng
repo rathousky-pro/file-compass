@@ -2293,7 +2293,7 @@
   "settings.notepadDefaultHint": "Leerer Pfad = Notepad",
   "settings.outlineIconDescription": "Dunkelblaue, gut lesbare Umrisse auf hellem Hintergrund.",
   "settings.outlineIcons": "Einfache Gliederung",
-  "settings.panelColorsDescription": "Einheitliches Aussehen: blaugrauer Hintergrund, weiße Karten und helle Optionsgruppen.",
+  "settings.panelColorsDescription": "Wählen Sie ein helles oder dunkles Erscheinungsbild und unabhängig davon eine Farbpalette.",
   "settings.panelRefreshGroup": "Panel-Aktualisierung",
   "settings.portableArchiveLibraryPrefix": "7-Zip · tragbare Bibliothek\n",
   "settings.programNotFound": "Programm nicht gefunden. Wählen Sie eine Datei aus oder geben Sie den Pfad manuell ein.",

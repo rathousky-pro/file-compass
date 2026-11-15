@@ -2293,7 +2293,7 @@
   "settings.notepadDefaultHint": "Pusta ścieżka = Notatnik",
   "settings.outlineIconDescription": "Ciemnoniebieskie, bardzo czytelne kontury na jasnym tle.",
   "settings.outlineIcons": "Prosty zarys",
-  "settings.panelColorsDescription": "Jednolity wygląd: niebieskoszare tło, białe karty i jasne grupy opcji.",
+  "settings.panelColorsDescription": "Wybierz jasny lub ciemny wygląd oraz niezależną paletę kolorów.",
   "settings.panelRefreshGroup": "Odświeżenie panelu",
   "settings.portableArchiveLibraryPrefix": "7-Zip · przenośna biblioteka\n",
   "settings.programNotFound": "Nie znaleziono programu. Wybierz plik lub wprowadź ścieżkę ręcznie.",

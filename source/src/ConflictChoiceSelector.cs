@@ -44,10 +44,10 @@ namespace FileCompass {
             Select(initial);
         }
         static RadioButton Choice(string text,string group){
-            var r=new RadioButton{Content=text,GroupName=group,MinHeight=30,MinWidth=93,Margin=new Thickness(0,0,6,0),Padding=new Thickness(12,5,12,5),Cursor=System.Windows.Input.Cursors.Hand};
+            var r=new RadioButton{Content=text,Foreground=FluentTheme.Text,Background=CompactTheme.WhiteSurface,BorderBrush=CompactTheme.FieldLine,GroupName=group,MinHeight=30,MinWidth=93,Margin=new Thickness(0,0,6,0),Padding=new Thickness(12,5,12,5),Cursor=System.Windows.Input.Cursors.Hand};
             r.Template=(ControlTemplate)XamlReader.Parse(@"<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' TargetType='RadioButton'>
-              <Border x:Name='Frame' CornerRadius='6' BorderThickness='1' BorderBrush='#A9C5E8' Background='#F1F6FD' Padding='{TemplateBinding Padding}'>
-                <ContentPresenter HorizontalAlignment='Center' VerticalAlignment='Center'/>
+              <Border x:Name='Frame' CornerRadius='6' BorderThickness='1' BorderBrush='{TemplateBinding BorderBrush}' Background='{TemplateBinding Background}' Padding='{TemplateBinding Padding}'>
+                <ContentPresenter HorizontalAlignment='Center' VerticalAlignment='Center' TextElement.Foreground='{TemplateBinding Foreground}'/>
               </Border>
               <ControlTemplate.Triggers>
                <Trigger Property='IsChecked' Value='True'><Setter TargetName='Frame' Property='Background' Value='#176AD3'/><Setter TargetName='Frame' Property='BorderBrush' Value='#176AD3'/><Setter Property='Foreground' Value='White'/></Trigger>

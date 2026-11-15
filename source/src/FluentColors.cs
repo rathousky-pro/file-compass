@@ -28,7 +28,7 @@ new FluentPalette("silver","Světlá šedá","Neutrální stříbrný rám","#53
   internal static readonly SolidColorBrush SectionLine=new SolidColorBrush(SectionColor(All[0]));
   static Color SectionColor(FluentPalette palette){var line=(Color)ColorConverter.ConvertFromString(palette.Line);var ink=(Color)ColorConverter.ConvertFromString(palette.Ink);return Color.FromRgb((byte)((line.R+ink.R)/2),(byte)((line.G+ink.G)/2),(byte)((line.B+ink.B)/2));}
   internal static string Normalize(string id){foreach(var p in All)if(p.Id==id)return id;return "azure";}
-  internal static void Select(string id){foreach(var p in All)if(p.Id==Normalize(id)){Current=p;break;}Navigation.Color=(Color)ColorConverter.ConvertFromString(Current.Navigation);SectionLine.Color=SectionColor(Current);AppearanceTheme.Apply("Light");}
+  internal static void Select(string id){foreach(var p in All)if(p.Id==Normalize(id)){Current=p;break;}Navigation.Color=(Color)ColorConverter.ConvertFromString(Current.Navigation);SectionLine.Color=SectionColor(Current);AppearanceTheme.Apply(AppearanceTheme.Mode);}
   internal static string Map(string original,string fallback){
    var p=Current;
    switch(original.ToUpperInvariant()){

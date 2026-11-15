@@ -2293,7 +2293,7 @@
   "settings.notepadDefaultHint": "Caminho vazio = Bloco de notas",
   "settings.outlineIconDescription": "Contornos azuis escuros altamente legíveis sobre um fundo claro.",
   "settings.outlineIcons": "Contorno simples",
-  "settings.panelColorsDescription": "Aspeto uniforme: fundo cinzento-azulado, cartões brancos e grupos de opções claros.",
+  "settings.panelColorsDescription": "Escolha um aspeto claro ou escuro e uma paleta de cores independente.",
   "settings.panelRefreshGroup": "Atualização do painel",
   "settings.portableArchiveLibraryPrefix": "7-Zip · biblioteca portátil\n",
   "settings.programNotFound": "Programa não encontrado. Selecione um arquivo ou insira o caminho manualmente.",

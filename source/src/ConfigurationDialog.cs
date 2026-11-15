@@ -30,6 +30,7 @@ namespace FileCompass
         ApplicationIcon originalApplicationIcon;
         bool appearanceSaved;
         string originalColor=FluentColors.Current.Id; string selectedColor=FluentColors.Current.Id;
+        string originalColorMode=AppearanceTheme.Mode; string selectedColorMode=AppearanceTheme.Mode;
         internal readonly ComboBox LanguageChoice = new ComboBox { MinWidth = 180 };
 
         readonly NetworkScheduleEditor networkSchedule;
@@ -158,7 +159,7 @@ namespace FileCompass
             network.Children.Add(Connections);
             Closing += delegate(object sender, System.ComponentModel.CancelEventArgs e) { if (!Connections.AllowHostClose()) e.Cancel = true; };
 
-            Closed += delegate { if (!appearanceSaved) { FluentColors.Select(originalColor); ApplicationBrand.Apply(originalApplicationIcon); PreviewToolbar(originalTheme); } if (Connections != null) Connections.DisposeManagers(); };
+            Closed += delegate { if (!appearanceSaved) { FluentColors.Select(originalColor); AppearanceTheme.Apply(originalColorMode); ApplicationBrand.Apply(originalApplicationIcon); PreviewToolbar(originalTheme); } if (Connections != null) Connections.DisposeManagers(); };
             var behavior = Page(L.Text("settings.fileOperations"), L.Text("settings.fileOperationsDescription"));
             fileBehavior = new FileBehaviorEditor(settings); behavior.Children.Add(fileBehavior);
             var updates=Page(L.Text("updates.title"),L.Text("updates.description"));UpdatePage=new UpdatesView(main);updates.Children.Add(UpdatePage);Closed+=delegate{UpdatePage.Dispose();};
@@ -200,7 +201,7 @@ namespace FileCompass
         }
         void Save(bool close)
         {
-            try { SaveChanges(); originalColor=selectedColor; originalTheme=selectedTheme;originalApplicationIcon=selectedApplicationIcon;if(close){appearanceSaved = true; DialogResult = true;} }
+            try { SaveChanges(); originalColor=selectedColor; originalColorMode=selectedColorMode; originalTheme=selectedTheme;originalApplicationIcon=selectedApplicationIcon;if(close){appearanceSaved = true; DialogResult = true;} }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, L.Text("menu.configuration"), MessageBoxButton.OK, MessageBoxImage.Warning); }
         }
         internal void SaveChanges()
@@ -214,7 +215,7 @@ namespace FileCompass
                 settings.SizeUnits=new[]{"SI","IEC","Bytes"}[Math.Max(0,sizeUnits.SelectedIndex)];
                 settings.ShowHiddenFiles = showHidden.IsChecked == true; settings.ShowSystemFiles = showSystem.IsChecked == true;
                 fileBehavior.Apply(); startupPreferences.Apply(); networkSchedule.Apply(settings);
-                settings.FluentColor=selectedColor; settings.WindowBackdrop = "None"; settings.ColorTheme = "Light";
+                settings.FluentColor=selectedColor; settings.WindowBackdrop = "None"; settings.ColorTheme = selectedColorMode;
                 settings.InterfaceMotif = "Clean";
                 string language = L.SupportedLanguages[LanguageChoice.SelectedIndex];
                 settings.ButtonIconSize=(double)buttonIconSize.SelectedItem;settings.DriveIconSize=(double)driveIconSize.SelectedItem;
@@ -240,12 +241,15 @@ namespace FileCompass
         void AddAppearanceChoices(StackPanel appearance) {
             foreach (var font in new[] { interfaceFont, fileListFont }) ((FrameworkElement)font.Children[font.Children.Count-1]).Margin = new Thickness(0,4,0,2);
             foreach (var name in L.LanguageNames) LanguageChoice.Items.Add(name); LanguageChoice.SelectedIndex = Array.IndexOf(L.SupportedLanguages,L.PreferredLanguage); if(LanguageChoice.SelectedIndex<0)LanguageChoice.SelectedIndex=Array.IndexOf(L.SupportedLanguages,L.DefaultLanguage);
+            var mode = new StackPanel(); mode.Children.Add(new TextBlock { Text = L.Text("settings.appearanceWindowTitle"), Margin = new Thickness(0,0,0,5) });
+            var modeChoice=new ComboBox { MinWidth=180 }; System.Windows.Automation.AutomationProperties.SetAutomationId(modeChoice,"AppearanceMode"); modeChoice.Items.Add(L.Text("settings.themeLight")); modeChoice.Items.Add(L.Text("settings.themeDark"));
+            modeChoice.SelectedIndex=selectedColorMode=="Dark"?1:0; modeChoice.SelectionChanged+=delegate { selectedColorMode=modeChoice.SelectedIndex==1?"Dark":"Light"; AppearanceTheme.Apply(selectedColorMode); }; mode.Children.Add(modeChoice);
             var language = new StackPanel(); language.Children.Add(new TextBlock { Text = L.Text("settings.language"), Margin = new Thickness(0,0,0,5) }); language.Children.Add(LanguageChoice);
             LanguageChoice.ToolTip = L.Text("settings.languageRestart");
             var description = (TextBlock)appearance.Children[1]; description.Text = L.Text("settings.panelColorsDescription"); description.Margin = new Thickness(0,0,0,8);
             var redundant = appearance.Children[appearance.Children.Count-1] as TextBlock; if (redundant != null) redundant.Visibility = Visibility.Collapsed;
             LanguageChoice.MinWidth = 0;
-            var choices = Row(language); choices.Margin = new Thickness(0,0,0,4); appearance.Children.Insert(2, choices);
+            var choices = new Grid { Margin=new Thickness(0,0,0,12) }; choices.ColumnDefinitions.Add(new ColumnDefinition()); choices.ColumnDefinitions.Add(new ColumnDefinition()); language.Margin=new Thickness(0,0,12,0); Grid.SetColumn(mode,1); choices.Children.Add(language); choices.Children.Add(mode); appearance.Children.Insert(2, choices);
         }
     }
 }

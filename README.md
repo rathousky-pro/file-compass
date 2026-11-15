@@ -1,6 +1,48 @@
 # File Compass
 
-A Windows x64 file manager by Rathousky.pro, in development as **0.9.5 beta**. Two-panel local/network/cloud file operations, archives, document previews, media conversion, search, synchronization, space analysis and SMART diagnostics.
+**A free, open-source file manager for Windows — local files, networks and cloud storage in one dual-panel workspace.**
+
+[![Release](https://img.shields.io/badge/release-0.9.5%20beta-orange)](https://github.com/rathousky-pro/file-compass-web/releases) [![Platform](https://img.shields.io/badge/platform-Windows%20x64-blue)](#getting-started) [![MIT License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
+**[Official website](https://filecompass.rathousky.pro/) · [Download latest beta](https://github.com/rathousky-pro/file-compass-web/releases) · [Report a bug](https://github.com/rathousky-pro/file-compass/issues/new) · [Suggest a feature](https://github.com/rathousky-pro/file-compass/issues/new)**
+
+File Compass is an actively developed Windows x64 file manager with two-panel browsing, local/network/cloud operations, archives, previews, conversion tools, search, folder synchronization, space analysis and SMART diagnostics. **Currently in public beta** — testing and feedback are very welcome.
+
+> **Unsigned beta:** Public builds are not digitally signed yet and may display a Windows SmartScreen warning. Only download from the official GitHub releases linked above and verify the published SHA-256 checksum when available. SignPath approval has **not** been granted. See [code signing policy](docs/CODE-SIGNING.md).
+
+## Screenshots
+
+These are **real screenshots of File Compass** captured with fictional demo content on 4 November 2026. The interface may have changed in later beta builds. No private files or credentials are shown.
+
+[![File Compass dual-panel workspace](https://raw.githubusercontent.com/rathousky-pro/file-compass-web/main/assets/screenshots/en-panels.png)](https://github.com/rathousky-pro/file-compass-web/blob/main/assets/screenshots/en-panels.png)
+
+*Dual-panel file browsing*
+
+| Previews | Disk space analysis |
+|:---:|:---:|
+| [![File previews](https://raw.githubusercontent.com/rathousky-pro/file-compass-web/main/assets/screenshots/en-preview.png)](https://github.com/rathousky-pro/file-compass-web/blob/main/assets/screenshots/en-preview.png) | [![Disk space analyzer](https://raw.githubusercontent.com/rathousky-pro/file-compass-web/main/assets/screenshots/en-analyzer.png)](https://github.com/rathousky-pro/file-compass-web/blob/main/assets/screenshots/en-analyzer.png) |
+| **Folder synchronization** | **Network connection profiles** |
+| [![Folder synchronization](https://raw.githubusercontent.com/rathousky-pro/file-compass-web/main/assets/screenshots/en-sync.png)](https://github.com/rathousky-pro/file-compass-web/blob/main/assets/screenshots/en-sync.png) | [![Network connections](https://raw.githubusercontent.com/rathousky-pro/file-compass-web/main/assets/screenshots/en-connections.png)](https://github.com/rathousky-pro/file-compass-web/blob/main/assets/screenshots/en-connections.png) |
+
+**[All 28 English screenshots](https://filecompass.rathousky.pro/#gallery) · [Česká galerie](https://filecompass.rathousky.pro/cs.html#gallery)**
+
+The gallery images are hosted in the official [website repository](https://github.com/rathousky-pro/file-compass-web/tree/main/assets/screenshots), rather than duplicating image binaries in this source repository.
+
+## Getting started
+
+1. Download the current public beta from the [official GitHub Releases](https://github.com/rathousky-pro/file-compass-web/releases).
+2. Extract the ZIP, keeping all support directories alongside `File Compass.exe`.
+3. Launch `File Compass.exe` on Windows x64. **.NET Framework 4.8** is required; some previews also need **Microsoft Edge WebView2 Runtime**.
+
+The website currently lists **0.9.5 beta, build 20261110.44**. Check the Releases page for newer builds, release notes and checksums. There is no signed installer yet.
+
+## Feedback and community
+
+If you find the project useful, consider **[starring this repository](https://github.com/rathousky-pro/file-compass)** — it helps others discover File Compass.
+
+Please [open an issue](https://github.com/rathousky-pro/file-compass/issues/new) to report bugs or propose improvements. Include the build number, Windows version, reproduction steps and expected vs. actual results. Before posting screenshots or logs, remove private paths, credentials and access tokens. Pull requests are welcome for review; please discuss substantial changes in an issue first.
+
+## Technical details
 
 ## Run and help
 

@@ -14,7 +14,7 @@ $nodeExe = Find-PublishTool 'node.exe' @((Join-Path $runtime 'node/bin/node.exe'
 $env:PATH = (Split-Path -Parent $gitExe)+';'+(Split-Path -Parent $nodeExe)+';'+$env:PATH
 function Invoke-PolicyGit {
     param([string]$Repository,[string[]]$Arguments)
-    & $gitExe --no-pager -c ('safe.directory='+$Repository.Replace('\','/')) -c 'user.name=JRKladno76' -c 'user.email=jan.rathousky.kladno@gmail.com' -C $Repository @Arguments
+    & $gitExe --no-pager -c ('safe.directory='+$Repository.Replace('\','/')) -c 'user.name=JRKladno76' -c 'user.email=developer@rathousky.pro' -C $Repository @Arguments
     if ($LASTEXITCODE -ne 0) { throw ('Git failed: '+$Arguments[0]) }
 }
 $targets = @(

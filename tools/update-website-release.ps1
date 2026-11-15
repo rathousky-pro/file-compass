@@ -11,7 +11,7 @@ $website = (Resolve-Path -LiteralPath $WebsiteDirectory).Path
 $safeWebsite = $website.Replace('\','/')
 $files = @('build.mjs','releases.json','index.html','cs.html','README.md')
 function Invoke-WebsiteGit {
-    & git --no-pager -c "safe.directory=$safeWebsite" -c 'user.name=JRKladno76' -c 'user.email=jan.rathousky.kladno@gmail.com' -C $website @args
+    & git --no-pager -c "safe.directory=$safeWebsite" -c 'user.name=JRKladno76' -c 'user.email=developer@rathousky.pro' -C $website @args
     if ($LASTEXITCODE -ne 0) { throw ('Website Git operation failed: '+$args[0]) }
 }
 if ((Invoke-WebsiteGit remote get-url origin) -ne 'https://github.com/rathousky-pro/file-compass-web.git') { throw 'Unexpected website repository.' }

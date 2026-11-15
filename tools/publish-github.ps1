@@ -27,7 +27,7 @@ if ($UpdateWebsite) {
 }
 $safeRoot = $projectRoot.Replace('\','/')
 function Invoke-SourceGit {
-    & $gitExe --no-pager -c "safe.directory=$safeRoot" -c 'user.name=JRKladno76' -c 'user.email=jan.rathousky.kladno@gmail.com' -C $projectRoot @args
+    & $gitExe --no-pager -c "safe.directory=$safeRoot" -c 'user.name=JRKladno76' -c 'user.email=developer@rathousky.pro' -C $projectRoot @args
     if ($LASTEXITCODE -ne 0) { throw ('Source Git operation failed: '+$args[0]) }
 }
 . (Join-Path $PSScriptRoot 'github-release.ps1')

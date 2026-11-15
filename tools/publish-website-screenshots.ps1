@@ -2,7 +2,7 @@ param(
     [string]$WebsiteDirectory = (Join-Path $PSScriptRoot '../ai-docs/artifacts/file-compass-web-counter'),
     [switch]$CheckOnly,
     [string]$CommitAuthorName = 'JRKladno76',
-    [string]$CommitAuthorEmail = 'jan.rathousky.kladno@gmail.com'
+    [string]$CommitAuthorEmail = 'developer@rathousky.pro'
 )
 $ErrorActionPreference = 'Stop'
 function Resolve-PublishTool {

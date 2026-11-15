@@ -20,17 +20,24 @@ namespace FileCompass
             bool scp=(sourceProfile!=null&&sourceProfile.Protocol==NetworkProtocol.SCP)||(targetProfile!=null&&targetProfile.Protocol==NetworkProtocol.SCP)||source.StartsWith("scp://",StringComparison.OrdinalIgnoreCase)||target.StartsWith("scp://",StringComparison.OrdinalIgnoreCase);
             bool relay=sourceProfile!=null&&targetProfile!=null,cloudUpload=targetProfile!=null&&!String.IsNullOrEmpty(targetProfile.CloudAccountId);
             string resumeHint=cloudUpload?L.Text("cloud.restartHelp"):relay?(scp?L.Text("transfer.scpResumeUnsupportedHelp"):L.Text("transfer.partialResumeChecksHelp")):scp?L.Text("transfer.scpSkipCompletedHint"):L.Text("transfer.quickResumeHint");
-            RulePicker.Items.Add(new ComboBoxItem{Content=L.Text("action.overwrite"),Tag=NetworkCopyRule.Overwrite});RulePicker.Items.Add(new ComboBoxItem{Content=L.Text("action.skip"),Tag=NetworkCopyRule.Skip});RulePicker.Items.Add(new ComboBoxItem{Content=L.Text(cloudUpload?"cloud.restartTransfer":"action.resumeTransfer"),Tag=NetworkCopyRule.Resume});
-            RulePicker.MinHeight=32;RulePicker.HorizontalAlignment=HorizontalAlignment.Stretch;System.Windows.Automation.AutomationProperties.SetName(RulePicker,L.Text("transfer.existingFilesLabel"));collisions.Children.Add(RulePicker);
-            var hint=new TextBlock{Text=resumeHint,TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,10,0,0),Visibility=Visibility.Collapsed};collisions.Children.Add(hint);RulePicker.SelectionChanged+=delegate{var selected=RulePicker.SelectedItem as ComboBoxItem;if(selected!=null)Rule=(NetworkCopyRule)selected.Tag;hint.Visibility=Rule==NetworkCopyRule.Resume?Visibility.Visible:Visibility.Collapsed;layout.Refit();};SelectRule(NetworkCopyRule.Skip);
+            RulePicker = new ConflictChoiceSelector<NetworkCopyRule>(
+                new[]{Tuple.Create(NetworkCopyRule.Overwrite,L.Text("action.overwrite")),Tuple.Create(NetworkCopyRule.Skip,L.Text("action.skip")),Tuple.Create(NetworkCopyRule.Ask,L.Text("conflict.ask"))},
+                new[]{Tuple.Create(NetworkCopyRule.Resume,L.Text(cloudUpload?"cloud.restartTransfer":"action.resumeTransfer"))},
+                NetworkCopyRule.Ask);
+            collisions.Children.Add(RulePicker);
+            if(move)collisions.Children.Add(new TextBlock{Text=L.Text("transfer.skippedSourceHint"),Foreground=FluentTheme.Muted,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,6,0,0)});
+            var hint=new TextBlock{Text=resumeHint,TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,8,0,0),Visibility=Visibility.Collapsed};
+            collisions.Children.Add(hint);
+            RulePicker.Changed+=delegate(NetworkCopyRule value){Rule=value;hint.Visibility=value==NetworkCopyRule.Resume?Visibility.Visible:Visibility.Collapsed;layout.Refit();};
+            SelectRule(NetworkCopyRule.Ask);
             var explanation=OperationDialogLayout.Group(details,L.Text("transfer.existingFilesLabel").TrimEnd(':'));
             explanation.Children.Add(new TextBlock{Text=cloudUpload?L.Text("cloud.restartHelp"):relay?(scp?L.Text("transfer.scpResumeUnsupportedHelp"):L.Text("transfer.partialResumeChecksHelp")):L.Text("transfer.resumeVerificationHelp"),TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted});
             var buttons=layout.Actions;var cancel=CopyUi.Button(L.Text("action.cancel"),delegate{DialogResult=false;});cancel.IsCancel=true;buttons.Children.Add(cancel);
             Start=CopyUi.Button(L.Text(move?"action.move":"action.copy"),delegate{DialogResult=true;});Start.IsDefault=true;FluentTheme.Primary(Start);buttons.Children.Add(Start);CopyUi.EnterDefault(this,Start);
         }
-        internal readonly ComboBox RulePicker=new ComboBox();
+        internal readonly ConflictChoiceSelector<NetworkCopyRule> RulePicker;
         internal readonly Button Start;
-        internal void SelectRule(NetworkCopyRule rule){foreach(ComboBoxItem item in RulePicker.Items)if((NetworkCopyRule)item.Tag==rule){RulePicker.SelectedItem=item;return;}}
+        internal void SelectRule(NetworkCopyRule rule){RulePicker.Select(rule);}
         static void AddLocation(StackPanel panel, string direction, string location, NetworkProfile profile)
         {
             Uri uri;

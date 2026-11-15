@@ -18,7 +18,7 @@ var entries=new[]{new Entry{FullPath=Path.Combine(root,"source.txt"),Name="sourc
 foreach(bool move in new[]{false,true}){var setup=new CopySetupDialog(owner,entries,root,new string[0],move,new ProgramSettings());check(press(setup,Key.Enter)==true && setup.Options!=null && setup.Options.Move==move,"Enter accepts default "+(move?"move":"copy")+" options");}
 foreach(bool permanent in new[]{false,true}){var deletion=new DeleteConfirmationDialog(owner,entries.ToList(),true,permanent,root);check(press(deletion,Key.Enter)==true && deletion.Permanent==permanent,"Enter accepts selected deletion mode permanent="+permanent);}
 var remoteDelete=new DeleteConfirmationDialog(owner,entries.ToList(),false,false,root);check(press(remoteDelete,Key.Enter)==true && remoteDelete.Permanent,"Enter confirms permanent deletion when recycle is unavailable");
-var network=new NetworkCopyDialog(owner,1,root,root,null,null,false);check(press(network,Key.Enter)==true && network.Rule==NetworkCopyRule.Skip,"Enter accepts network copy default");
+var network=new NetworkCopyDialog(owner,1,root,root,null,null,false);check(press(network,Key.Enter)==true && network.Rule==NetworkCopyRule.Ask,"Enter accepts network copy default");
 var cancelled=new CopySetupDialog(owner,entries,root,new string[0]);check(press(cancelled,Key.Escape)!=true && cancelled.Options==null,"cancel does not create a copy operation");
 File.WriteAllLines(Path.Combine(root,"result.txt"),checks.Concat(new[]{"PASS: "+checks.Count}));return 0;
 }catch(Exception ex){File.WriteAllText(Path.Combine(root,"result.txt"),String.Join("\n",checks)+"\nFAIL: "+ex);return 1;}finally{if(owner!=null)owner.Close();}

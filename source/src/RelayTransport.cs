@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 
 namespace FileCompass.NetworkTransport
@@ -10,7 +10,8 @@ namespace FileCompass.NetworkTransport
             CheckAbort();
             var bounded = new RelayLengthWriter(output,length - offset);
             if (offset < length || length == 0) {
-                if (options.Protocol == Protocol.Ftp) Curl.Download(path, bounded, length, progress,offset);
+                if (options.Protocol == Protocol.Nfs) NfsDownload(path,bounded,length,offset,progress);
+                else if (options.Protocol == Protocol.Ftp) Curl.Download(path, bounded, length, progress,offset);
                 else ssh.Transfer(path, bounded, length, false, progress,offset);
             }
             if (bounded.Remaining != 0) throw new IOException(L.Text("relay.sourceShrankDuringTransfer"));
@@ -29,7 +30,8 @@ namespace FileCompass.NetworkTransport
             try {
                 ValidateRelayTarget(target, expected); staged = true;
                 if (offset < length || length == 0) {
-                    if (options.Protocol == Protocol.Ftp) Curl.Upload(temporary, input, length, progress,offset);
+                    if (options.Protocol == Protocol.Nfs) {if(offset!=0)throw new IOException(L.Text("nfs.uploadResumeDisabled"));NfsUpload(temporary,input,length,progress);}
+                    else if (options.Protocol == Protocol.Ftp) Curl.Upload(temporary, input, length, progress,offset);
                     else ssh.Transfer(temporary, input, length, true, progress,offset);
                 }
                 CheckAbort();
@@ -37,7 +39,7 @@ namespace FileCompass.NetworkTransport
                 // the producer and validate the source before publishing its bytes.
                 validateSource(); CheckAbort();
                 if (GetFileInfo(temporary).Length != length) throw new IOException(L.Text("transfer.remoteTargetSizeMismatch"));
-                SetTime(temporary, modified); CheckAbort(); ValidateRelayTarget(target, expected);
+                if(options.Protocol!=Protocol.Nfs)SetTime(temporary, modified); CheckAbort(); ValidateRelayTarget(target, expected);
                 if (expected != null) { MoveFile(target, backup); oldMoved = true; }
                 MoveFile(temporary, target); committed = true; staged = false;
                 if (lease != null) lease.Checkpoint.Clear();

@@ -58,3 +58,9 @@ libssh2_sftp_mkdir_ex
 libssh2_sftp_rmdir_ex
 libssh2_sftp_unlink_ex
 libssh2_channel_wait_eof
+
+cn_nfs_list
+
+cn_nfs_read
+cn_nfs_write
+cn_nfs_action

@@ -88,7 +88,13 @@ namespace FileCompass
             var durable = recovery ?? durableQueue.Begin("Relay",entries.Select(x => x.FullPath).ToArray(),destination,null,rule,move,source.Profile,target.Profile);
             var planner = source.TransferConnection(); NetworkTransferJob job = null;
             if (job == null) {
-                job = new NetworkTransferJob(source.Profile,false,target.Profile) { Move = move }; job.Reserve(); networkJobs.Add(job); networkCopies++; var captured = job;
+                job = new NetworkTransferJob(source.Profile,false,target.Profile) { Move = move }; job.Reserve();
+                job.ResolveConflict=delegate(string from,string to){
+                    return Dispatcher.Invoke(new Func<NetworkCopyRule>(delegate {
+                        var answer=MessageBox.Show(this,L.Format("transfer.conflictQuestion",from,to),L.Text("transfer.existingFilesLabel"),MessageBoxButton.YesNoCancel,MessageBoxImage.Question);
+                        return answer==MessageBoxResult.Yes?NetworkCopyRule.Overwrite:answer==MessageBoxResult.No?NetworkCopyRule.Skip:NetworkCopyRule.Reject;
+                    }));
+                }; networkJobs.Add(job); networkCopies++; var captured = job;
                 job.ResolveError = delegate(CopyFailure failure) { captured.Cancellation.Token.ThrowIfCancellationRequested(); return Dispatcher.Invoke(new Func<CopyErrorChoice>(delegate { var error = new CopyErrorDialog(this,failure); error.ShowDialog(); return error.Choice; })); };
                 job.Activity = AddCopyActivity(L.Text("transfer.serverRelayTitlePrefix") + job.Caption,job.Cancel,delegate { ShowNetworkQueue(captured); });
                 job.Activity.Kind=DockActivityKind.NetworkTransfer;

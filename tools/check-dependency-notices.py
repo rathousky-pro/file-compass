@@ -14,11 +14,14 @@ def digest(path):
 
 
 def inventory():
+    network_manifest = json.loads((SOURCE / "plugins/network/manifest.json").read_text(encoding="utf-8"))
+    network_dll = SOURCE / "plugins/network" / network_manifest["dll"]["file"]
+    assert network_manifest["dll"]["sha256"].lower() == digest(network_dll), "Network DLL hash does not match its manifest"
     groups = {
         '7zip': ('LGPL-2.1-or-later with unRAR restriction and BSD components', ['plugins/7zip/License.txt']),
         'cloud': ('MIT', ['plugins/cloud/LICENSE.txt']),
         'everything': ('MIT', ['plugins/everything/LICENSE.txt']),
-        'network': ('curl, BSD, MIT, ISC and dependency-specific terms', ['plugins/network/licenses']),
+        'network': ('curl, libnfs LGPL-2.1-or-later, BSD, MIT, ISC and dependency-specific terms', ['plugins/network/licenses', 'plugins/network/licenses/libnfs/COPYING']),
         'smart': ('GPL-2.0', ['plugins/smart/LICENSE.txt', 'plugins/smart/smartmontools-7.5.tar.gz']),
         'ffmpeg': ('LGPL-3.0-or-later; corresponding sources still required for public redistribution', ['plugins/media/FFMPEG-LICENSE.txt', 'plugins/media/GPL-3.0.txt', 'plugins/media/SOURCE.json']),
         'magick': ('Apache-2.0 wrapper plus native dependency licenses', ['plugins/media/MAGICK-NOTICE.txt', 'plugins/media/SOURCE.json']),

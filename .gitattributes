@@ -22,6 +22,10 @@
 "/source/plugins/network/licenses/trurl/COPYING.txt" -text
 "/source/plugins/network/licenses/zlibng/LICENSE.md" -text
 "/source/plugins/network/licenses/zstd/LICENSE.txt" -text
+"/source/plugins/network/licenses/libnfs/COPYING" -text
+"/source/plugins/network/licenses/libnfs/LICENCE-BSD.txt" -text
+"/source/plugins/network/licenses/libnfs/LICENCE-GPL-3.txt" -text
+"/source/plugins/network/licenses/libnfs/LICENCE-LGPL-2.1.txt" -text
 "/source/plugins/network/manifest.json" -text
 "/source/plugins/smart/LICENSE.txt" -text
 "/source/plugins/smart/smartmontools-7.5.tar.gz" -text

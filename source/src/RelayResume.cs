@@ -79,7 +79,8 @@ namespace FileCompass.NetworkTransport
         string RelayRangeHash(string path,long start,int count)
         {
             CheckAbort(); using (var hash = new HashWriteStream()) {
-                if (options.Protocol == Protocol.Ftp) Curl.ReadRange(path,hash,start,count);
+                if (options.Protocol == Protocol.Nfs) NfsDownload(path,hash,start+count,start,delegate { CheckAbort(); });
+                else if (options.Protocol == Protocol.Ftp) Curl.ReadRange(path,hash,start,count);
                 else ssh.Transfer(path,hash,start + count,false,delegate { CheckAbort(); },start);
                 ResumeProbeBytes += hash.Length; if (hash.Length != count) throw new IOException(L.Text("resume.verificationEndedEarly")); return hash.Finish();
             }

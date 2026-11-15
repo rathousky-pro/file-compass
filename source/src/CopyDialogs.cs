@@ -92,7 +92,9 @@ namespace FileCompass
         public CopyOptions Options;
         readonly ComboBox destination = new ComboBox { IsEditable = true, Height = 26 };
         readonly ComboBox filter = new ComboBox { IsEditable = true, Text = "*.*", Height = 26 };
-        readonly ComboBox rule = new ComboBox { SelectedIndex = 0, Margin = new Thickness(2, 3, 2, 8) };
+        readonly ConflictChoiceSelector<CopyRule> rule = new ConflictChoiceSelector<CopyRule>(
+            new[]{Tuple.Create(CopyRule.OverwriteAll,L.Text("action.overwrite")),Tuple.Create(CopyRule.SkipAll,L.Text("action.skip")),Tuple.Create(CopyRule.Ask,L.Text("conflict.ask"))},
+            new[]{Tuple.Create(CopyRule.Older,L.Text("conflict.overwriteOlderTargets")),Tuple.Create(CopyRule.Different,L.Text("conflict.overwriteDifferent")),Tuple.Create(CopyRule.Larger,L.Text("conflict.overwriteIfSourceLarger")),Tuple.Create(CopyRule.Smaller,L.Text("conflict.overwriteIfSourceSmaller")),Tuple.Create(CopyRule.RenameAll,L.Text("conflict.autoRenameCopies"))},CopyRule.Ask);
         readonly CheckBox permissions = new CheckBox { Content = L.Text("copy.copyNtfsPermissions"), Margin = new Thickness(2, 6, 2, 7) };
         readonly CheckBox verify = new CheckBox { Content = L.Text("copy.verifySha256Option"), Margin = new Thickness(8, 6, 2, 7) };
         readonly CheckBox readOnly = new CheckBox { Content = L.Text("copy.allowReadOnlyOverwrite"), Margin = new Thickness(2, 4, 2, 4) };
@@ -139,8 +141,7 @@ namespace FileCompass
             filter.ToolTip = L.Text("copy.maskSyntaxHelp"); filterSection.Children.Add(filter);
             var verification=OperationDialogLayout.Group(security,L.Text("operation.verification"));verification.Children.Add(permissions);verification.Children.Add(readOnly);
             var collisions=OperationDialogLayout.Group(body,L.Text("copy.existingDestinationLabel"));
-            foreach (string text in new[] { L.Text("conflict.ask"), L.Text("conflict.overwriteAll"), L.Text("conflict.overwriteOlderTargets"), L.Text("conflict.skipAll"), L.Text("conflict.overwriteDifferent"), L.Text("conflict.overwriteIfSourceLarger"), L.Text("conflict.overwriteIfSourceSmaller"), L.Text("conflict.autoRenameCopies") }) rule.Items.Add(text);
-            rule.SelectedIndex = 0; collisions.Children.Add(rule);
+            collisions.Children.Add(rule);
             var fileSelection=OperationDialogLayout.Group(selection,L.Text("operation.selection"));fileSelection.Children.Add(hidden);fileSelection.Children.Add(empty);
             var metadata=OperationDialogLayout.Group(properties,L.Text("operation.properties"));metadata.Children.Add(times);metadata.Children.Add(attributes);
             properties.Children.Add(fileTarget);fileTarget.IsEnabled=single;body.Children.Add(verify);presets.Children.Add(enqueue);
@@ -180,7 +181,7 @@ namespace FileCompass
             bool exact = fileTarget.IsChecked == true || (moving && single && !folder);
             return new CopyOptions { Target = target, Filter = filter.Text, Queue = queue, Move = moving, Verify = verify.IsChecked == true, Permissions = permissions.IsChecked == true,
                 ReadOnly = readOnly.IsChecked == true, Times = times.IsChecked == true, Attributes = attributes.IsChecked == true, SkipHidden = hidden.IsChecked == true,
-                EmptyFolders = empty.IsChecked == true, TargetIsFile = exact, Rule = (CopyRule)rule.SelectedIndex };
+                EmptyFolders = empty.IsChecked == true, TargetIsFile = exact, Rule = rule.Value };
         }
         void Browse()
         {

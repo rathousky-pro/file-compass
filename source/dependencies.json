@@ -446,11 +446,12 @@
     },
     {
       "file": "plugins/network/FileCompassNetwork.dll",
-      "sha256": "0a0a03bb2a023e1f06e82f106b5460266505d15b5036a18bb7de8391271f0113",
+      "sha256": "adafe40a1ebc1afcd6bbec77961d664c7f94afacb10218a7277b0b9fe3982ab3",
       "component": "network",
-      "license": "curl, BSD, MIT, ISC and dependency-specific terms",
+      "license": "curl, libnfs LGPL-2.1-or-later, BSD, MIT, ISC and dependency-specific terms",
       "notices": [
-        "plugins/network/licenses"
+        "plugins/network/licenses",
+        "plugins/network/licenses/libnfs/COPYING"
       ]
     },
     {
@@ -524,6 +525,10 @@
       "sha256": "82f2f4427d6545ee5aaac4f0b80428da6cc8ba41c2cf5da3a03680ec327b9681"
     },
     {
+      "file": "plugins/network/licenses/libnfs/COPYING",
+      "sha256": "edd960c0142b8ada98b43b6396b78f4e557b0bc70ac601a51e397ad04070e2c5"
+    },
+    {
       "file": "plugins/network/licenses/libpsl/COPYING.txt",
       "sha256": "e7c9f0d8498d28a360a7e8293ea70fd7bd952955b636938322c13d60a03b5a45"
     },
@@ -565,7 +570,7 @@
     },
     {
       "file": "plugins/network/manifest.json",
-      "sha256": "a2191a21fe69b0f6b108ed9ab8f978c26c15935a53817cda1a4213ff90c6c429"
+      "sha256": "b9242d0ad71a9b078fc196d0294e21d36617b70056bb4a706efffd3f462d398f"
     },
     {
       "file": "plugins/smart/LICENSE.txt",

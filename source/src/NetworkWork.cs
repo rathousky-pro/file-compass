@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -46,6 +46,15 @@ namespace FileCompass
                                     ValidateSource(item,job,source);
                                     if (job.Move && !job.Download && source == null && localGuard == null) localGuard = new LocalMoveGuard(item.Source,item.Bytes,item.Modified);
                                     var rule = retryResume ? NetworkCopyRule.Resume : batch.Rule;
+                                    if(rule==NetworkCopyRule.Ask){
+                                        bool exists = target==null ? File.Exists(item.Destination)||Directory.Exists(item.Destination) : target.Session.FileExists(item.Destination);
+                                        if(exists){
+                                            if(job.ResolveConflict==null)throw new IOException(L.Text("transfer.missingConflictHandler"));
+                                            rule=job.ResolveConflict(item.Source,item.Destination);
+                                            if(rule!=NetworkCopyRule.Overwrite && rule!=NetworkCopyRule.Skip && rule!=NetworkCopyRule.Resume)
+                                                throw new OperationCanceledException(L.Text("transfer.conflictCancelled"));
+                                        }else rule=NetworkCopyRule.Overwrite;
+                                    }
                                     if (item.ResumeIfAvailable) {
                                         bool partial = source != null && target != null ? target.Session.HasRelayCheckpoint(source.Session,item.Source,item.Destination) : source != null ? source.Session.HasCheckpoint(false,item.Source,item.Destination) : target.Session.HasCheckpoint(true,item.Source,item.Destination);
                                         if (partial) rule = NetworkCopyRule.Resume;

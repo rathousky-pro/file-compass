@@ -8,7 +8,7 @@ using System.Windows.Data;
 using System.Windows.Markup;
 namespace FileCompass {
  internal sealed class UpdateRow {
-    public string Id{get;set;}public string Name{get;set;}public string Installed{get;set;}public string Available{get;set;}public string Status{get;set;}
+    public string Id{get;set;}public string Name{get;set;}public string Installed{get;set;}public string Available{get;set;}public string InstalledBuild{get;set;}="";public string AvailableBuild{get;set;}="";public string Status{get;set;}
     internal VendorUpdate Package;
  }
  internal sealed class UpdatesView : StackPanel,IDisposable {
@@ -23,6 +23,32 @@ namespace FileCompass {
         var actions=new DockPanel();check=CopyUi.Button(L.Text("updates.check"),async delegate{if(manager!=null){if(manager.Checking)manager.CancelCheck();else await manager.Check();}});DockPanel.SetDock(check,Dock.Right);actions.Children.Add(check);actions.Children.Add(feedback);Children.Add(actions);
         foreach(var definition in new[]{new[]{"updates.component","Name","1.1"},new[]{"updates.current","Installed",".7"},new[]{"updates.available","Available",".7"},new[]{"common.status","Status","1.6"}})Items.Columns.Add(new DataGridTextColumn{Header=L.Text(definition[0]),Binding=new Binding(definition[1]),Width=new DataGridLength(Double.Parse(definition[2],System.Globalization.CultureInfo.InvariantCulture),DataGridLengthUnitType.Star)});
         var cell=new Style(typeof(TextBlock));cell.Setters.Add(new Setter(TextBlock.TextTrimmingProperty,TextTrimming.CharacterEllipsis));cell.Setters.Add(new Setter(FrameworkElement.ToolTipProperty,new Binding("Text"){RelativeSource=RelativeSource.Self}));foreach(DataGridTextColumn column in Items.Columns)column.ElementStyle=cell;
+        // Explicit 2-line cell templates: TextBlocks are individually arranged by a StackPanel.
+        // Unlike a wrapped DataGridTextColumn, neither line can be clipped by the cell's text presenter.
+        foreach(int index in new[]{1,2}) {
+            string main=index==1?"Installed":"Available", build=index==1?"InstalledBuild":"AvailableBuild";
+            var column=new DataGridTemplateColumn{Header=Items.Columns[index].Header,Width=Items.Columns[index].Width};
+            var visual=new FrameworkElementFactory(typeof(StackPanel));
+            visual.SetValue(StackPanel.OrientationProperty,Orientation.Vertical);
+            visual.SetValue(FrameworkElement.VerticalAlignmentProperty,VerticalAlignment.Center);
+            var versionText=new FrameworkElementFactory(typeof(TextBlock));
+            versionText.SetBinding(TextBlock.TextProperty,new Binding(main));
+            versionText.SetValue(TextBlock.TextTrimmingProperty,TextTrimming.CharacterEllipsis);
+            visual.AppendChild(versionText);
+            var buildText=new FrameworkElementFactory(typeof(TextBlock));
+            buildText.SetBinding(TextBlock.TextProperty,new Binding(build));
+            buildText.SetValue(TextBlock.TextTrimmingProperty,TextTrimming.None);
+            buildText.SetValue(TextBlock.FontSizeProperty,11.0);
+            buildText.SetValue(TextBlock.MarginProperty,new Thickness(0,2,0,0));
+            var visibility=new Style(typeof(TextBlock));
+            var hidden=new DataTrigger{Binding=new Binding(build),Value=""};
+            hidden.Setters.Add(new Setter(UIElement.VisibilityProperty,Visibility.Collapsed));
+            visibility.Triggers.Add(hidden);
+            buildText.SetValue(FrameworkElement.StyleProperty,visibility);
+            visual.AppendChild(buildText);
+            column.CellTemplate=new DataTemplate{VisualTree=visual};
+            Items.Columns.RemoveAt(index);Items.Columns.Insert(index,column);
+        }
         Items.SizeChanged+=delegate{double width=Math.Max(200,Items.ActualWidth-SystemParameters.VerticalScrollBarWidth-12);double[] shares={.23,.29,.29,.19};for(int i=0;i<4;i++)Items.Columns[i].Width=Math.Floor(width*shares[i]);};
         Items.SelectionChanged+=delegate{Selection();};Children.Add(Items);
         var body=new StackPanel();body.Children.Add(details);body.Children.Add(source);body.Children.Add(location);
@@ -36,14 +62,13 @@ namespace FileCompass {
         daily.IsChecked=UpdateRegistry.State().Daily;Children.Add(daily);
         Children.Add(new TextBlock{Text=L.Text("updates.immediate"),TextWrapping=TextWrapping.Wrap,Foreground=FluentTheme.Muted,Margin=new Thickness(0,8,0,0)});
         body.Children.Remove(buttons);body.Children.Remove(details);Children.Clear();
-        Items.Height=254;Items.RowHeight=26;Items.SelectionUnit=DataGridSelectionUnit.FullRow;Items.GridLinesVisibility=DataGridGridLinesVisibility.None;
-        var compactRow=new Style(typeof(DataGridRow));compactRow.Setters.Add(new Setter(FrameworkElement.MinHeightProperty,0.0));compactRow.Setters.Add(new Setter(FrameworkElement.HeightProperty,26.0));compactRow.Setters.Add(new Setter(Control.BackgroundProperty,System.Windows.Media.Brushes.Transparent));compactRow.Setters.Add(new Setter(Control.ForegroundProperty,FluentTheme.Text));
-        var appRow=new DataTrigger{Binding=new Binding("Id"),Value="app"};appRow.Setters.Add(new Setter(FrameworkElement.HeightProperty,42.0));compactRow.Triggers.Add(appRow);
+        Items.Height=282;Items.RowHeight=Double.NaN;Items.SelectionUnit=DataGridSelectionUnit.FullRow;Items.GridLinesVisibility=DataGridGridLinesVisibility.None;
+        var compactRow=new Style(typeof(DataGridRow));compactRow.Setters.Add(new Setter(FrameworkElement.MinHeightProperty,26.0));compactRow.Setters.Add(new Setter(Control.BackgroundProperty,System.Windows.Media.Brushes.Transparent));compactRow.Setters.Add(new Setter(Control.ForegroundProperty,FluentTheme.Text));
+        var appHeight=new DataTrigger{Binding=new Binding("Id"),Value="app"};appHeight.Setters.Add(new Setter(FrameworkElement.MinHeightProperty,52.0));compactRow.Triggers.Add(appHeight);
         compactRow.Setters.Add(new Setter(Control.TemplateProperty,(ControlTemplate)XamlReader.Parse(@"<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' TargetType='DataGridRow'><Border Background='{TemplateBinding Background}' BorderBrush='{StaticResource CompassLine}' BorderThickness='0,0,0,1' SnapsToDevicePixels='True'><DataGridCellsPresenter/></Border></ControlTemplate>")));
         var hover=new Trigger{Property=UIElement.IsMouseOverProperty,Value=true};hover.Setters.Add(new Setter(Control.BackgroundProperty,CompactTheme.ThemeBrush("#F0F5FB")));compactRow.Triggers.Add(hover);
         var selectedRow=new Trigger{Property=DataGridRow.IsSelectedProperty,Value=true};selectedRow.Setters.Add(new Setter(Control.BackgroundProperty,CompactTheme.ThemeBrush("#DCEBFF")));selectedRow.Setters.Add(new Setter(Control.ForegroundProperty,FluentTheme.Text));compactRow.Triggers.Add(selectedRow);Items.RowStyle=compactRow;
         var cellStyle=new Style(typeof(DataGridCell));cellStyle.Setters.Add(new Setter(Control.BorderThicknessProperty,new Thickness(0)));cellStyle.Setters.Add(new Setter(Control.BackgroundProperty,System.Windows.Media.Brushes.Transparent));cellStyle.Setters.Add(new Setter(Control.ForegroundProperty,FluentTheme.Text));cellStyle.Setters.Add(new Setter(Control.TemplateProperty,(ControlTemplate)XamlReader.Parse(@"<ControlTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' TargetType='DataGridCell'><Border Background='Transparent' Padding='{TemplateBinding Padding}'><ContentPresenter VerticalAlignment='Center'/></Border></ControlTemplate>")));Items.CellStyle=cellStyle;
-        foreach(DataGridTextColumn column in Items.Columns.Where((c,i)=>i==1||i==2)){var versionStyle=new Style(typeof(TextBlock));versionStyle.Setters.Add(new Setter(TextBlock.TextWrappingProperty,TextWrapping.Wrap));versionStyle.Setters.Add(new Setter(TextBlock.TextTrimmingProperty,TextTrimming.None));versionStyle.Setters.Add(new Setter(FrameworkElement.ToolTipProperty,new Binding("Text"){RelativeSource=RelativeSource.Self}));column.ElementStyle=versionStyle;}
         Items.Margin=new Thickness(0,6,0,6);ScrollViewer.SetVerticalScrollBarVisibility(Items,ScrollBarVisibility.Disabled);ScrollViewer.SetHorizontalScrollBarVisibility(Items,ScrollBarVisibility.Disabled);
         details.TextWrapping=TextWrapping.NoWrap;details.TextTrimming=TextTrimming.CharacterEllipsis;details.Margin=new Thickness(0,4,0,4);source.Visibility=location.Visibility=Visibility.Collapsed;
         buttons.Margin=new Thickness(0,4,0,4);daily.Margin=new Thickness(0,4,0,0);daily.ToolTip=L.Text("updates.timing")+"\n"+L.Text("updates.immediate");
@@ -67,7 +92,9 @@ namespace FileCompass {
         rows.Add(new UpdateRow{Id="libraries",Name=L.Text("updates.libraries"),Installed=L.Text("updates.withApp"),Available="—",Status=L.Text("updates.withApp")});
         var app=state.Available.FirstOrDefault(x=>x.Id=="app");string appStatus=app==null?L.Text("updates.notChecked"):!String.IsNullOrEmpty(app.Error)?L.Text("updates.unverified"):String.IsNullOrEmpty(app.Version)?L.Text("updates.appNoRelease"):ApplicationUpdates.IsNewer(app)?L.Text("updates.newVersion"):L.Text("updates.currentState");
         try{if(ApplicationUpdates.Pending()!=null)appStatus=L.Text("updates.appReady");}catch(Exception ex){appStatus=ex.Message;}
-        rows.Add(new UpdateRow{Id="app",Name="File Compass",Installed=BuildInfo.DisplayVersion+"\nBuild "+BuildInfo.Build,Available=String.IsNullOrEmpty(app?.Version)?"—":app.Version+(String.IsNullOrEmpty(app.Channel)?"":" "+app.Channel)+(String.IsNullOrEmpty(app.Build)?"":"\nBuild "+app.Build),Status=appStatus,Package=app});
+        string currentVersion=BuildInfo.DisplayVersion;
+        string availableVersion=String.IsNullOrEmpty(app?.Version)?"—":app.Version+(String.IsNullOrEmpty(app.Channel)?"":" "+app.Channel);
+        rows.Add(new UpdateRow{Id="app",Name="File Compass",Installed=currentVersion,InstalledBuild="Build "+BuildInfo.Build,Available=availableVersion,AvailableBuild=String.IsNullOrEmpty(app?.Build)?"":"Build "+app.Build,Status=appStatus,Package=app});
         Items.ItemsSource=rows;Items.SelectedItem=rows.FirstOrDefault(x=>x.Id==selected)??rows[0];
         check.IsEnabled=manager!=null;check.Content=L.Text(manager!=null&&manager.Checking?"action.cancel":"updates.check");
         feedback.Text=manager!=null&&!String.IsNullOrEmpty(manager.Feedback)?manager.Feedback:state.LastSuccessUtc==DateTime.MinValue?L.Text("updates.notChecked"):L.Text("updates.lastCheck")+state.LastSuccessUtc.ToLocalTime().ToString("g");Selection();

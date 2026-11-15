@@ -69,6 +69,7 @@ namespace FileCompass
         public Action Changed;
         public CopyActivity Activity;
         public Func<CopyFailure, CopyErrorChoice> ResolveError;
+        public Func<string,string,NetworkCopyRule> ResolveConflict;
         bool skipErrors;
         public CopyErrorChoice HandleError(CopyFailure failure)
         {

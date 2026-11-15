@@ -57,7 +57,7 @@ namespace FileCompass
         public async Task AttachRemote(RemoteConnection connection)
         {
             CancelNavigation();
-            string path = RemoteConnection.Normalize(connection.Profile.Path);
+            string path = connection.Profile.Protocol == NetworkProtocol.NFS ? "/" : RemoteConnection.Normalize(connection.Profile.Path);
             var directory = await Task.Run(delegate { return connection.Session.ListDirectory(path); });
             var rows = RemoteRows(directory, path);
             if (!IsRemote) localReturnPath = IsArchive ? archiveReturnPath : CurrentPath;

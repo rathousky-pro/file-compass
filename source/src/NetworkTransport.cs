@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 
 namespace FileCompass.NetworkTransport
 {
-    public enum Protocol { Ftp, Sftp, Scp }
+    public enum Protocol { Ftp, Sftp, Scp, Nfs }
     public enum FtpMode { Passive, Active }
     public enum FtpSecure { None, Explicit, Implicit }
     public enum TransferMode { Binary }
@@ -73,7 +73,8 @@ namespace FileCompass.NetworkTransport
             CheckAbort(); options = settings;
             try
             {
-                if (settings.Protocol == Protocol.Ftp)
+                if (settings.Protocol == Protocol.Nfs) { NfsNative.List(settings.HostName, settings.Raw("NfsExport", "/"), Int32.Parse(settings.Raw("NfsVersion", "3")), "/"); }
+                else if (settings.Protocol == Protocol.Ftp)
                 {
                     if(settings.Raw("Utf","2")=="2")
                     {
@@ -98,6 +99,7 @@ namespace FileCompass.NetworkTransport
         public RemoteDirectoryInfo ListDirectory(string path)
         {
             CheckAbort(); path = RemoteConnection.Normalize(path);
+            if (options.Protocol == Protocol.Nfs) return NfsNative.List(options.HostName, options.Raw("NfsExport", "/"), Int32.Parse(options.Raw("NfsVersion", "3")), path);
             if (options.Protocol == Protocol.Sftp) return ssh.List(path);
             var result = new RemoteDirectoryInfo();
             if (options.Protocol == Protocol.Scp) { result.Files.AddRange(ShellListing(path)); return result; }
@@ -224,15 +226,21 @@ namespace FileCompass.NetworkTransport
         }
         public bool FileExists(string path)
         { CheckAbort(); path=RemoteConnection.Normalize(path); if(path=="/") return true; if(options.Protocol==Protocol.Sftp) return ssh.Stat(path,true)!=null; return ListDirectory(RemoteConnection.Parent(path)).Files.Any(x=>x.FullName==path); }
+        void NfsAction(int code,string path,string target=null)
+        {if(options.Raw("NfsVersion","3")!="3" && Environment.GetEnvironmentVariable("FILECOMPASS_EXPERIMENTAL_NFS4")!="1")throw new IOException(L.Text("nfs.writeDisabled"));CheckAbort();NfsNative.Action(options.HostName,options.Raw("NfsExport","/"),Int32.Parse(options.Raw("NfsVersion","3")),code,path,target);CheckAbort();}
+        internal void NfsDownload(string path,Stream stream,long length,long offset,Action<long> progress)
+        {NfsNative.Read(options.HostName,options.Raw("NfsExport","/"),Int32.Parse(options.Raw("NfsVersion","3")),path,stream,length,offset,progress,CheckAbort);}
+        internal void NfsUpload(string path,Stream stream,long length,Action<long> progress)
+        {if(options.Raw("NfsVersion","3")!="3" && Environment.GetEnvironmentVariable("FILECOMPASS_EXPERIMENTAL_NFS4")!="1")throw new IOException(L.Text("nfs.writeDisabled"));NfsNative.Write(options.HostName,options.Raw("NfsExport","/"),Int32.Parse(options.Raw("NfsVersion","3")),path,stream,length,progress,CheckAbort);}
         public void CreateDirectory(string path)
-        { CheckAbort(); if(options.Protocol==Protocol.Ftp) Curl.Commands("MKD " + path); else if(options.Protocol==Protocol.Sftp) ssh.Mkdir(path); else Command("mkdir -- " + Quote(path)); }
+        { if(options.Protocol==Protocol.Nfs){NfsAction(3,path);return;} CheckAbort(); if(options.Protocol==Protocol.Ftp) Curl.Commands("MKD " + path); else if(options.Protocol==Protocol.Sftp) ssh.Mkdir(path); else Command("mkdir -- " + Quote(path)); }
         public void MoveFile(string source, string target)
-        { CheckAbort(); if(options.Protocol==Protocol.Ftp) Curl.Commands("RNFR " + source,"RNTO " + target); else if(options.Protocol==Protocol.Sftp) ssh.Rename(source,target); else Command("mv -- " + Quote(source) + " " + Quote(target)); }
+        { if(options.Protocol==Protocol.Nfs){NfsAction(1,source,target);return;} CheckAbort(); if(options.Protocol==Protocol.Ftp) Curl.Commands("RNFR " + source,"RNTO " + target); else if(options.Protocol==Protocol.Sftp) ssh.Rename(source,target); else Command("mv -- " + Quote(source) + " " + Quote(target)); }
         public IEnumerable<RemoteFileInfo> EnumerateRemoteFiles(string path, string mask, EnumerationOptions enumeration)
         { foreach(var file in ListDirectory(path).Files) { if(file.IsParentDirectory || file.IsThisDirectory) continue; if(file.IsDirectory) foreach(var child in EnumerateRemoteFiles(file.FullName,mask,enumeration)) yield return child; else yield return file; } }
         public TransferResult RemoveFiles(string path)
         {
-            DeleteOperations.Validate(path,true); var info=GetFileInfo(path); CheckAbort();
+            if(options.Protocol==Protocol.Nfs){DeleteOperations.Validate(path,true);var nfsInfo=GetFileInfo(path);if(nfsInfo.IsDirectory)foreach(var child in ListDirectory(path).Files)RemoveFiles(child.FullName);NfsAction(nfsInfo.IsDirectory?4:2,path);return new TransferResult();} DeleteOperations.Validate(path,true); var info=GetFileInfo(path); CheckAbort();
             if(options.Protocol==Protocol.Scp) Command("rm -rf -- " + Quote(path));
             else { if(info.IsDirectory) foreach(var child in ListDirectory(path).Files.Where(x=>!x.IsThisDirectory && !x.IsParentDirectory)) RemoveFiles(child.FullName);
               if(options.Protocol==Protocol.Ftp) Curl.Commands((info.IsDirectory ? "RMD " : "DELE ") + path); else ssh.Remove(path,info.IsDirectory); }
@@ -250,6 +258,22 @@ namespace FileCompass.NetworkTransport
         }
         public TransferResult GetFiles(string remote, string local, bool remove = false, TransferOptions transfer = null)
         {
+            if (options.Protocol==Protocol.Nfs){
+                if(remove)throw new IOException(L.Text("nfs.moveDownloadDisabled"));
+                var nfsInfo=GetFileInfo(remote);if(nfsInfo.IsDirectory || nfsInfo.FileType=='L')throw new IOException(L.Text("nfs.expectedRegularFile"));
+                string nfsTarget=RemoteConnection.DownloadTarget(local,nfsInfo.Name);
+                string stage=nfsTarget+".fc-nfs-"+Guid.NewGuid().ToString("N");
+                try {using(var output=new FileStream(stage,FileMode.CreateNew,FileAccess.Write,FileShare.None)) {
+                    DownloadRelay(remote,output,nfsInfo.Length,delegate(long done){Progress(remote,done,nfsInfo.Length,Stopwatch.StartNew());});
+                    output.Flush(true);
+                }
+                // Preserve source timestamp so the move engine can verify the copied
+                // destination before allowing the original remote file to be removed.
+                File.SetLastWriteTime(stage,nfsInfo.LastWriteTime);
+                if(File.Exists(nfsTarget))File.Replace(stage,nfsTarget,null);else File.Move(stage,nfsTarget);
+                return new TransferResult();
+                }finally{if(File.Exists(stage))File.Delete(stage);}
+            }
             if (options.Protocol != Protocol.Scp && options.Raw("TransientTransfer","0") != "1") return DownloadCheckpointed(remote, local, remove, transfer);
             var info = GetFileInfo(remote); if (info.FileType == 'L' || info.IsDirectory) throw new IOException(L.Text("transfer.regularSourceFileRequiredPrefix") + remote);
             string target = RemoteConnection.DownloadTarget(local, info.Name);
@@ -271,6 +295,15 @@ namespace FileCompass.NetworkTransport
         }
         public TransferResult PutFiles(string local, string remote, bool remove = false, TransferOptions transfer = null)
         {
+            if (options.Protocol==Protocol.Nfs){
+                if(remove)throw new IOException(L.Text("nfs.moveUploadDisabled"));
+                string target=remote.EndsWith("/")?RemoteConnection.Combine(remote,Path.GetFileName(local)):remote;
+                using(var input=File.OpenRead(local)){
+                    var existing=FileExists(target)?GetFileInfo(target):null;
+                    UploadRelay(input,input.Length,File.GetLastWriteTime(local),target,existing,delegate{},delegate{},delegate{});
+                    return new TransferResult();
+                }
+            }
             if (options.Protocol != Protocol.Scp && options.Raw("TransientTransfer","0") != "1") return UploadCheckpointed(local, remote, remove, transfer);
             // Open the source before creating any remote file: local sharing violations
             // remain retryable without disrupting the independent browsing connection.

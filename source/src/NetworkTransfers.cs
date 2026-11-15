@@ -4,7 +4,7 @@ using FileCompass.NetworkTransport;
 
 namespace FileCompass
 {
-    public enum NetworkCopyRule { Reject, Skip, Overwrite, Resume }
+    public enum NetworkCopyRule { Reject, Skip, Overwrite, Resume, Ask }
     public sealed class NetworkCopyResult { public int Copied, Skipped; }
     public static class NetworkTransfers
     {
@@ -34,6 +34,7 @@ namespace FileCompass
         {
             if (check != null) check();
             if ((source == null) == (target == null)) throw new IOException(L.Text("transfer.exactlyOneRemotePanelRequired"));
+            if(rule==NetworkCopyRule.Ask)throw new IOException(L.Text("transfer.interactiveNeedsQueue"));
             var options = new TransferOptions { TransferMode = TransferMode.Binary, PreserveTimestamp = true, OverwriteMode = OverwriteMode.Overwrite, Resume = rule == NetworkCopyRule.Resume && (target == null || String.IsNullOrEmpty(target.Profile.CloudAccountId)) };
             if (source != null)
             {

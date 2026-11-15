@@ -110,7 +110,7 @@ namespace FileCompass
                 bool rememberPassword = false;
                 if (needsPassword) { password = RequestPassword(profile, out rememberPassword); if (password == null) return; }
                 NetworkBusy(true, L.Text("network.connectingPrefix") + profile.Name);
-                if (profile.Protocol == NetworkProtocol.SMB || profile.Protocol == NetworkProtocol.NFS)
+                if (profile.Protocol == NetworkProtocol.SMB || (profile.Protocol == NetworkProtocol.NFS && profile.NfsMapDrive))
                 {
                     string path = await Task.Run(delegate { return profile.Protocol == NetworkProtocol.SMB ? WindowsNetwork.ConnectSmb(profile, password) : WindowsNetwork.ConnectNfs(profile); });
                     if (profile.Protocol == NetworkProtocol.NFS) nfsDrive = profile.DriveLetter;
@@ -233,6 +233,12 @@ namespace FileCompass
             if (job == null)
             {
                 job = new NetworkTransferJob(browsing.Profile, download) { Move = move }; job.Reserve(); networkJobs.Add(job);
+                job.ResolveConflict=delegate(string from,string to){
+                    return Dispatcher.Invoke(new Func<NetworkCopyRule>(delegate {
+                        var answer=MessageBox.Show(this,L.Format("transfer.conflictQuestion",from,to),L.Text("transfer.existingFilesLabel"),MessageBoxButton.YesNoCancel,MessageBoxImage.Question);
+                        return answer==MessageBoxResult.Yes?NetworkCopyRule.Overwrite:answer==MessageBoxResult.No?NetworkCopyRule.Skip:NetworkCopyRule.Reject;
+                    }));
+                };
                 networkCopies++;
                 var captured = job;
                 job.ResolveError = delegate(CopyFailure failure)
@@ -283,8 +289,9 @@ namespace FileCompass
             {
                 var result = await Task.Run(delegate { using (connection) using (relayTarget) return relayTarget == null ? NetworkCopyWorker.Run(job, connection) : NetworkRelay.Run(job, connection, relayTarget); });
                 bool errors = job.SnapshotItems().Any(x => x.State.StartsWith(L.Code("state.error")));
-                job.Finish(errors ? L.Text("state.completedWithErrors") : L.Code("state.completed"));
-                job.Activity.Finish((errors ? L.Text("state.completedWithErrors") : L.Code("state.completed")) + " · " + job.Caption + (job.Move ? L.Text("copy.movedCountPrefix") : L.Text("copy.copiedCountPrefix")) + result.Copied + L.Text("copy.skippedCountSeparator") + result.Skipped + " · " + CopyUi.Bytes(job.TotalBytes) + L.Text("queue.clickToOpenSuffix"), !errors);
+                bool skippedMove = job.Move && result.Skipped > 0;
+                job.Finish(errors || skippedMove ? L.Text("state.completedWithErrors") : L.Code("state.completed"));
+                job.Activity.Finish((errors ? L.Text("state.completedWithErrors") : skippedMove ? L.Text("transfer.moveSkippedStatus") : L.Code("state.completed")) + " · " + job.Caption + (job.Move ? L.Text("copy.movedCountPrefix") : L.Text("copy.copiedCountPrefix")) + result.Copied + L.Text("copy.skippedCountSeparator") + result.Skipped + " · " + CopyUi.Bytes(job.TotalBytes) + L.Text("queue.clickToOpenSuffix"), !errors && !skippedMove);
             }
             catch (OperationCanceledException) {
                 job.Cancel(); bool kept = job.RelayTarget == null || job.KeepPartialOnCancel; job.Finish(kept ? L.Code("state.interrupted") : L.Code("state.cancelled"));

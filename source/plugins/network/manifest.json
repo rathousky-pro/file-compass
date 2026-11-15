@@ -4,11 +4,12 @@
   "components": {
     "libcurl": "8.22.0",
     "libressl": "4.3.3",
-    "libssh2": "1.11.1"
+    "libssh2": "1.11.1",
+    "libnfs": "18.0.0 (commit 331d391a9a224cca3782f782ed4835eec8fa33f8)"
   },
   "dll": {
     "file": "FileCompassNetwork.dll",
-    "sha256": "0a0a03bb2a023e1f06e82f106b5460266505d15b5036a18bb7de8391271f0113"
+    "sha256": "adafe40a1ebc1afcd6bbec77961d664c7f94afacb10218a7277b0b9fe3982ab3"
   },
   "package": {
     "local": "source/downloads/network/curl-8.22.0_3-win64-mingw.zip",
@@ -25,7 +26,15 @@
     "SFTP": "libssh2",
     "SCP": "libssh2",
     "FTPS": "libcurl",
-    "FTP": "libcurl"
+    "FTP": "libcurl",
+    "NFSv3": "libnfs: browsing, read, write and remote editor",
+    "NFSv4.0": "libnfs: experimental; read/write state tracking needs additional testing",
+    "NFSv4.2": "libnfs (experimental; server support required)"
   },
-  "builtAt": "2026-10-13"
+  "builtAt": "2026-11-15",
+  "nfsBuild": {
+    "source": "https://github.com/sahlberg/libnfs",
+    "commit": "331d391a9a224cca3782f782ed4835eec8fa33f8",
+    "script": "source/native/prepare-nfs.ps1"
+  }
 }

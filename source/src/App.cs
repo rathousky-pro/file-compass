@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -451,6 +451,10 @@ namespace FileCompass
             if (args.Contains("--archive-test")) return ArchiveTests.Run(args.Length > 1 ? args[1] : Path.GetTempPath());
             if (args.Contains("--integrity-test")) return IntegrityTests.Run(args.Length > 1 ? args[1] : Path.GetTempPath());
             if (args.Contains("--archive-upgrade-test")) return ArchiveUpgradeTests.Run(args[1]);
+            if (args.Contains("--conflict-choice-test")) return ConflictChoiceTests.Run(args[1]);
+            if (args.Contains("--updates-layout-test")) return UpdatesLayoutTests.Run(args[1]);
+            if (args.Contains("--nfs-smoke-test")) return NfsSmokeTests.Run(args);
+            if (args.Contains("--nfs-dsm-test")) return NfsDsmTests.Run(args);
             if (args.Contains("--self-test")) return SmokeTests.Run(args.Length > 1 ? args[1] : Path.GetTempPath());
             if (args.Contains("--network-test")) return NetworkTests.Run(args.Length > 1 ? args[1] : Path.GetTempPath());
             if (args.Contains("--sshfs-test")) return SshfsTests.Run(args[1], Int32.Parse(args[2]));

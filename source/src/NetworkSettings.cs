@@ -44,6 +44,8 @@ namespace FileCompass
         public int SshKeepAliveSeconds;
         public string DriveLetter = "Z:";
         public bool NfsAnonymous = true;
+        public bool NfsMapDrive = true; // Preserve behavior for existing profiles.
+        public int NfsVersion = 3;
         public bool UseWindowsTerminal = true;
         public bool UsePowerShell7;
         public bool SshfsConnectOnStartup;
@@ -76,8 +78,9 @@ namespace FileCompass
             if (Protocol == NetworkProtocol.NFS)
             {
                 if (String.IsNullOrWhiteSpace(Path.Trim('/', '\\'))) throw new ArgumentException(L.Text("nfs.exportPathRequired"));
-                if (DriveLetter == null || DriveLetter.Length != 2 || DriveLetter[0] < 'D' || DriveLetter[0] > 'Z' || DriveLetter[1] != ':')
+                if (NfsMapDrive && (DriveLetter == null || DriveLetter.Length != 2 || DriveLetter[0] < 'D' || DriveLetter[0] > 'Z' || DriveLetter[1] != ':'))
                     throw new ArgumentException(L.Text("nfs.driveLetterRequired"));
+                if (NfsVersion != 3 && NfsVersion != 4 && NfsVersion != 42) throw new ArgumentException(L.Text("nfs.unsupportedVersion"));
             }
             if (!String.IsNullOrEmpty(PrivateKeyPath) && CanOpenSsh && !File.Exists(PrivateKeyPath))
                 throw new ArgumentException(L.Text("ssh.privateKeyFileMissing"));

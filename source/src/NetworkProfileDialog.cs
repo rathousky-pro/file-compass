@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -22,7 +22,9 @@ namespace FileCompass
             mlsd = Choice(L.Text("ftp.disableMlsd"), L.Text("ftp.enableMlsd"), L.Text("network.autoDetectChoice")),
             hidden = Choice(L.Text("ftp.disableListHidden"), L.Text("ftp.enableListHidden"), L.Text("network.autoDetectChoice")),
             proxy = Choice(L.Text("proxy.noneChoice"), "SOCKS4", "SOCKS5", "HTTP CONNECT"), drive = new ComboBox(),
-            shell = Choice(L.Text("shell.windowsPowerShellChoice"), L.Text("shell.powerShell7Choice"));
+            shell = Choice(L.Text("shell.windowsPowerShellChoice"), L.Text("shell.powerShell7Choice")),
+            nfsMode = Choice(L.Text("nfs.panelMode"), L.Text("nfs.mappedMode")),
+            nfsVersion = Choice(L.Text("nfs.version3"), Environment.GetEnvironmentVariable("FILECOMPASS_EXPERIMENTAL_NFS4")=="1" ? L.Text("nfs.version4Test") : L.Text("nfs.version4Read"), L.Text("nfs.version42"));
         readonly StackPanel general = new StackPanel(), advanced = new StackPanel();
         internal readonly TabControl Tabs = new TabControl();
         internal void SelectProtocol(NetworkProtocol type) { protocol.SelectedItem = type; }
@@ -43,7 +45,7 @@ namespace FileCompass
             remember.IsChecked = !String.IsNullOrEmpty(Profile.EncryptedPassword);
             password.ToolTip = L.Text("network.savedPasswordFieldHelp");
             tls.IsChecked = Profile.FtpTls; tlsMode.SelectedIndex = Profile.FtpImplicitTls ? 1 : 0; passive.IsChecked = Profile.FtpPassive;
-            anon.IsChecked = Profile.NfsAnonymous; compression.IsChecked = Profile.SshCompression; agent.IsChecked = Profile.SshAgent;
+            anon.IsChecked = Profile.NfsAnonymous; nfsMode.SelectedIndex = newProfile ? 0 : Profile.NfsMapDrive ? 1 : 0; nfsVersion.SelectedIndex = Profile.NfsVersion == 42 ? 2 : Profile.NfsVersion == 4 ? 1 : 0; compression.IsChecked = Profile.SshCompression; agent.IsChecked = Profile.SshAgent;
             terminal.IsChecked = Profile.UseWindowsTerminal; shell.SelectedIndex = Profile.UsePowerShell7 ? 1 : 0;
             sshfsStartup.IsChecked = Profile.SshfsConnectOnStartup; sshfsKeep.IsChecked = Profile.SshfsKeepMounted;
             encoding.SelectedIndex = Profile.FilenameEncoding; mlsd.SelectedIndex = Profile.FtpMlsd; hidden.SelectedIndex = Profile.FtpHidden;
@@ -61,6 +63,7 @@ namespace FileCompass
             tls.Checked += delegate { tlsMode.IsEnabled = certificate.IsEnabled = true; };
             tls.Unchecked += delegate { tlsMode.IsEnabled = certificate.IsEnabled = false; };
             proxy.SelectionChanged += delegate { ProxyState(); };
+            nfsMode.SelectionChanged += delegate { if((NetworkProtocol)protocol.SelectedItem == NetworkProtocol.NFS) Rebuild(false); };
             Rebuild(false);
             Loaded += delegate { QueueProfileFit(); };
             Tabs.SelectionChanged += delegate { QueueProfileFit(); };
@@ -128,7 +131,7 @@ namespace FileCompass
             if (!ssh) Row(locations, type == NetworkProtocol.SMB ? L.Text("smb.shareLabel") : type == NetworkProtocol.NFS ? L.Text("nfs.exportLabel") : L.Text("network.remoteFolderLabel"), path);
             if (!ssh) Row(locations, L.Text("network.localFolderLabel"), Browse(local, true));
             if (ftp) locations.Children.Add(passive);
-            if (type == NetworkProtocol.NFS) { Row(locations, L.Text("network.driveLetterLabel"), drive); locations.Children.Add(anon); }
+            if (type == NetworkProtocol.NFS) { Row(locations, L.Text("nfs.modeLabel"), nfsMode); if(nfsMode.SelectedIndex == 1) { Row(locations, L.Text("network.driveLetterLabel"), drive); locations.Children.Add(anon); Note(advanced, L.Text("nfs.mappingHelp")); } else { Row(locations, L.Text("nfs.versionLabel"), nfsVersion); Note(advanced, Environment.GetEnvironmentVariable("FILECOMPASS_EXPERIMENTAL_NFS4")=="1" ? L.Text("nfs.experimentalHelp") : L.Text("nfs.directHelp")); } }
             if (sshfs) { Row(locations, L.Text("network.driveLetterLabel"), drive); locations.Children.Add(sshfsStartup); locations.Children.Add(sshfsKeep); }
             if (transfer || ssh || sshfs) Row(credentials, L.Text("ssh.privateKeyLabel"), Browse(key, false));
             if (ftp || transfer)
@@ -222,7 +225,7 @@ namespace FileCompass
             result.Path = path.Text.Trim(); result.LocalPath = local.Text.Trim(); result.UserName = user.Text.Trim();
             result.PrivateKeyPath = key.Text.Trim(); result.HostKeyFingerprint = fingerprint.Text.Trim();
             result.FtpTls = tls.IsChecked == true; result.FtpImplicitTls = tlsMode.SelectedIndex == 1; result.FtpPassive = passive.IsChecked == true;
-            result.NfsAnonymous = anon.IsChecked == true; result.DriveLetter = drive.SelectedItem as string;
+            result.NfsAnonymous = anon.IsChecked == true; result.NfsMapDrive = nfsMode.SelectedIndex == 1; result.NfsVersion = nfsVersion.SelectedIndex == 2 ? 42 : nfsVersion.SelectedIndex == 1 ? 4 : 3; result.DriveLetter = drive.SelectedItem as string;
             result.TimeoutSeconds = Number(timeout.Text, L.Text("network.timeoutFieldName")); result.FilenameEncoding = encoding.SelectedIndex;
             result.FtpMlsd = mlsd.SelectedIndex; result.FtpHidden = hidden.SelectedIndex; result.FtpCommands = commands.Text; result.ClientCertificate = certificate.Text.Trim();
             result.ProxyMethod = proxy.SelectedIndex; result.ProxyHost = proxyHost.Text.Trim(); result.ProxyPort = Number(proxyPort.Text, L.Text("proxy.portFieldName")); result.ProxyUser = proxyUser.Text.Trim();

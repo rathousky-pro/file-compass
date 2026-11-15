@@ -57,11 +57,12 @@ namespace FileCompass
         }
         public SessionOptions Options(string password)
         {
-            if (Profile.Protocol != NetworkProtocol.FTP && !Profile.IsSshTransfer) throw new ArgumentException(L.Text("network.profilePanelUnsupported"));
-            var options = new SessionOptions { Protocol = Profile.Protocol == NetworkProtocol.SCP ? FileCompass.NetworkTransport.Protocol.Scp : Profile.Protocol == NetworkProtocol.SFTP ? FileCompass.NetworkTransport.Protocol.Sftp : FileCompass.NetworkTransport.Protocol.Ftp,
+            if (Profile.Protocol != NetworkProtocol.FTP && !Profile.IsSshTransfer && Profile.Protocol != NetworkProtocol.NFS) throw new ArgumentException(L.Text("network.profilePanelUnsupported"));
+            var options = new SessionOptions { Protocol = Profile.Protocol == NetworkProtocol.NFS ? FileCompass.NetworkTransport.Protocol.Nfs : Profile.Protocol == NetworkProtocol.SCP ? FileCompass.NetworkTransport.Protocol.Scp : Profile.Protocol == NetworkProtocol.SFTP ? FileCompass.NetworkTransport.Protocol.Sftp : FileCompass.NetworkTransport.Protocol.Ftp,
                 HostName = Profile.Host, PortNumber = Profile.Port,
                 UserName = Profile.Protocol == NetworkProtocol.FTP && String.IsNullOrWhiteSpace(Profile.UserName) ? "anonymous" : Profile.UserName,
                 Password = password, Timeout = TimeSpan.FromSeconds(Profile.TimeoutSeconds) };
+            if (Profile.Protocol == NetworkProtocol.NFS) { options.AddRawSettings("NfsExport",Profile.Path); options.AddRawSettings("NfsVersion",Profile.NfsVersion.ToString()); }
             if (Profile.IsSshTransfer)
             {
                 if (!String.IsNullOrWhiteSpace(Profile.HostKeyFingerprint)) options.SshHostKeyFingerprint = Profile.HostKeyFingerprint;

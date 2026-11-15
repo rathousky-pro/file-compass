@@ -31,11 +31,13 @@ namespace FileCompass.NetworkTransport
         internal void RemoveVerifiedFile(string path,long length,DateTime modified)
         {
             var info = GetFileInfo(path); if (info.FileType == 'L' || info.IsDirectory || info.Length != length || info.LastWriteTime != modified) throw new IOException(L.Text("transfer.sourceChangedAfterTransfer")); CheckAbort();
+            if (options.Protocol == Protocol.Nfs) { NfsAction(2,path); return; }
             if (options.Protocol == Protocol.Ftp) Curl.Commands("DELE " + path); else if (options.Protocol == Protocol.Sftp) ssh.Remove(path,false); else Command("rm -- " + Quote(path));
         }
         internal void RemoveEmptyDirectory(string path)
         {
             DeleteOperations.Validate(path,true); var info = GetFileInfo(path); if (!info.IsDirectory || info.FileType == 'L') throw new IOException(L.Text("transfer.sourceFolderChanged")); CheckAbort();
+            if (options.Protocol == Protocol.Nfs) { NfsAction(4,path); return; }
             if (options.Protocol == Protocol.Ftp) Curl.Commands("RMD " + path); else if (options.Protocol == Protocol.Sftp) ssh.Remove(path,true); else Command("rmdir -- " + Quote(path));
         }
     }

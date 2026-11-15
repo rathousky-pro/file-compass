@@ -107,10 +107,10 @@ namespace FileCompass
             icon.MouseLeftButtonUp += delegate { ShowSummaryDetails(); };
             summaryPause.Click += delegate
             {
-                var local = copyControl != null && copyActivities.Children.OfType<CopyActivity>().Any(x => !x.Finished && x.Backgrounded && x.LocalMetrics != null);
+                var local = copyActivities.Children.OfType<CopyActivity>().Where(x => !x.Finished && x.Backgrounded && x.LocalMetrics != null && x.PauseAction != null && x.IsPaused != null).ToArray();
                 var remote = networkJobs.Where(x => !x.Finished && x.Activity != null && x.Activity.Backgrounded).ToArray();
-                bool pause = (local && !copyControl.Paused) || remote.Any(x => !x.Paused);
-                if (local && copyControl.Paused != pause) copyProgress.TogglePause();
+                bool pause = local.Any(x => !x.IsPaused()) || remote.Any(x => !x.Paused);
+                foreach (var activity in local) if (activity.IsPaused() != pause) activity.PauseAction();
                 foreach (var job in remote) job.Pause(pause);
                 RefreshCopySummary();
             };
@@ -119,7 +119,7 @@ namespace FileCompass
             {
                 if (!ConfirmNetworkCancellation(networkJobs.Where(x => !x.Finished && x.Activity != null && x.Activity.Backgrounded).ToArray())) return;
                 var background = copyActivities.Children.OfType<CopyActivity>().Where(x => !x.Finished && x.Backgrounded).ToArray();
-                if (copyControl != null && background.Any(x => x.Cancellation.Target == copyControl)) CancelWaitingCopies();
+                if (background.Any(x => x.LocalMetrics != null)) CancelWaitingCopies();
                 foreach (var activity in background) activity.RequestCancel(false);
                 RefreshCopySummary();
             };
@@ -128,6 +128,7 @@ namespace FileCompass
         {
             var running = copyActivities.Children.OfType<CopyActivity>().Where(x => !x.Finished && x.Backgrounded).ToArray();
             if (running.Length == 1 && running[0].RestoreDetails != null) { running[0].RestoreDetails(); return; }
+            if (running.Length > 1) { ShowActivityDetails(); return; }
             var transfer = networkJobs.FirstOrDefault(x => !x.Finished && x.Activity != null && x.Activity.Backgrounded);
             if (transfer != null) ShowNetworkQueue(transfer);
             else if (copyProgress != null && !copyProgress.IsVisible) ShowCopyProgress();
@@ -150,10 +151,10 @@ namespace FileCompass
             summaryTransferInfo.Visibility = transfers.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
             long rate = transfers.Sum(x => x.BytesPerSecond);
             double? remaining = transfers.Length > 0 && transfers.All(x => x.RemainingSeconds.HasValue) ? (double?)transfers.Max(x => x.RemainingSeconds.Value) : null;
-            bool localPaused = copyControl != null && running.Any(x => x.LocalMetrics != null) && copyControl.Paused;
+            var local = running.Where(x => x.LocalMetrics != null && x.PauseAction != null && x.IsPaused != null).ToArray();
             var remoteJobs = networkJobs.Where(x => !x.Finished && x.Activity != null && x.Activity.Backgrounded).ToArray();
-            bool paused = (localPaused || remoteJobs.Any(x => x.Paused)) && !(copyControl != null && running.Any(x => x.LocalMetrics != null) && !copyControl.Paused) && !remoteJobs.Any(x => !x.Paused);
-            summaryPause.IsEnabled = (copyControl != null && running.Any(x => x.LocalMetrics != null)) || remoteJobs.Length > 0;
+            bool paused = (local.Any(x => x.IsPaused()) || remoteJobs.Any(x => x.Paused)) && !local.Any(x => !x.IsPaused()) && !remoteJobs.Any(x => !x.Paused);
+            summaryPause.IsEnabled = local.Length > 0 || remoteJobs.Length > 0;
             summaryPause.Content = paused ? "▶ "+L.Text("action.resume") : "Ⅱ "+L.Text("action.pause"); summaryPause.ToolTip = paused ? L.Text("transfer.resumeTooltip") : L.Text("transfer.pauseTooltip");
             summaryRoute.Text = running.Length == 1 ? primary.TransferRoute ?? "" : ""; summaryRoute.ToolTip = summaryRoute.Text;
             summaryTransferInfo.Text = (running.Length==1&&primary.LocalMetrics!=null&&copyProgress!=null?copyProgress.FileCountSummary:"")+(paused ? L.Text("transfer.pausedPrefix") : "") + (rate / 1048576.0).ToString("F1") + L.Text("transfer.rateAndRemainingSuffix") + TransferTime(remaining);

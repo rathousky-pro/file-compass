@@ -194,7 +194,7 @@ namespace FileCompass
             style.Setters.Add(new Setter(FrameworkElement.MarginProperty,new Thickness(0)));style.Setters.Add(new Setter(FrameworkElement.UseLayoutRoundingProperty,true));style.Setters.Add(new Setter(UIElement.SnapsToDevicePixelsProperty,true));
             style.Setters.Add(new Setter(BracketOwnerProperty,this));style.Setters.Add(new Setter(BracketMarkedProperty,new Binding("IsMarked")));style.Setters.Add(new EventSetter(FrameworkElement.LoadedEvent,new RoutedEventHandler(delegate{QueueSelectionBrackets();})));
             style.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(0)));
-            style.Setters.Add(new Setter(FrameworkElement.HeightProperty, Math.Max(27, List.FontSize * 1.65 + 6)));
+            style.Setters.Add(new Setter(FrameworkElement.HeightProperty, FileRowHeight));
             style.Setters.Add(new Setter(Control.ForegroundProperty, FluentTheme.Text));
             style.Setters.Add(new Setter(Control.BackgroundProperty, Brushes.Transparent));
             style.Setters.Add(new Setter(Control.BorderBrushProperty, Brushes.Transparent));
@@ -366,7 +366,7 @@ namespace FileCompass
             { NavigateRemote(path.StartsWith("/") ? path : path.Substring(Remote.Display("/").Length - 1), remember); return; }
             NavigationTask = NavigateLocal(path, remember);
         }
-        async Task NavigateLocal(string path, bool remember)
+        async Task NavigateLocal(string path, bool remember, string returnCursor = null)
         {
             CancelNavigation(); var cancellation = new CancellationTokenSource(); navigationCancellation = cancellation;
             int version = navigationVersion; var token = cancellation.Token;
@@ -379,7 +379,7 @@ namespace FileCompass
             {
                 if (path.EndsWith("\\*.*")) path = path.Substring(0, path.Length - 3);
                 path = Path.GetFullPath(Environment.ExpandEnvironmentVariables(path));
-                var keepMarks = new HashSet<string>(StringComparer.OrdinalIgnoreCase); string keepCursor = null; double keepScroll = CaptureScroll(); bool refreshingSameFolder = String.Equals(path, CurrentPath, StringComparison.OrdinalIgnoreCase);
+                var keepMarks = new HashSet<string>(StringComparer.OrdinalIgnoreCase); string keepCursor = returnCursor; double keepScroll = CaptureScroll(); bool refreshingSameFolder = String.Equals(path, CurrentPath, StringComparison.OrdinalIgnoreCase);
                 if (!refreshingSameFolder && CurrentPath != null && !IsRemote && !IsArchive && !IsVirtualBrowser) {
                     var parent = new DirectoryInfo(CurrentPath).Parent;
                     if (parent != null && String.Equals(parent.FullName.TrimEnd('\\'), path.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase)) keepCursor = CurrentPath.TrimEnd('\\');
@@ -536,7 +536,7 @@ namespace FileCompass
             var entry = List.SelectedItem as Entry; if (entry == null) return;
             if(entry.NetworkServiceProfile!=null){var main=Window.GetWindow(this) as MainWindow;if(main!=null)main.OpenDiscoveredService(this,entry);return;}
             if(entry.NetworkDeviceTarget!=null){try{Process.Start(new ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows),"explorer.exe"),SshTerminal.QuoteWindowsArgument("shell:"+entry.NetworkDeviceTarget)){UseShellExecute=true});}catch(Exception ex){MessageBox.Show(ex.Message,L.Text("error.cannotOpenFile"));}return;}
-            if (entry.IsDirectory) Navigate(entry.FullPath, true);
+            if (entry.IsDirectory) Navigate(entry.IsLink && !IsRemote && !IsArchive && !IsExt && !IsVirtualBrowser ? DirectoryLinkTarget.Resolve(entry.FullPath) : entry.FullPath, true);
             else if (IsArchive) { if (ArchiveFileRequested != null) ArchiveFileRequested(this, entry, false, false); }
             else if(IsExt)ViewSelected();
             else if (IsRemote) OpenRemoteFile(entry);

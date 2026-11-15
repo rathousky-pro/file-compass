@@ -6,6 +6,7 @@ namespace FileCompass {
 #if APP_TESTS
   internal Func<bool> RightPressedForTests;
   internal Func<Point> RightPositionForTests;
+  internal Action<bool,string[]> ContextMenuForTests;
 #endif
   void InitializeRightScroll(){rightScrollTimer.Tick+=delegate{
    bool pressed=Mouse.RightButton==MouseButtonState.Pressed;Point point=Mouse.GetPosition(List);
@@ -39,7 +40,11 @@ namespace FileCompass {
 
   internal void FinishContextEntry(TimeSpan elapsed){if(!contextPending)return;if(!rightMoved&&IsContextHold(elapsed,false)){CompleteProgramContextHold();return;}var entry=contextPressedEntry;bool moved=rightMoved;contextPending=false;HideRightHoldIndicator();EndRightMark();Mouse.Capture(null);if(!moved&&entry!=null)ToggleMark(entry);}
   void EndFileContextGesture(MouseButtonEventArgs e){if(!contextPending){if(holdMenuShown)e.Handled=true;return;}FinishContextEntry(TimeSpan.FromMilliseconds(unchecked((uint)(e.Timestamp-contextPressTimestamp))));e.Handled=true;}
-  internal async void ShowFileContextMenu(bool native){if(LocalLoading||IsLoading)return;activate(this);if(native&&CanShowWindowsMenu){try{await ShellMenuWorker.Show(Window.GetWindow(this),Selected().Where(x=>!x.IsParent).Select(x=>x.FullPath).ToArray());if(IsLoaded)Refresh();}catch(OperationCanceledException){}catch(Exception ex){if(IsLoaded)MessageBox.Show(Window.GetWindow(this),ex.Message,L.Text("context.windows"));}return;}if(List.ContextMenu!=null){List.ContextMenu.PlacementTarget=List;List.ContextMenu.IsOpen=true;}}
+  internal async void ShowFileContextMenu(bool native){if(LocalLoading||IsLoading)return;activate(this);
+#if APP_TESTS
+   if(ContextMenuForTests!=null){ContextMenuForTests(native,Selected().Where(x=>!x.IsParent).Select(x=>x.FullPath).ToArray());return;}
+#endif
+   if(native&&CanShowWindowsMenu){try{await ShellMenuWorker.Show(Window.GetWindow(this),Selected().Where(x=>!x.IsParent).Select(x=>x.FullPath).ToArray());if(IsLoaded)Refresh();}catch(OperationCanceledException){}catch(Exception ex){if(IsLoaded)MessageBox.Show(Window.GetWindow(this),ex.Message,L.Text("context.windows"));}return;}if(List.ContextMenu!=null){List.ContextMenu.PlacementTarget=List;List.ContextMenu.IsOpen=true;}}
  }
  public partial class MainWindow {
   internal void AddFileContextCommands(ContextMenu menu,FilePanel panel){
@@ -59,7 +64,7 @@ namespace FileCompass {
    add("action.rename","Shift+F6","rename",Rename,()=>selected().Length==1&&!panel.IsVirtualBrowser);add("action.delete","F8","delete",DeleteSelected,()=>any()&&!panel.IsVirtualBrowser);
    menu.Items.Insert(index++,new Separator());
    add("action.compress","Alt+F5","pack",CreateArchive,()=>any()&&!panel.IsRemote&&!panel.IsArchive&&!panel.IsVirtualBrowser);
-   add("action.extract","Alt+F9","unpack",ExtractArchives,()=>panel.IsArchive||any()&&!panel.IsRemote&&selected().All(x=>!x.IsDirectory&&ArchiveEngine.Recognized(x.FullPath)));
+   add("action.extract","Alt+F9","unpack",ExtractArchives,()=>panel.IsArchive||any()&&!panel.IsRemote&&!panel.IsExt&&!panel.IsVirtualBrowser&&selected().All(x=>!x.IsDirectory));
    menu.Items.Insert(index++,new Separator());
    add("shell.propertiesShortcut","",null,ShowProperties,()=>any()&&!panel.IsRemote&&!panel.IsArchive&&!panel.IsExt);menu.Items.Add(extra);
    var system=new MenuItem{Header=L.Text("context.windows"),Tag="context.windows",ToolTip=L.Text("context.windowsHint")};system.Click+=delegate{panel.ShowFileContextMenu(true);};menu.Items.Add(new Separator());menu.Items.Add(system);

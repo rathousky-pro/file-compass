@@ -15,12 +15,15 @@ namespace FileCompass
         static FileStream OpenZone(string path, bool write)
         {
             // .NET Framework rejects ADS syntax in its managed path checks.
-            var handle = CreateFile(Path.GetFullPath(path) + ":Zone.Identifier", write ? 0x40000000u : 0x80000000u, 1, IntPtr.Zero, write ? 2u : 3u, 0x80, IntPtr.Zero);
+            string fullPath = Path.GetFullPath(path);
+            string extendedPath = fullPath.StartsWith(@"\\?\", StringComparison.Ordinal) ? fullPath : fullPath.StartsWith(@"\\", StringComparison.Ordinal) ? @"\\?\UNC\" + fullPath.Substring(2) : @"\\?\" + fullPath;
+            var handle = CreateFile(extendedPath + ":Zone.Identifier", write ? 0x40000000u : 0x80000000u, 1, IntPtr.Zero, write ? 2u : 3u, 0x80, IntPtr.Zero);
             if (handle.IsInvalid)
             {
                 int error = Marshal.GetLastWin32Error(); handle.Dispose();
                 if (!write && (error == 2 || error == 3)) return null;
-                throw new IOException(L.Text("security.zoneAccess"), new Win32Exception(error));
+                var cause = new Win32Exception(error);
+                throw new IOException(L.Text("security.zoneAccess") + "\n" + path + "\n" + cause.Message + " (" + error + ")", cause);
             }
             try { return new FileStream(handle, write ? FileAccess.Write : FileAccess.Read); }
             catch { handle.Dispose(); throw; }

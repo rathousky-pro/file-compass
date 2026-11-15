@@ -1,4 +1,5 @@
 {
+  "settings.fileRowSpacing": "Zeilenabstand im Dateifenster (px)",
   "transfer.manualLimit": "Manuelles Limit",
   "transfer.manualLimitHelp": "0 bedeutet kein manuelles Limit. Bei aktivem Zeitplan gilt das strengere Limit.",
   "transfer.effectiveLimit": "Aktuelles Limit: {0} KiB/s ({1})",

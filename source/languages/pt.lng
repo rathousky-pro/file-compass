@@ -1,4 +1,5 @@
 {
+  "settings.fileRowSpacing": "Espaçamento entre linhas do painel (px)",
   "transfer.manualLimit": "Limite manual",
   "transfer.manualLimitHelp": "0 significa sem limite manual. Quando existe um horário ativo, aplica-se o limite mais restritivo.",
   "transfer.effectiveLimit": "Limite atual: {0} KiB/s ({1})",

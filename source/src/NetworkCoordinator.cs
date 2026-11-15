@@ -229,7 +229,7 @@ namespace FileCompass
             var planner = browsing.TransferConnection();
             // An explicit resume must not disappear into a previous job's root
             // de-duplication set after an individual item was interrupted.
-            var job = recovery == null && rule != NetworkCopyRule.Resume ? networkJobs.AsEnumerable().Reverse().FirstOrDefault(x => x.Move == move && x.Matches(browsing, download) && x.Reserve()) : null;
+            NetworkTransferJob job = null;
             if (job == null)
             {
                 job = new NetworkTransferJob(browsing.Profile, download) { Move = move }; job.Reserve(); networkJobs.Add(job);

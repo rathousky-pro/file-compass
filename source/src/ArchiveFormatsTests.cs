@@ -7,6 +7,53 @@ namespace FileCompass
 {
     internal static class ArchiveFormatsTests
     {
+        internal static int Detection(string root)
+        {
+            Directory.CreateDirectory(root); var checks = new List<string>();
+            try {
+                SharpSevenZip.SharpSevenZipBase.SetLibraryPath(ArchiveEngine.SevenZipLibraryPath);
+                string folder = Directory.CreateDirectory(Path.Combine(root, "input")).FullName;
+                File.WriteAllText(Path.Combine(folder, "payload.txt"), "archive detection test");
+                string zip = Path.Combine(root, "source.zip"); if (File.Exists(zip)) File.Delete(zip);
+                System.IO.Compression.ZipFile.CreateFromDirectory(folder, zip);
+                var open = typeof(ArchiveWorker).GetMethod("Open", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+                var execute = typeof(ArchiveWorker).GetMethod("Execute", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+                foreach (string name in new[] { "archive", "archive.custom", "archive.rar" }) {
+                    string path = Path.Combine(root, name); File.Copy(zip, path, true);
+                    using (var reader = (SharpSevenZip.SharpSevenZipExtractor)open.Invoke(null, new object[] { path, null }))
+                        if (reader.FilesCount != 1) throw new IOException("Wrong entry count: " + name);
+                    string output = Path.Combine(root, "out-" + name); Directory.CreateDirectory(output);
+                    execute.Invoke(null, new object[] { new[] { "x", "-o" + output, "--", path }, "", root, new ArchiveBudget(new ArchiveSettings()), (Action<string>)(x => { }) });
+                    if (File.ReadAllText(Path.Combine(output, "payload.txt")) != "archive detection test") throw new IOException("Wrong extracted contents: " + name);
+                    checks.Add(name + " detected and extracted");
+                }
+                string encrypted = Path.Combine(root, "encrypted.custom"); if (File.Exists(encrypted)) File.Delete(encrypted);
+                var compressor = new SharpSevenZip.SharpSevenZipCompressor { ArchiveFormat = SharpSevenZip.OutArchiveFormat.SevenZip, EncryptHeaders = true };
+                compressor.CompressFilesEncrypted(encrypted, "test-password", Path.Combine(folder, "payload.txt"));
+                try { using (var ignored = (SharpSevenZip.SharpSevenZipExtractor)open.Invoke(null, new object[] { encrypted, null })) { } throw new Exception("Encrypted headers did not request a password"); }
+                catch (System.Reflection.TargetInvocationException ex) { if (!(ex.InnerException is ArchivePasswordException)) throw; }
+                using (var reader = (SharpSevenZip.SharpSevenZipExtractor)open.Invoke(null, new object[] { encrypted, "test-password" }))
+                    if (reader.FilesCount != 1) throw new IOException("Encrypted archive could not be opened");
+                checks.Add("renamed encrypted archive requests and accepts its password");
+                string invalid = Path.Combine(root, "ordinary.dat"); File.WriteAllText(invalid, "not an archive");
+                try { open.Invoke(null, new object[] { invalid, null }); throw new Exception("Non-archive accepted"); }
+                catch (System.Reflection.TargetInvocationException ex) { if (!(ex.InnerException is IOException) || ex.InnerException is ArchivePasswordException) throw; }
+                checks.Add("ordinary file reports a format error, not a password request");
+                string fixture = Environment.GetEnvironmentVariable("FILECOMPASS_ARCHIVE_FIXTURE");
+                if (!String.IsNullOrWhiteSpace(fixture)) {
+                    string output = Path.Combine(root, "real-fixture"); Directory.CreateDirectory(output);
+                    execute.Invoke(null, new object[] { new[] { "x", "-o" + output, "--", fixture }, "", root, new ArchiveBudget(new ArchiveSettings()), (Action<string>)(x => { }) });
+                    using (var zipReader = System.IO.Compression.ZipFile.OpenRead(fixture)) {
+                        var sample = zipReader.Entries.First(x => !x.FullName.EndsWith("/", StringComparison.Ordinal));
+                        string extracted = ArchiveEngine.DiskPath(output, sample.FullName);
+                        using (var hash = System.Security.Cryptography.SHA256.Create()) using (var a = sample.Open()) using (var b = File.OpenRead(extracted))
+                            if (!hash.ComputeHash(a).SequenceEqual(hash.ComputeHash(b))) throw new IOException("Fixture contents differ");
+                    }
+                    checks.Add("real renamed ZIP extracts and matches its content");
+                }
+                File.WriteAllLines(Path.Combine(root, "archive-detection-result.txt"), checks.Concat(new[] { "PASS" })); return 0;
+            } catch (Exception ex) { File.WriteAllText(Path.Combine(root, "archive-detection-result.txt"), String.Join("\n", checks) + "\nFAIL: " + ex); return 1; }
+        }
         internal static int Run(string root)
         {
             Directory.CreateDirectory(root); var checks = new List<string>();

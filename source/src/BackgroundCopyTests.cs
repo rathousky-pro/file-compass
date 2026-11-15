@@ -47,13 +47,11 @@ namespace FileCompass
                 string existing = Directory.CreateDirectory(Path.Combine(destination, "sub", "nested")).FullName;
                 File.WriteAllText(Path.Combine(existing, "one.bin"), "old content");
                 var append = StartNetworkCopy(new[] { new Entry { FullPath = "/sub", IsDirectory = true } }, left.Remote, true, destination, null, NetworkCopyRule.Overwrite);
-                while (job.TotalBytes == 8388608)
-                { if (copy.IsCompleted || DateTime.UtcNow > deadline) throw new Exception("Queue did not grow while original transfer was running."); await Task.Delay(20); }
-                if (job.TotalBytes != 10485760 || networkJobs.Count != (concurrentFtp == null ? 1 : 2)) throw new Exception("Append started another job or total byte count is incorrect.");
-                var duplicate = StartNetworkCopy(new[] { new Entry { FullPath = "/sub", IsDirectory = true } }, left.Remote, true, destination);
-                while (job.Planning > 0) await Task.Delay(20);
-                if (job.TotalBytes != 10485760 || job.SnapshotItems().Count(x => !x.Directory) != 3) throw new Exception("Duplicate queue selection inflated the byte total.");
-                if (ftpCopy != null && (ftpCopy.IsCompleted || networkCopies != 2)) throw new Exception("FTP and SFTP did not run concurrently.");
+                var secondJob = networkJobs.Last();
+                while (secondJob.TotalBytes == 0)
+                { if (copy.IsCompleted || DateTime.UtcNow > deadline) throw new Exception("Second transfer did not start while original transfer was running."); await Task.Delay(20); }
+                if (Object.ReferenceEquals(job, secondJob) || secondJob.TotalBytes != 2097152 || job.TotalBytes != 8388608 || networkJobs.Count != (concurrentFtp == null ? 2 : 3)) throw new Exception("Transfers did not retain independent queues and byte counts.");
+                if (ftpCopy != null && (ftpCopy.IsCompleted || networkCopies != 3)) throw new Exception("FTP and SFTP did not run concurrently.");
                 var queuePreview = new NetworkQueueWindow(null, delegate { return networkJobs.ToArray(); }, job);
                 NetworkTests.Render(queuePreview, Path.Combine(workspace, "network-queue.png")); queuePreview.Close();
                 left.Navigate("/sub", true);
@@ -62,7 +60,7 @@ namespace FileCompass
                 left.DisconnectRemote();
                 string elsewhere = Directory.CreateDirectory(Path.Combine(workspace, "elsewhere")).FullName;
                 right.Navigate(elsewhere, false); SwapPanels();
-                await Task.WhenAll(copy, append, duplicate);
+                await Task.WhenAll(copy, append);
                 if (ftpCopy != null) { await ftpCopy; if (new FileInfo(Path.Combine(ftpDestination, "slow.bin")).Length != 8388608) throw new Exception("Concurrent FTP copy content is incomplete."); }
                 if (ticks < 15 || !intermediate) throw new Exception("Missing live byte progress or responsive dispatcher.");
                 if (new FileInfo(Path.Combine(destination, "slow.bin")).Length != 8388608 || File.Exists(Path.Combine(elsewhere, "slow.bin"))) throw new Exception("Transfer destination changed with browsing panels.");

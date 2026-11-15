@@ -423,6 +423,7 @@ namespace FileCompass
             if (args.Contains("--archive-plugin-test")) return ArchivePluginTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--legacy-archive-test")) return LegacyArchiveTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--archive-formats-test")) return ArchiveFormatsTests.Run(Path.GetFullPath(args[1]));
+            if (args.Contains("--archive-detection-test")) return ArchiveFormatsTests.Detection(Path.GetFullPath(args[1]));
             if (args.Contains("--archive-presentation-test")) return ArchivePresentationTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--network-browser-test")) return NetworkBrowserTests.Run(Path.GetFullPath(args[1]));
             if (args.Contains("--network-browser-live-test")) return NetworkBrowserTests.Live(Path.GetFullPath(args[1]));
@@ -437,6 +438,7 @@ namespace FileCompass
             if (args.Contains("--compression-progress-test")) return CompressionProgressTests.Run(args[1]);
             if (args.Contains("--archive-memory-test")) return ArchiveMemoryTests.Run(args[1]);
             if (args.Contains("--delete-display-test")) return DeleteDisplayTests.Run(args[1]);
+            if (args.Contains("--parallel-copy-test")) return ParallelCopyTests.Run(args[1]);
             if (args.Contains("--theme-test")) return ToolbarThemeTests.Run(args.Length > 1 ? args[1] : Path.GetTempPath());
             if (args.Contains("--startup-test")) return StartupTests.Run(args.Length > 1 ? args[1] : Path.GetTempPath());
             if (args.Contains("--window-state-test")) return WindowStateTests.Run(args[1]);

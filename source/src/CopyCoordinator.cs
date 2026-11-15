@@ -21,6 +21,8 @@ namespace FileCompass
         CopyProgressDialog copyProgress;
         CopyJob runningCopyJob;
         CopyControl copyControl;
+        int activeCopyWorkers;
+        readonly Dictionary<CopyJob, Tuple<CopyControl, CopyProgressDialog>> activeCopyJobs = new Dictionary<CopyJob, Tuple<CopyControl, CopyProgressDialog>>();
 
         void StartCopy(bool move = false)
         {
@@ -39,19 +41,20 @@ namespace FileCompass
             else operation.Text = L.Text("copy.runningWithWaitingCount") + copyJobs.Count + L.Text("progress.clickToShowSuffix");
         }
 
-        async void RunCopyQueue()
+        async void RunCopyQueue(CopyJob immediate = null)
         {
-            copyRunning = true;
+            activeCopyWorkers++; copyRunning = true;
             try
             {
-                while (copyJobs.Count > 0)
+                while (immediate != null || (copyJobs.Count > 0 && activeCopyWorkers == 1))
                 {
-                    var job = copyJobs.Dequeue(); runningCopyJob = job;
+                    var job = immediate ?? copyJobs.Dequeue(); immediate = null; runningCopyJob = job;
                     using (var control = new CopyControl())
                     {
                         copyControl = control;
                         var dialog = new CopyProgressDialog(this, control); copyProgress = dialog;
-                        var activity = AddCopyActivity((job.Options.Move ? L.Text("copy.preparingMovePrefix") : L.Text("copy.preparingCopyPrefix")) + job.Options.Target, control.Cancel, ShowCopyProgress, job.Record);
+                        activeCopyJobs[job] = Tuple.Create(control, dialog);
+                        var activity = AddCopyActivity((job.Options.Move ? L.Text("copy.preparingMovePrefix") : L.Text("copy.preparingCopyPrefix")) + job.Options.Target, control.Cancel, dialog.RestoreProgress, job.Record);
                         activity.Kind=DesktopIcons.NetworkPath(job.Options.Target)||job.Sources.Any(DesktopIcons.NetworkPath)?DockActivityKind.NetworkTransfer:DockActivityKind.LocalTransfer;
                         activity.TransferTitle = (job.Options.Move ? L.Text("copy.movingStatus") : L.Text("copy.copyingStatus")) + (job.Sources.Length == 1 ? System.IO.Path.GetFileName(job.Sources[0].TrimEnd('\\')) : job.Sources.Length + L.Text("common.itemCountSuffix"));
                         activity.TransferRoute = String.Join("; ", job.Sources) + L.Text("common.routeArrow") + job.Options.Target;
@@ -63,7 +66,7 @@ namespace FileCompass
                         operation.Text = L.Text("copy.copyingPrefix") + job.Options.Target + L.Text("progress.clickToShowSuffix");
                         var updates = new Progress<CopyUpdate>(delegate(CopyUpdate update)
                         {
-                            if (copyProgress != dialog) return;
+                            if (!activeCopyJobs.ContainsKey(job)) return;
                             dialog.Update(update);
                             activity.Update(update.Phase + " · " + System.IO.Path.GetFileName(update.Source) + L.Text("copy.currentFilePrefix") + (update.FileTotal > 0 ? (100.0 * update.FileDone / update.FileTotal).ToString("F0") : "0") + L.Text("progress.percentAndTotalSeparator") + (update.TotalBytes > 0 ? (100.0 * update.TotalDone / update.TotalBytes).ToString("F0") : "0") + "% · " + update.Completed + " / " + update.TotalFiles + L.Text("common.fileCountSuffix"),
                                 update.FileTotal > 0 ? (double)update.FileDone / update.FileTotal : 0,
@@ -106,7 +109,7 @@ namespace FileCompass
                             });
                         }
                         catch (Exception ex) { durableQueue.Finish(job.Durable,false); activity.Finish(L.Text("copy.failedPrefix") + ex.Message, false); throw; }
-                        finally { dialog.Finish(); copyProgress = null; copyControl = null; }
+                        finally { dialog.Finish(); activeCopyJobs.Remove(job); if (copyProgress == dialog) { var remaining = activeCopyJobs.LastOrDefault(); copyProgress = remaining.Value == null ? null : remaining.Value.Item2; copyControl = remaining.Value == null ? null : remaining.Value.Item1; runningCopyJob = remaining.Key; } }
                         if (!left.IsRemote && (job.Options.Move || left.CurrentPath == job.Options.Target)) left.Refresh();
                         if (!right.IsRemote && (job.Options.Move || right.CurrentPath == job.Options.Target)) right.Refresh();
                         operation.Text = (result.Cancelled ? L.Code("state.cancelled") : L.Code("state.completed")) + (job.Options.Move ? L.Text("copy.movedCountPrefix") : L.Text("copy.copiedCountPrefix")) + result.Copied + L.Text("copy.skippedCountSeparator") + result.Skipped + L.Text("operation.errorCountSeparator") + result.Errors.Count;
@@ -119,7 +122,7 @@ namespace FileCompass
                 }
             }
             catch (Exception ex) { operation.Text = L.Text("copy.failedPrefix") + ex.Message; MessageBox.Show(this, ex.Message, L.Code("copy.title"), MessageBoxButton.OK, MessageBoxImage.Error); }
-            finally { copyRunning = false; copyProgress = null; copyControl = null; runningCopyJob = null; }
+            finally { activeCopyWorkers--; copyRunning = activeCopyWorkers > 0; if (!copyRunning) { copyProgress = null; copyControl = null; runningCopyJob = null; if (copyJobs.Count > 0) RunCopyQueue(); } }
         }
 
         void ShowCopyProgress()
@@ -145,7 +148,7 @@ namespace FileCompass
             var actions = QueuePresentation.Actions(); panel.Children.Add(actions);
             var show = CopyUi.Button(L.Text("action.showProgress"), delegate { window.Close(); ShowCopyProgress(); }); FluentTheme.Primary(show); actions.Children.Add(show);
             var waiting = CopyUi.Button(L.Text("queue.cancelWaiting"), CancelWaitingCopies); actions.Children.Add(waiting);
-            var cancel = CopyUi.Button(L.Text("queue.cancelAll"), delegate { CancelWaitingCopies(); if (copyControl != null) copyControl.Cancel(); }); actions.Children.Add(cancel);
+            var cancel = CopyUi.Button(L.Text("queue.cancelAll"), delegate { CancelWaitingCopies(); foreach (var item in activeCopyJobs.Values.ToArray()) item.Item1.Cancel(); }); actions.Children.Add(cancel);
             var footer = QueuePresentation.Actions(); panel.Children.Add(footer);
             footer.Children.Add(CopyUi.Button(L.Text("history.openDialog"), ShowOperationHistory));
             footer.Children.Add(CopyUi.Button(L.Text("action.close"), window.Close));

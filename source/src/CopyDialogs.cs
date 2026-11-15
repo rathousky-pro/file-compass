@@ -65,6 +65,7 @@ namespace FileCompass
             window.Owner = owner; window.Title = title; window.Width = width; window.SizeToContent = SizeToContent.Height;
             window.ResizeMode = ResizeMode.NoResize; window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
             FluentTheme.Dialog(window);
+            DialogGeometry.CenterOnExpanderChanges(window);
             TextOptions.SetTextFormattingMode(window, TextFormattingMode.Display);
             window.Icon = DesktopIcons.Drawing("app"); window.UseLayoutRounding = true; window.ShowInTaskbar = false;
         }

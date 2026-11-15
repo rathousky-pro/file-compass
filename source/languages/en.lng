@@ -1,4 +1,5 @@
 {
+  "settings.fileRowSpacing": "Panel row spacing (px)",
   "transfer.manualLimit": "Manual limit",
   "transfer.manualLimitHelp": "0 means no manual limit. When a schedule is active, the stricter limit applies.",
   "transfer.effectiveLimit": "Current limit: {0} KiB/s ({1})",

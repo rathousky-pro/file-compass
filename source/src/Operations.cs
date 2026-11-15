@@ -99,7 +99,8 @@ namespace FileCompass
                 durableQueue.Remove(job.Durable);
                 job.Record.State = L.Code("state.cancelled"); job.Record.Ended = DateTime.Now; job.Record.Summary = L.Text("state.cancelledBeforeStart"); operationJournal.Save();
             };
-            copyJobs.Enqueue(job);
+            if (copyRunning && !job.Options.Queue) RunCopyQueue(job);
+            else copyJobs.Enqueue(job);
         }
         void CancelWaitingCopies()
         {

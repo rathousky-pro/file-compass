@@ -51,6 +51,7 @@ namespace FileCompass
         public bool DefaultCopyTimes = true, DefaultCopyAttributes = true, DefaultCopyEmptyFolders = true, DeleteToRecycleBin = true;
         public string InterfaceFontFamily = "Segoe UI", FileListFontFamily = "Segoe UI";
         public double InterfaceFontSize = 12, FileListFontSize = 12;
+        public int FileListRowSpacing = 8;
         public double ButtonIconSize = 20, DriveIconSize = 10;
         public static string ConfigPath { get { return System.IO.Path.Combine(AppPaths.ConfigDirectory, "settings.xml"); } }
         public static ProgramSettings Load(string path = null)

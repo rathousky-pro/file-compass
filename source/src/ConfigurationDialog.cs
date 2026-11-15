@@ -38,6 +38,7 @@ namespace FileCompass
         readonly FontChoiceControl interfaceFont, fileListFont;
         readonly ComboBox sizeUnits=new ComboBox{MinWidth=200};
         readonly ComboBox buttonIconSize=new ComboBox{MinWidth=100},driveIconSize=new ComboBox{MinWidth=100};
+        readonly ComboBox fileRowSpacing = new ComboBox { MinWidth = 100, HorizontalAlignment = HorizontalAlignment.Left };
         readonly CheckBox internalEditor=new CheckBox{Content=L.Text("codeEditor.setting"),Margin=new Thickness(0)};
         readonly CheckBox automaticFolderViews = new CheckBox { Content = L.Text("columns.autoSetting"), Margin = new Thickness(0, 6, 0, 6) }; readonly CheckBox internalCodePreview = new CheckBox { Content = L.Text("settings.internalCodePreview"), Margin = new Thickness(0) };
         readonly CheckBox showHidden = new CheckBox { Content = L.Text("settings.showHiddenFiles"), Margin = new Thickness(0, 5, 0, 5) };
@@ -64,6 +65,9 @@ namespace FileCompass
             interfaceFont = new FontChoiceControl(L.Text("settings.interfaceFont"), settings.InterfaceFontFamily, settings.InterfaceFontSize, 12);
             fileListFont = new FontChoiceControl(L.Text("settings.fileListFont"), settings.FileListFontFamily, settings.FileListFontSize, 24);
             interfaceFont.Family.MinWidth=fileListFont.Family.MinWidth=100;fonts.Children.Add(interfaceFont); fonts.Children.Add(fileListFont);
+            fonts.Children.Add(new TextBlock { Text = L.Text("settings.fileRowSpacing"), Margin = new Thickness(0, 10, 0, 5) });
+            for (int spacing = 0; spacing <= 16; spacing++) fileRowSpacing.Items.Add(spacing);
+            fileRowSpacing.SelectedItem = Math.Max(0, Math.Min(16, settings.FileListRowSpacing)); fonts.Children.Add(fileRowSpacing);
             var units=FluentTheme.Section(appearance,L.Text("settings.sizeUnits"));foreach(string key in new[]{"settings.unitsSI","settings.unitsIEC","settings.unitsBytes"})sizeUnits.Items.Add(L.Text(key));sizeUnits.SelectedIndex=ByteSize.Normalize(settings.SizeUnits)=="SI"?0:ByteSize.Normalize(settings.SizeUnits)=="Bytes"?2:1;units.Children.Add(sizeUnits);var sizeUnitsGroup=(GroupBox)units.Parent;appearance.Children.Remove(sizeUnitsGroup);
             showHidden.IsChecked = settings.ShowHiddenFiles; showSystem.IsChecked = settings.ShowSystemFiles;
             var visibility = FluentTheme.Section(appearance, L.Text("settings.fileVisibility")); visibility.Children.Add(showHidden); visibility.Children.Add(showSystem);
@@ -215,6 +219,7 @@ namespace FileCompass
                 string language = L.SupportedLanguages[LanguageChoice.SelectedIndex];
                 settings.ButtonIconSize=(double)buttonIconSize.SelectedItem;settings.DriveIconSize=(double)driveIconSize.SelectedItem;
                 interfaceFont.Read(out settings.InterfaceFontFamily, out settings.InterfaceFontSize); fileListFont.Read(out settings.FileListFontFamily, out settings.FileListFontSize);
+                settings.FileListRowSpacing = (int)fileRowSpacing.SelectedItem;
             archiveLimits.Apply(archives); archives.WinRarPath = rarPath.Text.Trim().Trim('"'); archives.ArjPath = arjPath.Text.Trim().Trim('"'); archives.LhaPath = lhaPath.Text.Trim().Trim('"');
             // Approve only programs explicitly selected or edited in this dialog.
             // Language/appearance saves must neither read an unrelated trust store

@@ -175,15 +175,27 @@ namespace FileCompass
                 string selection = args.FirstOrDefault(x => x.StartsWith("-i@", StringComparison.Ordinal));
                 var wanted = selection == null ? null : new HashSet<string>(File.ReadAllLines(selection.Substring(3), Encoding.UTF8).Select(ArchiveEngine.SafeMember), StringComparer.OrdinalIgnoreCase);
                 string destination = args.FirstOrDefault(x => x.StartsWith("-o", StringComparison.Ordinal)); destination = destination == null ? null : destination.Substring(2);
+                string stripArgument = args.FirstOrDefault(x => x.StartsWith("-fc-strip=", StringComparison.Ordinal));
+                int strip = stripArgument == null ? 0 : Int32.Parse(stripArgument.Substring(10), System.Globalization.CultureInfo.InvariantCulture);
+                bool direct = stripArgument != null, skipExisting = args.Contains("-fc-skip");
+                string zoneArgument = args.FirstOrDefault(x => x.StartsWith("-fc-zone=", StringComparison.Ordinal));
+                string zone = zoneArgument == null ? null : Encoding.UTF8.GetString(Convert.FromBase64String(zoneArgument.Substring(9)));
                 foreach (var item in entries)
                 {
                     if (wanted != null && !wanted.Contains(item.FileName)) continue;
                     budget.Check(); progress(L.Text("archive.extractingMemberPrefix") + item.FileName);
-                    string path = command == "x" ? ArchiveEngine.DiskPath(destination, item.FileName) : null;
+                    string relative = item.FileName;
+                    if (direct) { if (relative.Length <= strip) continue; relative = relative.Substring(strip); }
+                    string path = command == "x" ? ArchiveEngine.DiskPath(destination, relative) : null;
                     if (path != null) RejectLinks(path);
                     if (item.IsDirectory) { if (path != null) Directory.CreateDirectory(path); continue; }
                     if (path != null) Directory.CreateDirectory(Path.GetDirectoryName(path));
-                    using (var output = path == null ? Stream.Null : new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
+                    if (direct && skipExisting && File.Exists(path)) continue;
+                    if (direct && zone != null) {
+                        using (var created = new FileStream(path, skipExisting ? FileMode.CreateNew : FileMode.Create, FileAccess.Write, FileShare.None)) { }
+                        AttachmentSecurity.WriteZone(path, zone);
+                    }
+                    using (var output = path == null ? Stream.Null : new FileStream(path, direct && zone != null ? FileMode.Truncate : direct && skipExisting ? FileMode.CreateNew : FileMode.Create, FileAccess.Write, FileShare.None))
                     using (var bounded = new ArchiveOutputStream(output, budget, path))
                     {
                         try { extractor.ExtractFile(item.Index, bounded); }
@@ -203,8 +215,11 @@ namespace FileCompass
                 if(Path.GetExtension(path).Equals(".exe",StringComparison.OrdinalIgnoreCase))foreach(var format in new[]{InArchiveFormat.SevenZip,InArchiveFormat.Zip,InArchiveFormat.Rar,InArchiveFormat.Arj}){
                     extractor=null;try{extractor=password==null?new SharpSevenZipExtractor(path,format):new SharpSevenZipExtractor(path,password,format);var count=extractor.FilesCount;return extractor;}catch(SharpSevenZipException){if(extractor!=null)extractor.Dispose();}
                 }
+                ArchiveFormatInfo detected;
+                if (!SharpSevenZipArchiveFormat.TryCheckFormat(path, out detected)) throw new IOException(L.Text("archive.unreadableListing"));
                 throw new ArchivePasswordException();
             }
+            catch (ArgumentException ex) { if (extractor != null) extractor.Dispose(); throw new IOException(L.Text("archive.unreadableListing"), ex); }
             catch { if (extractor != null) extractor.Dispose(); throw; }
         }
         static List<ArchiveFileInfo> Entries(SharpSevenZipExtractor extractor, ArchiveBudget budget)

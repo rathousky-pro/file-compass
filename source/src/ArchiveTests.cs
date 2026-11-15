@@ -33,6 +33,11 @@ namespace FileCompass
                 string nested = Path.Combine(folder, "český [1].txt"); File.WriteAllText(nested, "původní obsah");
                 string neighbour = Path.Combine(source, "soused.txt"); File.WriteAllText(neighbour, "zachovat");
                 string secondPanel = Directory.CreateDirectory(Path.Combine(root, "second-panel")).FullName;
+                string longFolder = root;
+                while (longFolder.Length < 210) longFolder = Path.Combine(longFolder, "long-directory-0123456789");
+                Directory.CreateDirectory(longFolder); string longFile = Path.Combine(longFolder, "attachment.txt"); File.WriteAllText(longFile, "data");
+                AttachmentSecurity.MarkInternet(longFile);
+                check(AttachmentSecurity.ReadZone(longFile).Contains("ZoneId=3"), "attachment zone works when the alternate stream path exceeds MAX_PATH");
                 check(Path.GetDirectoryName(MainWindow.DefaultArchiveTarget(new[] { folder, neighbour }, source, secondPanel)) == secondPanel, "compression defaults to destination panel rather than source panel");
                 string childDir = Directory.CreateDirectory(Path.Combine(folder, "child")).FullName; File.WriteAllText(Path.Combine(childDir, "nested.txt"), "deep");
                 string shallow = Path.Combine(secondPanel, "shallow.zip");
@@ -72,6 +77,13 @@ namespace FileCompass
                     string output = Directory.CreateDirectory(Path.Combine(root, "extract-" + format)).FullName;
                     ArchiveEngine.Extract(document, new[] { "složka" }, output, CancellationToken.None);
                     check(File.ReadAllText(Path.Combine(output, "složka", "český [1].txt")) == "původní obsah" && !File.Exists(Path.Combine(output, "soused.txt")), format + " extracts only selected directory with exact content");
+                    string direct = Directory.CreateDirectory(Path.Combine(root, "direct-" + format)).FullName;
+                    ArchiveEngine.ExtractDirect(document, new[] { "složka/český [1].txt" }, "složka", direct, false, CancellationToken.None);
+                    string directFile = Path.Combine(direct, "český [1].txt"); check(File.ReadAllText(directFile) == "původní obsah", format + " direct extraction strips the current archive folder");
+                    File.WriteAllText(directFile, "existing"); ArchiveEngine.ExtractDirect(document, new[] { "složka/český [1].txt" }, "složka", direct, false, CancellationToken.None);
+                    check(File.ReadAllText(directFile) == "existing", format + " direct extraction skips existing files");
+                    ArchiveEngine.ExtractDirect(document, new[] { "složka/český [1].txt" }, "složka", direct, true, CancellationToken.None);
+                    check(File.ReadAllText(directFile) == "původní obsah", format + " direct extraction overwrites existing files when requested");
                     File.WriteAllText(nested, "změněný obsah");
                     ArchiveEngine.Add(document, "", new[] { folder }, false, settings, CancellationToken.None);
                     using (var temp = new ArchiveTemp())

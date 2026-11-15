@@ -19,7 +19,7 @@ namespace FileCompass
             { MessageBox.Show(this, L.Text("archive.downloadBeforeOpening"), L.Text("settings.archivesSection")); return null; }
             var entries = active.Selected().ToArray();
             if (entries.Length == 0) return null;
-            if (entries.Any(x => x.IsDirectory || !ArchiveEngine.Recognized(x.FullPath)))
+            if (entries.Any(x => x.IsDirectory))
             { MessageBox.Show(this, L.Text("archive.selectArchives"), L.Text("settings.archivesSection")); return null; }
             var documents = new List<ArchiveDocument>();
             foreach (var entry in entries)
@@ -67,27 +67,14 @@ namespace FileCompass
             foreach (var document in documents)
             {
                 if (!ArchivePassword(document, document.Items.Select(x => x.Path))) return;
-                if (!await ArchiveOperation(L.Text("archive.extractingPrefix") + document.Display, delegate(CancellationToken token, Action<string> progress)
+                bool success = await ArchiveOperation(L.Text("archive.extractingPrefix") + document.Display, delegate(CancellationToken token, Action<string> progress)
                 {
-                    using (var temp = new ArchiveTemp())
-                    {
-                        if (document.Items.Count == 0) { Directory.CreateDirectory(destination); return; }
-                        ArchiveEngine.Extract(document, document.Items.Select(x => x.Path), temp.Path, token, progress);
-                        using (var control = new CopyControl())
-                        using (token.Register(control.Cancel))
-                        {
-                            var copied = new CopyEngine(new CopyOptions { Target = destination, Rule = dialog.Overwrite ? CopyRule.OverwriteAll : CopyRule.SkipAll }, control,
-                                delegate { return new CopyDecision(CopyChoice.Cancel); },
-                                delegate(CopyUpdate update) { progress(update.Phase + " · " + (update.TotalBytes > 0 ? 100.0 * update.TotalDone / update.TotalBytes : 0).ToString("F0") + "%"); },
-                                delegate(CopyFailure failure) { return Dispatcher.Invoke(new Func<CopyErrorChoice>(delegate { var error = new CopyErrorDialog(this, failure); error.ShowDialog(); return error.Choice; })); })
-                                .Run(Directory.GetFileSystemEntries(temp.Path));
-                            if (copied.Cancelled) throw new OperationCanceledException();
-                            if (copied.Errors.Count > 0) throw new IOException(String.Join("\n", copied.Errors));
-                        }
-                    }
-                })) return;
+                    if (document.Items.Count == 0) { Directory.CreateDirectory(destination); return; }
+                    ArchiveEngine.ExtractDirect(document, document.Items.Select(x => x.Path), "", destination, dialog.Overwrite, token, progress);
+                });
                 foreach (var panel in new[] { left, right })
                     if (!panel.IsArchive && !panel.IsRemote && panel.CurrentPath == destination) panel.Refresh();
+                if (!success) return;
             }
         }
     }

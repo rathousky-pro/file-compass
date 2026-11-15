@@ -127,6 +127,11 @@ namespace FileCompass
                         if (sourceArchive != null)
                         {
                             var members = entries.Select(x => x.FullPath.TrimStart('/')).ToArray();
+                            if (targetArchive == null && networkTarget == null && !copyOptions.Verify && !copyOptions.SkipHidden && copyOptions.EmptyFolders && (String.IsNullOrWhiteSpace(copyOptions.Filter) || copyOptions.Filter.Trim() == "*.*" || copyOptions.Filter.Trim() == "*")) {
+                                string prefix = members[0].Contains("/") ? members[0].Substring(0, members[0].LastIndexOf('/')) : "";
+                                ArchiveEngine.ExtractDirect(sourceArchive, members, prefix, destination, rule == NetworkCopyRule.Overwrite, token, progress);
+                                return;
+                            }
                             ArchiveEngine.Extract(sourceArchive, members, temp.Path, token, progress);
                             files = members.Select(x => ArchiveEngine.DiskPath(temp.Path, x)).ToArray();
                         }
@@ -160,6 +165,7 @@ namespace FileCompass
                     if (targetArchive != null) RefreshArchivePanels(targetArchive);
                     else if (target.CurrentPath == destination && target.IsRemote == (networkTarget != null)) target.Refresh();
                 }
+                else if (sourceArchive != null && targetArchive == null && networkTarget == null && target.CurrentPath == destination) target.Refresh();
                 }
             }
             finally { if (networkSource != null) networkSource.Dispose(); if (networkTarget != null) networkTarget.Dispose(); }

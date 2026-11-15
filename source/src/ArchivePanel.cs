@@ -14,6 +14,7 @@ namespace FileCompass
         public bool IsArchive { get { return Archive != null; } }
         public string ArchivePrefix { get; private set; }
         string archiveReturnPath;
+        string archiveReturnFile;
         readonly Stack<Tuple<ArchiveDocument, string>> archiveParents = new Stack<Tuple<ArchiveDocument, string>>();
         readonly List<ArchiveTemp> archiveTemps = new List<ArchiveTemp>();
         public event Action<FilePanel, Entry, bool, bool> ArchiveFileRequested;
@@ -39,7 +40,7 @@ namespace FileCompass
                 }
                 document.Parent = parent; document.ParentMember = parentMember;
                 if (Archive != null && parent != null) archiveParents.Push(Tuple.Create(Archive, ArchivePrefix));
-                else { archiveReturnPath = CurrentPath; archiveParents.Clear(); }
+                else { archiveReturnPath = CurrentPath; archiveReturnFile = file; archiveParents.Clear(); }
                 if (Remote != null) { RememberRemote(); Remote = null; }
                 Archive = document; ArchivePrefix = "";
                 history.Clear(); forwardHistory.Clear();
@@ -89,8 +90,14 @@ namespace FileCompass
         void ExitArchive()
         {
             if (archiveParents.Count > 0)
-            { var parent = archiveParents.Pop(); Archive = parent.Item1; ArchivePrefix = parent.Item2; history.Clear(); forwardHistory.Clear(); ApplyArchiveRows(); }
-            else { string back = archiveReturnPath; Archive = null; ArchivePrefix = null; history.Clear(); forwardHistory.Clear(); Navigate(back, false); }
+            { string member = Archive.ParentMember; var parent = archiveParents.Pop(); Archive = parent.Item1; ArchivePrefix = parent.Item2; history.Clear(); forwardHistory.Clear(); ApplyArchiveRows(); SelectArchiveMember(member); }
+            else { string back = archiveReturnPath, file = archiveReturnFile; Archive = null; ArchivePrefix = null; history.Clear(); forwardHistory.Clear(); NavigationTask = NavigateLocal(back, false, file); }
+        }
+        void SelectArchiveMember(string member)
+        {
+            if (String.IsNullOrEmpty(member)) return;
+            var row = List.Items.Cast<Entry>().FirstOrDefault(x => !x.IsParent && String.Equals(x.FullPath.TrimStart('/'), member.TrimStart('/'), StringComparison.OrdinalIgnoreCase));
+            if (row != null) { List.SelectedItem = row; List.ScrollIntoView(row); }
         }
         internal async void RefreshArchive()
         {

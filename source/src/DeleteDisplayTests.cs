@@ -27,7 +27,14 @@ namespace FileCompass
                 check(main.FontSize == 16 && panel.List.FontSize == 24 && panel.List.FontFamily.Source == "Consolas", "interface and file list use distinct selected font sizes and families");
                 main.UpdateLayout(); var entry = panel.List.Items.Cast<Entry>().First(x => x.FullPath == normal); panel.List.ScrollIntoView(entry); main.UpdateLayout(); var row = panel.List.ItemContainerGenerator.ContainerFromItem(entry) as ListViewItem;
                 check(row != null && row.ActualHeight >= 42, "file row grows to fit larger font");
-                string settingsFile = Path.Combine(root, "preferences.xml"); preferences.Save(settingsFile); var restored = ProgramSettings.Load(settingsFile); check(!restored.ShowHiddenFiles && restored.ShowSystemFiles && restored.InterfaceFontSize == 16 && restored.FileListFontSize == 24 && restored.FileListFontFamily == "Consolas", "font and visibility choices survive XML restart");
+                preferences.FileListRowSpacing = 0; main.ApplyDisplaySettings(preferences); main.UpdateLayout();
+                row = panel.List.ItemContainerGenerator.ContainerFromItem(entry) as ListViewItem;
+                check(row != null && row.ActualHeight >= 39 && row.ActualHeight < 48, "compact spacing preserves room for a large font");
+                preferences.FileListFontSize = 12; main.ApplyDisplaySettings(preferences); main.UpdateLayout();
+                row = panel.List.ItemContainerGenerator.ContainerFromItem(entry) as ListViewItem;
+                check(row != null && row.ActualHeight >= 18 && row.ActualHeight <= 21, "compact spacing produces compact rows without clipping the icon");
+                preferences.FileListFontSize = 24; preferences.FileListRowSpacing = 3;
+                string settingsFile = Path.Combine(root, "preferences.xml"); preferences.Save(settingsFile); var restored = ProgramSettings.Load(settingsFile); check(!restored.ShowHiddenFiles && restored.ShowSystemFiles && restored.InterfaceFontSize == 16 && restored.FileListFontSize == 24 && restored.FileListFontFamily == "Consolas" && restored.FileListRowSpacing == 3, "font, row spacing and visibility choices survive XML restart");
                 var font = new FontChoiceControl("test", "Consolas", 12, 24); font.Points.Text = "NaN"; bool invalid = false; string family; double size; try { font.Read(out family, out size); } catch (ArgumentException) { invalid = true; } check(invalid, "invalid font size is rejected");
                 NextStageTests.Draw(main, Path.Combine(root, "large-font-panels.png"));
                 var selected = new List<Entry> { new Entry { FullPath = normal, Name = "normal" } };

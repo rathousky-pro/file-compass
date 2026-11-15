@@ -9,7 +9,8 @@ namespace FileCompass {
   static T ColumnVisual<T>(DependencyObject node)where T:DependencyObject{if(node is T)return (T)node;for(int i=0;i<System.Windows.Media.VisualTreeHelper.GetChildrenCount(node);i++){var found=ColumnVisual<T>(System.Windows.Media.VisualTreeHelper.GetChild(node,i));if(found!=null)return found;}return null;}
   void ObserveColumnViewport(){var viewport=ColumnVisual<ScrollViewer>(List);if(Object.ReferenceEquals(viewport,columnViewport))return;if(columnViewport!=null)columnViewport.ScrollChanged-=ColumnViewportChanged;columnViewport=viewport;if(viewport!=null)viewport.ScrollChanged+=ColumnViewportChanged;FitColumns();}
   void ColumnViewportChanged(object sender,ScrollChangedEventArgs e){if(Math.Abs(e.ViewportWidthChange)>.1&&!resizingColumns)FitColumns();}
-  double ColumnRoom {get{if(columnViewport!=null&&columnViewport.ViewportWidth>0&&!Double.IsInfinity(columnViewport.ViewportWidth))return columnViewport.ViewportWidth;return Math.Max(0,List.ActualWidth-List.BorderThickness.Left-List.BorderThickness.Right-List.Padding.Left-List.Padding.Right);}}
+  const double ColumnRightInset=20;
+  double ColumnRoom {get{if(columnViewport!=null&&columnViewport.ViewportWidth>0&&!Double.IsInfinity(columnViewport.ViewportWidth))return Math.Max(0,columnViewport.ViewportWidth-ColumnRightInset);return Math.Max(0,List.ActualWidth-List.BorderThickness.Left-List.BorderThickness.Right-List.Padding.Left-List.Padding.Right-ColumnRightInset);}}
   double ColumnMinimum(string key){return key=="Name"?100:key=="Extension"?60:key=="Size"?70:key=="Modified"?130:key=="Attributes"?65:80;}
   bool CanShowColumn(string key){return ColumnRoom<1||view.Columns.Where(x=>x.Width>0&&ColumnKey(x)!=key).Sum(x=>ColumnMinimum(ColumnKey(x)))+ColumnMinimum(key)<=ColumnRoom;}
   void FitColumns(string preferred=null){

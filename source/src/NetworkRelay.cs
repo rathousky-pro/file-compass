@@ -86,7 +86,7 @@ namespace FileCompass
         {
             entries = entries.Where(x => !x.IsParent).Select(x => new Entry { FullPath = x.FullPath, IsDirectory = x.IsDirectory, Bytes = x.Bytes }).ToArray();
             var durable = recovery ?? durableQueue.Begin("Relay",entries.Select(x => x.FullPath).ToArray(),destination,null,rule,move,source.Profile,target.Profile);
-            var planner = source.TransferConnection(); var job = recovery == null ? networkJobs.AsEnumerable().Reverse().FirstOrDefault(x => x.Move == move && x.MatchesRelay(source,target) && x.Reserve()) : null;
+            var planner = source.TransferConnection(); NetworkTransferJob job = null;
             if (job == null) {
                 job = new NetworkTransferJob(source.Profile,false,target.Profile) { Move = move }; job.Reserve(); networkJobs.Add(job); networkCopies++; var captured = job;
                 job.ResolveError = delegate(CopyFailure failure) { captured.Cancellation.Token.ThrowIfCancellationRequested(); return Dispatcher.Invoke(new Func<CopyErrorChoice>(delegate { var error = new CopyErrorDialog(this,failure); error.ShowDialog(); return error.Choice; })); };

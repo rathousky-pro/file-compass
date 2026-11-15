@@ -1,4 +1,5 @@
 {
+  "settings.fileRowSpacing": "Espacement des lignes du panneau (px)",
   "transfer.manualLimit": "Limite manuelle",
   "transfer.manualLimitHelp": "0 désactive la limite manuelle. Si un planning est actif, la limite la plus stricte s’applique.",
   "transfer.effectiveLimit": "Limite actuelle : {0} Kio/s ({1})",

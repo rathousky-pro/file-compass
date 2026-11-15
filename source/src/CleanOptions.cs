@@ -75,7 +75,7 @@ namespace FileCompass {
                     slot.Children.Add(s.Actions);Grid.SetColumn(s.Actions,1);
                     s.More=CopyUi.Button(L.Text("action.more"),delegate{});s.More.HorizontalAlignment=HorizontalAlignment.Left;s.More.MinWidth=86;
                     s.More.ContentTemplate=MoreCaption();
-                    s.More.Click+=delegate{s.Expanded=!s.Expanded;Update(s);};
+                    s.More.Click+=delegate{DialogGeometry.PreserveCenterAfterLayout(s.Window);s.Expanded=!s.Expanded;Update(s);};
                     System.Windows.Automation.AutomationProperties.SetAutomationId(s.More,"CleanMore");
                     slot.Children.Add(s.More);
                 }
@@ -89,7 +89,7 @@ namespace FileCompass {
             if(w.WindowState!=WindowState.Normal)return;
             if(w.SizeToContent==SizeToContent.WidthAndHeight)w.SizeToContent=SizeToContent.Height;else if(w.SizeToContent==SizeToContent.Width)w.SizeToContent=SizeToContent.Manual;
             double next=Math.Max(w.MinWidth,Math.Min(w.MaxWidth,width+delta));double change=next-width;
-            w.Width=next;if(!Double.IsNaN(w.Left))w.Left-=change;s.ExtraWidth+=change;
+            w.Width=next;s.ExtraWidth+=change;
         }
         static void Update(Session s){Resize(s,AppearanceTheme.IsClean&&s.Expanded&&s.Available());bool clean=AppearanceTheme.IsClean,available=s.Available();s.More.Visibility=clean&&available?Visibility.Visible:Visibility.Collapsed;s.More.Tag=s.Expanded;s.More.Content=L.Text(s.Expanded?"action.less":"action.more");s.ShowNavigation(!clean||s.Expanded);}
         internal static void Reveal(Window window){var sessions=window.GetValue(SessionsProperty) as List<Session>;if(sessions==null)return;Refresh(window);foreach(var s in sessions){s.Expanded=true;Update(s);}}

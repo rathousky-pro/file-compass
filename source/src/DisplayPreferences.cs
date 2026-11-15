@@ -6,6 +6,8 @@ namespace FileCompass
     {
         internal static double IconSize(double value,double fallback){return Double.IsNaN(value)||Double.IsInfinity(value)?fallback:Math.Max(8,Math.Min(32,value));}
         bool showHiddenFiles = true, showSystemFiles = true, naturalSorting = true, foldersAlwaysByName, maskIncludesFolders = true, folderBrackets, fullNameTooltips = true;
+        int fileListRowSpacing = 8;
+        double FileRowHeight { get { return Math.Ceiling(Math.Max(18, List.FontSize * 1.65) + fileListRowSpacing); } }
         internal void ApplyDisplaySettings(ProgramSettings settings)
         {
             driveIconSize=IconSize(settings.DriveIconSize,10);
@@ -13,7 +15,7 @@ namespace FileCompass
             naturalSorting = settings.NaturalSorting; folderBrackets = settings.FolderBrackets; fullNameTooltips = settings.FullNameTooltips;
             showHiddenFiles = settings.ShowHiddenFiles; showSystemFiles = settings.ShowSystemFiles;
             System.Windows.Documents.TextElement.SetFontFamily(this, DisplayPreferences.Font(settings.InterfaceFontFamily)); System.Windows.Documents.TextElement.SetFontSize(this, DisplayPreferences.Size(settings.InterfaceFontSize));
-            List.FontFamily = DisplayPreferences.Font(settings.FileListFontFamily); List.FontSize = DisplayPreferences.Size(settings.FileListFontSize);RefreshCleanDrives();
+            List.FontFamily = DisplayPreferences.Font(settings.FileListFontFamily); List.FontSize = DisplayPreferences.Size(settings.FileListFontSize); fileListRowSpacing = Math.Max(0, Math.Min(16, settings.FileListRowSpacing)); RefreshCleanDrives();
             SetDisplay(displayMode); Sort(); ApplyQuickFilter();if(CurrentPath!=null&&!EmptyPanel&&!IsRemote&&!IsArchive&&!IsShellBrowser&&!IsNetworkBrowser)UpdateDiskInfo(); treeRootKey = null; if (treeVisible) EnsureTreeRoot();
         }
     }

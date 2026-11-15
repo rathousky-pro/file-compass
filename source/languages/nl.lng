@@ -1,4 +1,5 @@
 {
+  "settings.fileRowSpacing": "Rijafstand in paneel (px)",
   "transfer.manualLimit": "Handmatige limiet",
   "transfer.manualLimitHelp": "0 betekent geen handmatige limiet. Bij een actief schema geldt de strengste limiet.",
   "transfer.effectiveLimit": "Huidige limiet: {0} KiB/s ({1})",

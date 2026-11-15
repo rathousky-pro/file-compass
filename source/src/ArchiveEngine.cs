@@ -235,6 +235,25 @@ namespace FileCompass
             }
             }
         }
+        internal static void ExtractDirect(ArchiveDocument doc, IEnumerable<string> members, string prefix, string destination, bool overwrite, CancellationToken token, Action<string> progress = null)
+        {
+            CheckCurrent(doc);
+            using (var archiveLock = new FileStream(doc.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var manifest = new ArchiveTemp())
+            {
+                var selected = Select(doc, members);
+                string normalizedPrefix = String.IsNullOrEmpty(prefix) ? "" : SafeMember(prefix).TrimEnd('/') + "/";
+                if (selected.Any(x => !x.Path.StartsWith(normalizedPrefix, StringComparison.OrdinalIgnoreCase))) throw new IOException(L.Text("archive.pathOutsideWorkspace"));
+                Directory.CreateDirectory(destination);
+                string zone = AttachmentSecurity.ReadZone(doc.Root.FilePath) ?? AttachmentSecurity.ReadZone(doc.FilePath);
+                string list = System.IO.Path.Combine(manifest.Path, "items.txt"); File.WriteAllLines(list, selected.Select(x => x.Path), new UTF8Encoding(false));
+                var directOptions = new List<string> { "-fc-strip=" + normalizedPrefix.Length.ToString(CultureInfo.InvariantCulture) };
+                if (!overwrite) directOptions.Add("-fc-skip");
+                if (zone != null) directOptions.Add("-fc-zone=" + Convert.ToBase64String(Encoding.UTF8.GetBytes(zone)));
+                try { Run(SevenZipPath, new[] { "x", "-scsUTF-8", "-bsp1", "-o" + destination, "-i@" + list }.Concat(directOptions).Concat(Options(doc)).Concat(new[] { "--", doc.FilePath }), null, token, progress); }
+                catch (ArchivePasswordException) { doc.Password = null; throw; }
+            }
+        }
         internal static void PropagateExtractedZone(IEnumerable<ArchiveItem> selected, string destination, string zone)
         {
             foreach (var item in selected.Where(x => !x.Directory))
@@ -393,14 +412,10 @@ namespace FileCompass
                         if (progress != null) progress(L.Code("state.verifying") + " " + L.Text("archive.memoryRetry"));
                         Write(doc, stage, workingInput, members, false, settings, token, compressionProgress, compressionOptions.Concat(new[] { "-filecompass-low-memory" }).ToArray());
                     }
-                    if (progress != null) progress(L.Text("archive.verifying"));
-                    try {
-                        Run(SevenZipPath, new[] { "t" }.Concat(Options(doc)).Concat(new[] { "--", stage }), null, token);
-                        var created = Open(stage, pack.Password, token);
-                        if (legacy) VerifyLegacyArchive(created, input.Path, extension == ".arj" ? "arj" : "lzh", token);
-                    } catch (IOException ex) {
-                        if (!legacy) throw;
-                        throw new IOException(L.Text("archive.legacyVerificationFailed") + "\n" + ex.Message, ex);
+                    if (legacy) {
+                        if (progress != null) progress(L.Text("archive.verifying"));
+                        try { VerifyLegacyArchive(Open(stage, pack.Password, token), input.Path, extension == ".arj" ? "arj" : "lzh", token); }
+                        catch (IOException ex) { throw new IOException(L.Text("archive.legacyVerificationFailed") + "\n" + ex.Message, ex); }
                     }
                     token.ThrowIfCancellationRequested();
                     if (newestFile.HasValue) File.SetLastWriteTimeUtc(stage, newestFile.Value);

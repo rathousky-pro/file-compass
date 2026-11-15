@@ -1,4 +1,5 @@
 {
+  "settings.fileRowSpacing": "Odstęp wierszy w panelu (px)",
   "transfer.manualLimit": "Limit ręczny",
   "transfer.manualLimitHelp": "0 oznacza brak limitu ręcznego. Gdy harmonogram jest aktywny, obowiązuje niższy limit.",
   "transfer.effectiveLimit": "Aktualny limit: {0} KiB/s ({1})",

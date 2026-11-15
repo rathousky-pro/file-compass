@@ -1,4 +1,5 @@
 {
+  "settings.fileRowSpacing": "Odsazení řádků v panelu (px)",
   "transfer.manualLimit": "Ruční limit",
   "transfer.manualLimitHelp": "0 znamená bez ručního limitu. Je-li aktivní plán, platí přísnější omezení.",
   "transfer.effectiveLimit": "Aktuální limit: {0} KiB/s ({1})",

@@ -61,11 +61,11 @@ namespace FileCompass
                 DragDrop.DoDragDrop(List, data, DragDropEffects.Copy);
             };
             List.DragOver += delegate(object s, DragEventArgs e) {
-                bool supported = !LocalLoading && !IsLoading && (e.Data.GetDataPresent(DataFormats.FileDrop) || e.Data.GetDataPresent(L.Code("clipboard.panelDataFormat"))) && CurrentPath != null;
+                bool supported = !IsRecycleBin && !LocalLoading && !IsLoading && (e.Data.GetDataPresent(DataFormats.FileDrop) || e.Data.GetDataPresent(L.Code("clipboard.panelDataFormat"))) && CurrentPath != null;
                 e.Effects = supported ? DragDropEffects.Copy : DragDropEffects.None; e.Handled = true;
             };
             List.Drop += delegate(object s, DragEventArgs e) {
-                if (LocalLoading || IsLoading) return;
+                if (IsRecycleBin || LocalLoading || IsLoading) return;
                 if (e.Data.GetDataPresent(L.Code("clipboard.panelDataFormat"))) { var source = e.Data.GetData(L.Code("clipboard.panelDataFormat")) as FilePanel; var entries = e.Data.GetData("FileCompass.Entries") as Entry[]; if (source != null && entries != null && PanelFilesDropped != null) PanelFilesDropped(source, this, entries, (e.KeyStates & DragDropKeyStates.ShiftKey) != 0); e.Effects = DragDropEffects.Copy; e.Handled = true; return; }
                 if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
                 var paths = e.Data.GetData(DataFormats.FileDrop) as string[]; if (paths == null) return;

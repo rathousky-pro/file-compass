@@ -16,14 +16,14 @@ namespace FileCompass
 {
     internal sealed class ShellLocation
     {
-        internal string Path, Name;
+        internal string Path, Name, RecycleId, OriginalFolder;
         internal ImageSource Icon;
         internal bool Directory, Hidden, System;
         internal long Size;
     }
 
     // Shell objects stay on a background STA. Only strings and frozen images cross to WPF.
-    internal static class WindowsShell
+    internal static partial class WindowsShell
     {
         internal const string Computer = "::{20D04FE0-3AEA-1069-A2D8-08002B30309D}";
         internal const string Home = "::{F874310E-B6B7-47DC-BC84-B9E6B38F5903}";
@@ -63,7 +63,7 @@ namespace FileCompass
             return DesktopIcons.StockIcon(path == Computer ? 15 : path == Home ? 4 : 3);
         }
         internal static Task<ShellLocation[]> Roots() { return Run("@roots", ReadRoots); }
-        internal static Task<ShellLocation[]> Read(string path, bool foldersOnly = false) { return Run(path + (foldersOnly ? "|folders" : "|all"), delegate { return ReadItems(path, foldersOnly); }); }
+        internal static Task<ShellLocation[]> Read(string path, bool foldersOnly = false) { return Run(path + (foldersOnly ? "|folders" : "|all"), delegate { return SamePath(path, RecycleBin) ? ReadRecycleBin(foldersOnly) : ReadItems(path, foldersOnly); }); }
         internal static Task<ShellLocation[]> Folders(string path, bool hidden, bool system)
         {
             return Run(path + "|directories|" + hidden + "|" + system, delegate {

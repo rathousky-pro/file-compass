@@ -48,6 +48,7 @@ namespace FileCompass
                 left.Navigate(folder, false); right.Navigate(nested, false); NavigationTests.WaitPanels(main); left.SetQuickFilter(""); NavigationTests.Wait(main.ApplyWorkspace(reloaded));
                 Check(left.CurrentPath == nested && right.CurrentPath == folder && left.QuickFilter == "*.txt", "workspace restores both folders and independent active filters", checks);
                 Check(left.TabCount == workspace.Left.Length && right.TabCount == workspace.Right.Length, "workspace restores both complete tab sets", checks);
+                left.VerifyPanelInteractions(root, (valid, label) => Check(valid, label, checks));
                 var huge = Enumerable.Range(0, 20000).Select(i => new Entry { Name = "file" + i, Extension = "txt", FullPath = Path.Combine(folder, "file" + i + ".txt"), Icon = DesktopIcons.Drawing("document") }).ToList();
                 left.SetQuickFilter(""); left.List.ItemsSource = huge; left.SetDisplay("Thumbnails"); main.UpdateLayout(); NavigationTests.Wait(Task.Delay(100)); main.Dispatcher.Invoke(DispatcherPriority.ApplicationIdle, new Action(delegate { }));
                 var tiles = FilePanel.VisualChild<VirtualFileTiles>(left.List); int count = tiles == null ? 0 : VisualTreeHelper.GetChildrenCount(tiles);

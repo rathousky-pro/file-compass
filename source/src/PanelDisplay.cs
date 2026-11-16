@@ -61,14 +61,15 @@ namespace FileCompass
             Unloaded += delegate { displayVersion++; displayCancellation.Cancel(); treeRootKey = null; };
             List.ItemContainerGenerator.StatusChanged += delegate { if (List.ItemContainerGenerator.Status == GeneratorStatus.ContainersGenerated) ScheduleThumbnails(); };
             List.AddHandler(ScrollViewer.ScrollChangedEvent,new ScrollChangedEventHandler(delegate { ScheduleThumbnails(); }));
-            List.LayoutUpdated += delegate { if (displayMode == "Thumbnails") ScheduleThumbnails(); };
+            List.SizeChanged += delegate { ScheduleThumbnails(); };
+            List.IsVisibleChanged += delegate { ScheduleThumbnails(); };
             List.PreviewMouseWheel += delegate(object sender, MouseWheelEventArgs e) { if (displayMode != "Thumbnails" || (Keyboard.Modifiers & ModifierKeys.Control) == 0) return; ChangeThumbnailSize(e.Delta > 0 ? 1 : -1); e.Handled = true; };
             List.PreviewKeyDown += delegate(object sender,KeyEventArgs e) { if (displayMode == "Details" || e.Handled || Keyboard.Modifiers != ModifierKeys.None) return; int delta = e.Key == Key.Up ? -DisplayColumns : e.Key == Key.Down ? DisplayColumns : e.Key == Key.Left ? -1 : e.Key == Key.Right ? 1 : 0; if (delta != 0 && List.Items.Count > 0) { List.SelectedIndex = Math.Max(0,Math.Min(List.Items.Count - 1,List.SelectedIndex + delta)); List.ScrollIntoView(List.SelectedItem); e.Handled = true; } };
         }
         internal void SetDisplay(string mode)
         {
             if (mode != "Short" && mode != "Thumbnails") mode = "Details";
-            displayMode = mode; if (mode != "Thumbnails") { foreach (var old in thumbnailVisible) old.Thumbnail = null; thumbnailVisible.Clear(); } if (displayGrid == null) return;
+            displayMode = mode; if (mode != "Details") RefreshPanelGrouping(); if (mode != "Thumbnails") { foreach (var old in thumbnailVisible) old.Thumbnail = null; thumbnailVisible.Clear(); } if (displayGrid == null) return;
             var selected = List.SelectedItem;
             if (mode == "Details") { List.ItemTemplate = null; List.ItemsPanel = new ItemsPanelTemplate(new FrameworkElementFactory(typeof(VirtualizingStackPanel))); List.View = view; List.ItemContainerStyle = RowStyle(); ScrollViewer.SetHorizontalScrollBarVisibility(List,ScrollBarVisibility.Disabled);FitColumns(); }
             else {
@@ -76,10 +77,11 @@ namespace FileCompass
                 var tiles = new FrameworkElementFactory(typeof(VirtualFileTiles)); tiles.SetValue(VirtualFileTiles.TileWidthProperty,mode == "Thumbnails" ? TileWidth : 220.0); tiles.SetValue(VirtualFileTiles.TileHeightProperty,mode == "Thumbnails" ? TileHeight : FileRowHeight); List.ItemsPanel = new ItemsPanelTemplate(tiles); ScrollViewer.SetHorizontalScrollBarVisibility(List,ScrollBarVisibility.Disabled); ScrollViewer.SetCanContentScroll(List,true);
                 var style = new Style(typeof(ListViewItem)); style.Setters.Add(new Setter(Control.HorizontalContentAlignmentProperty,HorizontalAlignment.Stretch)); style.Setters.Add(new Setter(Control.PaddingProperty,mode == "Thumbnails" ? new Thickness(4,2,4,2) : new Thickness(4,0,4,0))); style.Setters.Add(new Setter(FrameworkElement.HeightProperty,mode == "Thumbnails" ? TileHeight - 2 : FileRowHeight));
                 var marked = new DataTrigger { Binding = new Binding("IsMarked"),Value = true }; marked.Setters.Add(new Setter(Control.ForegroundProperty,Brushes.Firebrick)); style.Triggers.Add(marked); List.ItemContainerStyle = style;
-                var body = new FrameworkElementFactory(typeof(DockPanel)); var icon = new FrameworkElementFactory(typeof(Image)); if (mode == "Thumbnails") icon.SetValue(DockPanel.DockProperty,Dock.Top); if (mode != "Thumbnails") { icon.SetValue(FrameworkElement.WidthProperty, 18.0); icon.SetValue(FrameworkElement.HeightProperty, 18.0); } icon.SetValue(FrameworkElement.MarginProperty,new Thickness(2,0,mode == "Thumbnails" ? 2 : 10,0)); icon.SetBinding(Image.SourceProperty,new Binding(mode == "Thumbnails" ? "Thumbnail" : "Icon")); if (mode == "Thumbnails") { var slot = new FrameworkElementFactory(typeof(Border)); slot.SetValue(DockPanel.DockProperty, Dock.Top); slot.SetValue(FrameworkElement.HeightProperty, TileHeight - 64 - Math.Max(0, List.FontSize - 12) * 2.4); var iconStyle = new Style(typeof(Image)); iconStyle.Setters.Add(new Setter(FrameworkElement.WidthProperty, TileWidth - 20)); iconStyle.Setters.Add(new Setter(FrameworkElement.HeightProperty, TileHeight - 64 - Math.Max(0, List.FontSize - 12) * 2.4)); var folder = new DataTrigger { Binding = new Binding("IsDirectory"), Value = true }; folder.Setters.Add(new Setter(FrameworkElement.WidthProperty, 56.0)); folder.Setters.Add(new Setter(FrameworkElement.HeightProperty, 48.0)); iconStyle.Triggers.Add(folder); icon.SetValue(FrameworkElement.StyleProperty, iconStyle);  icon.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center); icon.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center); slot.AppendChild(icon); body.AppendChild(slot); } else body.AppendChild(icon);
+                var body = new FrameworkElementFactory(typeof(DockPanel)); var icon = new FrameworkElementFactory(typeof(Image)); ConfigureHoverName(icon); if (mode == "Thumbnails") icon.SetValue(DockPanel.DockProperty,Dock.Top); if (mode != "Thumbnails") { icon.SetValue(FrameworkElement.WidthProperty, 18.0); icon.SetValue(FrameworkElement.HeightProperty, 18.0); } icon.SetValue(FrameworkElement.MarginProperty,new Thickness(2,0,mode == "Thumbnails" ? 2 : 10,0)); icon.SetBinding(Image.SourceProperty,new Binding(mode == "Thumbnails" ? "Thumbnail" : "Icon")); if (mode == "Thumbnails") { var slot = new FrameworkElementFactory(typeof(Border)); slot.SetValue(DockPanel.DockProperty, Dock.Top); slot.SetValue(FrameworkElement.HeightProperty, TileHeight - 64 - Math.Max(0, List.FontSize - 12) * 2.4); var iconStyle = new Style(typeof(Image)); iconStyle.Setters.Add(new Setter(FrameworkElement.WidthProperty, TileWidth - 20)); iconStyle.Setters.Add(new Setter(FrameworkElement.HeightProperty, TileHeight - 64 - Math.Max(0, List.FontSize - 12) * 2.4)); var folder = new DataTrigger { Binding = new Binding("IsDirectory"), Value = true }; folder.Setters.Add(new Setter(FrameworkElement.WidthProperty, 56.0)); folder.Setters.Add(new Setter(FrameworkElement.HeightProperty, 48.0)); iconStyle.Triggers.Add(folder); icon.SetValue(FrameworkElement.StyleProperty, iconStyle);  icon.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Center); icon.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center); slot.AppendChild(icon); body.AppendChild(slot); } else body.AppendChild(icon);
                 if (mode == "Thumbnails") { var info = new FrameworkElementFactory(typeof(TextBlock)); info.SetValue(DockPanel.DockProperty, Dock.Bottom); info.SetValue(TextBlock.FontSizeProperty, 10.0); info.SetValue(TextBlock.ForegroundProperty, FluentTheme.Muted); info.SetValue(TextBlock.TextAlignmentProperty, TextAlignment.Center); info.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis); info.SetBinding(TextBlock.TextProperty, new Binding("MediaInfo")); info.SetBinding(FrameworkElement.ToolTipProperty, new Binding("MediaInfo")); body.AppendChild(info); }
                 var name = new FrameworkElementFactory(typeof(TextBlock)); name.SetBinding(TextBlock.TextProperty,new Binding() { Converter = new DisplayFileName() }); name.SetBinding(FrameworkElement.ToolTipProperty, new Binding("NameToolTip")); name.SetValue(TextBlock.TextTrimmingProperty,TextTrimming.CharacterEllipsis); name.SetValue(FrameworkElement.VerticalAlignmentProperty,VerticalAlignment.Center); if (mode == "Thumbnails") { name.SetValue(TextBlock.TextAlignmentProperty,TextAlignment.Center); name.SetValue(TextBlock.TextWrappingProperty,TextWrapping.Wrap); name.SetValue(FrameworkElement.MaxHeightProperty,Math.Max(36, List.FontSize * 2.4)); } body.AppendChild(name); List.ItemTemplate = new DataTemplate { VisualTree = body };
             }
+            if (mode == "Details") RefreshPanelGrouping();
             if (selected != null) List.SelectedItem = selected; ScheduleThumbnails(); if (DisplayModeChanged != null) DisplayModeChanged();
         }
         internal void ChangeThumbnailSize(int delta) { thumbnailSize = Math.Max(0, Math.Min(2, thumbnailSize + delta)); SetDisplay("Thumbnails"); }
@@ -90,7 +92,19 @@ namespace FileCompass
             public object ConvertBack(object value,Type type,object parameter,System.Globalization.CultureInfo culture) { throw new NotSupportedException(); }
         }
         internal int LastThumbnailScanCount;
+        bool thumbnailScanQueued;
         void ScheduleThumbnails()
+        {
+            if (thumbnailScanQueued || displayMode != "Thumbnails" || !List.IsVisible) return;
+            thumbnailScanQueued = true;
+            Dispatcher.BeginInvoke(new Action(delegate
+            {
+                thumbnailScanQueued = false;
+                ScanVisibleThumbnails();
+            }), System.Windows.Threading.DispatcherPriority.Background);
+        }
+
+        void ScanVisibleThumbnails()
         {
             LastThumbnailScanCount = 0;
             if (displayMode != "Thumbnails" || !List.IsVisible || displayCancellation.IsCancellationRequested) return;
@@ -101,6 +115,7 @@ namespace FileCompass
                 var entry = row.Content as Entry; if (entry == null) continue; thumbnailVisible.Add(entry);
                 if (row == null || !row.IsLoaded || row.ActualHeight <= 0 || !viewport.IntersectsWith(row.TransformToAncestor(List).TransformBounds(new Rect(0,0,row.ActualWidth,row.ActualHeight)))) continue;
                 if (entry.IsDirectory) { entry.Thumbnail = entry.IsParent ? parentThumbnail : folderThumbnail; continue; }
+                if (IsRecycleBin) { entry.Thumbnail = entry.Icon ?? documentThumbnail; continue; }
                 string kind = FileViewers.Kind(entry.FullPath);
                 if (entry.IsLink || IsArchive || (IsRemote && (Remote.Profile.Protocol == NetworkProtocol.SCP || kind != "image")) || (kind != "image" && kind != "media")) { entry.Thumbnail = entry.Icon ?? documentThumbnail; continue; }
                 if (thumbnailPending.Contains(entry) || thumbnailPending.Count >= 64) continue;

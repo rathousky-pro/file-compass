@@ -38,8 +38,9 @@ namespace FileCompass
         public string FullName { get { return FilePanel.EntryName(this); } }
         public string LocationName { get; set; }
         public string ListName { get { if (LocationName != null) return LocationName; return IsDirectory && !IsParent ? folderBrackets ? "[" + FullName + "]" : FullName : Name; } }
-        public string NameToolTip { get { return nameTooltips && !IsParent ? (LocationName == null ? FullName : FullPath) + (TagNames.Length == 0 ? "" : "\n" + TagsLabel) : null; } }
-        internal void ApplyNameSettings(bool brackets, bool tooltips) { folderBrackets = brackets; nameTooltips = tooltips; if (PropertyChanged != null) { PropertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs("ListName")); PropertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs("NameToolTip")); } }
+        public string NameToolTip { get { return !String.IsNullOrEmpty(OriginalFolder) ? Name + "\n" + OriginalFolder : nameTooltips && !IsParent ? (LocationName == null ? FullName : FullPath) + (TagNames.Length == 0 ? "" : "\n" + TagsLabel) : null; } }
+        internal void ApplyNameSettings(bool brackets, bool tooltips) { if (folderBrackets == brackets && nameTooltips == tooltips) return; folderBrackets = brackets; nameTooltips = tooltips; if (PropertyChanged != null) { PropertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs("ListName")); PropertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs("NameToolTip")); } }
+        internal string RecycleId, OriginalFolder;
         internal string NetworkDeviceTarget;
         internal NetworkProfile NetworkServiceProfile;
         internal bool NetworkServiceSaved;
@@ -196,7 +197,7 @@ namespace FileCompass
         }
         internal static string FolderOnDisk(FilePanel other, string disk)
         {
-            return !other.IsRemote && !other.IsArchive && other.CurrentPath != null && String.Equals(Path.GetPathRoot(other.CurrentPath), disk, StringComparison.OrdinalIgnoreCase) ? other.CurrentPath : disk;
+            return !other.IsRemote && !other.IsArchive && !other.IsVirtualBrowser && other.CurrentPath != null && String.Equals(Path.GetPathRoot(other.CurrentPath), disk, StringComparison.OrdinalIgnoreCase) ? other.CurrentPath : disk;
         }
 
         async void NewFolder()

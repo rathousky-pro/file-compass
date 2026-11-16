@@ -118,6 +118,8 @@ namespace FileCompass {
             var menu=new ContextMenu();
             menu.Opened+=delegate {
                 menu.Items.Clear();
+                AddGroupingMenu(menu);
+                menu.Items.Add(new Separator());
                 menu.Items.Add(new MenuItem{Header=L.Text("columns.choose"),IsEnabled=false});
                 foreach(int index in new[]{0,1,2,3,4}){
                     int captured=index;var baseItem=new MenuItem{Header=ColumnCaption(BaseColumnKeys[index]),Tag=BaseColumnKeys[index],IsCheckable=true,IsChecked=BaseColumn(index).Width>0,IsEnabled=index!=0&&(BaseColumn(index).Width>0||CanShowColumn(BaseColumnKeys[index]))};

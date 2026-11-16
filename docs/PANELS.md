@@ -78,7 +78,7 @@ File icons use Windows associations, including effective user registrations and 
 
 ## Common locations and right-click menus
 
-Drive buttons remain at the left of their row. The common-folders dropdown at the right contains only Desktop, Downloads, Documents, Pictures, Music, Videos and the user profile; drives are not repeated in it. Drive label, free space and total capacity appear in the panel footer. Their actual redirected paths are resolved through SHGetKnownFolderPath, and selecting one bypasses remembered per-drive directories.
+Drive buttons remain at the left of their row. The common-folders dropdown at the right contains Desktop, Downloads, Documents, Pictures, Music, Videos, the user profile and Recycle Bin; drives are not repeated in it. Drive label, free space and total capacity appear in the panel footer. Their actual redirected paths are resolved through SHGetKnownFolderPath, and selecting one bypasses remembered per-drive directories.
 
 A short right-click toggles the item mark while preserving other marks. A stationary hold shows feedback after 250 ms and opens the File Compass command menu at 600 ms. Its final Windows menu command opens the classic native shell menu for supported local selections, using IContextMenu with IContextMenu2/3 message forwarding. Right-button dragging marks files. Remote/archive items retain application commands; unsupported commands are disabled. Holding on a marked item preserves its group; holding on an unmarked item targets that item.
 
@@ -100,4 +100,10 @@ One blue-grey row combines location tabs and navigation. The active panel has a 
 
 File headers have a bottom separator and thin vertical cell dividers. Right-click a header to toggle or reorder available columns, or drag headers. The sort arrow follows its column. Counts and widths are fitted to the available panel width; there is no horizontal file-list scrollbar. SI MB/GB, IEC MiB/GiB and exact bytes are configurable under Settings → Panels alongside hidden/system visibility.
 
+Dragging a divider redistributes its two visible neighboring columns' width within that panel. The last column has no divider to resize. In Details view, right-click a column header and select **Group by** to group files by type (extension), modification date or size range. The group heading shows the number of visible items. The active sort still applies within each group. Grouping is stored with the tab's view.
+
+In viewer settings, **Text and code** controls the hover preview for text and other files. Under **Images and media**, images and video frames each have their own option. Leave the pointer over the file icon or thumbnail for one second to show a temporary preview. Local videos show the six sampled frames without playing the video. Moving off the name, scrolling, or clicking closes the popup.
+
 Preview starts with only the selected file. More/Less at the start of its information row uses down/up chevrons to show/hide the file carousel. Choosing a carousel item updates the source-panel cursor while preserving marks. Opening another folder refreshes carousel candidates from that folder. Details opens a separate popup. Wheel scrolling keeps the carousel scrollbar off the pictures, and document/archive icons remain small.
+
+Open **Recycle Bin** from the common folders dropdown. To restore selected files or folders, open the context menu or click **Recycle Bin** in the panel footer. Windows restores items to their original locations. **Empty Recycle Bin** applies to all drives after Windows asks for confirmation.

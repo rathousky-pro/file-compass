@@ -13,6 +13,10 @@ namespace FileCompass
             driveIconSize=IconSize(settings.DriveIconSize,10);
             SetAutomaticFolderViews(settings.AutomaticFolderViews); foldersAlwaysByName = settings.FoldersAlwaysByName; maskIncludesFolders = settings.MaskIncludesFolders; ApplySelectionMode(settings.WindowsMouseSelection);
             naturalSorting = settings.NaturalSorting; folderBrackets = settings.FolderBrackets; fullNameTooltips = settings.FullNameTooltips;
+            hoverPreviewEnabled = settings.HoverFilePreview;
+            hoverImagesEnabled = settings.ShowHoverImages;
+            hoverVideosEnabled = settings.ShowHoverVideos;
+            CloseHoverPreview();
             showHiddenFiles = settings.ShowHiddenFiles; showSystemFiles = settings.ShowSystemFiles;
             System.Windows.Documents.TextElement.SetFontFamily(this, DisplayPreferences.Font(settings.InterfaceFontFamily)); System.Windows.Documents.TextElement.SetFontSize(this, DisplayPreferences.Size(settings.InterfaceFontSize));
             List.FontFamily = DisplayPreferences.Font(settings.FileListFontFamily); List.FontSize = DisplayPreferences.Size(settings.FileListFontSize); fileListRowSpacing = Math.Max(0, Math.Min(16, settings.FileListRowSpacing)); RefreshCleanDrives();

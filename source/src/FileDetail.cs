@@ -150,6 +150,14 @@ namespace FileCompass
             fileDetail.ShowMessage(L.Text("preview.loadingStatus"));
             await Task.Delay(150);
             if (request != detailRequest || !detailExpanded || !detailLayoutVisible || detailDisposed || !IsVisible || LocalLoading) return;
+            if (IsRecycleBin)
+            {
+                fileDetail.SetSelection(new Entry[0], PreviewContext, delegate { }, false);
+                detailMetadata.Text = (List.SelectedItem as Entry)?.OriginalFolder ?? "";
+                detailMetadata.ToolTip = detailMetadata.Text;
+                fileDetail.ShowMessage(L.Text("locations.recycleBin"));
+                return;
+            }
             var entries=PreviewEntries();if(entries.Length>0){ApplyDetailSelection(entries);if(fileDetail.LoadingTask!=null)await fileDetail.LoadingTask;return;}
             fileDetail.SetSelection(new Entry[0],PreviewContext,delegate{},false);
             var entry = List.SelectedItem as Entry;

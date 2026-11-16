@@ -9,7 +9,7 @@ namespace FileCompass
     public sealed class FavoriteLocation { public string Name = "", Group = "", Left = "", Right = ""; public SavedTab LeftLocation, RightLocation; public override string ToString() { return (String.IsNullOrEmpty(Group) ? "" : Group + " / ") + Name; } }
     public sealed class PanelView
     {
-        public string Sort = "Name"; public bool Descending; public double[] Widths = new double[0];
+        public string Sort = "Name"; public string GroupBy = ""; public bool Descending; public double[] Widths = new double[0];
         public string Display = "Details"; public bool Tree; public string[] MetadataColumns = new string[0];
         public int ThumbnailSize = 1;
         public bool? ExtensionColumn, AttributesColumn, SizeColumn, ModifiedColumn;
@@ -42,7 +42,10 @@ namespace FileCompass
         public bool AutoRefresh = true, WatchNetworkFolders;
         public bool NetworkScheduleEnabled; public int NetworkScheduleDays = 127, NetworkScheduleStart = 480, NetworkScheduleEnd = 1320; public long NetworkScheduleKiB = 1024;
         public System.Collections.Generic.List<NetworkScheduleRule> NetworkScheduleRules;
-        public bool InternalCodePreview; public bool AutomaticFolderViews;
+        public bool InternalCodePreview; public bool AutomaticFolderViews; public bool HoverFilePreview;
+        public bool? HoverImagePreview, HoverVideoPreview;
+        internal bool ShowHoverImages { get { return HoverImagePreview ?? HoverFilePreview; } }
+        internal bool ShowHoverVideos { get { return HoverVideoPreview ?? HoverFilePreview; } }
         public bool ShowHiddenFiles = true, ShowSystemFiles = true;
         public bool FoldersAlwaysByName, DriveAlwaysRoot, WindowsMouseSelection, ArchiveNewestFileDate;
         public bool MaskIncludesFolders = true;

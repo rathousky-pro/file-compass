@@ -235,6 +235,7 @@ namespace FileCompass
         long currentOffset;
         readonly Grid content = new Grid();
         WrapPanel previewModeRow;DockPanel previewTools;bool compactPreview;
+        readonly bool hoverPreviewOnly;
         readonly ListView archiveContents = new ListView { Visibility = Visibility.Collapsed };
         CancellationTokenSource cancellation;
         string current;
@@ -245,8 +246,9 @@ namespace FileCompass
         internal Task LoadingTask { get; private set; }
         RemoteConnection remoteTemplate;
 
-        internal QuickPreviewPane(Action close, bool compact = false)
+        internal QuickPreviewPane(Action close, bool compact = false, bool hoverOnly = false)
         {
+            hoverPreviewOnly = hoverOnly;
             Background = CompactTheme.WhiteSurface; BorderBrush = CompactTheme.Line; BorderThickness = new Thickness(1);CornerRadius=new CornerRadius(6);
             compactPreview=compact;Background=CompactTheme.Chrome;BorderBrush=CompactTheme.ThemeBrush("#DCE8F3");Padding=new Thickness(compact?4:12);CornerRadius=new CornerRadius(14);var body = new DockPanel { Margin = new Thickness(compact ? 2 : 8) }; Child = body;
             var heading = new DockPanel();var headingFrame=new Border{Tag="preview-header-card",Child=heading,Background=CompactTheme.WhiteSurface,CornerRadius=new CornerRadius(8),Padding=new Thickness(9,6,9,6),Margin=new Thickness(0,0,0,8)};DockPanel.SetDock(headingFrame,Dock.Top);body.Children.Add(headingFrame);
@@ -473,6 +475,11 @@ namespace FileCompass
         internal void ShowFile(string path, bool preserveUnchanged = false)
         {
             if (preserveUnchanged && IsCurrentLocalFile(path)) return;
+            if (hoverPreviewOnly && FileViewers.IsVideo(path) && NetworkVideoPath(path))
+            {
+                ShowMessage(L.Text("video.networkConsent"));
+                return;
+            }
             if(currentMode==PreviewMode.Auto&&FileViewers.IsVideo(path)&&NetworkVideoPath(path)){try{var info=new FileInfo(path);VideoConsent(path,"network:"+path+"|"+info.Length+"|"+info.LastWriteTimeUtc.Ticks,L.Text("video.networkConsent"),delegate{if(remoteTemplate!=null)remoteTemplate.Dispose();remoteTemplate=null;LoadingTask=Load(path,0);});}catch(Exception ex){ShowMessage(L.Text("preview.loadFailedPrefix")+ex.Message);}return;}
             ResetVideoOrigin();
             if (remoteTemplate != null) remoteTemplate.Dispose(); remoteTemplate = null;

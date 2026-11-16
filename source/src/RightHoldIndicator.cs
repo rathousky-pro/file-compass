@@ -10,7 +10,7 @@ namespace FileCompass {
   internal double RightHoldProgress {get{return rightHoldBar==null?0:rightHoldBar.Value/100;}}
   internal void StartRightHoldIndicator(Point point){holdMenuShown=false;contextPending=true;rightMoved=false;
    if(rightHoldPopup==null){rightHoldBar=new ProgressBar{Minimum=0,Maximum=100,Width=116,Height=4,Foreground=FluentTheme.Accent,Margin=new Thickness(0,4,0,0)};var body=new StackPanel();rightHoldLabel=new TextBlock{FontSize=10,Foreground=FluentTheme.Text};body.Children.Add(rightHoldLabel);body.Children.Add(rightHoldBar);rightHoldPopup=new Popup{PlacementTarget=List,Placement=PlacementMode.RelativePoint,StaysOpen=true,AllowsTransparency=true,Focusable=false,IsHitTestVisible=false,Child=new Border{Padding=new Thickness(7,5,7,6),Background=CompactTheme.PanelSurface,BorderBrush=CompactTheme.Line,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(5),Child=body}};rightHoldTimer.Tick+=delegate{AdvanceRightHold(rightHoldClock.Elapsed,Mouse.RightButton==MouseButtonState.Pressed);};Unloaded+=delegate{CancelFileContextGesture();};List.PreviewKeyDown+=delegate(object sender,KeyEventArgs e){if(e.Key==Key.Escape&&contextPending){CancelFileContextGesture();Mouse.Capture(null);e.Handled=true;}};}
-   rightHoldLabel.Text=L.Text(CanShowWindowsMenu ? "context.windows" : "context.programMenu");rightHoldBar.Value=0;rightHoldPopup.HorizontalOffset=point.X+16;rightHoldPopup.VerticalOffset=point.Y+20;rightHoldPopup.IsOpen=false;rightHoldClock.Restart();rightHoldTimer.Start();
+   rightHoldLabel.Text=L.Text("context.programMenu");rightHoldBar.Value=0;rightHoldPopup.HorizontalOffset=point.X+16;rightHoldPopup.VerticalOffset=point.Y+20;rightHoldPopup.IsOpen=false;rightHoldClock.Restart();rightHoldTimer.Start();
   }
   void HideRightHoldIndicator(){rightHoldTimer.Stop();if(rightHoldPopup!=null)rightHoldPopup.IsOpen=false;}
   internal void CancelFileContextGesture(){contextPending=false;HideRightHoldIndicator();EndRightMark();}
@@ -19,7 +19,7 @@ namespace FileCompass {
 #if APP_TESTS
    if(HoldCompletedForTests!=null){HoldCompletedForTests();return;}
 #endif
-   ShowFileContextMenu(CanShowWindowsMenu);
+   ShowFileContextMenu(false);
   }
  }
 }

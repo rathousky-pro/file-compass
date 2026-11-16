@@ -2,10 +2,63 @@
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 namespace FileCompass {
  public partial class FilePanel {
   bool batchColumnWidths;
+  bool draggingColumnDivider;
   ScrollViewer columnViewport;
+  void InitializeColumnGrip(GridViewColumnHeader header, GridViewColumn column)
+  {
+   GridViewColumn neighbor = null;
+   double originalLeft = 0, originalRight = 0, start = 0;
+   header.AddHandler(Thumb.DragStartedEvent, new DragStartedEventHandler((sender, e) =>
+   {
+    neighbor = NextVisibleColumn(column);
+    if (neighbor == null) return;
+    start = Mouse.GetPosition(List).X;
+    originalLeft = column.Width;
+    originalRight = neighbor.Width;
+    draggingColumnDivider = true;
+    e.Handled = true;
+   }));
+   header.AddHandler(Thumb.DragDeltaEvent, new DragDeltaEventHandler((sender, e) =>
+   {
+    if (neighbor == null) return;
+    ResizeColumnPair(column, neighbor, originalLeft, originalRight, Mouse.GetPosition(List).X - start);
+    e.Handled = true;
+   }));
+   header.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler((sender, e) =>
+   {
+    if (neighbor == null) return;
+    if (e.Canceled) { column.Width = originalLeft; neighbor.Width = originalRight; }
+    else if (column.Width != originalLeft) preserveColumnWidths = true;
+    neighbor = null;
+    draggingColumnDivider = false;
+    e.Handled = true;
+   }));
+   header.QueryCursor += (sender, e) =>
+   {
+    var thumb = e.OriginalSource as Thumb;
+    if (thumb != null && thumb.Name == "AdjacentColumnGrip" && NextVisibleColumn(column) == null)
+    { e.Cursor = Cursors.Arrow; e.Handled = true; }
+   };
+  }
+  void ResizeColumnPair(GridViewColumn leftColumn, GridViewColumn rightColumn, double originalLeft, double originalRight, double offset)
+  {
+   double total = originalLeft + originalRight;
+   double minimumLeft = Math.Min(originalLeft, ColumnMinimum(ColumnKey(leftColumn)));
+   double minimumRight = Math.Min(originalRight, ColumnMinimum(ColumnKey(rightColumn)));
+   double left = Math.Max(minimumLeft, Math.Min(total - minimumRight, originalLeft + offset));
+   leftColumn.Width = left;
+   rightColumn.Width = total - left;
+  }
+  GridViewColumn NextVisibleColumn(GridViewColumn column)
+  {
+   int index = view.Columns.IndexOf(column);
+   return index < 0 ? null : view.Columns.Skip(index + 1).FirstOrDefault(candidate => candidate.Width > 0);
+  }
   static T ColumnVisual<T>(DependencyObject node)where T:DependencyObject{if(node is T)return (T)node;for(int i=0;i<System.Windows.Media.VisualTreeHelper.GetChildrenCount(node);i++){var found=ColumnVisual<T>(System.Windows.Media.VisualTreeHelper.GetChild(node,i));if(found!=null)return found;}return null;}
   void ObserveColumnViewport(){var viewport=ColumnVisual<ScrollViewer>(List);if(Object.ReferenceEquals(viewport,columnViewport))return;if(columnViewport!=null)columnViewport.ScrollChanged-=ColumnViewportChanged;columnViewport=viewport;if(viewport!=null)viewport.ScrollChanged+=ColumnViewportChanged;FitColumns();}
   void ColumnViewportChanged(object sender,ScrollChangedEventArgs e){if(Math.Abs(e.ViewportWidthChange)>.1&&!resizingColumns)FitColumns();}
@@ -14,7 +67,7 @@ namespace FileCompass {
   double ColumnMinimum(string key){return key=="Name"?100:key=="Extension"?60:key=="Size"?70:key=="Modified"?130:key=="Attributes"?65:80;}
   bool CanShowColumn(string key){return ColumnRoom<1||view.Columns.Where(x=>x.Width>0&&ColumnKey(x)!=key).Sum(x=>ColumnMinimum(ColumnKey(x)))+ColumnMinimum(key)<=ColumnRoom;}
   void FitColumns(string preferred=null){
-   if(List.ActualWidth<1||view.Columns.Count<5)return;double room=ColumnRoom;var wanted=view.Columns.Where(x=>{int index=Array.IndexOf(BaseColumnKeys,ColumnKey(x));return index<0||BaseColumnVisible(index);}).ToList();
+   if(draggingColumnDivider||List.ActualWidth<1||view.Columns.Count<5)return;double room=ColumnRoom;var wanted=view.Columns.Where(x=>{int index=Array.IndexOf(BaseColumnKeys,ColumnKey(x));return index<0||BaseColumnVisible(index);}).ToList();
    var priority=wanted.OrderBy(x=>ColumnKey(x)=="Name"?0:ColumnKey(x)=="Size"?1:ColumnKey(x)=="Modified"?2:ColumnKey(x)=="Extension"?3:ColumnKey(x)=="Attributes"?4:5).ToList();var shown=new System.Collections.Generic.List<GridViewColumn>();double used=0;
    foreach(var column in priority){double minimum=ColumnMinimum(ColumnKey(column));if(shown.Count==0||used+minimum<=room){shown.Add(column);used+=Math.Min(minimum,room);}}
    bool previous=resizingColumns;resizingColumns=true;try{

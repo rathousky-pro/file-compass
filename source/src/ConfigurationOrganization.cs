@@ -24,7 +24,7 @@ namespace FileCompass {
    var archiveInfo=SettingTab(L.Text("configsection.14"),info.Concat(new FrameworkElement[]{SettingSection(L.Text("configsection.15"),general[5])}).ToArray());
    DetachSetting(archiveLimits);archiveLimits.Tag="settings-section-page";
    SetSettingPages(archive,archiveInfo,tools,archiveLimits);
-   var viewers=pages[4];var imageGroup=FindSetting(viewers,"settings.imagesLabel");var mediaGroup=FindSetting(viewers,"settings.audioAndVideoLabel");var editorGroup=FindSetting(viewers,"settings.textEditorLabel");var viewerHelp=viewers.Children.OfType<TextBlock>().Last();SetSettingPages(viewers,SettingTab(L.Text("configsection.16"),imageGroup,mediaGroup),SettingTab(L.Text("configsection.17"),editorGroup,internalEditor,internalCodePreview,viewerHelp));
+   var viewers=pages[4];var imageGroup=FindSetting(viewers,"settings.imagesLabel");var mediaGroup=FindSetting(viewers,"settings.audioAndVideoLabel");var editorGroup=FindSetting(viewers,"settings.textEditorLabel");var viewerHelp=viewers.Children.OfType<TextBlock>().Last();SetSettingPages(viewers,SettingTab(L.Text("configsection.16"),imageGroup,mediaGroup),SettingTab(L.Text("configsection.17"),editorGroup,internalEditor,internalCodePreview,hoverFilePreview,viewerHelp));
   }
  }
 }

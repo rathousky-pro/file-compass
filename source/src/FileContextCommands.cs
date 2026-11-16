@@ -34,7 +34,7 @@ namespace FileCompass {
   internal void SelectContextEntry(Entry entry){if(entry==null)return;activate(this);if(windowsSelection){if(!List.SelectedItems.Contains(entry))List.SelectedItem=entry;}else{if(!entry.IsMarked&&List.Items.Cast<Entry>().Any(x=>x.IsMarked))MarkAll(false);List.SelectedItem=entry;}}
   internal void FocusRightEntry(Entry entry){if(entry==null)return;bool previous=synchronizingSelection;synchronizingSelection=true;try{List.SelectedItem=entry;}finally{synchronizingSelection=previous;}SyncWindowsSelection();}
   internal void BeginContextEntry(Entry entry,Point point){contextPressedEntry=entry;activate(this);FocusRightEntry(entry);contextPressTimestamp=Environment.TickCount;rightStart=point;rightMoved=false;contextPending=true;StartRightHoldIndicator(point);rightScrollTimer.Start();}
-  void BeginFileContextGesture(MouseButtonEventArgs e){var row=RowAt(e.GetPosition(List));if(row==null)return;BeginContextEntry((Entry)row.Content,e.GetPosition(List));contextPressTimestamp=e.Timestamp;bool previous=synchronizingSelection;synchronizingSelection=true;try{row.Focus();}finally{synchronizingSelection=previous;}SyncWindowsSelection();Mouse.Capture(List,CaptureMode.SubTree);e.Handled=true;}
+  void BeginFileContextGesture(MouseButtonEventArgs e){var row=RowAt(e.GetPosition(List));if(row==null){if(IsRecycleBin){ShowRecycleMenu(List);e.Handled=true;}return;}BeginContextEntry((Entry)row.Content,e.GetPosition(List));contextPressTimestamp=e.Timestamp;bool previous=synchronizingSelection;synchronizingSelection=true;try{row.Focus();}finally{synchronizingSelection=previous;}SyncWindowsSelection();Mouse.Capture(List,CaptureMode.SubTree);e.Handled=true;}
   void ContinueFileContextGesture(MouseEventArgs e){if(e.RightButton==MouseButtonState.Pressed)ContinueRightGesture(e.GetPosition(List));}
   void ContinueRightGesture(Point point){if(!contextPending)return;var delta=point-rightStart;if(!rightMoved&&(Math.Abs(delta.X)>=SystemParameters.MinimumHorizontalDragDistance||Math.Abs(delta.Y)>=SystemParameters.MinimumVerticalDragDistance)){rightMoved=true;HideRightHoldIndicator();BeginRightMark(contextPressedEntry);}if(rightDragging&&point.Y>=0&&point.Y<List.ActualHeight){var row=RowAt(point);if(row!=null)ContinueRightMark((Entry)row.Content);}}
 
@@ -44,6 +44,7 @@ namespace FileCompass {
 #if APP_TESTS
    if(ContextMenuForTests!=null){ContextMenuForTests(native,Selected().Where(x=>!x.IsParent).Select(x=>x.FullPath).ToArray());return;}
 #endif
+   if(IsRecycleBin){ShowRecycleMenu(List);return;}
    if(native&&CanShowWindowsMenu){try{await ShellMenuWorker.Show(Window.GetWindow(this),Selected().Where(x=>!x.IsParent).Select(x=>x.FullPath).ToArray());if(IsLoaded)Refresh();}catch(OperationCanceledException){}catch(Exception ex){if(IsLoaded)MessageBox.Show(Window.GetWindow(this),ex.Message,L.Text("context.windows"));}return;}if(List.ContextMenu!=null){List.ContextMenu.PlacementTarget=List;List.ContextMenu.IsOpen=true;}}
  }
  public partial class MainWindow {

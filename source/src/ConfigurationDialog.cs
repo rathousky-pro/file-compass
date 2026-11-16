@@ -41,6 +41,9 @@ namespace FileCompass
         readonly ComboBox buttonIconSize=new ComboBox{MinWidth=100},driveIconSize=new ComboBox{MinWidth=100};
         readonly ComboBox fileRowSpacing = new ComboBox { MinWidth = 100, HorizontalAlignment = HorizontalAlignment.Left };
         readonly CheckBox internalEditor=new CheckBox{Content=L.Text("codeEditor.setting"),Margin=new Thickness(0)};
+        readonly CheckBox hoverFilePreview = new CheckBox { Content = L.Text("settings.hoverFilePreview") };
+        readonly CheckBox hoverImagePreview = new CheckBox { Content = L.Text("settings.hoverImagePreview") };
+        readonly CheckBox hoverVideoPreview = new CheckBox { Content = L.Text("settings.hoverVideoPreview") };
         readonly CheckBox automaticFolderViews = new CheckBox { Content = L.Text("columns.autoSetting"), Margin = new Thickness(0, 6, 0, 6) }; readonly CheckBox internalCodePreview = new CheckBox { Content = L.Text("settings.internalCodePreview"), Margin = new Thickness(0) };
         readonly CheckBox showHidden = new CheckBox { Content = L.Text("settings.showHiddenFiles"), Margin = new Thickness(0, 5, 0, 5) };
         readonly CheckBox showSystem = new CheckBox { Content = L.Text("settings.showSystemFiles"), Margin = new Thickness(0, 5, 0, 5) };
@@ -135,12 +138,18 @@ namespace FileCompass
             archiveLimits = new ArchiveLimitEditor(archives); archivePage.Children.Add(archiveLimits);
             archivePage.Children.Add(new TextBlock { Text = L.Text("settings.archiveFormatCapabilities"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 16, 0, 0) });
             var viewers = Page(L.Text("settings.viewersTitle"), L.Text("settings.viewerShortcutsHelp"));
-            imagePath = ProgramPath(FluentTheme.Section(viewers, L.Text("settings.imagesLabel")), L.Text("settings.builtInImageViewerHint"), settings.ImageViewerPath);
+            var imageSection = FluentTheme.Section(viewers, L.Text("settings.imagesLabel"));
+            imagePath = ProgramPath(imageSection, L.Text("settings.builtInImageViewerHint"), settings.ImageViewerPath);
+            hoverImagePreview.IsChecked = settings.ShowHoverImages;
+            imageSection.Children.Add(hoverImagePreview);
             var mediaSection = FluentTheme.Section(viewers, L.Text("settings.audioAndVideoLabel"));
             mediaPath = ProgramPath(mediaSection, L.Text("settings.mediaPlayerLabel"), settings.MediaPlayerPath);
             mediaSection.Children.Add(CopyUi.Button(L.Text("settings.findMediaPlayerClassic"), delegate { Find(mediaPath, FileViewers.FindMediaPlayer()); }));
+            hoverVideoPreview.IsChecked = settings.ShowHoverVideos;
+            mediaSection.Children.Add(hoverVideoPreview);
             editorPath = ProgramPath(FluentTheme.Section(viewers, L.Text("settings.textEditorLabel")), L.Text("settings.notepadDefaultHint"), settings.TextEditorPath);
             internalEditor.IsChecked=settings.InternalTextEditor;viewers.Children.Add(internalEditor);internalCodePreview.IsChecked = settings.InternalCodePreview; viewers.Children.Add(internalCodePreview);
+            hoverFilePreview.IsChecked = settings.HoverFilePreview; viewers.Children.Add(hoverFilePreview);
             viewers.Children.Add(new TextBlock { Text = L.Text("settings.supportedViewerFormatsHelp"), TextWrapping = TextWrapping.Wrap, Foreground = FluentTheme.Muted, Margin = new Thickness(0, 8, 0, 0) });
             var view = Page(L.Text("settings.startupViewTitle"), L.Text("settings.restoreViewDescription"));
             startupPreferences = new StartupPreferencesEditor(settings); view.Children.Add(startupPreferences);
@@ -211,6 +220,9 @@ namespace FileCompass
                 { string value = input.Text.Trim().Trim('"'); if (ProgramPathChanged(input) && value.Length > 0 && !File.Exists(Environment.ExpandEnvironmentVariables(value))) throw new IOException(L.Text("settings.programNotFound") + "\n" + value); }
                 settings.ImageViewerPath = imagePath.Text.Trim().Trim('"'); settings.MediaPlayerPath = mediaPath.Text.Trim().Trim('"'); settings.TextEditorPath = editorPath.Text.Trim().Trim('"');settings.InternalTextEditor=internalEditor.IsChecked==true;
                 settings.AutoRefresh = automaticRefresh.IsChecked == true; settings.WatchNetworkFolders = networkRefresh.IsChecked == true;
+                settings.HoverFilePreview = hoverFilePreview.IsChecked == true;
+                settings.HoverImagePreview = hoverImagePreview.IsChecked == true;
+                settings.HoverVideoPreview = hoverVideoPreview.IsChecked == true;
                 settings.InternalCodePreview = internalCodePreview.IsChecked == true; settings.AutomaticFolderViews = automaticFolderViews.IsChecked == true;
                 settings.SizeUnits=new[]{"SI","IEC","Bytes"}[Math.Max(0,sizeUnits.SelectedIndex)];
                 settings.ShowHiddenFiles = showHidden.IsChecked == true; settings.ShowSystemFiles = showSystem.IsChecked == true;

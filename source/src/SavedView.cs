@@ -8,12 +8,16 @@ namespace FileCompass
         static double ValidDimension(double value, double min, double max, double fallback) { return Double.IsNaN(value) || Double.IsInfinity(value) || value < min || value > max ? fallback : value; }
         internal void InitializeColumnWidths(ProgramSettings settings)
         {
-            left.SharedColumnWidths = right.SharedColumnWidths = true;
             var widths = settings == null ? null : settings.ColumnWidths;
-            if (settings != null && (widths == null || widths.Length == 0)) widths = settings.LeftView == null ? null : settings.LeftView.Widths;
-            if (widths != null) for (int i = 0; i < Math.Min(5, widths.Length); i++) if (widths[i] >= 25 && widths[i] <= 4000) { left.SetColumnWidth(i, widths[i]); right.SetColumnWidth(i, widths[i]); }
-            left.ColumnWidthChanged += delegate(int index, double width) { left.SetColumnWidth(index, width); if (left.ColumnIdentity(index) == right.ColumnIdentity(index)) right.SetColumnWidth(index, width); };
-            right.ColumnWidthChanged += delegate(int index, double width) { right.SetColumnWidth(index, width); if (left.ColumnIdentity(index) == right.ColumnIdentity(index)) left.SetColumnWidth(index, width); };
+            if (widths == null) return;
+            bool restoreLeft = settings.LeftView == null || settings.LeftView.Widths == null || settings.LeftView.Widths.Length == 0;
+            bool restoreRight = settings.RightView == null || settings.RightView.Widths == null || settings.RightView.Widths.Length == 0;
+            for (int i = 0; i < Math.Min(5, widths.Length); i++)
+            {
+                if (widths[i] < 25 || widths[i] > 4000) continue;
+                if (restoreLeft) left.SetColumnWidth(i, widths[i]);
+                if (restoreRight) right.SetColumnWidth(i, widths[i]);
+            }
         }
         internal void CaptureView(ProgramSettings settings)
         {

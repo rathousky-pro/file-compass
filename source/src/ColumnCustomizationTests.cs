@@ -8,6 +8,60 @@ using System.Windows.Input;
 using System.Threading.Tasks;
 namespace FileCompass {
  public partial class FilePanel {
+  internal void VerifyPanelInteractions(string root, Action<bool,string> check)
+  {
+   var original = new PanelView();
+   SavePanelView(original);
+   try
+   {
+    var header = (GridViewColumnHeader)BaseColumn(0).Header;
+    SetBaseColumnVisible(1,true);
+    SetBaseColumnVisible(2,false);
+    var widths = view.Columns.Select(column => column.Width).ToArray();
+    var neighbor = NextVisibleColumn(BaseColumn(0));
+    check(neighbor == BaseColumn(1), "the Name divider targets the next visible column");
+    ResizeColumnPair(BaseColumn(0), neighbor, widths[0], widths[1], -20);
+    check(BaseColumn(0).Width < widths[0] && Math.Abs(BaseColumn(0).Width + neighbor.Width - widths[0] - widths[1]) < .001
+        && view.Columns.Skip(2).Select(column => column.Width).SequenceEqual(widths.Skip(2)), "moving the Name divider redistributes only the adjacent widths");
+    ResizeColumnPair(BaseColumn(0), neighbor, widths[0], widths[1], 0);
+    header.ContextMenu.IsOpen = true;
+    var groupMenu = header.ContextMenu.Items.OfType<MenuItem>().Single(item => Equals(item.Header, L.Text("columns.groupBy")));
+    ((MenuItem)groupMenu.Items[1]).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+    header.ContextMenu.IsOpen = false;
+    var groups = List.Items.Groups;
+    check(groups != null && groups.Cast<System.Windows.Data.CollectionViewGroup>().Any(group => Equals(group.Name, ".txt"))
+        && ((Entry)List.Items[0]).IsParent, "type grouping keeps the parent first and groups visible files by extension");
+    SetDisplay("Short");
+    check(List.Items.Groups == null, "tile mode suspends grouping");
+    SetDisplay("Details");
+    check(List.Items.Groups != null, "returning to Details restores grouping");
+    var popupSize = new Size(520, 340);
+    var workAtTop = new Rect(-140, -30, 850, 710);
+    var workAtBottom = new Rect(-690, -675, 850, 710);
+    var nearTop = HoverPreviewBounds(workAtTop, 20, popupSize);
+    var nearBottom = HoverPreviewBounds(workAtBottom, 20, popupSize);
+    check(nearTop.Top > 20 && nearTop.Size == popupSize && workAtTop.Contains(nearTop),
+        "hover preview opens below a top row within the monitor work area");
+    check(nearBottom.Bottom < 0 && nearBottom.Size == popupSize && workAtBottom.Contains(nearBottom),
+        "hover preview opens above a bottom row and stays clear of the taskbar and right edge");
+    var smallWorkArea = new Rect(-110, -150, 460, 310);
+    var limited = HoverPreviewBounds(smallWorkArea, 20, popupSize);
+    check(!limited.IsEmpty && limited.Width < popupSize.Width && limited.Height < popupSize.Height && smallWorkArea.Contains(limited),
+        "hover preview shrinks to fit a small monitor without covering the hovered name");
+    var state = new PanelView();
+    SavePanelView(state);
+    var file = Path.Combine(root, "panel-interactions.xml");
+    new ProgramSettings { LeftView = state, HoverFilePreview = false, HoverImagePreview = true, HoverVideoPreview = false }.Save(file);
+    var restored = ProgramSettings.Load(file);
+    check(!restored.HoverFilePreview && restored.ShowHoverImages && !restored.ShowHoverVideos
+        && new ProgramSettings { HoverFilePreview = true }.ShowHoverVideos
+        && !new ProgramSettings().ShowHoverImages, "hover options persist independently and preserve legacy preferences");
+    RestorePanelView(original);
+    RestorePanelView(restored.LeftView);
+    check(restored.LeftView.GroupBy == "Extension" && List.Items.Groups != null, "grouping survives the panel settings round trip");
+   }
+   finally { RestorePanelView(original); }
+  }
   internal void VerifyColumnCustomization(string root,Action<bool,string> check){
    var original=new PanelView();SavePanelView(original);var main=Window.GetWindow(this);
    try{

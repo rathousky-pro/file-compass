@@ -26,9 +26,7 @@ namespace FileCompass
         internal event Action LocalNavigationCompleted;
         public Task NavigationTask { get; private set; }
         internal void CancelNavigation() { navigationVersion++; var previous = navigationCancellation; navigationCancellation = null; if (previous != null) previous.Cancel(); LocalLoading = false; List.IsEnabled = true; }
-        internal void SavePanelView(PanelView saved) { saved.ExtensionColumn=extensionColumn;saved.AttributesColumn=attributesColumn;saved.SizeColumn=sizeColumn;saved.ModifiedColumn=modifiedColumn;saved.ColumnOrder=view.Columns.Select(ColumnKey).ToArray();saved.MetadataColumns = MetadataColumnKeys; saved.Sort = sortProperty; saved.Descending = descending; saved.Widths = LogicalColumns.Select((x,i) => i>0&&i<5&&!BaseColumnVisible(i)?RememberedWidth(i):x.Width).ToArray(); saved.Display = displayMode; saved.Tree = treeRequested; saved.ThumbnailSize = thumbnailSize; SaveDetailView(saved); }
-        internal bool SharedColumnWidths;
-        internal event Action<int, double> ColumnWidthChanged;
+        internal void SavePanelView(PanelView saved) { saved.ExtensionColumn=extensionColumn;saved.AttributesColumn=attributesColumn;saved.SizeColumn=sizeColumn;saved.ModifiedColumn=modifiedColumn;saved.ColumnOrder=view.Columns.Select(ColumnKey).ToArray();saved.MetadataColumns = MetadataColumnKeys; saved.Sort = sortProperty; saved.GroupBy = panelGrouping; saved.Descending = descending; saved.Widths = LogicalColumns.Select((x,i) => i>0&&i<5&&!BaseColumnVisible(i)?RememberedWidth(i):x.Width).ToArray(); saved.Display = displayMode; saved.Tree = treeRequested; saved.ThumbnailSize = thumbnailSize; SaveDetailView(saved); }
         internal void SetColumnWidth(int index, double width)
         {
             var columns=LogicalColumns.ToArray();if (index < 0 || index >= columns.Length || Double.IsNaN(width) || Double.IsInfinity(width)) return;
@@ -44,9 +42,10 @@ namespace FileCompass
             extensionColumn=saved.ExtensionColumn;attributesColumn=saved.AttributesColumn;sizeColumn=saved.SizeColumn;modifiedColumn=saved.ModifiedColumn;ApplyBaseColumns();
             SetMetadataColumns(saved.MetadataColumns); if (new[] { "Name", "Extension", "Size", "Modified", "Attributes" }.Contains(saved.Sort) || MetadataColumn.IsSort(saved.Sort)) sortProperty = saved.Sort;
             descending = saved.Descending;
+            panelGrouping = new[] { "Extension", "Modified", "Size" }.Contains(saved.GroupBy) ? saved.GroupBy : "";
             thumbnailSize = Math.Max(0, Math.Min(2, saved.ThumbnailSize)); SetDisplay(saved.Display ?? "Details"); SetTree(saved.Tree);
             RestoreDetailView(saved);
-            batchColumnWidths=true;try{if (saved.Widths != null) for (int i = 0; i < Math.Min(saved.Widths.Length, view.Columns.Count); i++) if ((!SharedColumnWidths || i >= 5 || MetadataColumnKeys.Length > 0 || applyingFolderView) && saved.Widths[i] >= 25 && saved.Widths[i] <= 4000) SetColumnWidth(i, saved.Widths[i]);}finally{batchColumnWidths=false;}
+            batchColumnWidths=true;try{if (saved.Widths != null) for (int i = 0; i < Math.Min(saved.Widths.Length, view.Columns.Count); i++) if (saved.Widths[i] >= 25 && saved.Widths[i] <= 4000) SetColumnWidth(i, saved.Widths[i]);}finally{batchColumnWidths=false;}
             ApplyColumnOrder(saved.ColumnOrder!=null&&saved.ColumnOrder.Length>0?saved.ColumnOrder:BaseColumnKeys.Concat(MetadataColumnKeys.Select(x=>"Meta:"+x)));FitColumns();Sort();
         }
         public string CurrentPath { get; private set; }
@@ -136,6 +135,8 @@ namespace FileCompass
             List.Background = CompactTheme.WhiteSurface; List.Foreground = FluentTheme.Text;
             List.FontFamily = new FontFamily("Segoe UI"); List.FontSize = 12;
             ScrollViewer.SetHorizontalScrollBarVisibility(List, ScrollBarVisibility.Disabled);
+            InitializePanelGrouping();
+            InitializeHoverPreview();
             List.ItemContainerStyle = RowStyle();InitializeSelectionBrackets();
             List.SizeChanged += delegate { ResizeColumns(); };List.Loaded+=delegate{ObserveColumnViewport();};
             List.PreviewMouseLeftButtonDown += delegate(object sender, MouseButtonEventArgs e)
@@ -180,7 +181,7 @@ namespace FileCompass
             List.MouseDoubleClick += delegate(object sender, MouseButtonEventArgs e) { if (windowsSelection && e.ChangedButton == MouseButton.Left && RowAt(e.GetPosition(List)) != null) { OpenSelected(); e.Handled = true; } };
             Grid.SetRow(List, 3); grid.Children.Add(List);
             status.Margin = new Thickness(9, 3, 5, 0); status.Foreground = FluentTheme.Muted; status.FontSize = 11;
-            System.Windows.Automation.AutomationProperties.SetAutomationId(status,"PanelStatus");System.Windows.Automation.AutomationProperties.SetAutomationId(panelRole,"PanelRole");var statusRow=new Grid();statusRow.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star)});statusRow.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(2,GridUnitType.Star)});capacity.Margin=new Thickness(8,0,12,0);capacity.VerticalAlignment=VerticalAlignment.Center;capacity.HorizontalAlignment=HorizontalAlignment.Right;capacity.TextTrimming=TextTrimming.CharacterEllipsis;Grid.SetColumn(capacity,1);status.TextTrimming=TextTrimming.CharacterEllipsis;statusRow.Children.Add(capacity);statusRow.Children.Add(status);var statusSeparator=new Border{Tag="panel-status-separator",BorderBrush=CompactTheme.Line,BorderThickness=new Thickness(0,1,0,0),Child=statusRow};Grid.SetRow(statusSeparator,4);grid.Children.Add(statusSeparator);
+            System.Windows.Automation.AutomationProperties.SetAutomationId(status,"PanelStatus");System.Windows.Automation.AutomationProperties.SetAutomationId(panelRole,"PanelRole");var statusRow=new Grid();statusRow.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star)});statusRow.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(2,GridUnitType.Star)});capacity.Cursor=System.Windows.Input.Cursors.Hand;capacity.MouseLeftButtonUp+=delegate { if (IsRecycleBin) { ShowRecycleMenu(capacity); return; } if(IsRemote || IsArchive || IsExt || IsShellBrowser || IsNetworkBrowser || String.IsNullOrEmpty(CurrentPath)) return; string root=Path.GetPathRoot(CurrentPath); if(String.IsNullOrEmpty(root) || root.StartsWith(@"\\")) return; var owner=Window.GetWindow(this) as MainWindow; if(owner!=null){activate(this);new DrivePropertiesWindow(owner,root,this).Show();} };capacity.Margin=new Thickness(8,0,12,0);capacity.VerticalAlignment=VerticalAlignment.Center;capacity.HorizontalAlignment=HorizontalAlignment.Right;capacity.TextTrimming=TextTrimming.CharacterEllipsis;Grid.SetColumn(capacity,1);status.TextTrimming=TextTrimming.CharacterEllipsis;statusRow.Children.Add(capacity);statusRow.Children.Add(status);var statusSeparator=new Border{Tag="panel-status-separator",BorderBrush=CompactTheme.Line,BorderThickness=new Thickness(0,1,0,0),Child=statusRow};Grid.SetRow(statusSeparator,4);grid.Children.Add(statusSeparator);
             PreviewGotKeyboardFocus += delegate { activate(this); };
             PreviewMouseDown += delegate { activate(this); };
             InitializePanelTools();
@@ -268,7 +269,7 @@ namespace FileCompass
             border.SetValue(Border.BorderBrushProperty, CompactTheme.Line); border.SetValue(Border.BorderThicknessProperty, new Thickness(0, 0, 1, 1));border.SetValue(FrameworkElement.MarginProperty,new Thickness(0,5,0,0));
             var presenter = new FrameworkElementFactory(typeof(ContentPresenter)); presenter.SetValue(FrameworkElement.MarginProperty, new Thickness(8,0,0,0));presenter.SetValue(FrameworkElement.VerticalAlignmentProperty,VerticalAlignment.Center); border.AppendChild(presenter);
             var headerGrid = new FrameworkElementFactory(typeof(Grid)); headerGrid.AppendChild(border);
-            var grip = new FrameworkElementFactory(typeof(System.Windows.Controls.Primitives.Thumb), "PART_HeaderGripper");
+            var grip = new FrameworkElementFactory(typeof(System.Windows.Controls.Primitives.Thumb), "AdjacentColumnGrip");
             grip.SetValue(FrameworkElement.WidthProperty, 7.0);
             grip.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Right);
             grip.SetValue(FrameworkElement.CursorProperty, Cursors.SizeWE);
@@ -291,6 +292,7 @@ namespace FileCompass
                 text.SetBinding(FrameworkElement.ToolTipProperty, new Binding("NameToolTip"));
                 var dock = new FrameworkElementFactory(typeof(DockPanel));
                 var icon = new FrameworkElementFactory(typeof(Image));
+                ConfigureHoverName(icon);
                 icon.SetBinding(Image.SourceProperty, new Binding("Icon")); icon.SetValue(FrameworkElement.WidthProperty, 16.0); icon.SetValue(FrameworkElement.HeightProperty, 16.0);
                 icon.SetValue(FrameworkElement.MarginProperty, new Thickness(5, 0, 7, 0));
                 icon.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
@@ -307,15 +309,12 @@ namespace FileCompass
             }
             else column.CellTemplate = new DataTemplate { VisualTree = text };
             view.Columns.Add(column);
-            DependencyPropertyDescriptor.FromProperty(GridViewColumn.WidthProperty, typeof(GridViewColumn)).AddValueChanged(column, delegate {
-                if (resizingColumns) return;
-                preserveColumnWidths = true;FitColumns(ColumnKey(column));
-                if (ColumnWidthChanged != null) ColumnWidthChanged(LogicalColumns.ToList().IndexOf(column), column.Width);
-            });
+            InitializeColumnGrip(header, column);
         }
 
         void ResizeColumns()
         {
+            if (draggingColumnDivider) return;
             if (preserveColumnWidths || view.Columns.Count != 5){FitColumns();return;}
             double available = Math.Max(AppearanceTheme.IsClean?200:480, List.ActualWidth - 24);
             double[] ratios = { .50, .15, .08, .13, .14 };
@@ -337,7 +336,15 @@ namespace FileCompass
         {
             if (List.ItemsSource != null) foreach (Entry entry in List.ItemsSource) entry.ApplyNameSettings(folderBrackets, fullNameTooltips);
             var collection = CollectionViewSource.GetDefaultView(List.ItemsSource) as ListCollectionView;
-            if (collection != null) { collection.CustomSort = new EntryComparer(sortProperty, descending, naturalSorting, foldersAlwaysByName); collection.Filter = MatchesFilter; }
+            if (collection != null)
+            {
+                using (collection.DeferRefresh())
+                {
+                    collection.CustomSort = new EntryComparer(sortProperty, descending, naturalSorting, foldersAlwaysByName);
+                    collection.Filter = MatchesFilter;
+                    ApplyPanelGrouping(collection);
+                }
+            }
             foreach (GridViewColumn column in view.Columns)
             {
                 var header = (GridViewColumnHeader)column.Header;
@@ -476,8 +483,11 @@ namespace FileCompass
         void UpdateDriveSelection()
         {
             if(IsExt){selectingDrive=true;DriveChoice ext;driveSelector.SelectedItem=extChoices.TryGetValue(ExtLocations.Root(CurrentPath),out ext)?ext:null;selectingDrive=false;return;}
-            string root = Path.GetPathRoot(CurrentPath);
-            selectingDrive = true; driveSelector.SelectedItem = CommonLocations.Match(driveSelector.Items.Cast<DriveChoice>(),CurrentPath); selectingDrive = false;
+            bool virtualLocation = IsVirtualBrowser;
+            string root = virtualLocation ? null : Path.GetPathRoot(CurrentPath);
+            selectingDrive = true;
+            driveSelector.SelectedItem = virtualLocation ? null : CommonLocations.Match(driveSelector.Items.Cast<DriveChoice>(), CurrentPath);
+            selectingDrive = false;
             foreach (var pair in driveButtons)
             {
                 bool selected = String.Equals(pair.Key, root, StringComparison.OrdinalIgnoreCase);
@@ -534,6 +544,7 @@ namespace FileCompass
         public void OpenSelected()
         {
             var entry = List.SelectedItem as Entry; if (entry == null) return;
+            if (IsRecycleBin) return;
             if(entry.NetworkServiceProfile!=null){var main=Window.GetWindow(this) as MainWindow;if(main!=null)main.OpenDiscoveredService(this,entry);return;}
             if(entry.NetworkDeviceTarget!=null){try{Process.Start(new ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows),"explorer.exe"),SshTerminal.QuoteWindowsArgument("shell:"+entry.NetworkDeviceTarget)){UseShellExecute=true});}catch(Exception ex){MessageBox.Show(ex.Message,L.Text("error.cannotOpenFile"));}return;}
             if (entry.IsDirectory) Navigate(entry.IsLink && !IsRemote && !IsArchive && !IsExt && !IsVirtualBrowser ? DirectoryLinkTarget.Resolve(entry.FullPath) : entry.FullPath, true);
@@ -546,7 +557,7 @@ namespace FileCompass
         }
         public void ViewSelected()
         {
-
+            if (IsRecycleBin) return;
             var entry = List.SelectedItem as Entry; if (entry == null) return;
             if (entry.IsDirectory) { OpenSelected(); return; }
             var host=Window.GetWindow(this) as MainWindow;if(host!=null){host.PreviewInOtherPanel(this);return;}

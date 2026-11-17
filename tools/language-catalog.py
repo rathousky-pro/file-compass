@@ -56,8 +56,10 @@ def check():
         if missing:
             raise ValueError(f'{locale.name}: missing keys: {sorted(missing)}')
         for key, value in values.items():
-            if not value:
+            if not value.strip():
                 raise ValueError(f'{locale.name}: empty translation: {key}')
+            if '\ufffd' in value:
+                raise ValueError(f'{locale.name}: damaged character in translation: {key}')
             if key in base:
                 fields = lambda text: sorted(re.findall(r'\{(\d+)(?:,[^{}:]+)?(?::[^{}]+)?\}', text))
                 if fields(value) != fields(base[key]):

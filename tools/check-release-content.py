@@ -55,9 +55,11 @@ for lang in ('cs', 'en'):
     sets.append(ids)
     illustration_sets.append(set(re.findall(r'<figure src="([a-z0-9-]+)"', ''.join(t['Body'] for t in topics))))
 assert sets[0] == sets[1], 'Help languages must cover the same topics'
-assert illustration_sets[0] == illustration_sets[1] and len(illustration_sets[0]) == 28, 'Help illustrations must cover the same current workflows'
+assert illustration_sets[0] == illustration_sets[1] and len(illustration_sets[0]) >= 29, 'Help illustrations must cover the same current workflows'
 manifest = json.loads((ROOT/'source/help/images/manifest.json').read_text(encoding='utf-8'))
-assert len(manifest['images']) == 56
+expected_images = {f'{locale}.{scene}.png' for locale in ('cs', 'en') for scene in illustration_sets[0]}
+assert {image['file'] for image in manifest['images']} == expected_images, 'Screenshot manifest does not match help figures'
+assert manifest['scenesPerLanguage'] == len(illustration_sets[0])
 for image in manifest['images']:
     content = (ROOT/'source/help/images'/image['file']).read_bytes()
     assert hashlib.sha256(content).hexdigest() == image['sha256'], image['file']

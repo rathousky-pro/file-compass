@@ -10,7 +10,7 @@ namespace FileCompass
 {
     internal static class RenameMetadata
     {
-        internal static readonly string[] Tokens = { "[EXIF.Date]", "[EXIF.Time]", "[EXIF.Camera]", "[MP3.Artist]", "[MP3.Album]", "[MP3.Title]", "[MP3.Track]", "[MP3.Year]", "[MP3.Genre]", "[MP3.Disc]", "[MP3.Composer]", "[Image.Title]", "[Image.Author]", "[Image.Comment]", "[Image.Copyright]", "[EXIF.Make]", "[EXIF.Model]" };
+        internal static readonly string[] Tokens = { "[EXIF.Date]", "[EXIF.Time]", "[EXIF.Camera]", "[MP3.Artist]", "[MP3.Album]", "[MP3.AlbumArtist]", "[MP3.Title]", "[MP3.Track]", "[MP3.TrackCount]", "[MP3.Year]", "[MP3.Genre]", "[MP3.Disc]", "[MP3.DiscCount]", "[MP3.Composer]", "[MP3.Comment]", "[Image.Title]", "[Image.Author]", "[Image.Comment]", "[Image.Copyright]", "[EXIF.Make]", "[EXIF.Model]" };
         internal static bool Needed(string mask) { return mask.Contains("[EXIF.") || mask.Contains("[MP3.") || mask.Contains("[Image."); }
         internal static string Safe(string value)
         {
@@ -33,9 +33,11 @@ namespace FileCompass
                     values["[EXIF.Camera]"] = Safe(String.Join(" ", new[] { image.Make, image.Model }.Where(x => !String.IsNullOrWhiteSpace(x))));
                 }
                 values["[MP3.Artist]"] = Safe(String.Join(", ", media.Tag.Performers ?? new string[0]));
+                values["[MP3.AlbumArtist]"] = Safe(String.Join(", ", media.Tag.AlbumArtists ?? new string[0])); values["[MP3.Comment]"] = Safe(media.Tag.Comment);
                 values["[MP3.Album]"] = Safe(media.Tag.Album); values["[MP3.Title]"] = Safe(media.Tag.Title);
                 values["[MP3.Track]"] = media.Tag.Track == 0 ? "" : media.Tag.Track.ToString("D2", CultureInfo.InvariantCulture);
                 values["[MP3.Genre]"]=Safe(String.Join(", ",media.Tag.Genres??new string[0]));values["[MP3.Composer]"]=Safe(String.Join(", ",media.Tag.Composers??new string[0]));values["[MP3.Disc]"]=media.Tag.Disc==0?"":media.Tag.Disc.ToString("D2",CultureInfo.InvariantCulture);
+                values["[MP3.TrackCount]"]=media.Tag.TrackCount==0?"":media.Tag.TrackCount.ToString(CultureInfo.InvariantCulture);values["[MP3.DiscCount]"]=media.Tag.DiscCount==0?"":media.Tag.DiscCount.ToString(CultureInfo.InvariantCulture);
                 values["[MP3.Year]"] = media.Tag.Year == 0 ? "" : media.Tag.Year.ToString(CultureInfo.InvariantCulture);
             }
             token.ThrowIfCancellationRequested(); return values;

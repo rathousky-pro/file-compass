@@ -1,4 +1,4 @@
-﻿#if APP_TESTS
+#if APP_TESTS
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -32,7 +32,7 @@ namespace FileCompass {
   }
  }
  public partial class MainWindow {
-  internal void VerifyImageBatchMenu(Action<bool,string> check){var group=FluentUiTests.Children<MenuItem>(this).Single(x=>Convert.ToString(x.Header)==L.Text("media.menu"));var titles=group.Items.OfType<MenuItem>().Select(x=>Convert.ToString(x.Header)).ToArray();check(new[]{"action.batchRename","mediaNames.rename","mediaNames.write","media.convertImages","media.convertAudio"}.All(key=>titles.Contains(L.Text(key))),"Batch rename, metadata directions and the unified converter share one submenu");check(FluentUiTests.Children<MenuItem>(this).Count(x=>Convert.ToString(x.Header)==L.Text("imageTools.title"))==0,"Standalone quick-image menu is removed");}
+  internal void VerifyImageBatchMenu(Action<bool,string> check){var group=FluentUiTests.Children<MenuItem>(this).Single(x=>Convert.ToString(x.Header)==L.Text("media.menu"));var titles=group.Items.OfType<MenuItem>().Select(x=>Convert.ToString(x.Header)).ToArray();check(new[]{"action.batchRename","mediaEditor.title","mediaNames.rename","mediaNames.write","media.convertImages","media.convertAudio"}.All(key=>titles.Contains(L.Text(key))),"Batch rename, metadata directions and the unified converter share one submenu");check(FluentUiTests.Children<MenuItem>(this).Count(x=>Convert.ToString(x.Header)==L.Text("imageTools.title"))==0,"Standalone quick-image menu is removed");}
  }
 }
 #endif

@@ -2,7 +2,7 @@ using System;using System.IO;using System.Xml;using System.Xml.Serialization;usi
 namespace FileCompass {
  internal static class RenamePresets {
   internal static void Save(string path,RenameOptions options){using(var writer=XmlWriter.Create(path,new XmlWriterSettings{Indent=true}))new XmlSerializer(typeof(RenameOptions)).Serialize(writer,options);}
-  internal static RenameOptions Load(string path){using(var reader=XmlReader.Create(path,new XmlReaderSettings{DtdProcessing=DtdProcessing.Prohibit,XmlResolver=null,MaxCharactersInDocument=65536})){var options=(RenameOptions)new XmlSerializer(typeof(RenameOptions)).Deserialize(reader);if(options.Name==null||options.Extension==null||options.Find==null||options.Replace==null||options.Start<0||options.Step<1||options.Digits<1||options.Digits>12||options.LetterCase<0||options.LetterCase>3)throw new IOException(L.Text("rename.invalidCounterSettings"));return options;}}
+  internal static RenameOptions Load(string path){using(var reader=XmlReader.Create(path,new XmlReaderSettings{DtdProcessing=DtdProcessing.Prohibit,XmlResolver=null,MaxCharactersInDocument=65536})){var options=(RenameOptions)new XmlSerializer(typeof(RenameOptions)).Deserialize(reader);if(options.Name==null||options.Extension==null||options.Find==null||options.Replace==null||options.Start<0||options.Step<1||options.Digits<1||options.Digits>12||options.LetterCase<0||options.LetterCase>4)throw new IOException(L.Text("rename.invalidCounterSettings"));return options;}}
  }
  internal static class RenameRangePicker {
   internal static void Insert(Window owner,TextBox target,string kind){

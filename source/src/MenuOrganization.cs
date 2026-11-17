@@ -14,7 +14,7 @@ namespace FileCompass {
             GroupMenu(edit, "menuGroup.copyDetails", "clipboard.copyNames", "clipboard.copyFullPaths", "clipboardFile.title");
             GroupMenu(commands, "menuGroup.navigation", "action.refresh", "action.parentFolder", "panel.openSameFolderInOtherPanel");
             GroupMenu(commands, "menuGroup.tabs", "panel.swap", "tabs.new", "tabs.close", "tabs.toggleLock");
-            GroupMenu(commands, "menuGroup.search", "action.findFiles", "duplicates.title", "everything.title", "tags.results");
+            GroupMenu(commands, "menuGroup.search", "action.findFiles", "duplicates.title", "everything.title", "tags.workspace");
             GroupMenu(commands, "menuGroup.workspace", "favorites.openMenu", "workspace.title", "projection.addToBasket", "projection.basket", "projection.removeFromBasket");
             GroupMenu(commands, "menuGroup.operations", "queue.copyTitle", "queue.restoreSaved", "queue.saveAndExit", "queue.networkCopyTitle");
             GroupMenu(commands, "menuGroup.compare", "action.compareFiles", "action.compareFolders", "action.synchronizeFolders");

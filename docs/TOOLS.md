@@ -79,6 +79,8 @@ Text search defaults to a zero (unlimited) source size limit and streams ordinar
 
 ## File names and embedded media metadata
 
+The metadata editor is available from the top toolbar's Tools menu, the Media menu, the file context menu and batch rename. It shows and edits audio or image fields for the selected files, offers filename patterns, and previews changes before writing. Music files can also use a front cover. A mixed selection is separated into Music and Images. Batch edits affect only fields explicitly changed; the clear button removes an individual field.
+
 Media / Metadata from file names previews a pattern against file names without extensions. For audio use `[MP3.Artist] - [MP3.Track] - [MP3.Title]`; MP3 tokens also represent supported other audio containers. For pictures use `[EXIF.Date]_[EXIF.Time] - [Image.Title]`. Dates accept `yyyy-MM-dd` or `yyyyMMdd`, times `HH-mm-ss` or `HHmmss`. `[Ignore]` skips a segment; variable fields require literal separators.
 
 Existing values are retained unless Replace existing metadata is enabled. Only previewed changes are written, using a temporary copy and post-save field verification. An exact original `.filecompass-metadata-<id>.bak` is retained beside every successfully replaced file. Preserve those backups until satisfied with the result. Unsupported writes fail without replacing the original. Files changed after preview, read-only files and linked paths are rejected. Limits: 500 files per batch and 1 GB per source. The feature works with local and mounted network paths.
@@ -125,7 +127,7 @@ Media converter layout: Conversion settings and Advanced are separate tabs witho
 
 ### Illustrated native help
 
-F1 opens context-sensitive native help with 44 linked topics in Czech or English. Numbered screenshots explain real controls using generated demonstration files. Click an illustration for native zoom (slider, scroll, Escape to close); no browser or internet is needed. Other interface languages show the English article language explicitly. Figures are embedded resources under source/help/images and accept curated identifiers only, never file paths or external URLs.
+F1 opens context-sensitive native help with 44 linked topics in Czech or English. Screenshots show real controls using generated demonstration files. Click an illustration for native zoom (slider, scroll, Escape to close); no browser or internet is needed. Other interface languages show the English article language explicitly. Figures are loaded from source/help/images by identifier, never from arbitrary paths or external URLs.
 
 
 ## Linux disks (read-only)

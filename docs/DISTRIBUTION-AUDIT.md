@@ -55,7 +55,7 @@ the remote release state, asset sizes and SHA-256 digests before committing link
 
 ## Documentation scope
 
-All nine interface catalogs are maintained together with equal key sets and format placeholders. Offline help is an external HTML package shared by the native viewer and browsers, with 44 topics and 28 screenshot scenes per language. It is maintained in Czech and English; other interface languages explicitly show English help. Original third-party legal notices are not translated. Historical validation records in ignored development directories are not current product specifications.
+All nine interface catalogs are maintained together with equal key sets and format placeholders. Offline help is an external HTML package shared by the native viewer and browsers, with 44 topics and 29 screenshot scenes per language. It is maintained in Czech and English; other interface languages explicitly show English help. Original third-party legal notices are not translated. Historical validation records in ignored development directories are not current product specifications.
 
 ## Current inventory and cleanup boundaries
 

@@ -10,9 +10,11 @@ namespace FileCompass {
   internal static readonly DependencyProperty MenuProperty=DependencyProperty.RegisterAttached("Menu",typeof(ContextMenu),typeof(TokenDropdown));
   static readonly DependencyProperty OpenProperty=DependencyProperty.RegisterAttached("Open",typeof(Action),typeof(TokenDropdown));
   internal static void Show(TextBox input){var open=input.GetValue(OpenProperty) as Action;if(open!=null)open();}
-  internal static ContextMenu Attach(TextBox input,IEnumerable<string> tokens){
+  internal static IEnumerable<MenuItem> Entries(ItemsControl parent){foreach(var item in parent.Items.OfType<MenuItem>()){if(item.HasItems){foreach(var child in Entries(item))yield return child;}else yield return item;}}
+  internal static ContextMenu Attach(TextBox input,IEnumerable<string> tokens,bool groupMetadata=false){
    input.ToolTip=L.Text("rename.metadataTokenHelp");var menu=new ContextMenu{PlacementTarget=input,Placement=PlacementMode.Bottom,MaxHeight=380,MinWidth=270};input.SetValue(MenuProperty,menu);int start=0,length=0;
-   foreach(string token in tokens.Distinct()){string value=token;var item=new MenuItem{Header=token,Tag=token};item.Click+=delegate{int position=Math.Min(start,input.Text.Length);input.Select(position,Math.Min(length,input.Text.Length-position));input.SelectedText=value;input.CaretIndex=position+value.Length;input.Select(input.CaretIndex,0);input.Focus();};menu.Items.Add(item);}
+   var all=tokens.Distinct().ToArray();MenuItem music=null,images=null;if(groupMetadata){music=new MenuItem{Header=L.Text("rename.musicFields")};images=new MenuItem{Header=L.Text("rename.imageFields")};menu.Items.Add(music);menu.Items.Add(images);}
+   foreach(string token in all){string value=token;var item=new MenuItem{Header=token,Tag=token};item.Click+=delegate{int position=Math.Min(start,input.Text.Length);input.Select(position,Math.Min(length,input.Text.Length-position));input.SelectedText=value;input.CaretIndex=position+value.Length;input.Select(input.CaretIndex,0);input.Focus();};if(groupMetadata&&token.StartsWith("[MP3."))music.Items.Add(item);else if(groupMetadata&&(token.StartsWith("[EXIF.")||token.StartsWith("[Image.")))images.Items.Add(item);else menu.Items.Add(item);}
    Action open=delegate{if(!input.IsEnabled||input.IsReadOnly)return;start=input.SelectionStart;length=input.SelectionLength;menu.IsOpen=true;};
    input.SetValue(OpenProperty,open);
    bool altOnly=false;

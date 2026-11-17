@@ -25,7 +25,7 @@ namespace FileCompass
             Button favoritesButton = null;
             favoritesButton = Tool(tools, "favorite", L.Text("favorites.openMenu"), delegate { ShowFavorites(true, favoritesButton); });
             System.Windows.Automation.AutomationProperties.SetAutomationId(favoritesButton, "PanelFavorites");
-            var labelsButton = Tool(tools, "label", L.Text("tags.results"), ShowTaggedFiles);
+            var labelsButton = Tool(tools, "label", L.Text("tags.workspace"), ShowTaggedFiles);
             System.Windows.Automation.AutomationProperties.SetAutomationId(labelsButton, "PanelLabels");
             UpdateViewToolbarControls();
         }

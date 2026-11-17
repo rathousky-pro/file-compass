@@ -378,6 +378,8 @@ namespace FileCompass
         string TabPrefix(int index){var tab=tabs[index];return (!String.IsNullOrEmpty(tab.Error)?"⚠ ":tab.Saved.Locked?"🔒 ":"")+(!String.IsNullOrEmpty(tab.Saved.ProfileId)?tab.Saved.Caption+" · ":"");}
         string TabDisplayPath(int index)
         {
+            var tabProjection = index == tabIndex ? projection : tabs[index].Saved.Projection;
+            if (tabProjection != null && tabProjection.Kind == "Tags") return L.Text("tags.tabTitle");
             string path = TabPath(index);
             if (index == tabIndex && CurrentPath != null && !HasUnavailableTab && (IsRemote || IsArchive || IsExt)) return DisplayPath;
             if (index == tabIndex && IsShellBrowser && !String.IsNullOrEmpty(ShellLocationName)) return ShellLocationName;
@@ -387,6 +389,8 @@ namespace FileCompass
 
         string TabCaption(int index)
         {
+            var tabProjection = index == tabIndex ? projection : tabs[index].Saved.Projection;
+            if (tabProjection != null && tabProjection.Kind == "Tags") return TabPrefix(index) + L.Text("tags.tabTitle");
             string path = TabDisplayPath(index);
             string last = path.TrimEnd('\\','/').Split(new[]{'\\','/'}, StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
             string caption = index == tabIndex ? path : tabs[index].Saved.Label;

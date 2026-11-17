@@ -10,96 +10,39 @@ namespace FileCompass
 {
     public partial class MainWindow
     {
-        static string[] DefaultLabels()
+        internal static string[] DefaultLabels()
         {
-            return new[] { L.Text("tags.important"), L.Text("tags.todo"), L.Text("tags.done"), "Old",
+            return new[] { L.Text("tags.important"), L.Text("tags.todo"), L.Text("tags.done"), L.Text("tags.old"),
                 L.Text("tags.inProgress"), L.Text("tags.review"), L.Text("tags.waiting"), L.Text("tags.project"),
                 L.Text("tags.archive"), L.Text("tags.personal") };
         }
 
-        void ShowTaggedFiles()
+        async void ShowTaggedFiles()
         {
             var panel = active;
-            var title = L.Text("tags.results");
-            var window = new Window { MaxHeight = SystemParameters.WorkArea.Height };
-            CopyUi.Style(window, this, title, 540);
-            var root = SettingsUx.Frame(window, title, out var actions);
-            var body = new DockPanel { Margin = new Thickness(20, 12, 20, 16) };
-            root.Children.Add(body);
-            var prompt = CopyUi.Label(L.Text("tags.globalPrompt"));
-            DockPanel.SetDock(prompt, Dock.Top);
-            body.Children.Add(prompt);
-            var input = new TextBox { MinHeight = 30, Margin = new Thickness(0, 0, 0, 10) };
-            System.Windows.Automation.AutomationProperties.SetLabeledBy(input, prompt);
-            DockPanel.SetDock(input, Dock.Top);
-            body.Children.Add(input);
-            var choices = new WrapPanel();
-            body.Children.Add(new ScrollViewer { Content = choices, MinHeight = 100, MaxHeight = 300,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
-
-            string query = null;
-            bool exact = false;
-            var cancel = CopyUi.Button(L.Text("action.cancel"), () => window.DialogResult = false);
-            cancel.IsCancel = true;
-            actions.Children.Add(cancel);
-            var search = CopyUi.Button(L.Text("action.search"), delegate
+            var selected = panel.Selected().ToArray();
+            bool valid = !panel.IsRemote && !panel.IsArchive && !panel.IsVirtualBrowser && selected.Length > 0 && selected.All(x => !x.IsLink && !x.IsParent);
+            var window = new TagPickerWindow(this, selected, valid);
+            if (window.ShowDialog() != true) return;
+            if (!window.Assign)
             {
-                query = input.Text.Trim().TrimStart('#');
-                window.DialogResult = true;
-            });
-            search.IsDefault = true;
-            FluentTheme.Primary(search);
-            actions.Children.Add(search);
-            bool closed = false;
-            window.Closed += delegate { closed = true; };
-            window.Loaded += async delegate
-            {
-                input.Focus();
-                var loading = CopyUi.Label(L.Text("state.loading"));
-                choices.Children.Add(loading);
-                var snapshot = await Task.Run(() =>
-                {
-                    var records = FileTagStore.Current.Snapshot(out var colors, out var known);
-                    var error = FileTagStore.LastError;
-                    var assigned = new HashSet<string>(records.Where(FileTagStore.MatchesCurrentItem)
-                        .SelectMany(record => record.Tags ?? new string[0]).Select(FileTagStore.DisplayName),
-                        StringComparer.OrdinalIgnoreCase);
-                    var names = known.Concat(colors.Keys).Concat(records.SelectMany(record => record.Tags ?? new string[0]));
-                    return (Assigned: assigned, Names: names.Where(name => !String.IsNullOrWhiteSpace(name))
-                        .Select(FileTagStore.DisplayName).ToArray(), Colors: colors, Error: error);
-                });
-                if (closed) return;
-                choices.Children.Clear();
-                if (snapshot.Error != null)
-                {
-                    choices.Children.Add(CopyUi.Label(L.Text("tags.loadError") + " " + snapshot.Error));
-                    search.IsEnabled = false;
-                    return;
-                }
-                foreach (string tag in DefaultLabels().Concat(snapshot.Names).Distinct(StringComparer.OrdinalIgnoreCase)
-                    .OrderByDescending(snapshot.Assigned.Contains).ThenBy(name => name, StringComparer.CurrentCultureIgnoreCase))
-                {
-                    bool enabled = snapshot.Assigned.Contains(tag);
-                    snapshot.Colors.TryGetValue(tag, out var color);
-                    var button = CopyUi.Button(tag, delegate
-                    {
-                        query = tag;
-                        exact = true;
-                        window.DialogResult = true;
-                    });
-                    button.IsEnabled = enabled;
-                    System.Windows.Automation.AutomationProperties.SetName(button, tag);
-                    var caption = new StackPanel { Orientation = Orientation.Horizontal, Opacity = enabled ? 1 : 0.55 };
-                    caption.Children.Add(TagSwatch(enabled ? new FileTagBadge(tag, color).Color : FluentTheme.Muted));
-                    caption.Children.Add(new TextBlock { Text = tag, VerticalAlignment = VerticalAlignment.Center,
-                        FontWeight = enabled ? FontWeights.SemiBold : FontWeights.Normal });
-                    button.Content = caption;
-                    choices.Children.Add(button);
-                }
-            };
-            if (window.ShowDialog() == true)
-                panel.ShowProjection(new ProjectionSpec { Kind = "Tags", Query = query, ExactLabel = exact,
+                panel.ShowProjection(new ProjectionSpec { Kind = "Tags", Query = window.Query, ExactLabel = window.Exact,
                     Root = panel.SavedLocalFolder ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) });
+                return;
+            }
+            fileToolsRunning++;
+            try
+            {
+                await Task.Run(() => FileTagStore.Current.Change(window.Paths, window.Labels, window.ChangeMode, window.Colors));
+                panel.Refresh();
+                if (window.Colors.Count > 0)
+                {
+                    var other = panel == left ? right : left;
+                    if (!other.IsRemote && !other.IsArchive && !other.IsVirtualBrowser && !other.LocalLoading) other.Refresh();
+                }
+            }
+            catch (Exception ex) { MessageBox.Show(this, ex.Message, L.Text("tags.saveFailed")); }
+            finally { fileToolsRunning--; }
         }
 
         internal async void EditTags()
@@ -240,7 +183,7 @@ namespace FileCompass
             catch (Exception ex) { MessageBox.Show(this, ex.Message, L.Text("tags.saveFailed")); }
             finally { fileToolsRunning--; }
         }
-        static Border TagSwatch(System.Windows.Media.Brush color)
+        internal static Border TagSwatch(System.Windows.Media.Brush color)
         {
             return new Border { Background = color, BorderBrush = CompactTheme.FieldLine, BorderThickness = new Thickness(1),
                 Width = 13, Height = 13, CornerRadius = new CornerRadius(3), Margin = new Thickness(0, 0, 7, 0),

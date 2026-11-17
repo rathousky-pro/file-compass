@@ -74,7 +74,7 @@ namespace FileCompass
             AddMenu(commands, L.Text("panel.openSameFolderInOtherPanel"), OpenSameFolder);
             AddMenu(commands, L.Text("favorites.openMenu"), ShowFavorites, "Ctrl+D");
             AddMenu(commands, L.Text("workspace.title"), ShowWorkspaces);
-            AddMenu(commands, L.Text("tags.results"), ShowTaggedFiles);
+            AddMenu(commands, L.Text("tags.workspace"), ShowTaggedFiles);
             AddMenu(commands, L.Text("projection.addToBasket"), AddToBasket); AddMenu(commands, L.Text("projection.basket"), ShowBasket); AddMenu(commands, L.Text("projection.removeFromBasket"), RemoveFromBasket);
             AddMenu(commands, L.Text("everything.title"), SearchEverything);
             AddMenu(commands, L.Text("analyzer.title"), AnalyzeFolder); AddMenu(commands, L.Text("smart.title"), ShowDiskSmart);
@@ -247,6 +247,7 @@ namespace FileCompass
             };
             add("analyzer.title",AnalyzeFolder);add("smart.title",ShowDiskSmart);
             menu.Items.Add(new Separator());
+            add("mediaEditor.title",ShowMediaEditor);
             add("media.convertImages",delegate{OpenMediaConverter(true);});
             add("media.convertAudio",delegate{OpenMediaConverter(false);});
         }

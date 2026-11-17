@@ -17,11 +17,12 @@ namespace FileCompass {
   readonly Dictionary<FilePanel,string> linkedTargets=new Dictionary<FilePanel,string>();
   MenuItem linkedMenu;
   void RegisterReleaseCommand(MenuItem item,string title,Action action,string shortcut) {
-   if(action==null)return;string id=L.CatalogKey(title)??title;
+   if(action==null)return;string id=L.CatalogKey(title)??title;if(id=="tags.workspace")id="tags.results";
    var existing=releaseCommands.FirstOrDefault(x=>x.Id==id);if(existing!=null){existing.Mirrors.Add(item);return;}
    releaseCommands.Add(new ReleaseCommand{Id=id,Default=shortcut,Item=item,Run=action});
   }
   void AddReleaseTools(MenuItem edit,MenuItem commands,MenuItem config) {
+   AddMenu(commands,L.Text("mediaEditor.title"),ShowMediaEditor);
    AddMenu(commands,L.Text("mediaNames.write"),WriteMetadataFromNames);
    AddMenu(commands,L.Text("mediaNames.rename"),RenameUsingMetadata);
    AddMenu(edit,L.Text("tools1.undo"),ShowSafeUndo,"Ctrl+Z");

@@ -87,7 +87,8 @@ namespace FileCompass {
    Func<bool> convertible=()=>!panel.IsRemote&&!panel.IsArchive&&!panel.IsVirtualBrowser&&any()&&selected().All(x=>!x.IsDirectory&&(MediaCatalog.IsImage(x.FullPath)||MediaCatalog.IsAudio(x.FullPath)));
    add("media.contextConvert","","sync",delegate{var cursor=panel.List.SelectedItem as Entry;var first=cursor!=null&&selected().Contains(cursor)?cursor:selected()[0];OpenMediaConverter(MediaCatalog.IsImage(first.FullPath));},convertible);
    var convert=commands.Last().Item1;
-   var contextualKeys=new HashSet<string>{"context.folderNewTab","context.folderOtherPanel","action.findFiles","action.batchRename","action.createChecksums"};
+   add("mediaEditor.title","","edit",delegate{OpenMediaEditor(selected().Select(x=>x.FullPath).ToArray(),this,false);},()=>local()&&any()&&selected().All(x=>!x.IsDirectory&&MediaNames.Supported(x.FullPath)));
+   var contextualKeys=new HashSet<string>{"context.folderNewTab","context.folderOtherPanel","action.findFiles","action.batchRename","action.createChecksums","mediaEditor.title"};
    menu.Items.Insert(index++,new Separator());
    add("action.copy","F5","copy",()=>Transfer(false),any);add("action.move","F6","move",()=>Transfer(true),()=>any()&&!panel.IsArchive&&!panel.IsVirtualBrowser);
    add("action.copyToClipboard","Ctrl+C","copy",()=>CopyClipboard(false),any);add("action.cut","Ctrl+X","cut",()=>CopyClipboard(true),()=>any()&&!panel.IsArchive&&!panel.IsRemote&&!panel.IsExt);add("action.paste","Ctrl+V","paste",PasteClipboard,()=>!panel.IsVirtualBrowser&&!String.IsNullOrEmpty(panel.CurrentPath));

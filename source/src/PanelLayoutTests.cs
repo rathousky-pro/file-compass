@@ -145,12 +145,14 @@ namespace FileCompass
             var viewButtons=((Panel)toolbarAllFilesButton.Parent).Children.OfType<Button>().ToArray();int hiddenIndex=Array.IndexOf(viewButtons,toolbarAllFilesButton);
             check(viewButtons[hiddenIndex+1]==toolbarFolderViewButton &&
                 System.Windows.Automation.AutomationProperties.GetAutomationId(viewButtons[hiddenIndex+2])=="PanelFavorites" &&
-                name(viewButtons[hiddenIndex+3])==L.Text("selection.invertMarks")+" (Num *)"&&name(viewButtons[hiddenIndex+4])==L.Text("undoHistory.title"),"view menu, selection and undo follow hidden files");
+                System.Windows.Automation.AutomationProperties.GetAutomationId(viewButtons[hiddenIndex+3])=="PanelLabels" &&
+                name(viewButtons[hiddenIndex+4])==L.Text("selection.invertMarks")+" (Num *)"&&name(viewButtons[hiddenIndex+5])==L.Text("undoHistory.title"),"view menu, favorites, labels, selection and undo follow hidden files");
             var fileButtons=((Panel)toolbarPreviewButton.Parent).Children.OfType<Button>().ToArray();
-            check(fileButtons[0]==toolbarPreviewButton&&fileButtons[1]==toolbarThumbnailsButton&&name(fileButtons[2])==L.Text("toolbar.edit"),"preview and thumbnails stay together before edit");
+            check(fileButtons[0]==toolbarPreviewButton&&name(fileButtons[1])==L.Text("toolbar.editor")&&fileButtons[2]==toolbarThumbnailsButton,"preview, editor and thumbnails follow their current toolbar order");
             var toolsButton=FluentUiTests.Children<Button>(this).Single(x=>x.Content is StackPanel&&((StackPanel)x.Content).Children.OfType<Image>().Any(i=>(string)i.Tag=="tools"));
-            check(toolsButton.ContextMenu.Items.OfType<MenuItem>().Select(x=>Convert.ToString(x.Header)).SequenceEqual(new[]{L.Text("analyzer.title"),L.Text("smart.title"),L.Text("media.convertImages"),L.Text("media.convertAudio")}),"tools menu offers analyzer, SMART, image and audio converters");
+            check(toolsButton.ContextMenu.Items.OfType<MenuItem>().Select(x=>Convert.ToString(x.Header)).SequenceEqual(new[]{L.Text("analyzer.title"),L.Text("smart.title"),L.Text("mediaEditor.title"),L.Text("media.convertImages"),L.Text("media.convertAudio")}),"tools menu offers the metadata editor, analyzer, SMART and converters");
             click(toolsButton);check(toolsButton.ContextMenu.IsOpen,"tools button opens its menu");toolsButton.ContextMenu.IsOpen=false;
+            SetActive(left);left.MarkAll(false);var previousSelection=left.List.SelectedItem;left.List.SelectedItem=left.List.Items.Cast<Entry>().Single(x=>x.FullPath==picture);toolsButton.ContextMenu.Items.OfType<MenuItem>().Single(x=>Convert.ToString(x.Header)==L.Text("mediaEditor.title")).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));var metadata=OwnedWindows.OfType<MediaEditorWindow>().Single();if(metadata.Work!=null)await metadata.Work;check(metadata.IsVisible,"tools menu opens the metadata editor for the selected file");metadata.Close();left.List.SelectedItem=previousSelection;if(quickPreview!=null&&quickPreview.LoadingTask!=null)await quickPreview.LoadingTask;
             var syncButton=FluentUiTests.Children<Button>(this).Single(x=>name(x)==L.Text("tabCompare.toolbar"));click(syncButton);
             var syncCommand=syncButton.ContextMenu.Items.OfType<MenuItem>().Single(item=>Equals(item.Header,L.Text("action.synchronizeFolders")));
             syncButton.ContextMenu.IsOpen=false;

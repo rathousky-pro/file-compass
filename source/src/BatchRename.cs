@@ -27,6 +27,19 @@ namespace FileCompass
     }
     public static class BatchRenameEngine
     {
+        static string FirstLetterUpper(string value, bool folder)
+        {
+            var textInfo = System.Globalization.CultureInfo.CurrentCulture.TextInfo;
+            string lower = textInfo.ToLower(value);
+            int end = folder ? lower.Length : lower.Length - System.IO.Path.GetExtension(lower).Length;
+            for (int i = 0; i < end;)
+            {
+                string element = System.Globalization.StringInfo.GetNextTextElement(lower, i);
+                if (Char.IsLetter(lower, i)) return lower.Substring(0, i) + textInfo.ToUpper(element) + lower.Substring(i + element.Length);
+                i += element.Length;
+            }
+            return lower;
+        }
         static string Expand(string mask, string name, string ext, int counter, DateTime date)
         {
             string result = Regex.Replace(mask, @"\[(N|E)(\d+)(?:-(\d+))?\]", delegate(Match m)
@@ -74,7 +87,7 @@ namespace FileCompass
                 };
                 string combined = stem + (extension.Length == 0 ? "" : "." + extension);
                 if (options.IncludeExtension) combined = replace(combined); else combined = replace(stem) + (extension.Length == 0 ? "" : "." + extension);
-                if (options.LetterCase == 1) combined = combined.ToUpperInvariant(); else if (options.LetterCase == 2) combined = combined.ToLowerInvariant(); else if (options.LetterCase == 3) combined = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(combined.ToLower());
+                if (options.LetterCase == 1) combined = combined.ToUpperInvariant(); else if (options.LetterCase == 2) combined = combined.ToLowerInvariant(); else if (options.LetterCase == 3) combined = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(combined.ToLower()); else if (options.LetterCase == 4) combined = FirstLetterUpper(combined, folder);
                 FileOperations.ValidateName(combined); rows.Add(new RenameRow { Path = path, OldName = old, NewName = combined });
             }
             Validate(rows.ToArray(), token); return rows.ToArray();

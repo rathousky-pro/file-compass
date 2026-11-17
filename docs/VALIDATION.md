@@ -1,6 +1,12 @@
-# Validation — 4 November 2026
+# Validation
 
-## Current Fluent screenshots
+## Help and translations — 17 November 2026
+
+The offline help now uses 29 Czech and 29 English screenshots captured from development build **20261117.43**, including the current metadata editor and label editor. Captures use generated demo files, fictional accounts and synthetic hardware/progress data. Both contact sheets were reviewed, and the image hashes and help references passed the release-content check. The application language test passed 3,125 checks, the appearance/language test 87 checks, and native help passed 228 checks. The independent website checkout and the installed `bin` were not updated by this help refresh.
+
+Interactive browser verification was not completed in this environment: the headless Edge process did not start successfully, and the browser automation policy did not allow opening a local `file:` URL. Native help and offline HTML structure, links and hashes were checked separately. Translation completeness and formatting were checked for all nine catalogs; these automated checks do not replace a full native-speaker review.
+
+## Previous screenshot audit — 4 November 2026
 
 All 28 screenshot scenes were recaptured in Czech and English from development build **20261104.53**, using generated files, fictional connection profiles and synthetic hardware/progress data. The website checkout, source help and installed `bin/help/images` now share the same 56 PNGs; both compatibility audio aliases were refreshed as well. Both contact sheets were visually reviewed. There are no user files or credentials in the capture inputs.
 

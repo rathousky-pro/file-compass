@@ -244,6 +244,38 @@ namespace FileCompass
             throw new TimeoutException("Saved label color did not appear in the panel");
         }
 
+        static async Task VerifyUnifiedLabelAssignment(MainWindow main, FilePanel panel, string first, string folder, string output, List<string> checks)
+        {
+            var marked=panel.List.Items.Cast<Entry>().Where(x=>x.FullPath==first||x.FullPath==folder).ToArray();
+            foreach(var entry in marked)entry.IsMarked=true;
+            var done=new TaskCompletionSource<bool>();var timer=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(50)};int attempts=0;
+            timer.Tick+=delegate{
+                var dialog=Application.Current.Windows.OfType<TagPickerWindow>().FirstOrDefault(x=>x.IsVisible&&x.Owner==main);
+                if(dialog==null||dialog.LoadingTask==null||!dialog.LoadingTask.IsCompleted){if(++attempts>100){timer.Stop();done.TrySetException(new TimeoutException("Label workspace did not load"));}return;}
+                timer.Stop();try{
+                    Check(dialog.Tabs.SelectedIndex==0&&dialog.Paths.Length==2&&dialog.SaveButton.IsEnabled,"label toolbar opens assignment for both marked items",checks);Check(dialog.ModeButtons.Length==3&&dialog.ModeButtons[0].IsChecked==true,"label action choices are visible with Add selected",checks);dialog.ModeButtons[2].IsChecked=true;Check(dialog.ModeButtons[2].IsChecked==true&&dialog.ModeButtons[0].IsChecked==false,"label actions are mutually exclusive",checks);dialog.ModeButtons[0].IsChecked=true;
+                    dialog.AssignInput.Text="Unified label";var color=FluentUiTests.Children<ComboBox>(dialog).Single(x=>System.Windows.Automation.AutomationProperties.GetName(x)==L.Text("tags.color"));color.SelectedItem=color.Items.OfType<ComboBoxItem>().Single(x=>Equals(x.Tag,"#23744D"));
+                    NextStageTests.Draw(dialog,Path.Combine(output,"label-workspace-assign.png"));dialog.SaveButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));done.TrySetResult(true);
+                }catch(Exception ex){dialog.Close();done.TrySetException(ex);}
+            };
+            timer.Start();try{var labels=FluentUiTests.Children<Button>(main).Single(x=>System.Windows.Automation.AutomationProperties.GetAutomationId(x)=="PanelLabels");labels.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));await done.Task;}finally{timer.Stop();}
+            for(int attempt=0;attempt<100;attempt++){
+                var records=FileTagStore.Current.Snapshot(out var colors);if(new[]{first,folder}.All(path=>records.Any(x=>x.Path==path&&x.Tags.Contains("Unified label")))&&colors.TryGetValue("Unified label",out var color)&&color=="#23744D"){
+                    Check(records.Single(x=>x.Path==folder).Tags.Contains("Custom"),"assignment adds labels and preserves existing labels",checks);Check(File.ReadAllText(first)=="one","label assignment leaves file contents unchanged",checks);if(panel.NavigationTask!=null)await panel.NavigationTask;var empty=new TagPickerWindow(main,new Entry[0],false){Left=-18000,Top=-18000,WindowStartupLocation=WindowStartupLocation.Manual};empty.Show();await empty.LoadingTask;Check(empty.Tabs.SelectedIndex==1&&empty.SearchButton.IsEnabled,"without a selection the label workspace opens search",checks);empty.Tabs.SelectedIndex=0;Check(!empty.SaveButton.IsEnabled,"assignment is disabled without eligible files",checks);empty.Close();return;}
+                await Task.Delay(50);
+            }
+            throw new TimeoutException("Unified label assignment did not persist");
+        }
+
+        static async Task VerifyLabelAction(MainWindow main,FilePanel panel,string file,string preservedFolder,int mode,List<string> checks)
+        {
+            foreach(var entry in panel.List.Items.Cast<Entry>())entry.IsMarked=entry.FullPath==file;
+            var done=new TaskCompletionSource<bool>();var timer=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(50)};int attempts=0;
+            timer.Tick+=delegate{var dialog=Application.Current.Windows.OfType<TagPickerWindow>().FirstOrDefault(x=>x.IsVisible&&x.Owner==main);if(dialog==null||dialog.LoadingTask==null||!dialog.LoadingTask.IsCompleted){if(++attempts>100){timer.Stop();done.TrySetException(new TimeoutException("Label action did not load"));}return;}timer.Stop();try{dialog.AssignInput.Text="Replacement";dialog.ModeButtons[mode].IsChecked=true;dialog.SaveButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));done.TrySetResult(true);}catch(Exception ex){dialog.Close();done.TrySetException(ex);}};
+            timer.Start();try{FluentUiTests.Children<Button>(main).Single(x=>System.Windows.Automation.AutomationProperties.GetAutomationId(x)=="PanelLabels").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));await done.Task;}finally{timer.Stop();}
+            for(int attempt=0;attempt<100;attempt++){var records=FileTagStore.Current.Snapshot();var item=records.FirstOrDefault(x=>x.Path==file);bool completed=mode==1?item!=null&&item.Tags.SequenceEqual(new[]{"Replacement"}):item==null||!item.Tags.Contains("Replacement");if(completed){Check(records.Any(x=>x.Path==preservedFolder&&x.Tags.Contains("Unified label")),"label actions leave unselected files unchanged",checks);Check(true,mode==1?"Replace action replaces existing labels":"Remove action removes the selected label",checks);await Task.Delay(120);if(panel.NavigationTask!=null)await panel.NavigationTask;return;}await Task.Delay(50);}throw new TimeoutException("Label action did not persist: "+mode);
+        }
+
         static void VerifyLabelSearch(MainWindow main, FilePanel panel, string folder, string taggedFolder, string otherFile, string output, List<string> checks)
         {
             FileTagStore.Current.Change(new[] { otherFile }, new[] { "Custom variant", "Unused custom" }, 0);
@@ -262,8 +294,10 @@ namespace FileCompass
             timer.Tick += delegate
             {
                 var dialog = Application.Current.Windows.OfType<Window>().FirstOrDefault(window =>
-                    window.IsVisible && window.Owner == main && window.Title == L.Text("tags.results"));
-                var choices = dialog == null ? new Button[0] : FluentUiTests.Children<Button>(dialog).ToArray();
+                    window.IsVisible && window.Owner == main && window.Title == L.Text("tags.workspace"));
+                var picker = dialog as TagPickerWindow;
+                if (picker != null && picker.Tabs.SelectedIndex != 1) { picker.Tabs.SelectedIndex = 1; picker.UpdateLayout(); }
+                var choices = dialog == null ? new Button[0] : FluentUiTests.Children<Button>(dialog).Where(x=>x.IsVisible).ToArray();
                 Func<string,Button> find = name => choices.FirstOrDefault(button =>
                     System.Windows.Automation.AutomationProperties.GetName(button) == name);
                 var custom = find("Custom");
@@ -290,6 +324,9 @@ namespace FileCompass
             Check(panel.Projection.ExactLabel && panel.List.Items.Cast<Entry>().Where(item => !item.IsParent)
                 .Select(item => item.FullPath).SequenceEqual(new[] { taggedFolder }),
                 "clicking a label shows exact matches, including tagged folders", checks);
+            Func<Button[]> tabButtons=()=>FluentUiTests.Children<Button>(panel).Where(x=>Equals(x.Tag,"panel-tab")).ToArray();
+            Check(tabButtons().Any(x=>System.Windows.Automation.AutomationProperties.GetName(x)==L.Text("tags.tabTitle")),"active label results tab shows Labels rather than a filesystem path",checks);
+            int labelTab=panel.TabCount-1;panel.SwitchTab(labelTab-1);NavigationTests.Wait(panel.TabNavigationTask);Check(tabButtons().Any(x=>System.Windows.Automation.AutomationProperties.GetName(x)==L.Text("tags.tabTitle")),"inactive label results tab keeps its label",checks);panel.SwitchTab(labelTab);NavigationTests.Wait(panel.TabNavigationTask);Check(panel.IsProjection&&panel.Projection.Kind=="Tags"&&tabButtons().Any(x=>System.Windows.Automation.AutomationProperties.GetName(x)==L.Text("tags.tabTitle")),"switching back restores the label results tab and its title",checks);
             panel.Navigate(folder, false);
             NavigationTests.Wait(panel.NavigationTask);
         }
@@ -322,6 +359,9 @@ namespace FileCompass
                 var panels = FluentUiTests.Children<FilePanel>(main).ToArray(); var left = panels[0]; var right = panels[1];
                 NavigationTests.Wait(VerifyLabelEditor(main,left,nested,root,checks));
                 VerifyLabelSearch(main,left,folder,nested,first,root,checks);
+                NavigationTests.Wait(VerifyUnifiedLabelAssignment(main,left,first,nested,root,checks));
+                NavigationTests.Wait(VerifyLabelAction(main,left,first,nested,1,checks));
+                NavigationTests.Wait(VerifyLabelAction(main,left,first,nested,2,checks));
                 int tabCount = left.TabCount;
                 Check(left.ToggleFlatView(), "flat listing can be toggled from a local folder", checks);
                 NavigationTests.Wait(left.NavigationTask);

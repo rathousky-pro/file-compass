@@ -35,7 +35,19 @@ namespace FileCompass
                 settings.MaximumItems = 1; settings.Save(); reject(delegate { ArchiveEngine.Open(plain); }, "item count budget rejects archive before extraction");
                 settings.MaximumItems = 100000; settings.Save();
                 string huge = Path.Combine(root, "expanded.zip"); using (var file = File.Create(huge)) using (var zip = new ZipArchive(file, ZipArchiveMode.Create)) using (var stream = zip.CreateEntry("large.bin").Open()) { var zeros = new byte[2 * 1048576]; stream.Write(zeros, 0, zeros.Length); }
-                settings.MaximumExtractedMiB = 1; settings.Save(); reject(delegate { ArchiveEngine.Open(huge); }, "expanded size budget rejects high compression ratio payload");
+                settings.MaximumExtractedMiB = 1; settings.Save();
+                var oversized = ArchiveEngine.Open(huge);
+                reject(delegate { ArchiveEngine.Test(oversized, CancellationToken.None); }, "expanded size budget rejects decompression of oversized payloads");
+                string largeFolder = Directory.CreateDirectory(Path.Combine(root, "large-source")).FullName;
+                File.WriteAllBytes(Path.Combine(largeFolder, "data.bin"), new byte[2 * 1048576]);
+                foreach (string password in new[] { null, "test-password" })
+                {
+                    string largeArchive = Path.Combine(root, password == null ? "large-direct.zip" : "large-encrypted.zip");
+                    ArchiveEngine.Create(largeArchive, new[] { largeFolder }, settings, CancellationToken.None, null,
+                        new ArchivePackOptions { Level = 0, Password = password });
+                    check(new FileInfo(largeArchive).Length > 1048576 && ArchiveEngine.Open(largeArchive, password).Items.Any(x => x.Bytes == 2 * 1048576),
+                        "creation and browsing work above the extraction limit: " + Path.GetFileName(largeArchive));
+                }
                 using (var memory = new MemoryStream())
                 using (var output = new ArchiveOutputStream(memory, new ArchiveBudget(settings), null))
                 {
@@ -47,7 +59,7 @@ namespace FileCompass
                 var document = ArchiveEngine.Open(plain);
                 reject(delegate { ArchiveEngine.Extract(document, document.Items.Select(x => x.Path), Path.Combine(root, "no-space"), CancellationToken.None); }, "free disk reserve rejects extraction");
                 settings.MinimumFreeMiB = 0; settings.MaximumListingMiB = 1; settings.Save();
-                string many = Path.Combine(root, "many.zip"); using (var file = File.Create(many)) using (var zip = new ZipArchive(file, ZipArchiveMode.Create)) for (int i = 0; i < 3000; i++) zip.CreateEntry(i.ToString("D5") + new string('x', 180) + ".txt");
+                string many = Path.Combine(root, "many.zip"); using (var file = File.Create(many)) using (var zip = new ZipArchive(file, ZipArchiveMode.Create)) for (int i = 0; i < 5000; i++) zip.CreateEntry(i.ToString("D5") + new string('x', 180) + ".txt");
                 reject(delegate { ArchiveEngine.Open(many); }, "listing budget bounds text sent to main process");
                 settings.MaximumListingMiB = 16; settings.Save();
                 settings.MaximumNesting = 1; settings.Save(); reject(delegate { ArchiveEngine.CheckNesting(new ArchiveDocument()); }, "nested archives obey configured depth"); settings.MaximumNesting = 8; settings.Save();

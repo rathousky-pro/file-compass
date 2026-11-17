@@ -38,9 +38,20 @@ namespace FileCompass
             await left.VerifyExplorerTree(root, check);
             UpdateLayout(); NextStageTests.Draw(this, Path.Combine(root, "explorer-tree.png"));
             SetPanelLayout("SideBySide"); UpdateLayout();
-            check(!FluentUiTests.Children<TreeView>(left).Single().IsVisible && !FluentUiTests.Children<TreeView>(right).Single().IsVisible, "Explorer navigation remains exclusive to single-panel mode");
+            check(left.FolderTreeVisible && !right.FolderTreeVisible && right.IsVisible, "the left tree stays local in side-by-side mode");
+            SetActive(right);
+            toolbarFolderViewButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            var viewMenu = toolbarFolderViewButton.ContextMenu;
+            var tree = viewMenu.Items.OfType<MenuItem>().Single(item => Equals(item.Header, L.Text("panel.folderTree")));
+            viewMenu.IsOpen = false;
+            tree.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            if (right.TreeLoadingTask != null) await right.TreeLoadingTask;
+            check(panelLayout == "SideBySide" && left.FolderTreeVisible && right.FolderTreeVisible &&
+                left.IsVisible && right.IsVisible, "the toolbar toggles only the right tree and preserves the two-panel layout");
+            left.ToggleTree();
             SetPanelLayout("Stacked"); UpdateLayout();
-            check(!FluentUiTests.Children<TreeView>(left).Single().IsVisible, "stacked panels do not reserve space for the tree");
+            check(!left.FolderTreeVisible && right.FolderTreeVisible, "stacking preserves each panel's tree preference");
+            SetActive(left);
             SetPanelLayout("Single"); if (left.TreeLoadingTask != null) await left.TreeLoadingTask;
             check(FluentUiTests.Children<TreeView>(left).Single().IsVisible, "returning to one panel restores Explorer navigation");
         }
@@ -49,76 +60,57 @@ namespace FileCompass
     {
         internal async Task VerifyExplorerTree(string root, Action<bool, string> check)
         {
-            var roots = folderTree.Items.OfType<TreeViewItem>().Where(x => x.Tag is string).ToArray();
-            var computer = roots.Single(x => (string)x.Tag == WindowsShell.Computer);
-            var home = roots.Single(x => (string)x.Tag == WindowsShell.Home);
-            var network = roots.Single(x => (string)x.Tag == NetworkBrowser.Root);
-            string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-            var desktop = roots.Single(x => WindowsShell.SamePath((string)x.Tag, desktopPath));
-            check(roots.Length >= 4 && home != null && desktop != null && computer != null && network != null, "tree has Home, Desktop, This PC and Network roots");
-            check(roots.All(x => x.Header is StackPanel && ((StackPanel)x.Header).Children.OfType<Image>().Single().Source != null), "every namespace root has an icon and a text label");
-            check(roots.All(x => ((StackPanel)x.Header).Children.OfType<Image>().Single().Source.IsFrozen), "system icons are frozen before crossing from the shell worker to WPF");
-            File.WriteAllLines(Path.Combine(root, "shell-roots.txt"), roots.Select(x => System.Windows.Automation.AutomationProperties.GetName(x) + "	" + x.Tag));
-            await LoadTreeNode(computer);
-            var drives = computer.Items.OfType<TreeViewItem>().Where(x => x.Tag is string).ToArray();
-            string currentDrive = Path.GetPathRoot(root);
-            File.WriteAllLines(Path.Combine(root, "computer-branches.txt"), computer.Items.OfType<TreeViewItem>().Select(x => (x.Tag ?? x.Header) + " " + x.ToolTip));
-            check(drives.Any(x => WindowsShell.SamePath((string)x.Tag, currentDrive)), "This PC expands to real drives including the current disk");
-            check(drives.All(x => x.Header is StackPanel && ((StackPanel)x.Header).Children.OfType<Image>().Single().Source != null), "drive branches carry Windows shell icons");
-            computer.IsSelected = true; await NavigationTask; if (TreeLoadingTask != null) await TreeLoadingTask;
-            check(IsShellBrowser && CurrentPath == WindowsShell.Computer && List.Items.Cast<Entry>().Any(x => WindowsShell.SamePath(x.FullPath, currentDrive)), "clicking This PC displays its drives inside the file panel");
-            check(Selected().Count == 0, "system overview entries are navigation targets rather than filesystem operation inputs");
-            check(ReferenceEquals(computer, folderTree.Items.OfType<TreeViewItem>().Single(x => (x.Tag as string) == WindowsShell.Computer)), "virtual navigation preserves the namespace tree instead of rebuilding it");
-            var rootDrive = List.Items.Cast<Entry>().Single(x => WindowsShell.SamePath(x.FullPath, currentDrive)); List.SelectedItem = rootDrive;
-            OpenSelected(); await NavigationTask; if (TreeLoadingTask != null) await TreeLoadingTask;
-            check(!IsShellBrowser && WindowsShell.SamePath(CurrentPath, currentDrive), "opening a drive from This PC enters its real directory");
-            desktop.IsSelected = true; await NavigationTask; if (TreeLoadingTask != null) await TreeLoadingTask;
-            check(WindowsShell.SamePath(CurrentPath, desktopPath), "Desktop root opens the actual redirected Windows desktop");
-            home.IsSelected = true; await NavigationTask; if (TreeLoadingTask != null) await TreeLoadingTask;
-            check(IsShellBrowser && CurrentPath == WindowsShell.Home && List.Items.Cast<Entry>().Any(x => x.IsDirectory), "Home opens Windows quick-access folders inside the panel");
+            string current = Directory.CreateDirectory(Path.Combine(root, "Current")).FullName;
+            string child = Directory.CreateDirectory(Path.Combine(current, "Child")).FullName;
+            string grandchild = Directory.CreateDirectory(Path.Combine(child, "Grandchild")).FullName;
+            Directory.CreateDirectory(Path.Combine(root, "Sibling"));
+            File.WriteAllText(Path.Combine(current, "file.txt"), "file");
 
-            string nested = Directory.CreateDirectory(Path.Combine(root, "Folders", "Nested")).FullName;
-            Navigate(nested, true); await NavigationTask; if (TreeLoadingTask != null) await TreeLoadingTask;
-            check(folderTree.SelectedItem is TreeViewItem && WindowsShell.SamePath((string)((TreeViewItem)folderTree.SelectedItem).Tag, nested), "tree follows a nested path through the appropriate system root");
-            check(ReferenceEquals(computer, folderTree.Items.OfType<TreeViewItem>().Single(x => (x.Tag as string) == WindowsShell.Computer)), "ordinary folder navigation keeps namespace roots and expanded branches");
-            var selectedNode = (TreeViewItem)folderTree.SelectedItem;
-            var parentNode = ItemsControl.ItemsControlFromItemContainer(selectedNode) as TreeViewItem;
-            if (parentNode != null) { loadedTreeNodes.Remove(parentNode); await LoadTreeNode(parentNode); }
-            await Task.Delay(80);
-            check(CurrentPath == nested && !IsLoading && folderTree.SelectedItem == selectedNode, "refreshing a branch preserves selection without starting unintended navigation");
-            string hidden = Directory.CreateDirectory(Path.Combine(root, "Folders", "Hidden")).FullName;
-            File.SetAttributes(hidden, File.GetAttributes(hidden) | FileAttributes.Hidden);
-            var filtered = await BoundedShellRead(WindowsShell.Folders(Path.GetDirectoryName(nested), false, true));
-            var unfiltered = await BoundedShellRead(WindowsShell.Folders(Path.GetDirectoryName(nested), true, true));
-            check(!filtered.Any(x => x.Path == hidden) && unfiltered.Any(x => x.Path == hidden), "tree directory enumeration respects the hidden-files switch");
-            var errorNode = FolderNode(Path.Combine(root, "does-not-exist"), "Missing");
-            await LoadTreeNode(errorNode);
-            check(errorNode.Items.OfType<TreeViewItem>().Any(x => x.Tag == null && !x.IsEnabled) && !loadedTreeNodes.Contains(errorNode), "unavailable branches show an error and remain retryable");
+            Navigate(current, true);
+            await NavigationTask;
+            await TreeLoadingTask;
+            var currentNode = folderTree.Items.OfType<TreeViewItem>().Single();
+            check(WindowsShell.SamePath((string)currentNode.Tag, current) && currentNode.IsExpanded && currentNode.IsSelected,
+                "the only expanded tree root is the current folder");
+            var childNode = currentNode.Items.OfType<TreeViewItem>().Single();
+            check(WindowsShell.SamePath((string)childNode.Tag, child), "the tree lists subfolders and omits files, siblings and ancestors");
+            await LoadTreeNode(childNode);
+            check(childNode.Items.OfType<TreeViewItem>().Any(node => WindowsShell.SamePath(node.Tag as string, grandchild)),
+                "deeper descendants load on demand");
+
+            string added = Directory.CreateDirectory(Path.Combine(current, "New")).FullName;
+            Refresh();
+            await NavigationTask;
+            await TreeLoadingTask;
+            check(ReferenceEquals(currentNode, folderTree.Items[0]) &&
+                currentNode.Items.OfType<TreeViewItem>().Any(node => WindowsShell.SamePath(node.Tag as string, added)),
+                "refreshing the current folder preserves its root and updates its child listing");
+
+            childNode.IsSelected = true;
+            await NavigationTask;
+            await TreeLoadingTask;
+            check(WindowsShell.SamePath(CurrentPath, child) &&
+                WindowsShell.SamePath((string)folderTree.Items.OfType<TreeViewItem>().Single().Tag, child),
+                "selecting a child navigates and re-roots the tree");
+            Up();
+            await NavigationTask;
+            await TreeLoadingTask;
+            check(WindowsShell.SamePath((string)folderTree.Items.OfType<TreeViewItem>().Single().Tag, current),
+                "navigating upwards roots the tree at the new current folder");
 
             NetworkBrowser.TestProvider = path => new List<Entry> {
-                new Entry { Name = path == NetworkBrowser.Root ? "Tree test server" : "Data", FullPath = path == NetworkBrowser.Root ? @"\\tree-test-server" : @"\\tree-test-server\Data", IsDirectory = true, Icon = DesktopIcons.StockIcon(17) }
+                new Entry { Name = "Tree test server", FullPath = @"\\tree-test-server", IsDirectory = true, Icon = DesktopIcons.StockIcon(17) }
             };
-            await LoadTreeNode(network);
-            check(network.Items.OfType<TreeViewItem>().Any(x => (x.Tag as string) == @"\\tree-test-server"), "Network expands to discovered Windows servers");
-            network.IsSelected = true; await NavigationTask; if (TreeLoadingTask != null) await TreeLoadingTask;
-            check(IsNetworkBrowser && folderTree.Items.OfType<TreeViewItem>().Any(x => (x.Tag as string) == WindowsShell.Computer), "opening Network retains Desktop and This PC in the tree");
-            var server = network.Items.OfType<TreeViewItem>().Single(x => (x.Tag as string) == @"\\tree-test-server");
-            server.IsSelected = true; await NavigationTask; if (TreeLoadingTask != null) await TreeLoadingTask; await LoadTreeNode(server);
-            check(CurrentPath == @"\\tree-test-server" && server.Items.OfType<TreeViewItem>().Any(x => (x.Tag as string) == @"\\tree-test-server\Data"), "a network server opens and expands to shared folders");
+            Navigate(NetworkBrowser.Root, true);
+            await NavigationTask;
+            await TreeLoadingTask;
+            var network = folderTree.Items.OfType<TreeViewItem>().Single();
+            check((string)network.Tag == NetworkBrowser.Root && network.Items.OfType<TreeViewItem>().Any(node => node.Tag as string == @"\\tree-test-server"),
+                "the network location also stays scoped to the current root");
             NetworkBrowser.TestProvider = null;
-            Navigate(nested, true); await NavigationTask; if (TreeLoadingTask != null) await TreeLoadingTask;
-            // Finish navigation before rendering, so cleanup cannot race a loading panel.
-            computer.IsSelected = true; await NavigationTask; if (TreeLoadingTask != null) await TreeLoadingTask;
-            await LoadTreeNode(computer); ExpandTreeWithoutLoad(computer);
-            revealingTree = true;
-            try {
-                foreach (var item in roots.Where(x => x != computer)) item.IsExpanded = false;
-                foreach (var item in computer.Items.OfType<TreeViewItem>()) item.IsExpanded = false;
-            } finally { revealingTree = false; }
-            folderTree.UpdateLayout();
-            var scroll = FluentUiTests.Children<ScrollViewer>(folderTree).FirstOrDefault();
-            if (scroll != null) scroll.ScrollToTop();
-            check(roots.All(x => ((StackPanel)x.Header).Children.OfType<TextBlock>().Single().Text.Length > 0), "namespace labels come from Windows rather than empty placeholders");
+            Navigate(current, true);
+            await NavigationTask;
+            await TreeLoadingTask;
         }
     }
 }

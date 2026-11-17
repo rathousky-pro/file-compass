@@ -160,3 +160,4 @@ if ($Release) {
 
 New-Item -ItemType Directory -Path (Join-Path $bin 'plugins/media') -Force | Out-Null
 Copy-Item -Path (Join-Path $PSScriptRoot 'plugins/media/*') -Destination (Join-Path $bin 'plugins/media') -Recurse -Force
+& (Join-Path $PSScriptRoot 'copy-license-index.ps1') -OutputDirectory $bin

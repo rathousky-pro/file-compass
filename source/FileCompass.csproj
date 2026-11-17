@@ -93,6 +93,9 @@
   <Target Name="GeneratePluginHashes" BeforeTargets="BeforeCompile;CoreCompile">
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\gen-plugin-hashes.ps1&quot;" />
   </Target>
+  <Target Name="CopyLicenseIndex" AfterTargets="Build">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\copy-license-index.ps1&quot; -OutputDirectory &quot;$(TargetDir)&quot;" />
+  </Target>
 </Project>
 
 

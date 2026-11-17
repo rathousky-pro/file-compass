@@ -19,6 +19,8 @@ namespace FileCompass
                     var clock = System.Diagnostics.Stopwatch.StartNew(); long firstReport = -1; bool locked = false;
                     ArchiveEngine.Create(target, selected, settings, CancellationToken.None, delegate(string text) { ArchiveCompressionProgress update; if (ArchiveCompressionProgress.TryParse(text, out update)) { reports.Add(update); if (firstReport < 0) { firstReport = clock.ElapsedMilliseconds; try { using (File.Open(input, FileMode.Open, FileAccess.Write, FileShare.None)) { } } catch (IOException) { locked = true; } } } });
                     if (!reports.Any(x => !x.Complete && x.Percent > 0 && x.Percent < 99)) throw new Exception("No real intermediate compression progress for " + extension);
+                    if (extension == ".rar" && !reports.Any(x => x.CurrentFile == Path.GetFileName(input)))
+                        throw new Exception("RAR does not report the current selected file.");
                     if (extension != ".rar" && !reports.Any(x => x.Processed > 0 && x.Processed <= x.Original)) throw new Exception("Direct compressor did not report actual bytes read.");
                     if(extension!=".rar"&&!reports.Any(x=>x.FileTotal>0&&x.FileDone>0&&x.FileDone<x.FileTotal))throw new Exception("Missing real per-file byte progress for "+extension);
                     if(reports.Any(x=>x.FileTotal>=0&&(x.FileDone<0||x.FileDone>x.FileTotal)))throw new Exception("Per-file progress exceeds the source length.");

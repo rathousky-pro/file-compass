@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -8,7 +8,7 @@ namespace FileCompass
 {
     public partial class MainWindow
     {
-        Button toolbarLayoutButton, toolbarAllFilesButton, toolbarPreviewButton, toolbarThumbnailsButton=null;
+        Button toolbarLayoutButton, toolbarAllFilesButton, toolbarFolderViewButton, toolbarPreviewButton, toolbarThumbnailsButton=null;
         bool toolbarAllFiles = true;
         string toolbarHiddenSymbol="hidden-files-visible";
         Action updateDirectionTools=null;
@@ -20,10 +20,59 @@ namespace FileCompass
             });
             Tool(tools,"refresh",L.Text("toolbar.refreshShortcut"),RefreshPanels,allowDuringLoading:true);
             toolbarAllFilesButton = Tool(tools, "hidden-files", L.Text("toolbar.allFilesHelp"), ToggleToolbarAllFiles);
+            toolbarFolderViewButton = Tool(tools, "tree", L.Text("menu.view"), delegate { ShowPanelViewMenu(toolbarFolderViewButton); });
+            System.Windows.Automation.AutomationProperties.SetAutomationId(toolbarFolderViewButton, "PanelViewMenu");
+            Button favoritesButton = null;
+            favoritesButton = Tool(tools, "favorite", L.Text("favorites.openMenu"), delegate { ShowFavorites(true, favoritesButton); });
+            System.Windows.Automation.AutomationProperties.SetAutomationId(favoritesButton, "PanelFavorites");
+            var labelsButton = Tool(tools, "label", L.Text("tags.results"), ShowTaggedFiles);
+            System.Windows.Automation.AutomationProperties.SetAutomationId(labelsButton, "PanelLabels");
             UpdateViewToolbarControls();
         }
 
 
+
+        internal void ShowPanelViewMenu(FrameworkElement anchor)
+        {
+            var panel = active;
+            if (panel == null || anchor == null) return;
+
+            var menu = new ContextMenu { PlacementTarget = anchor, Placement = PlacementMode.Bottom };
+            var defaults = new MenuItem { Header = L.Text("columns.useDefault"),
+                IsEnabled = !panel.EmptyPanel && panel.CurrentPath != null };
+            defaults.Click += async delegate
+            {
+                if (panel.IsFlatView)
+                {
+                    panel.ToggleFlatView();
+                    if (panel.NavigationTask != null) await panel.NavigationTask;
+                }
+                panel.UseDefaultFolderView();
+                if (panel.FolderTreeVisible) panel.SetTree(false);
+            };
+            menu.Items.Add(defaults);
+            var flat = new MenuItem
+            {
+                Header = L.Text("projection.includeChildren"), IsCheckable = true, IsChecked = panel.IsFlatView,
+                IsEnabled = panel.IsFlatView || panel.CanOpenFlatView
+            };
+            flat.Click += delegate { panel.ToggleFlatView(); };
+            menu.Items.Add(flat);
+            var tree = new MenuItem
+            {
+                Header = L.Text("panel.folderTree"), Icon = DesktopIcons.Toolbar("tree", 16),
+                IsCheckable = true, IsChecked = panel.FolderTreeVisible
+            };
+            tree.Click += delegate { panel.ToggleTree(); };
+            menu.Items.Add(tree);
+            menu.Items.Add(new Separator());
+            var view = new MenuItem { Header = panel.FolderViewCaption };
+            panel.AddFolderViewOptions(view, false);
+            view.IsEnabled = view.Items.OfType<MenuItem>().Any(item => item.IsEnabled);
+            menu.Items.Add(view);
+            if (anchor == toolbarFolderViewButton) anchor.ContextMenu = menu;
+            menu.IsOpen = true;
+        }
 
         void ToggleToolbarAllFiles()
         {

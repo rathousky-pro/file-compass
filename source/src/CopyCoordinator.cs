@@ -68,10 +68,11 @@ namespace FileCompass
                         {
                             if (!activeCopyJobs.ContainsKey(job)) return;
                             dialog.Update(update);
-                            activity.Update(update.Phase + " · " + System.IO.Path.GetFileName(update.Source) + L.Text("copy.currentFilePrefix") + (update.FileTotal > 0 ? (100.0 * update.FileDone / update.FileTotal).ToString("F0") : "0") + L.Text("progress.percentAndTotalSeparator") + (update.TotalBytes > 0 ? (100.0 * update.TotalDone / update.TotalBytes).ToString("F0") : "0") + "% · " + update.Completed + " / " + update.TotalFiles + L.Text("common.fileCountSuffix"),
+                            string preparation = update.DisplayPhase + L.Text("search.foundCountSeparator") + update.TotalFiles.ToString("N0") + L.Text("copy.filesAndBytesSeparator") + CopyUi.Bytes(update.TotalBytes);
+                            activity.Update(update.Preparing ? preparation : update.DisplayPhase + " · " + System.IO.Path.GetFileName(update.Source) + L.Text("copy.currentFilePrefix") + (update.FileTotal > 0 ? (100.0 * update.FileDone / update.FileTotal).ToString("F0") : "0") + L.Text("progress.percentAndTotalSeparator") + (update.TotalBytes > 0 ? (100.0 * update.TotalDone / update.TotalBytes).ToString("F0") : "0") + "% · " + update.Completed + " / " + update.TotalFiles + L.Text("common.fileCountSuffix"),
                                 update.FileTotal > 0 ? (double)update.FileDone / update.FileTotal : 0,
-                                update.TotalBytes > 0 ? (double)update.TotalDone / update.TotalBytes : (update.TotalFiles > 0 ? (double)update.Completed / update.TotalFiles : 0), update.Phase == L.Code("copy.loadingFiles") || update.Phase == L.Code("copy.savingPlan"));
-                            operation.Text = (control.Paused ? L.Code("state.paused") : update.Phase) + ": " + update.Completed + " / " + update.TotalFiles +
+                                update.TotalBytes > 0 ? (double)update.TotalDone / update.TotalBytes : (update.TotalFiles > 0 ? (double)update.Completed / update.TotalFiles : 0), update.Preparing);
+                            operation.Text = (control.Paused ? L.Text("state.paused") : update.Preparing ? preparation : update.DisplayPhase + ": " + update.Completed + " / " + update.TotalFiles) +
                                 L.Text("queue.waitingCountPrefix") + copyJobs.Count + L.Text("progress.clickToShowSuffix");
                         });
                         ConfigureCopyRetry(activity.Record, job.Options);

@@ -457,7 +457,7 @@ namespace FileCompass
             richAvailable = (currentMode == PreviewMode.Auto || currentMode == PreviewMode.Text) && !useHex && lastData.Text != null && currentOffset == 0 && current != null && RichFilePreview.Supports(current);
             if (richAvailable) rich.Show(current, lastData.Text, lastData.Markdown);
             formatted.IsEnabled = richAvailable || documentReady || CsvAvailable;
-            bool showNav = remoteTemplate == null && lastData.Image == null && (lastData.TotalLength > lastData.ReadBytes || useHex || useBin || currentOffset > 0);
+            bool showNav = !hoverPreviewOnly && remoteTemplate == null && lastData.Image == null && (lastData.TotalLength > lastData.ReadBytes || useHex || useBin || currentOffset > 0);
             navigationBar.Visibility = showNav ? Visibility.Visible : Visibility.Collapsed;
             offsetInput.Text = useHex ? "0x" + lastData.Offset.ToString("X") : lastData.Offset.ToString();
             UpdateFormat();
@@ -515,7 +515,7 @@ namespace FileCompass
             var token = cancellation.Token; int request = version;
             if (remoteTemplate == null) MetadataLoadingTask = LoadDetails(path, token, request);
             DocumentLoadingTask = LoadDocumentPreview(path, token, request);
-            title.Text = Path.GetFileName(path); title.ToolTip = path;ShowBasicInfo(path);bool textControls=FileViewers.Kind(path)=="text";previewTools.Visibility=previewModeRow.Visibility=textControls?Visibility.Visible:Visibility.Collapsed;
+            title.Text = Path.GetFileName(path); title.ToolTip = path;ShowBasicInfo(path);bool textControls=!hoverPreviewOnly&&FileViewers.Kind(path)=="text";previewTools.Visibility=previewModeRow.Visibility=textControls?Visibility.Visible:Visibility.Collapsed;
             text.Text = ""; picture.Source = null; rich.Clear(); richAvailable = false;
             UpdateFormat(); status.Text = L.Text("preview.loadingStatus");
             var selectedEncoding = SelectedEncoding;

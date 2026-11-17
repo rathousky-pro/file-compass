@@ -23,6 +23,7 @@ namespace FileCompass
         internal void RequestCancel() { RequestCancel(true); }
         internal void RequestCancel(bool confirm) { if (finished || (Record != null && Record.CancelRequested)) return; if (confirm && ConfirmCancellation != null && !ConfirmCancellation()) return; if (finished) return; if (Record != null) { Record.CancelRequested = true; Record.State = L.Code("state.cancelling"); } Cancellation(); cancel.IsEnabled = false; label.Text = L.Text("state.cancellingOperation"); if (Changed != null) Changed(); }
         bool finished;
+        readonly long measurementStarted = PerformanceLog.Start;
         internal bool Finished { get { return finished; } }
         internal double FileFraction { get { return progress.FileFraction; } }
         internal bool Preparing { get { return progress.Preparing; } }
@@ -48,6 +49,8 @@ namespace FileCompass
         }
         public void Finish(string text, bool success)
         {
+            if (!finished && measurementStarted != 0)
+                PerformanceLog.Write("activity.finish", measurementStarted, details: "kind=" + Kind + " success=" + success);
             Update(text, success ? 1 : progress.FileFraction, success ? 1 : progress.TotalFraction); finished = true;
             if (Record != null) { Record.Ended = DateTime.Now; Record.State = success ? L.Code("state.completed") : Record.CancelRequested || text.IndexOf(L.Text("state.cancelledMatchFragment"), StringComparison.OrdinalIgnoreCase) >= 0 || text.IndexOf(L.Text("state.interruptedMatchFragment"), StringComparison.OrdinalIgnoreCase) >= 0 ? L.Code("state.cancelled") : L.Text("state.completedWithErrors"); }
             cancel.Content = L.Text("action.close"); cancel.IsEnabled = true;
@@ -75,8 +78,8 @@ namespace FileCompass
             var track = CompactTheme.ThemeBrush("#E7ECF3");
             drawing.DrawRoundedRectangle(track, null, new Rect(0, 0, width, line), 1.5, 1.5);
             drawing.DrawRoundedRectangle(track, null, new Rect(0, height - line, width, line), 1.5, 1.5);
-            drawing.DrawRoundedRectangle(FileColor, null, new Rect(0, 0, width * (preparing ? .25 : FileFraction), line), 1.5, 1.5);
-            drawing.DrawRoundedRectangle(TotalColor, null, new Rect(0, height - line, width * (preparing ? .25 : TotalFraction), line), 1.5, 1.5);
+            if (!preparing && FileFraction > 0) drawing.DrawRoundedRectangle(FileColor, null, new Rect(0, 0, width * FileFraction, line), 1.5, 1.5);
+            if (!preparing && TotalFraction > 0) drawing.DrawRoundedRectangle(TotalColor, null, new Rect(0, height - line, width * TotalFraction, line), 1.5, 1.5);
         }
     }
     public partial class MainWindow

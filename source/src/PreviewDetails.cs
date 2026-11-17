@@ -16,6 +16,7 @@ namespace FileCompass {
             System.Windows.Automation.AutomationProperties.SetAutomationId(basicInfo,"PreviewBasicInfo");basicInfo.MaxHeight=compact?20:70;basicInfo.TextWrapping=compact?TextWrapping.NoWrap:TextWrapping.Wrap;basicInfo.TextTrimming=TextTrimming.CharacterEllipsis;
             var info=new DockPanel{Margin=new Thickness(0,6,0,6)};carouselToggle.Margin=new Thickness(0,0,10,0);carouselToggle.VerticalAlignment=VerticalAlignment.Center;DockPanel.SetDock(carouselToggle,Dock.Left);info.Children.Add(carouselToggle);
             moreDetails=CopyUi.Button(L.Text("preview.details"),ShowDetailsPopup);System.Windows.Automation.AutomationProperties.SetAutomationId(moreDetails,"PreviewMore");moreDetails.MinWidth=65;moreDetails.VerticalAlignment=VerticalAlignment.Center;DockPanel.SetDock(moreDetails,Dock.Right);info.Children.Add(moreDetails);info.Children.Add(basicInfo);
+            if(hoverPreviewOnly){moreDetails.Visibility=Visibility.Collapsed;carouselToggle.Visibility=Visibility.Collapsed;basicInfo.MaxHeight=64;basicInfo.TextWrapping=TextWrapping.Wrap;}
             DockPanel.SetDock(info,Dock.Bottom);body.Children.Add(info);
         }
         void ShowBasicInfo(string path){
@@ -36,7 +37,10 @@ namespace FileCompass {
             try {
                 var data=await Task.Run(delegate { return FileMetadataService.Load(path,token); });
                 if(request!=version||token.IsCancellationRequested)return;
-                detailsData=data;var dimensions=data.Rows.FirstOrDefault(x=>x.Key=="dimensions"||x.Key=="resolution");basicInfo.Text+=(dimensions==null?"":" · "+dimensions.Value);basicInfo.ToolTip=Convert.ToString(title.ToolTip)+"\n"+data.Summary;
+                detailsData=data;
+                if(hoverPreviewOnly){var keys=new[]{"dimensions","megapixels","dpi","encoding","lines","sampleLines","lineEndings","columns","pages","sheets","duration","videoWidth","videoHeight","fps","audioBitrate","sampleRate","channels"};var values=data.Rows.Where(x=>keys.Contains(x.Key)).Select(x=>x.Label+": "+x.Value);basicInfo.Text+="\n"+String.Join(" · ",values);}
+                else {var dimensions=data.Rows.FirstOrDefault(x=>x.Key=="dimensions"||x.Key=="resolution");basicInfo.Text+=(dimensions==null?"":" · "+dimensions.Value);}
+                basicInfo.ToolTip=Convert.ToString(title.ToolTip)+"\n"+data.Summary;
                 ApplyDocumentExcerpt();
             }catch(OperationCanceledException){}catch(Exception){}
             finally {if(request==version){documentDetailsLoading=false;if(WantsDocument)UpdateFormat();}}

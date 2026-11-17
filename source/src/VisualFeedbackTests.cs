@@ -18,14 +18,15 @@ namespace FileCompass {
                 File.WriteAllBytes(Path.Combine(source,"data.bin"),new byte[3*1048576]);
                 var updates = new List<string>();
                 ArchiveEngine.Create(Path.Combine(root,"test.zip"),new[]{source},ArchiveSettings.Load(),CancellationToken.None,updates.Add,new ArchivePackOptions());
-                ArchivePreparationProgress parsed;
-                check(updates.Any(x => ArchivePreparationProgress.TryParse(x,out parsed) && parsed.Path.Contains("Žluťoučká")),"Preparation reports original Unicode source path");
-                check(updates.Any(x => ArchivePreparationProgress.TryParse(x,out parsed) && parsed.Bytes > 0),"Preparation reports bytes while copying");
-                check(ArchiveEngine.Open(Path.Combine(root,"test.zip"),null,CancellationToken.None).Items.Any(x => x.Path == "data.bin" || x.Path.EndsWith("/data.bin")),"Prepared archive is readable");
+                check(!updates.Any(x => x.StartsWith("@archive-preparation|", StringComparison.Ordinal)),
+                    "regular folder compression starts without copying its input");
+                check(updates.Any(x => ArchiveCompressionProgress.TryParse(x,out var report) && report.Complete && report.Original == 3*1048576),
+                    "direct folder compression reports original and packed sizes");
+                check(ArchiveEngine.Open(Path.Combine(root,"test.zip"),null,CancellationToken.None).Items.Any(x => x.Path == "Žluťoučká složka/data.bin"),"Directly compressed archive preserves the selected folder and Unicode names");
                 using(var cancel = new CancellationTokenSource()) {
                     bool cancelled=false;
-                    try { ArchiveEngine.Create(Path.Combine(root,"cancel.zip"),new[]{source},ArchiveSettings.Load(),cancel.Token,x => { if(x.StartsWith("@archive-preparation|"))cancel.Cancel(); },new ArchivePackOptions()); } catch(OperationCanceledException){cancelled=true;}
-                    check(cancelled && !File.Exists(Path.Combine(root,"cancel.zip")),"Cancellation during preparation does not publish archive");
+                    try { ArchiveEngine.Create(Path.Combine(root,"cancel.zip"),new[]{source},ArchiveSettings.Load(),cancel.Token,x => { if(x.StartsWith("@archive-compression|"))cancel.Cancel(); },new ArchivePackOptions()); } catch(OperationCanceledException){cancelled=true;}
+                    check(cancelled && !File.Exists(Path.Combine(root,"cancel.zip")),"Cancellation during compression does not publish archive");
                 }
                 main = new MainWindow(root,new ProgramSettings {AutoRefresh=false}) {Width=1440,Height=850,ShowActivated=false,ShowInTaskbar=false,Left=-18000,Top=-18000,WindowStartupLocation=WindowStartupLocation.Manual};
                 main.Show(); NavigationTests.WaitPanels(main); main.CheckVisualFeedback(root,check);

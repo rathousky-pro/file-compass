@@ -119,7 +119,7 @@ namespace FileCompass
             var credentials = type == NetworkProtocol.NFS ? null : FluentTheme.Section(general, L.Text("network.credentialsGroup"));
             if (ftp)
             {
-                var tlsRow = new DockPanel(); var anonymous = CopyUi.Button(L.Text("ftp.anonymousLogin"), delegate { user.Text = ""; password.Password = ""; remember.IsChecked = false; });
+                var tlsRow = new DockPanel(); var anonymous = CopyUi.Button(L.Text("ftp.anonymousLogin"), delegate { user.Text = "anonymous"; password.Password = ""; remember.IsChecked = false; });
                 anonymous.Margin = new Thickness(0); DockPanel.SetDock(anonymous, Dock.Right); tlsRow.Children.Add(anonymous); tlsRow.Children.Add(tls); credentials.Children.Add(tlsRow);
             }
             if (type != NetworkProtocol.NFS)

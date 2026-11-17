@@ -39,6 +39,20 @@ namespace FileCompass {
                 store.Put(ftp); store.Put(sftp);
                 main = new MainWindow(root, new ProgramSettings { AutoRefresh = false }) { Left = -18000, Top = -18000, ShowActivated = false, ShowInTaskbar = false, WindowStartupLocation = WindowStartupLocation.Manual };
                 main.Show(); NavigationTests.WaitPanels(main);
+                var loginCheck = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+                bool loginShown = false;
+                loginCheck.Tick += delegate
+                {
+                    loginCheck.Stop();
+                    var login = main.OwnedWindows.Cast<Window>().FirstOrDefault(x => x.IsVisible && x.Title == L.Text("network.loginTitlePrefix") + ftp.Name);
+                    if (login == null) return;
+                    loginShown = AdvancedToolsTests.Visual<TextBox>(login).Count() == 1 && AdvancedToolsTests.Visual<PasswordBox>(login).Count() == 1 && !Find(login, "ssh.loginContinue").IsEnabled;
+                    login.DialogResult = false;
+                };
+                loginCheck.Start();
+                try { NavigationTests.Wait((Task)typeof(MainWindow).GetMethod("ConnectNetworkTask", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(main, new object[] { ftp })); }
+                finally { loginCheck.Stop(); }
+                check(loginShown && ftp.FtpNeedsUser, "Blank FTP user opens a username and password prompt, and cancel leaves the profile untouched");
                 dialog = new ConfigurationDialog(main, L.Text("network.connectionsTitle"), null, store) { Left = -18000, Top = -18000, ShowActivated = false, ShowInTaskbar = false, WindowStartupLocation = WindowStartupLocation.Manual };
                 dialog.Show(); NavigationTests.Wait(Task.Delay(40)); dialog.FitSettingsPage();
                 var view = dialog.Connections;

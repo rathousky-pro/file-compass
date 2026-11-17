@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -32,6 +32,7 @@ namespace FileCompass
         readonly DockPanel tabRow = new DockPanel { LastChildFill = true, Background = CompactTheme.PanelSurface, Height = 34 };
         DockPanel panelPathRow;
         Border activeTabFace;
+        ScrollViewer tabScroller;
         Button newTabButton,cleanRootButton,cleanParentButton;
         internal Action<FilePanel> BookmarksRequested;
         readonly StackPanel crumbs = new StackPanel { Orientation = Orientation.Horizontal };
@@ -59,7 +60,7 @@ namespace FileCompass
             newTabButton=CompactTheme.Button("+",L.Text("tabs.newShortcutTooltip"),delegate{NewTab();});
             newTabButton.Tag="panel-tab";newTabButton.Width=36;newTabButton.Height=36;newTabButton.MinWidth=0;newTabButton.Padding=new Thickness(0);newTabButton.Margin=new Thickness(6,0,0,0);newTabButton.Background=CompactTheme.PanelSurface;newTabButton.BorderThickness=new Thickness(0);newTabButton.FontSize=16;
             System.Windows.Automation.AutomationProperties.SetAutomationId(newTabButton,"PanelNewTab");
-            var tabScroller=new ScrollViewer { Content = tabStrip, HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled };tabScroller.PreviewMouseWheel+=delegate(object sender,MouseWheelEventArgs e){tabScroller.ScrollToHorizontalOffset(tabScroller.HorizontalOffset-e.Delta/3.0);e.Handled=true;};row.Children.Add(tabScroller);row.SizeChanged+=delegate(object sender,SizeChangedEventArgs e){if(e.WidthChanged)RenderTabs();};
+            tabScroller=new ScrollViewer { Content = tabStrip, HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled };tabScroller.PreviewMouseWheel+=delegate(object sender,MouseWheelEventArgs e){tabScroller.ScrollToHorizontalOffset(tabScroller.HorizontalOffset-e.Delta/3.0);e.Handled=true;};DockPanel.SetDock(newTabButton,Dock.Right);row.Children.Add(newTabButton);row.Children.Add(tabScroller);row.SizeChanged+=delegate(object sender,SizeChangedEventArgs e){if(e.WidthChanged)RenderTabs();};
             DockPanel.SetDock(quickBar, Dock.Bottom); wrapper.Children.Add(quickBar);
             quickMode.Items.Add(L.Text("action.filter")); quickMode.Items.Add(L.Text("action.find")); quickMode.SelectedIndex = 0;
             quickBar.Children.Add(new TextBlock { Text = L.Text("navigation.quickPrefix"), VerticalAlignment = VerticalAlignment.Center });
@@ -131,7 +132,7 @@ namespace FileCompass
             tab.Saved.Caption = IsRemote ? Remote.Profile.DisplayLabel : IsArchive ? Path.GetFileName(Archive.FilePath) : "";
             if (String.IsNullOrEmpty(tab.Saved.Home)) tab.Saved.Home = CurrentPath;
             tab.Remote = Remote; tab.Archive = Archive; tab.ReturnPath = IsArchive ? archiveReturnPath : localReturnPath;
-            tab.Parents = archiveParents.ToArray(); SavePanelView(tab.View); tab.Saved.View = tab.View;
+            tab.Parents = archiveParents.ToArray(); tab.View = CaptureBaseFolderView(); tab.Saved.View = tab.View;
             var cursor = List.SelectedItem as Entry; tab.Cursor = cursor == null ? null : cursor.FullPath;
             tab.Marks = new HashSet<string>(List.Items.Cast<Entry>().Where(x => x.IsMarked).Select(x => x.FullPath), StringComparer.Ordinal);
             tab.History = history.ToArray(); tab.Forward = forwardHistory.ToArray();
@@ -140,7 +141,7 @@ namespace FileCompass
         {
             var view = item.View ?? new PanelView();
             return new SavedTab { ExtSource=item.ExtSource,ExtVolume=item.ExtVolume,Path = item.Path, Home = item.Home, Label = item.Label, Caption = item.Caption, ProfileId = item.ProfileId, ArchiveFile = item.ArchiveFile, ArchivePrefix = item.ArchivePrefix, Locked = item.Locked, Filter = item.Filter,
-                Projection = item.Projection == null ? null : new ProjectionSpec { Kind = item.Projection.Kind, Root = item.Projection.Root, Query = item.Projection.Query, Paths = item.Projection.Paths == null ? null : (string[])item.Projection.Paths.Clone() },
+                Projection = item.Projection == null ? null : new ProjectionSpec { Kind = item.Projection.Kind, Root = item.Projection.Root, Query = item.Projection.Query, ExactLabel = item.Projection.ExactLabel, Paths = item.Projection.Paths == null ? null : (string[])item.Projection.Paths.Clone() },
                 View = new PanelView { MetadataColumns = view.MetadataColumns == null ? new string[0] : (string[])view.MetadataColumns.Clone(), Sort = view.Sort, GroupBy = view.GroupBy, Descending = view.Descending, Widths = view.Widths == null ? new double[0] : (double[])view.Widths.Clone(), Display = view.Display, Tree = view.Tree, ThumbnailSize = view.ThumbnailSize, ExtensionColumn=view.ExtensionColumn,AttributesColumn=view.AttributesColumn,SizeColumn=view.SizeColumn,ModifiedColumn=view.ModifiedColumn,ColumnOrder=view.ColumnOrder==null?new string[0]:(string[])view.ColumnOrder.Clone(),DetailExpanded = view.DetailExpanded, DetailConfigured = view.DetailConfigured, DetailRatio = view.DetailRatio, TreeWidth = view.TreeWidth } };
         }
         internal SavedTab[] SaveTabs() { if(EmptyPanel)return new SavedTab[0];CaptureTab(); return tabs.Select(x => CloneSavedTab(x.Saved)).ToArray(); }
@@ -151,6 +152,7 @@ namespace FileCompass
             if (tabs.Count == 0) tabs.Add(new PanelTab());
             tabIndex = Math.Max(0, Math.Min(selected, tabs.Count - 1)); RenderTabs();
             var tab = tabs[tabIndex];
+            ResetFolderViewTracking();
             if (tab.Saved.View != null) RestorePanelView(tab.View);
             if(!restoreActiveFolder&&!tab.Saved.Locked&&String.IsNullOrEmpty(tab.Saved.ProfileId)&&String.IsNullOrEmpty(tab.Saved.ArchiveFile)){tab.Pending=false;return;}
             // Connections are reopened only on an explicit click; startup never asks for credentials.
@@ -173,17 +175,19 @@ namespace FileCompass
             if(HasUnavailableTab){tabs.Add(new PanelTab());tabIndex=tabs.Count-1;Navigate(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),false);RenderTabs();NotifyTabsChanged();return;}
             CaptureTab(); var current = tabs[tabIndex];
             var fresh = new PanelTab { Saved = new SavedTab { ExtSource=current.Saved.ExtSource,ExtVolume=current.Saved.ExtVolume,Projection = projection, Path = CurrentPath, Home = CurrentPath, ProfileId = IsRemote ? Remote.Profile.Id : "", ArchiveFile = IsArchive ? Archive.FilePath : "", ArchivePrefix = IsArchive ? ArchivePrefix : "", Caption = IsRemote ? Remote.Profile.DisplayLabel : IsArchive ? Path.GetFileName(Archive.FilePath) : "" }, Remote = Remote, Archive = Archive, ReturnPath = current.ReturnPath, Parents = current.Parents };
-            SavePanelView(fresh.View); fresh.Saved.View = fresh.View;
+            fresh.View = CaptureBaseFolderView(); fresh.Saved.View = fresh.View;
             tabs.Add(fresh); tabIndex = tabs.Count - 1; RenderTabs();NotifyTabsChanged(); activate(this); List.Focus();
         }
         internal Task TabNavigationTask { get; private set; }
         internal void SwitchTab(int index) { TabNavigationTask = SwitchTabCore(index); }
         async Task SwitchTabCore(int index)
         {
-            if (index < 0 || index >= tabs.Count || IsLoading || LocalLoading) return;
+            if (index < 0 || index >= tabs.Count || IsLoading || (LocalLoading && !IsFlatView)) return;
             CaptureTab(); tabIndex = index; var tab = tabs[index]; switchingTabs = true;
             try {
                 SetQuickFilter(""); CancelNavigation(); RememberRemote(); CloseArchiveContext(); Remote = null;
+                ResetFolderViewTracking();
+                ExitFlatLocationColumn();
                 RestorePanelView(tab.View);
                 if (tab.Saved.Projection != null) { ShowProjection(tab.Saved.Projection, false); await NavigationTask; }
                 else if (tab.Remote != null && openConnections.ContainsKey(tab.Remote)) {
@@ -233,43 +237,135 @@ namespace FileCompass
             var widths=TabWidths();
             tabStrip.Children.Clear(); if(EmptyPanel)return;for (int i = 0; i < tabs.Count; i++) {
                 int index = i; var saved = tabs[i].Saved;
-                string name = saved.Label;
-                if (String.IsNullOrEmpty(name) && saved.Projection != null) name = ProjectionFiles.Title(saved.Projection);
-                if (String.IsNullOrEmpty(name)) { name = String.IsNullOrEmpty(saved.Path) ? L.Text("common.folder") : Path.GetFileName((saved.Locked&&!String.IsNullOrEmpty(saved.Home)?saved.Home:saved.Path).TrimEnd('\\', '/')); if (String.IsNullOrEmpty(name)) name = saved.Path; }
-                if (tabs[i].Pending&&!String.IsNullOrEmpty(saved.ProfileId)) name += " · "+L.Text("tabs.disconnected");
-                if(!String.IsNullOrEmpty(tabs[i].Error))name="⚠ "+name;
-                var button = CompactTheme.Button((saved.Locked ? "🔒 " : "") + name, (String.IsNullOrEmpty(saved.Caption) ? "" : saved.Caption + "\n") + saved.Path, delegate { SwitchTab(index); });
+                var button = CompactTheme.Button(TabCaption(i), TabToolTip(i), delegate { SwitchTab(index); });
                 button.Width = widths[i]; button.MaxWidth = widths[i]; button.Height = 30; button.Padding = new Thickness(10, 1, 10, 1);
                 button.Margin = new Thickness(3, 4, 0, 0); button.Background = i == tabIndex ? CompactTheme.WhiteSurface : Brushes.Transparent;
                 button.Foreground = i == tabIndex ? FluentTheme.Accent : FluentTheme.Text;button.BorderBrush=CompactTheme.ThemeBrush("#A9BCD3");
-                var menu = new ContextMenu();
-                AddTabAction(menu, L.Text("tabs.new"), NewTab); AddTabAction(menu, L.Text("action.close"), delegate { CloseTab(index); });
-                AddTabAction(menu, saved.Locked ? L.Text("action.unlock") : L.Text("tabs.lockHomeFolder"), delegate { LockTab(index); });
-                AddTabAction(menu, L.Text("tabs.moveLeft"), delegate { MoveTab(index, -1); }); AddTabAction(menu, L.Text("tabs.moveRight"), delegate { MoveTab(index, 1); });
-                AddTabAction(menu, L.Text("tabs.renameMenu"), delegate { string label = NavigationPrompt(L.Text("tabs.title"), L.Text("tabs.nameLabel"), saved.Label); if (label != null) { saved.Label = label; RenderTabs();NotifyTabsChanged(); } });
-                AddTabStartMenu(menu,index);
-                var tabPath=new PathTextBlock{FullPath=TabPath(i),Prefix=TabPrefix(i),Width=Math.Max(20,widths[i]-24),Foreground=button.Foreground};button.Content=tabPath;
+                var menu = BuildTabMenu(index);
+                button.Content = new TextBlock { Text = TabCaption(i), TextTrimming = TextTrimming.CharacterEllipsis };
                 button.ContextMenu = menu;
                 if(i==tabIndex){
                     var fullCaption=new TextBlock{Text=TabPrefix(i)+TabPath(i),FontFamily=System.Windows.Documents.TextElement.GetFontFamily(this),FontSize=System.Windows.Documents.TextElement.GetFontSize(this)};fullCaption.Measure(new Size(Double.PositiveInfinity,30));
                     if(fullCaption.DesiredSize.Width+TabPath(i).Count(c=>c=='\\'||c=='/')*12+40>widths[i]){var compact=new DockPanel{Width=Math.Max(20,widths[i]-2)};var edit=CompactTheme.Button("✎",L.Text("navigation.editPathShortcutTooltip"),delegate{FocusAddress();});if(AppearanceTheme.IsClean)edit.Height=20;DockPanel.SetDock(edit,Dock.Right);compact.Children.Add(edit);compact.Children.Add(new PathTextBlock{FullPath=TabPath(i),Prefix=TabPrefix(i),Foreground=FluentTheme.Accent,Margin=new Thickness(5,0,2,0)});crumbScroll.Content=compact;}else crumbScroll.Content=crumbs;
                     crumbScroll.ScrollToHorizontalOffset(0);activeTabFace=new Border{Child=crumbScroll,Width=widths[i],Height=30,Margin=new Thickness(2,1,2,1),Background=CompactTheme.ActivePath,BorderBrush=FluentTheme.Accent,BorderThickness=new Thickness(AppearanceTheme.IsClean?1:2),CornerRadius=new CornerRadius(AppearanceTheme.IsClean?6:4),ToolTip=button.ToolTip,ContextMenu=menu};activeTabFace.MouseLeftButtonDown+=delegate{activate(this);};tabStrip.Children.Add(activeTabFace);}else tabStrip.Children.Add(button);
             }
-            if(cleanBreadcrumbFrame!=null&&activeTabFace!=null){
-                var menu=activeTabFace.ContextMenu;
-                if(AppearanceTheme.IsClean){menu.Items.Add(new Separator());AddTabAction(menu,L.Text("navigation.editPathShortcutTooltip"),FocusAddress);AddTabAction(menu,L.Text("favorites.title"),delegate{if(BookmarksRequested!=null)BookmarksRequested(this);});var recent=new MenuItem{Header=L.Text("navigation.folderHistory")};foreach(string path in history.Distinct(StringComparer.OrdinalIgnoreCase).Take(20)){string captured=path;AddTabActionTo(recent,captured,delegate{Navigate(captured,true);});}recent.IsEnabled=recent.Items.Count>0;menu.Items.Add(recent);}
-                cleanBreadcrumbFrame.ContextMenu=menu;
-            }
+            if (cleanBreadcrumbFrame != null) cleanBreadcrumbFrame.ContextMenu = activeTabFace?.ContextMenu;
+            RevealActiveTab();
         }
+
+        void RevealActiveTab()
+        {
+            var face = activeTabFace;
+            if (face == null) return;
+            face.Dispatcher.BeginInvoke(new Action(delegate
+            {
+                if (activeTabFace == face && face.IsVisible && tabScroller.ScrollableWidth > 0)
+                    face.BringIntoView();
+            }), DispatcherPriority.Loaded);
+        }
+
+        ContextMenu BuildTabMenu(int index)
+        {
+            var tab = tabs[index];
+            var saved = tab.Saved;
+            var menu = new ContextMenu();
+            AddTabAction(menu, L.Text("tabs.new"), NewTab).Icon = MainWindow.MenuCommandIcon("new-file");
+            AddTabAction(menu, L.Text("action.close"), delegate { CloseTab(index); }).Icon = MainWindow.MenuCommandIcon("close");
+            AddTabAction(menu, L.Text(saved.Locked ? "action.unlock" : "tabs.lockHomeFolder"), delegate { LockTab(index); }).Icon = MainWindow.MenuCommandIcon(saved.Locked ? "unlock" : "lock");
+            AddTabAction(menu, L.Text("tabs.renameMenu"), delegate
+            {
+                string label = NavigationPrompt(L.Text("tabs.title"), L.Text("tabs.nameLabel"), saved.Label);
+                if (label != null) { saved.Label = label; RenderTabs(); NotifyTabsChanged(); }
+            }).Icon = MainWindow.MenuCommandIcon("rename");
+            AddTabAction(menu, L.Text("tabs.moveLeft"), delegate { MoveTab(index, -1); }, "back").IsEnabled = index > 0;
+            AddTabAction(menu, L.Text("tabs.moveRight"), delegate { MoveTab(index, 1); }, "forward").IsEnabled = index < tabs.Count - 1;
+            menu.Items.Add(new Separator());
+            AddTabAction(menu, L.Text("clipboard.copyFullPaths"), async delegate
+            {
+                string path = index == tabIndex && IsRemote ? DisplayPath : TabPath(index);
+                if (String.IsNullOrEmpty(path)) return;
+                try
+                {
+                    if (!await ClipboardTextWriter.TryWriteAsync(path))
+                        MessageBox.Show(Window.GetWindow(this), L.Text("smart.clipboardBusy"), L.Text("clipboard.unavailableTitle"));
+                }
+                catch (System.Runtime.InteropServices.ExternalException ex)
+                {
+                    MessageBox.Show(Window.GetWindow(this), ex.Message, L.Text("clipboard.unavailableTitle"));
+                }
+            }, "copy");
+            AddLocationTabAction(menu, tab, "navigation.editPathShortcutTooltip", owner => FocusAddress());
+            AddLocationTabAction(menu, tab, "panel.openSameFolderInOtherPanel", owner => owner.OpenFolderInOtherPanel(this));
+            AddLocationTabAction(menu, tab, "action.refresh", owner => Refresh());
+            AddLocationTabAction(menu, tab, "action.findFiles", owner => owner.FindFiles(), () => !IsVirtualBrowser);
+            AddLocationTabAction(menu, tab, "panelCompare.command", owner => owner.CompareOpenPanels(), () => CanComparePanel);
+            AddLocationTabAction(menu, tab, saved.Projection?.Kind == "Flat" ? "projection.normal" : "projection.includeChildren",
+                owner => ToggleFlatView(), () => IsFlatView || CanOpenFlatView);
+            AddLocationTabAction(menu, tab, "columns.savedView", owner => owner.ShowPanelViewMenu(activeTabFace), () => CanUseFolderView);
+            AddLocationTabAction(menu, tab, "favorites.title", owner => BookmarksRequested?.Invoke(this));
+            var recent = new MenuItem { Header = L.Text("navigation.folderHistory"), Icon = MainWindow.MenuCommandIcon("history") };
+            var locations = index == tabIndex ? history.ToArray() : tab.History;
+            foreach (string path in locations.Distinct(StringComparer.OrdinalIgnoreCase).Take(20))
+                AddTabActionTo(recent, path, async delegate { if (await ActivateTabContext(tab)) Navigate(path, true); });
+            recent.IsEnabled = recent.Items.Count > 0;
+            menu.Items.Add(recent);
+            AddTabStartMenu(menu,index);
+            return menu;
+        }
+
+        async Task<bool> ActivateTabContext(PanelTab tab)
+        {
+            int index = tabs.IndexOf(tab);
+            if (index < 0 || IsLoading || (LocalLoading && index == tabIndex)) return false;
+            if (index != tabIndex)
+            {
+                SwitchTab(index);
+                if (TabNavigationTask != null) await TabNavigationTask;
+            }
+            if (tabs[tabIndex] != tab || HasUnavailableTab || LocalLoading || IsLoading || CurrentPath == null) return false;
+            activate(this);
+            return true;
+        }
+
+        void AddLocationTabAction(ContextMenu menu, PanelTab tab, string key, Action<MainWindow> action, Func<bool> allowed = null)
+        {
+            var item = AddTabAction(menu, L.Text(key), async delegate
+            {
+                if (!await ActivateTabContext(tab) || (allowed != null && !allowed())) return;
+                var owner = Window.GetWindow(this) as MainWindow;
+                if (owner != null) action(owner);
+            });
+            string icon;
+            switch (key)
+            {
+                case "navigation.editPathShortcutTooltip": icon = "edit"; break;
+                case "panel.openSameFolderInOtherPanel": icon = "panels-SideBySide"; break;
+                case "action.refresh": icon = "refresh"; break;
+                case "action.findFiles": icon = "search"; break;
+                case "panelCompare.command": icon = "sync"; break;
+                case "projection.normal": icon = "details"; break;
+                case "projection.includeChildren": icon = "tree"; break;
+                case "columns.savedView": icon = "settings"; break;
+                default: icon = "favorite"; break;
+            }
+            item.Icon = MainWindow.MenuCommandIcon(icon);
+            menu.Opened += delegate
+            {
+                item.IsEnabled = tabs.Contains(tab) && !IsLoading &&
+                    (tab != tabs[tabIndex] || !HasUnavailableTab && !LocalLoading && (allowed == null || allowed()));
+            };
+        }
+
         void AddTabStartMenu(ContextMenu menu,int index) {
-            var start=new MenuItem{Header=L.Text("menu.start"),Tag="tab-start-menu"};
+            var tab = tabs[index];
+            var start=new MenuItem{Header=L.Text("menu.start"),Tag="tab-start-menu",Icon=MainWindow.MenuCommandIcon("terminal")};
             Action<string,Action<MainWindow>,string> add=(key,action,shortcut)=>{
-             var item=new MenuItem{Header=L.Text(key),InputGestureText=shortcut};
+             var item=new MenuItem{Header=L.Text(key),InputGestureText=shortcut,
+                    Icon=MainWindow.MenuCommandIcon(key=="action.openExplorer"?"folder":"terminal")};
              item.Click+=async delegate{
-                if(index!=tabIndex){SwitchTab(index);if(TabNavigationTask!=null)await TabNavigationTask;}
-                if(index!=tabIndex || LocalLoading || IsLoading)return;
+                if(!await ActivateTabContext(tab))return;
                 var owner=Window.GetWindow(this) as MainWindow;if(owner==null)return;
-                activate(this);action(owner);
+                action(owner);
              };start.Items.Add(item);
             };
             add("action.openExplorer",w=>w.OpenExplorer(),"");
@@ -277,16 +373,83 @@ namespace FileCompass
             add("action.runPowerShellHere",w=>w.OpenPowerShell(),"Ctrl+Alt+P");
             menu.Items.Add(new Separator());menu.Items.Add(start);
         }
-        static void AddTabActionTo(MenuItem parent,string title,Action action){var item=new MenuItem{Header=title};item.Click+=delegate{action();};parent.Items.Add(item);}
+        static void AddTabActionTo(MenuItem parent,string title,Action action){var item=new MenuItem{Header=title,Icon=MainWindow.MenuCommandIcon("folder")};item.Click+=delegate{action();};parent.Items.Add(item);}
         string TabPath(int index){return index==tabIndex&&CurrentPath!=null?CurrentPath:tabs[index].Saved.Path??"";}
         string TabPrefix(int index){var tab=tabs[index];return (!String.IsNullOrEmpty(tab.Error)?"⚠ ":tab.Saved.Locked?"🔒 ":"")+(!String.IsNullOrEmpty(tab.Saved.ProfileId)?tab.Saved.Caption+" · ":"");}
-        double[] TabWidths(){
-            var natural=new double[tabs.Count];
-            for(int i=0;i<tabs.Count;i++){var text=new TextBlock{Text=AppearanceTheme.IsClean?CleanTabCaption(i):TabPrefix(i)+TabPath(i),FontFamily=System.Windows.Documents.TextElement.GetFontFamily(this),FontSize=AppearanceTheme.IsClean?Math.Max(14,System.Windows.Documents.TextElement.GetFontSize(this)+1):System.Windows.Documents.TextElement.GetFontSize(this)};text.Measure(new Size(Double.PositiveInfinity,30));natural[i]=Math.Max(70,Math.Min(260,text.DesiredSize.Width+72));}
-            double available=Math.Max(100,tabRow.ActualWidth-36-tabs.Count*4);if(natural.Sum()<=available)return natural;
-            double lo=70,hi=260;for(int n=0;n<20;n++){double mid=(lo+hi)/2;if(natural.Sum(x=>Math.Min(x,mid))>available)hi=mid;else lo=mid;}return natural.Select(x=>Math.Min(x,lo)).ToArray();
+        string TabDisplayPath(int index)
+        {
+            string path = TabPath(index);
+            if (index == tabIndex && CurrentPath != null && !HasUnavailableTab && (IsRemote || IsArchive || IsExt)) return DisplayPath;
+            if (index == tabIndex && IsShellBrowser && !String.IsNullOrEmpty(ShellLocationName)) return ShellLocationName;
+            if (WindowsShell.SamePath(path,WindowsShell.RecycleBin)) return L.Text("locations.recycleBin");
+            return path;
         }
-        static void AddTabAction(ContextMenu menu, string title, Action action) { var item = new MenuItem { Header = title }; item.Click += delegate { action(); }; menu.Items.Add(item); }
+
+        string TabCaption(int index)
+        {
+            string path = TabDisplayPath(index);
+            string last = path.TrimEnd('\\','/').Split(new[]{'\\','/'}, StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+            string caption = index == tabIndex ? path : tabs[index].Saved.Label;
+            if (String.IsNullOrEmpty(caption)) caption = String.IsNullOrEmpty(last) || path.Length <= 3 ? path : last;
+            if (String.IsNullOrEmpty(caption)) caption = L.Text("common.folder");
+            var tab = tabs[index];
+            return (!String.IsNullOrEmpty(tab.Error) ? "⚠ " : tab.Saved.Locked ? "🔒 " : "") + caption;
+        }
+
+        string TabToolTip(int index)
+        {
+            var saved = tabs[index].Saved;
+            return String.Join("\n", new[] { saved.Label, saved.Caption, TabDisplayPath(index) }.Where(x => !String.IsNullOrEmpty(x)).Distinct());
+        }
+
+        double[] TabWidths()
+        {
+            double available = Math.Max(80, tabRow.ActualWidth - newTabButton.Width - newTabButton.Margin.Left);
+            double gap = AppearanceTheme.IsClean ? 2 : 4;
+            var widths = new double[tabs.Count];
+            double inactiveWidth = 0;
+            for (int index = 0; index < tabs.Count; index++)
+            {
+                if (index == tabIndex) continue;
+                var label = new TextBlock { Text = TabCaption(index), FontFamily = System.Windows.Documents.TextElement.GetFontFamily(this),
+                    FontSize = TabFontSize };
+                label.Measure(new Size(Double.PositiveInfinity, 30));
+                widths[index] = Math.Max(56, Math.Ceiling(label.DesiredSize.Width) + 54);
+                inactiveWidth += widths[index] + gap;
+            }
+            // Allocate the full names first. The active tab expands into the remaining room.
+            var activeLabel = new TextBlock { Text = TabCaption(tabIndex),
+                FontFamily = System.Windows.Documents.TextElement.GetFontFamily(this), FontSize = TabFontSize,
+                FontWeight = FontWeights.Medium };
+            activeLabel.Measure(new Size(Double.PositiveInfinity, 30));
+            double desiredActive = Math.Max(65, Math.Ceiling(activeLabel.DesiredSize.Width) + 56);
+            double reservedForActive = Math.Min(available - gap, Math.Min(desiredActive, 84));
+            double inactiveBudget = available - reservedForActive - gap;
+            if (tabs.Count > 1 && inactiveWidth > inactiveBudget)
+            {
+                double factor = Math.Max(0, inactiveBudget - (tabs.Count - 1) * gap) /
+                    widths.Sum();
+                inactiveWidth = 0;
+                for (int index = 0; index < tabs.Count; index++)
+                {
+                    if (index == tabIndex) continue;
+                    widths[index] = Math.Max(56, Math.Floor(widths[index] * factor));
+                    inactiveWidth += widths[index] + gap;
+                }
+            }
+            widths[tabIndex] = Math.Min(desiredActive, Math.Max(reservedForActive, available - inactiveWidth - gap));
+            return widths;
+        }
+
+        double TabFontSize { get { return Math.Max(14,System.Windows.Documents.TextElement.GetFontSize(this)+1); } }
+
+        static MenuItem AddTabAction(ContextMenu menu, string title, Action action, string icon = null)
+        {
+            var item = new MenuItem { Header = title, Icon = icon == null ? null : MainWindow.MenuCommandIcon(icon) };
+            item.Click += delegate { action(); };
+            menu.Items.Add(item);
+            return item;
+        }
         void NavigationChanged()
         {
             RefreshCleanDrives();
@@ -323,7 +486,7 @@ namespace FileCompass
         internal bool MatchesFilter(object value)
         {
             var item = value as Entry; if (item == null || item.IsParent) return true;
-            if ((!showHiddenFiles && item.IsHidden) || (!showSystemFiles && item.IsSystem)) return false;
+            if ((!showHiddenFiles && item.IsHidden) || (!showSystemFiles && item.IsSystem) || !MatchesComparison(item)) return false;
             if (quickMode.SelectedIndex == 1 || String.IsNullOrEmpty(quickText.Text)) return true;
             string query = quickText.Text; if (query.StartsWith("#")) return item.TagNames.Any(x => x.IndexOf(query.Substring(1), StringComparison.CurrentCultureIgnoreCase) >= 0); return query.IndexOfAny(new[] { '*', '?' }) >= 0 ? MaskMatches(EntryName(item), query) : EntryName(item).IndexOf(query, StringComparison.CurrentCultureIgnoreCase) >= 0;
         }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -27,7 +27,7 @@ namespace FileCompass {
             if(panelPathRow==null||cleanBreadcrumbFrame==null)return;
             bool editing=address.Visibility==Visibility.Visible;
             panelPathRow.Visibility=Visibility.Visible;panelPathRow.Margin=new Thickness(0);panelPathRow.Background=Brushes.Transparent;tabRow.Background=Brushes.Transparent;tabRow.Visibility=Visibility.Visible;
-            cleanBreadcrumbFrame.Background=IsActivePanel?CompactTheme.ThemeBrush("#D3E2EF"):CompactTheme.PanelSurface;cleanBreadcrumbFrame.ToolTip=CurrentPath;cleanBreadcrumbFrame.Visibility=Visibility.Visible;cleanBreadcrumbDock.Visibility=editing?Visibility.Collapsed:Visibility.Visible;
+            cleanBreadcrumbFrame.Background=Brushes.Transparent;cleanBreadcrumbFrame.ToolTip=CurrentPath;cleanBreadcrumbFrame.Visibility=Visibility.Visible;cleanBreadcrumbDock.Visibility=editing?Visibility.Collapsed:Visibility.Visible;
             if(cleanRootButton!=null)cleanRootButton.IsEnabled=cleanParentButton.IsEnabled=CurrentPath!=null;
         }
         Button networkDriveButton;bool? cleanChrome;double driveIconSize=10,cleanExtensionWidth=80,cleanAttributesWidth=70;

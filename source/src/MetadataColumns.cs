@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -79,13 +79,20 @@ namespace FileCompass {
         bool automaticFolderViews, applyingFolderView, columnScanQueued;
         string lastColumnPath;
         PanelView normalFolderView;
+        FolderViewRule activeFolderViewRule;
+        bool showingSuggestedFolderView;
+        bool suppressFolderView;
         internal string[] MetadataColumnKeys {get{return view.Columns.Cast<GridViewColumn>().Select(ColumnKey).Where(MetadataColumn.IsSort).Select(x=>x.Substring(5)).ToArray();}}
         internal string ColumnIdentity(int index) {var columns=LogicalColumns.ToArray();return index<0||index>=columns.Length?null:ColumnKey(columns[index]);}
         internal void InitializeMetadataColumns() {
             PathChanged+=delegate {
                 columnCancellation.Cancel();columnCancellation.Dispose();columnCancellation=new CancellationTokenSource();columnPending.Clear();
-                if(!String.Equals(lastColumnPath,DisplayPath,StringComparison.OrdinalIgnoreCase)){
-                    lastColumnPath=DisplayPath;ApplyAutomaticFolderView();
+                string folderPath = CanUseFolderView ? CurrentPath : null;
+                if (!String.Equals(lastColumnPath, folderPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    lastColumnPath = folderPath;
+                    suppressFolderView = false;
+                    ApplyAutomaticFolderView();
                 }
                 ScheduleColumnMetadata();
                 if(MetadataColumn.IsSort(sortProperty))LoadAllColumnMetadata();
@@ -137,29 +144,110 @@ namespace FileCompass {
                 var moveRight=new MenuItem{Header=L.Text("columns.moveRight"),IsEnabled=position>=0&&position<visible.Count-1};moveRight.Click+=delegate{MoveVisibleColumn(selectedColumn,1);};menu.Items.Add(moveRight);
                 var reset=new MenuItem{Header=L.Text("columns.reset")};reset.Click+=delegate {extensionColumn=null;attributesColumn=null;sizeColumn=null;modifiedColumn=null;ApplyBaseColumns();SetMetadataColumns(new string[0]);ApplyColumnOrder(BaseColumnKeys);preserveColumnWidths=false;ResizeColumns();Sort();};menu.Items.Add(reset);
                 menu.Items.Add(new Separator());
-                AddFolderRuleItem(menu,false);AddFolderRuleItem(menu,true);
-                var remove=new MenuItem{Header=L.Text("columns.removeRule"),IsEnabled=CanUseFolderView};
-                remove.Click+=delegate {try{var store=FolderViewRules.Load();store.Rules.RemoveAll(x=>String.Equals(x.Path,CurrentPath,StringComparison.OrdinalIgnoreCase));store.Save();if(automaticFolderViews){lastColumnPath=null;ApplyAutomaticFolderView();}}catch(Exception ex){MessageBox.Show(Window.GetWindow(this),ex.Message);}};
-                menu.Items.Add(remove);
+                AddFolderViewOptions(menu);
             };
             return menu;
         }
-        bool CanUseFolderView {get{return !IsRemote&&!IsArchive&&!IsShellBrowser&&!IsNetworkBrowser&&projection==null&&!String.IsNullOrEmpty(CurrentPath);}}
-        void AddFolderRuleItem(ContextMenu menu,bool children) {
+        bool CanUseFolderView {get{return !IsExt&&!EmptyPanel&&!HasUnavailableTab&&!IsRemote&&!IsArchive&&!IsShellBrowser&&!IsNetworkBrowser&&projection==null&&!String.IsNullOrEmpty(CurrentPath);}}
+        void AddFolderRuleItem(ItemsControl menu,bool children) {
             var item=new MenuItem{Header=L.Text(children?"columns.saveChildren":"columns.saveFolder"),IsEnabled=CanUseFolderView};
             item.Click+=delegate {
                 try{
                     var state=new PanelView();SavePanelView(state);
-                    var store=FolderViewRules.Load();store.Rules.RemoveAll(x=>String.Equals(x.Path,CurrentPath,StringComparison.OrdinalIgnoreCase));
-                    store.Rules.Add(new FolderViewRule{Path=CurrentPath,IncludeChildren=children,View=state});store.Save();
+                    var store=FolderViewRules.Load();store.Rules.RemoveAll(x=>SameFolderRulePath(x.Path, CurrentPath));
+                    var rule = new FolderViewRule { Path = CurrentPath, IncludeChildren = children, View = state };
+                    store.Rules.Add(rule);
+                    store.Save();
+                    if (normalFolderView == null) normalFolderView = lastDefaultFolderView ?? state;
+                    activeFolderViewRule = rule;
+                    showingSuggestedFolderView = false;
+                    suppressFolderView = false;
                 }catch(Exception ex){MessageBox.Show(Window.GetWindow(this),ex.Message);}
             };menu.Items.Add(item);
         }
-        internal void SetAutomaticFolderViews(bool enabled) {
-            if(automaticFolderViews==enabled)return;
-            automaticFolderViews=enabled;
-            if(!enabled&&normalFolderView!=null){applyingFolderView=true;try{RestorePanelView(normalFolderView);}finally{applyingFolderView=false;normalFolderView=null;}}
-            if(enabled)ApplyAutomaticFolderView();
+        PanelView lastDefaultFolderView;
+
+        internal string FolderViewCaption
+        {
+            get
+            {
+                return L.Text(activeFolderViewRule != null ? "columns.savedView" :
+                    showingSuggestedFolderView ? "columns.suggestedView" : "columns.defaultView");
+            }
+        }
+
+        internal void UseDefaultFolderView()
+        {
+            if (normalFolderView != null)
+            {
+                suppressFolderView = true;
+                ApplyAutomaticFolderView();
+            }
+            else if (DisplayMode != "Details") SetDisplay("Details");
+        }
+
+        internal void AddFolderViewOptions(ItemsControl menu, bool includeDefault = true)
+        {
+            AddFolderRuleItem(menu, false);
+            AddFolderRuleItem(menu, true);
+            if (includeDefault)
+            {
+                var reset = new MenuItem { Header = L.Text("columns.useDefault"), IsEnabled = CanUseFolderView && normalFolderView != null };
+                reset.Click += delegate { UseDefaultFolderView(); };
+                menu.Items.Add(reset);
+            }
+            var reapply = new MenuItem { Header = L.Text("columns.reapplyView"), IsEnabled = CanUseFolderView && suppressFolderView };
+            reapply.Click += delegate
+            {
+                suppressFolderView = false;
+                ApplyAutomaticFolderView();
+            };
+            menu.Items.Add(reapply);
+            var store = CanUseFolderView ? FolderViewRules.Load() : null;
+            var remove = new MenuItem { Header = L.Text("columns.removeRule"), IsEnabled = store != null && store.Rules.Any(rule => SameFolderRulePath(rule.Path, CurrentPath)) };
+            remove.Click += delegate
+            {
+                try
+                {
+                    var rules = FolderViewRules.Load();
+                    rules.Rules.RemoveAll(rule => SameFolderRulePath(rule.Path, CurrentPath));
+                    rules.Save();
+                    suppressFolderView = false;
+                    ApplyAutomaticFolderView();
+                }
+                catch (Exception ex) { MessageBox.Show(Window.GetWindow(this), ex.Message); }
+            };
+            menu.Items.Add(remove);
+        }
+
+        static bool SameFolderRulePath(string first, string second)
+        {
+            return String.Equals(first?.TrimEnd('\\','/'), second?.TrimEnd('\\','/'), StringComparison.OrdinalIgnoreCase);
+        }
+
+        PanelView CaptureBaseFolderView()
+        {
+            if (normalFolderView != null) return normalFolderView;
+            var state = new PanelView();
+            SavePanelView(state);
+            return state;
+        }
+
+        void ResetFolderViewTracking()
+        {
+            lastColumnPath = null;
+            normalFolderView = null;
+            lastDefaultFolderView = null;
+            activeFolderViewRule = null;
+            showingSuggestedFolderView = false;
+            suppressFolderView = false;
+        }
+
+        internal void SetAutomaticFolderViews(bool enabled)
+        {
+            if (automaticFolderViews == enabled) return;
+            automaticFolderViews = enabled;
+            if (activeFolderViewRule == null) ApplyAutomaticFolderView();
         }
         internal static string DetectFolderKind(IEnumerable<Entry> entries) {
             var files=entries.Where(x=>!x.IsDirectory&&!x.IsParent&&!x.IsHidden&&!x.IsSystem).ToArray();
@@ -178,20 +266,42 @@ namespace FileCompass {
             return "";
         }
         internal void ApplyAutomaticFolderView() {
-            if(!automaticFolderViews||applyingFolderView||List.ItemsSource==null)return;
-            applyingFolderView=true;
-            try {
-                if(normalFolderView!=null)RestorePanelView(normalFolderView);
-                if(!CanUseFolderView)return;
-                if(normalFolderView==null){normalFolderView=new PanelView();SavePanelView(normalFolderView);}
-                var rule=FolderViewRules.Load().Match(CurrentPath);
-                if(rule!=null){RestorePanelView(rule.View);return;}
-                string kind=DetectFolderKind(List.ItemsSource.Cast<Entry>());
+            if (applyingFolderView || List.ItemsSource == null) return;
+            applyingFolderView = true;
+            try
+            {
+                if (normalFolderView != null) RestorePanelView(normalFolderView);
+                normalFolderView = null;
+                activeFolderViewRule = null;
+                showingSuggestedFolderView = false;
+                lastDefaultFolderView = null;
+                if (!CanUseFolderView) return;
+
+                lastDefaultFolderView = CaptureBaseFolderView();
+                if (suppressFolderView) return;
+
+                activeFolderViewRule = FolderViewRules.Load().Match(CurrentPath);
+                if (activeFolderViewRule != null)
+                {
+                    normalFolderView = lastDefaultFolderView;
+                    RestorePanelView(activeFolderViewRule.View);
+                    return;
+                }
+                if (!automaticFolderViews) return;
+                string kind = DetectFolderKind(List.ItemsSource.Cast<Entry>());
+                if (String.IsNullOrEmpty(kind)) return;
+
+                normalFolderView = lastDefaultFolderView;
+                showingSuggestedFolderView = true;
                 if(kind=="images"){SetMetadataColumns(new[]{"dimensions","taken","camera"});SetDisplay("Thumbnails");}
                 else if(kind=="documents"){SetMetadataColumns(new[]{"author","pages","sheets"});SetDisplay("Details");}
                 else if(kind=="audio"){SetMetadataColumns(new[]{"artist","album","title","duration"});SetDisplay("Details");}
                 else if(kind=="video"){SetMetadataColumns(new[]{"duration","dimensions"});SetDisplay("Details");}
-            }finally{applyingFolderView=false;}
+            }
+            finally
+            {
+                applyingFolderView = false;
+            }
         }
         void ScheduleColumnMetadata() {
             if(columnScanQueued||MetadataColumnKeys.Length==0)return;

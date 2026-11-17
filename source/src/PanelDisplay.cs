@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -18,10 +18,9 @@ namespace FileCompass
     {
         internal event Action DisplayModeChanged;
         string displayMode = "Details",treeRootKey;
-        bool treeVisible, treeRequested, treeAllowedByLayout = true;
+        bool treeVisible, treeRequested;
         double treeWidth = 210;
         bool revealingTree;
-        int treeRevealVersion;
         readonly Dictionary<TreeViewItem, Task> treeLoads = new Dictionary<TreeViewItem, Task>();
         readonly HashSet<TreeViewItem> loadedTreeNodes = new HashSet<TreeViewItem>();
         internal Task TreeLoadingTask { get; private set; }
@@ -53,7 +52,8 @@ namespace FileCompass
             folderTree.Margin = new Thickness(0, 0, 6, 0);
             treeGrip = new Thumb { Width = 6, HorizontalAlignment = HorizontalAlignment.Right, Cursor = Cursors.SizeWE, Background = CompactTheme.Chrome };
             Grid.SetRow(treeGrip, 3); grid.Children.Add(treeGrip);
-            treeGrip.DragDelta += delegate(object sender, DragDeltaEventArgs e) { treeWidth = Math.Max(120, Math.Min(Math.Min(800, Math.Max(120, ActualWidth - 220)), displayGrid.ColumnDefinitions[0].ActualWidth + e.HorizontalChange)); if (treeVisible) displayGrid.ColumnDefinitions[0].Width = new GridLength(treeWidth); };
+            displayGrid.SizeChanged += delegate { SizeFolderTree(); };
+            treeGrip.DragDelta += delegate(object sender, DragDeltaEventArgs e) { treeWidth = Math.Max(120, Math.Min(Math.Min(800, Math.Max(120, ActualWidth - 220)), displayGrid.ColumnDefinitions[0].ActualWidth + e.HorizontalChange)); SizeFolderTree(); };
             folderTree.IsVisibleChanged += delegate { treeGrip.Visibility = treeVisible ? Visibility.Visible : Visibility.Collapsed; };
             treeGrip.Visibility = Visibility.Collapsed;
             folderTree.SelectedItemChanged += delegate { if (revealingTree) return; var node = folderTree.SelectedItem as TreeViewItem; if (node != null && node.Tag is string) { string path = (string)node.Tag; if (path != CurrentPath) Navigate(path,true); } };
@@ -141,14 +141,22 @@ namespace FileCompass
             } catch (OperationCanceledException) { } catch (Exception) { /* Keep the file icon when a decoder or remote preview is unavailable. */ }
             finally { thumbnailPending.Remove(entry); if (acquired) thumbnailSlots.Release(); if (remote != null) remote.Dispose(); }
         }
+        void SizeFolderTree()
+        {
+            if (displayGrid == null) return;
+            double width = displayGrid.ActualWidth > 0
+                ? Math.Min(treeWidth, Math.Max(0, Math.Min(displayGrid.ActualWidth * .45, displayGrid.ActualWidth - 160)))
+                : treeWidth;
+            displayGrid.ColumnDefinitions[0].Width = new GridLength(treeVisible ? width : 0);
+        }
+
+        internal bool FolderTreeVisible { get { return treeVisible; } }
         internal void ToggleTree() { SetTree(!treeRequested); }
-        internal void SetLayoutTreeVisibility(bool allowed) { treeAllowedByLayout = allowed; SetTree(treeRequested); }
         internal void SetTree(bool show)
         {
-            treeRevealVersion++;
-            treeRequested = show; treeVisible = show && treeAllowedByLayout; if (displayGrid == null) return;
+            treeRequested = treeVisible = show; if (displayGrid == null) return;
             if (treeGrip != null) treeGrip.Visibility = treeVisible ? Visibility.Visible : Visibility.Collapsed;
-            folderTree.Visibility = treeVisible ? Visibility.Visible : Visibility.Collapsed; displayGrid.ColumnDefinitions[0].Width = new GridLength(treeVisible ? treeWidth : 0); if (treeVisible) EnsureTreeRoot();
+            folderTree.Visibility = treeVisible ? Visibility.Visible : Visibility.Collapsed; SizeFolderTree(); if (treeVisible) EnsureTreeRoot();
         }
     }
 }

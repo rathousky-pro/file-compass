@@ -69,8 +69,6 @@ namespace FileCompass
             RememberPanelRatio(); CloseQuickPreview();
             bool enteringSingle = mode == "Single" && (!layoutInitialized || panelLayout != "Single");
             panelLayout = mode; if (mode != "Single") lastDualLayout = mode;
-            // A tab or saved view may request a tree, but dual-panel layouts never display it.
-            left.SetLayoutTreeVisibility(mode == "Single"); right.SetLayoutTreeVisibility(mode == "Single");
             left.SetDetailLayoutVisibility(mode == "Single"); right.SetDetailLayoutVisibility(mode == "Single");
             panelSplit.RowDefinitions.Clear(); panelSplit.ColumnDefinitions.Clear();
             left.Visibility = right.Visibility = Visibility.Visible;

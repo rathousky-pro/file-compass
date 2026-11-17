@@ -11,10 +11,15 @@ namespace FileCompass {
   readonly CompressionRatioTrend ratioTrend=new CompressionRatioTrend{Height=68,Margin=new Thickness(0,8,0,0)};
   bool finished;
   internal Action Backgrounded,Foregrounded;
-  internal ArchiveProgressDialog(Window owner,string title,CancellationTokenSource cancellation){
-   CopyUi.Style(this,owner,L.Text("app.dialogTitlePrefix")+title,620);SizeToContent=SizeToContent.Height;ResizeMode=ResizeMode.NoResize;
+  internal ArchiveProgressDialog(Window owner,string title,CancellationTokenSource cancellation,string archivePath=null){
+   CopyUi.Style(this,owner,L.Text("app.dialogTitlePrefix")+title+(archivePath==null?"":" · "+archivePath),620);SizeToContent=SizeToContent.Height;ResizeMode=ResizeMode.NoResize;
    placement=new TransferWindowState(this,delegate{if(Backgrounded!=null)Backgrounded();},delegate{if(Foregrounded!=null)Foregrounded();});
    presentation=new TransferProgressLayout(this,title);
+   if(!String.IsNullOrEmpty(archivePath)){
+    presentation.Route.Tag="dialog-title-detail";
+    presentation.Route.SetPath("",archivePath);
+    presentation.Route.Visibility=Visibility.Visible;
+   }
    presentation.DetailBody.Children.Add(detail);presentation.DetailBody.Children.Add(compression);presentation.DetailBody.Children.Add(ratioTrend);
    presentation.Actions.Children.Add(CopyUi.Button(L.Text("action.cancel"),cancellation.Cancel));
    var background=CopyUi.Button(L.Text("copy.backgroundAction"),placement.Background);FluentTheme.Primary(background);presentation.Actions.Children.Add(background);

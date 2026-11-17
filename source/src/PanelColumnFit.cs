@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -68,7 +68,7 @@ namespace FileCompass {
   bool CanShowColumn(string key){return ColumnRoom<1||view.Columns.Where(x=>x.Width>0&&ColumnKey(x)!=key).Sum(x=>ColumnMinimum(ColumnKey(x)))+ColumnMinimum(key)<=ColumnRoom;}
   void FitColumns(string preferred=null){
    if(draggingColumnDivider||List.ActualWidth<1||view.Columns.Count<5)return;double room=ColumnRoom;var wanted=view.Columns.Where(x=>{int index=Array.IndexOf(BaseColumnKeys,ColumnKey(x));return index<0||BaseColumnVisible(index);}).ToList();
-   var priority=wanted.OrderBy(x=>ColumnKey(x)=="Name"?0:ColumnKey(x)=="Size"?1:ColumnKey(x)=="Modified"?2:ColumnKey(x)=="Extension"?3:ColumnKey(x)=="Attributes"?4:5).ToList();var shown=new System.Collections.Generic.List<GridViewColumn>();double used=0;
+   var priority=wanted.OrderBy(x=>ColumnKey(x)=="Name"?0:ColumnKey(x)=="ComparisonLabel"||ColumnKey(x)=="FlatLocation"?1:ColumnKey(x)=="Size"?2:ColumnKey(x)=="Modified"?3:ColumnKey(x)=="Extension"?4:ColumnKey(x)=="Attributes"?5:6).ToList();var shown=new System.Collections.Generic.List<GridViewColumn>();double used=0;
    foreach(var column in priority){double minimum=ColumnMinimum(ColumnKey(column));if(shown.Count==0||used+minimum<=room){shown.Add(column);used+=Math.Min(minimum,room);}}
    bool previous=resizingColumns;resizingColumns=true;try{
     var widths=shown.Select(x=>Math.Max(ColumnMinimum(ColumnKey(x)),Double.IsNaN(x.Width)?100:x.Width)).ToArray();double minimumTotal=shown.Sum(x=>ColumnMinimum(ColumnKey(x)));

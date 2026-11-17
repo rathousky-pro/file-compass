@@ -48,14 +48,47 @@ namespace FileCompass {
    body.Children.Add(new Border{Height=1,Background=CompactTheme.ColorBrush("#42617C"),Margin=new Thickness(6,10,6,6)});
    link(L.Text("favorites.openMenu"),delegate{ShowFavorites();});
    link(L.Text("queue.copyTitle"),ShowCopyQueue);
-   var drawerBody=new DockPanel();if(about!=null){about.Icon=new TextBlock{Text="\uE946",FontFamily=new FontFamily("Segoe MDL2 Assets"),Foreground=Brushes.White,FontSize=16};System.Windows.Automation.AutomationProperties.SetAutomationId(about,"FluentAbout");var aboutMenu=CascadeNavigation.Build(new[]{about},CloseFluentDrawer);aboutMenu.Tag="cascade-about";var aboutFooter=new Border{Tag="drawer-about-footer",Padding=new Thickness(12,8,12,8),BorderBrush=CompactTheme.ColorBrush("#42617C"),BorderThickness=new Thickness(0,1,0,0),Child=aboutMenu};DockPanel.SetDock(aboutFooter,Dock.Bottom);drawerBody.Children.Add(aboutFooter);}drawerBody.Children.Add(new ScrollViewer{Tag="drawer-scroll",Content=body,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled});
+   Menu aboutMenu=null;
+   var drawerBody=new DockPanel();if(about!=null){about.Icon=new TextBlock{Text="\uE946",FontFamily=new FontFamily("Segoe MDL2 Assets"),Foreground=Brushes.White,FontSize=16};System.Windows.Automation.AutomationProperties.SetAutomationId(about,"FluentAbout");aboutMenu=CascadeNavigation.Build(new[]{about},CloseFluentDrawer);aboutMenu.Tag="cascade-about";var aboutFooter=new Border{Tag="drawer-about-footer",Padding=new Thickness(12,8,12,8),BorderBrush=CompactTheme.ColorBrush("#42617C"),BorderThickness=new Thickness(0,1,0,0),Child=aboutMenu};DockPanel.SetDock(aboutFooter,Dock.Bottom);drawerBody.Children.Add(aboutFooter);}drawerBody.Children.Add(new ScrollViewer{Tag="drawer-scroll",Content=body,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled});
    fluentDrawer=new Border{Tag="fluent-drawer",Width=250,HorizontalAlignment=HorizontalAlignment.Left,VerticalAlignment=VerticalAlignment.Stretch,Margin=new Thickness(8,0,0,8),Background=FluentColors.Navigation,CornerRadius=new CornerRadius(8),Visibility=Visibility.Collapsed,Child=drawerBody};
    InstallDrawerSearch(drawerBody,roots.Concat(about==null?new MenuItem[0]:new[]{about}).ToArray());
+   WatchDrawerMenuPointer(fluentCascadeMenu);
+   if(aboutMenu!=null)WatchDrawerMenuPointer(aboutMenu);
    Panel.SetZIndex(fluentDrawer,20);workspace.Children.Add(fluentDrawer);
    split.PreviewMouseDown+=delegate{CloseFluentDrawer();};
    Deactivated+=delegate{CloseFluentDrawer();};
    PreviewKeyDown+=delegate(object sender,KeyEventArgs e){if(e.Key==Key.Escape&&fluentDrawer.IsVisible){CloseFluentDrawer();menu.Focus();e.Handled=true;}};
   }
+  void WatchDrawerMenuPointer(Menu menu)
+  {
+   var handler = new MouseEventHandler(delegate(object sender, MouseEventArgs e)
+   {
+    CloseDrawerSubmenuOverControl(menu, e.GetPosition(fluentDrawer));
+   });
+   fluentDrawer.AddHandler(Mouse.PreviewMouseMoveEvent, handler, true);
+   menu.AddHandler(Mouse.PreviewMouseMoveEvent, handler, true);
+  }
+
+  internal void CloseDrawerSubmenuOverControl(Menu menu, Point position)
+  {
+   if (!fluentDrawer.IsVisible || !menu.Items.OfType<MenuItem>().Any(item => item.IsSubmenuOpen))
+    return;
+
+   // Mouse capture routes moves to the menu even over other drawer controls.
+   var hit = fluentDrawer.InputHitTest(position) as DependencyObject;
+   while (hit != null && hit != fluentDrawer)
+   {
+    if (hit is TextBox || hit is Button)
+    {
+     CascadeNavigation.Close(menu);
+     if (Mouse.Captured == menu)
+      menu.ReleaseMouseCapture();
+     return;
+    }
+    hit = VisualTreeHelper.GetParent(hit);
+   }
+  }
+
   internal void ToggleFluentDrawer(){if(fluentDrawer.IsVisible)CloseFluentDrawer();else{fluentDrawer.Visibility=Visibility.Visible;fluentCommandSearch.Clear();fluentCommandSearch.Focus();}}
  }
 }

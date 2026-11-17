@@ -1,6 +1,6 @@
 # Aktualizace programu a doplňků
 
-V **Konfigurace → Aktualizace** najdete instalovanou a dostupnou verzi, výsledek poslední kontroly, zdroj a cestu k používanému souboru. Kontrolu lze spustit ručně nebo povolit jednou denně. Denní kontrola sama žádné balíčky nestahuje. Změna jejího nastavení se ukládá tlačítkem **Použít** nebo **Uložit**; kontrola, stažení a použití balíčku jsou samostatné okamžité akce.
+V **Konfigurace → Aktualizace** najdete instalovanou a dostupnou verzi, výsledek poslední kontroly, zdroj a cestu k používanému souboru. Kontrolu lze spustit ručně nebo povolit jednou denně. Denní kontrola sama žádné balíčky nestahuje. Změna jejího nastavení se ukládá tlačítkem **Použít** nebo **Uložit**; kontrola a stažení jsou samostatné akce; připravená součást se aktivuje automaticky, jakmile to podmínky dovolí.
 
 ## Zdroje
 
@@ -10,8 +10,6 @@ V **Konfigurace → Aktualizace** najdete instalovanou a dostupnou verzi, výsle
 | FFmpeg + FFprobe | [Plné statické Windows sestavení gyan.dev](https://www.gyan.dev/ffmpeg/builds/), na které odkazuje [ffmpeg.org](https://ffmpeg.org/download.html); oba nástroje společně. |
 | rclone | [Oficiální repozitář rclone/rclone](https://github.com/rclone/rclone/releases), Windows AMD64 balíček. |
 | smartmontools | [Oficiální vydání](https://github.com/smartmontools/smartmontools/releases). Verze se kontroluje, ale automatická instalace vyžaduje zveřejněný SHA-256. Aktuální starší vydání na GitHubu má místo něj PGP/MD5 soubory; dokud aplikace neověřuje PGP, nabídne stránku výrobce. |
-| Magick.NET / OpenMP | Přehled ukazuje instalovanou verzi. Spravovaná knihovna, nativní OpenMP knihovna a odpovídající runtime se aktualizují společně s File Compass. Samostatná aktualizace FFmpegu je nenahrazuje. |
-| Knihovny a ovladače | Síťové/náhledové knihovny zůstávají součástí vydání File Compass. SSHFS/WinFsp nadále používají instalační postupy výrobce. |
 | File Compass | [GitHub Releases rathousky-pro/file-compass-web](https://github.com/rathousky-pro/file-compass-web/releases), Windows x64 ZIP; porovnává se verze, kanál i build. |
 
 Zjištění verze a ověření stahovaného balíčku jsou samostatné kroky. Pokud metadata výrobce potvrzují stejnou nebo starší verzi, stav je **Aktuální** i tehdy, když vydavatel neposkytuje SHA-256. U novější verze bez SHA-256 stav nabízí ruční stažení; automatické stažení a instalace zůstávají vypnuté. Podrobnost u řádku vysvětluje chybějící kontrolní součet. Chyba síťové kontroly se nadále zobrazuje jako chyba.
@@ -26,7 +24,7 @@ Doplňky používají stabilní vydání. File Compass v beta kanálu připoušt
 4. Nová verze zůstává v datové části profilu, například `data/updates/packages/7zip/<sha256>/7zip/`. Původní dodané soubory se nepřepisují. Tím funguje i instalace bez práva měnit programové soubory, pokud je zapisovatelná datová část profilu.
 5. Je-li součást volná a v programu neběží práce, připravená verze se atomicky aktivuje. Pokud už byla DLL 7-Zipu načtena do procesu, změna počká na příští spuštění. rclone se přepíná při příštím spuštění kvůli jeho dlouho žijícím cloudovým procesům. Rozpracované převody, archivace a přenosy se kvůli aktualizaci neruší.
 
-**Použít připravené** zkusí aktivovat čekající balíčky, pro které jsou splněné podmínky. **Vrátit předchozí** vrátí předchozí verzi, případně původní dodanou součást; u načtené DLL a rclone se návrat připraví pro další spuštění. Nastavení, taby, připojení a uživatelské soubory tím nejsou nahrazovány.
+Připravené součásti se po uvolnění automaticky aktivují; součásti vyžadující restart se aktivují při dalším spuštění. **Vrátit předchozí** vrátí předchozí verzi, případně původní dodanou součást; u načtené DLL a rclone se návrat připraví pro další spuštění. Nastavení, taby, připojení a uživatelské soubory tím nejsou nahrazovány.
 
 ## Ověřování a obnova
 
@@ -49,7 +47,7 @@ Každý příkaz používá vlastní testovací profil. Živý test navíc načt
 
 ## Vydání a vlastní aktualizace File Compass
 
-Kontrola používá `https://api.github.com/repos/rathousky-pro/file-compass-web/releases?per_page=100`. Zdrojový repozitář aplikace zůstává soukromý. Veřejný repozitář webu nese pouze distribuční ZIP a poznámky vydání. Záznam bez vhodného vydání není označen jako aktuální verze.
+Kontrola používá `https://api.github.com/repos/rathousky-pro/file-compass-web/releases?per_page=100`. Zdrojový repozitář aplikace je veřejný. Vydání a distribuční balíčky jsou v repozitáři webu. Záznam bez vhodného vydání není označen jako aktuální verze.
 
 Tag má tvar `v0.9.5-beta-build.20261104.66`, stabilní verze například `v1.0.0-build.20261105.01`. Soubor se vždy jmenuje `FileCompass-win-x64.zip`. Jednoznačný odkaz je `https://github.com/rathousky-pro/file-compass-web/releases/download/<tag>/FileCompass-win-x64.zip`. Pro poslední stabilní vydání lze použít `https://github.com/rathousky-pro/file-compass-web/releases/latest/download/FileCompass-win-x64.zip`; beta aktualizátor vybírá vydání přes API, protože latest vynechává prerelease.
 

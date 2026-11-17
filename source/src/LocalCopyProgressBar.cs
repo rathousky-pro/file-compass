@@ -27,7 +27,8 @@ namespace FileCompass
             if (width <= 0 || height <= 0) return;
             double top = (ActualHeight - height) / 2;
             drawing.DrawRoundedRectangle(AppearanceTheme.IsBalanced ? CompactTheme.ThemeBrush("#EEEEEE") : track,null,new Rect(0,top,width,height),1.5,1.5);
-            drawing.DrawRoundedRectangle(AppearanceTheme.IsBalanced ? CompactTheme.ThemeBrush(total ? "#1457A2" : "#85C5F4") : fill,null,new Rect(0,top,width * (preparing ? .25 : fraction),height),1.5,1.5);
+            if (!preparing && fraction > 0)
+                drawing.DrawRoundedRectangle(AppearanceTheme.IsBalanced ? CompactTheme.ThemeBrush(total ? "#1457A2" : "#85C5F4") : fill,null,new Rect(0,top,width * fraction,height),1.5,1.5);
         }
     }
 }

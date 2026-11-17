@@ -276,11 +276,12 @@ namespace FileCompass
         }
         void UpdateMetrics()
         {
-            var metrics = Metrics(); string state = control.Cancelled ? L.Text("copy.cancellingStatus") : control.Paused ? L.Code("state.paused") : latest == null ? L.Code("copy.loadingFiles") : latest.Phase;
+            var metrics = Metrics(); string state = control.Cancelled ? L.Text("copy.cancellingStatus") : control.Paused ? L.Text("state.paused") : latest == null ? L.Text("copy.loadingFiles") : latest.DisplayPhase;
             phase.Text = latest != null && latest.Phase == L.Code("copy.loadingFiles") && !control.Paused && !control.Cancelled
                 ? state + L.Text("search.foundCountSeparator") + latest.TotalFiles.ToString("N0") + L.Text("copy.filesAndBytesSeparator") + CopyUi.Bytes(latest.TotalBytes)
                 : state + L.Text("transfer.remainingPrefix") + MainWindow.TransferTime(metrics.RemainingSeconds);
-            fileProgress.Preparing = totalProgress.Preparing = latest == null || latest.Phase == L.Code("copy.loadingFiles") || latest.Phase == L.Code("copy.savingPlan");
+            fileProgress.Preparing = totalProgress.Preparing = latest == null || latest.Preparing;
+            if (totalProgress.Preparing) filePercent.Text = totalPercent.Text = "—";
             if (!complete) speedTrend.Add(metrics.BytesPerSecond / 1048576.0, QueueFraction);
             speed.Text = (metrics.BytesPerSecond / 1048576.0).ToString("F1") + " MiB/s";
             if (MetricsChanged != null) MetricsChanged();
@@ -302,21 +303,24 @@ namespace FileCompass
             var background=CopyUi.Button(L.Text("copy.backgroundAction"),placement.Background);FluentTheme.Primary(background);buttons.Children.Add(background);
             metricsTimer.Tick += delegate { UpdateMetrics(); }; Loaded += delegate { if (!complete) metricsTimer.Start(); }; Closed += delegate { metricsTimer.Stop(); };
             Closing += delegate(object sender, System.ComponentModel.CancelEventArgs e) { if (!complete) { e.Cancel = true; control.Cancel(); UpdateMetrics(); } };
+            UpdateMetrics();
         }
         public void Update(CopyUpdate update)
         {
             latest = update; lastUpdate = DateTime.UtcNow; UpdateMetrics();
-            if(!String.IsNullOrWhiteSpace(update.Phase))presentation.Heading.Text=update.Phase;
+            if(!String.IsNullOrWhiteSpace(update.DisplayPhase))presentation.Heading.Text=update.DisplayPhase;
             source.SetPath(L.Text("transfer.sourceLabel"),update.Source);target.SetPath(L.Text("transfer.targetLabel"),update.Target);
             if(!String.IsNullOrEmpty(update.Source)&&!String.IsNullOrEmpty(update.Target)){
                 presentation.Route.SetPath("",TransferProgressLayout.ParentPath(update.Source)+" → "+TransferProgressLayout.ParentPath(update.Target));presentation.Route.Visibility=Visibility.Visible;
             }
             double file = update.FileTotal == 0 ? 0 : (double)update.FileDone / update.FileTotal;
             double total = update.TotalBytes == 0 ? (update.TotalFiles == 0 ? 0 : (double)update.Completed / update.TotalFiles) : (double)update.TotalDone / update.TotalBytes;
-            fileProgress.Update(file); totalProgress.Update(total); filePercent.Text = (Math.Max(0,Math.Min(1,file)) * 100).ToString("F0") + " %"; totalPercent.Text = (Math.Max(0,Math.Min(1,total)) * 100).ToString("F0") + " %";
+            fileProgress.Update(file); totalProgress.Update(total);
+            filePercent.Text = update.Preparing ? "—" : (Math.Max(0, Math.Min(1, file)) * 100).ToString("F0") + " %";
+            totalPercent.Text = update.Preparing ? "—" : (Math.Max(0, Math.Min(1, total)) * 100).ToString("F0") + " %";
             count.Text = update.Completed + " / " + update.TotalFiles;
             totals.Text = CopyUi.Bytes(update.TotalDone) + " / " + CopyUi.Bytes(update.TotalBytes);
-            presentation.Current(update.Source,update.FileTotal>0?(double?)file:null);
+            presentation.Current(update.Source,!update.Preparing && update.FileTotal>0?(double?)file:null);
         }
         public void Finish() { complete = true; metricsTimer.Stop(); placement.Finish(); }
     }

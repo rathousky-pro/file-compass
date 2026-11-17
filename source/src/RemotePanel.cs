@@ -65,6 +65,8 @@ namespace FileCompass
             var previous = openConnections.Keys.FirstOrDefault(x => x.Profile.Id == connection.Profile.Id && x != connection);
             if (previous != null) { openConnections.Remove(previous); previous.Dispose(); }
             openConnections[connection] = path;
+            ExitFlatLocationColumn();
+            projection = null;
             Remote = connection; history.Clear(); forwardHistory.Clear();
             CloseArchiveContext();
             CurrentPath = path; ApplyRemoteRows(rows, null);

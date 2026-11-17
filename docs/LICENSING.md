@@ -1,5 +1,7 @@
 # File Compass licensing
 
+For a single entry point to the application license and original third-party notices, open `help/licenses/README.md` in the portable package or `LICENSES.md` in the source repository.
+
 Original File Compass application code, build scripts and original documentation
 are licensed under the MIT License. Copyright (c) 2026 Jan Rathouský.
 The complete license is in `LICENSE` at the repository root and `help/LICENSE.txt`

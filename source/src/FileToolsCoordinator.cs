@@ -9,10 +9,12 @@ namespace FileCompass
     public partial class MainWindow
     {
         int fileToolsRunning;
-        void FindFiles()
+        internal void FindFiles() { FindFilesInFolder(null); }
+
+        void FindFilesInFolder(string folder)
         {
             var panel = active; var archive = panel.Archive; var remote = panel.Remote;
-            string root = panel.CurrentPath; string[] selected = panel.Selected().Select(x => x.FullPath).ToArray();
+            string root = folder ?? panel.CurrentPath; string[] selected = panel.Selected().Select(x => x.FullPath).ToArray();
             ArchiveItem[] members = archive == null ? null : archive.Items.ToArray();
             RemoteConnection login = remote == null ? null : remote.TransferConnection();
             bool local = archive == null && remote == null;

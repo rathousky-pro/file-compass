@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -25,8 +25,8 @@ namespace FileCompass
 #endif
         internal event Action LocalNavigationCompleted;
         public Task NavigationTask { get; private set; }
-        internal void CancelNavigation() { navigationVersion++; var previous = navigationCancellation; navigationCancellation = null; if (previous != null) previous.Cancel(); LocalLoading = false; List.IsEnabled = true; }
-        internal void SavePanelView(PanelView saved) { saved.ExtensionColumn=extensionColumn;saved.AttributesColumn=attributesColumn;saved.SizeColumn=sizeColumn;saved.ModifiedColumn=modifiedColumn;saved.ColumnOrder=view.Columns.Select(ColumnKey).ToArray();saved.MetadataColumns = MetadataColumnKeys; saved.Sort = sortProperty; saved.GroupBy = panelGrouping; saved.Descending = descending; saved.Widths = LogicalColumns.Select((x,i) => i>0&&i<5&&!BaseColumnVisible(i)?RememberedWidth(i):x.Width).ToArray(); saved.Display = displayMode; saved.Tree = treeRequested; saved.ThumbnailSize = thumbnailSize; SaveDetailView(saved); }
+        internal void CancelNavigation() { navigationVersion++; var previous = navigationCancellation; navigationCancellation = null; if (previous != null) previous.Cancel(); if (IsFlatView && LocalLoading) capacity.Text = L.Text("projection.incomplete"); LocalLoading = false; List.IsEnabled = true; }
+        internal void SavePanelView(PanelView saved) { saved.ExtensionColumn=extensionColumn;saved.AttributesColumn=attributesColumn;saved.SizeColumn=sizeColumn;saved.ModifiedColumn=modifiedColumn;saved.ColumnOrder=LogicalColumns.OrderBy(view.Columns.IndexOf).Select(ColumnKey).ToArray();saved.MetadataColumns = MetadataColumnKeys; saved.Sort = sortProperty == "FlatLocation" || sortProperty == "ComparisonLabel" ? "Name" : sortProperty; saved.GroupBy = panelGrouping; saved.Descending = descending; saved.Widths = LogicalColumns.Select((x,i) => i>0&&i<5&&!BaseColumnVisible(i)?RememberedWidth(i):x.Width).ToArray(); saved.Display = flatPreviousDisplay ?? displayMode; saved.Tree = treeRequested; saved.ThumbnailSize = thumbnailSize; SaveDetailView(saved); }
         internal void SetColumnWidth(int index, double width)
         {
             var columns=LogicalColumns.ToArray();if (index < 0 || index >= columns.Length || Double.IsNaN(width) || Double.IsInfinity(width)) return;
@@ -122,9 +122,9 @@ namespace FileCompass
             foreach(var action in new[]{cleanRootButton,cleanParentButton}){action.Tag="panel-breadcrumb";action.Width=30;action.Height=30;action.MinWidth=0;action.Margin=new Thickness(1,0,3,0);action.Padding=new Thickness(0);action.Background=CompactTheme.WhiteSurface;action.BorderBrush=CompactTheme.Line;action.BorderThickness=new Thickness(1);action.Foreground=FluentTheme.Accent;action.FontWeight=FontWeights.Bold;action.FontSize=16;DockPanel.SetDock(action,Dock.Right);cleanBreadcrumbDock.Children.Add(action);}
             pathRow.Children.Clear();cleanBreadcrumbDock.Children.Add(tabRow);
             var pathEditor=new Grid();pathEditor.Children.Add(cleanBreadcrumbDock);pathEditor.Children.Add(address);
-            cleanBreadcrumbFrame=new Border{Tag="panel-path",Child=pathEditor,Background=CompactTheme.PanelSurface,BorderThickness=new Thickness(0),CornerRadius=new CornerRadius(10),Margin=new Thickness(8,5,8,0),Padding=new Thickness(7,1,7,0),Height=46};
+            cleanBreadcrumbFrame=new Border{Tag="panel-path",Child=pathEditor,Background=Brushes.Transparent,BorderBrush=CompactTheme.Line,BorderThickness=new Thickness(0,0,0,1),Margin=new Thickness(8,4,8,4),Padding=new Thickness(0,0,0,0),Height=43};
             System.Windows.Automation.AutomationProperties.SetAutomationId(cleanBreadcrumbFrame,"PanelBreadcrumb");cleanBreadcrumbFrame.MouseLeftButtonDown+=delegate(object sender,MouseButtonEventArgs e){activate(this);if(e.ClickCount==2){FocusAddress();e.Handled=true;}};
-            pathStack.Children.Add(cleanBreadcrumbFrame);Grid.SetRow(pathStack,2);grid.Children.Add(pathStack);
+            pathStack.Children.Add(cleanBreadcrumbFrame);InitializePanelViewActions(pathStack);Grid.SetRow(pathStack,2);grid.Children.Add(pathStack);
 
             AddColumn(L.Text("column.name"), "Name", 230); AddColumn(L.Text("column.extension"), "Extension", 80);
             AddColumn(L.Text("column.size"), "Size", 90); AddColumn(L.Text("column.date"), "Modified", 130); AddColumn(L.Text("attributes.title"), "Attributes", 70);
@@ -208,7 +208,20 @@ namespace FileCompass
             var presenter = new FrameworkElementFactory(typeof(GridViewRowPresenter));
             presenter.SetBinding(GridViewRowPresenter.ContentProperty, new Binding());
             presenter.SetBinding(GridViewRowPresenter.ColumnsProperty, new Binding("View.Columns") { RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(ListView), 1) });
-            border.AppendChild(presenter);
+            var cells = new FrameworkElementFactory(typeof(Grid));
+            cells.AppendChild(presenter);
+            var comparison = new FrameworkElementFactory(typeof(Border));
+            comparison.SetBinding(Border.BackgroundProperty, new Binding("ComparisonBrush"));
+            comparison.SetValue(UIElement.IsHitTestVisibleProperty, false);
+            comparison.SetValue(UIElement.OpacityProperty, .13);
+            cells.AppendChild(comparison);
+            var indicator = new FrameworkElementFactory(typeof(Border));
+            indicator.SetBinding(Border.BackgroundProperty, new Binding("ComparisonBrush"));
+            indicator.SetValue(FrameworkElement.WidthProperty, 4.0);
+            indicator.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Right);
+            indicator.SetValue(UIElement.IsHitTestVisibleProperty, false);
+            cells.AppendChild(indicator);
+            border.AppendChild(cells);
             var rowTemplate=new ControlTemplate(typeof(ListViewItem)){VisualTree=border};style.Setters.Add(new Setter(Control.TemplateProperty,rowTemplate));
             var cursor = new MultiDataTrigger();
             cursor.Conditions.Add(new Condition(new Binding("IsSelected") { RelativeSource = RelativeSource.Self }, true));
@@ -283,6 +296,7 @@ namespace FileCompass
                         if(property=="Name"){var nameBinding=new MultiBinding{Converter=new PanelNameConverter()};nameBinding.Bindings.Add(new Binding("ListName"));nameBinding.Bindings.Add(new Binding("FullName"));nameBinding.Bindings.Add(new Binding("IsDirectory"));nameBinding.Bindings.Add(new Binding("LocationName"));nameBinding.Bindings.Add(new Binding("Clean"){Source=InterfaceTheme.State});nameBinding.Bindings.Add(new Binding("SeparateExtension"){Source=this});text.SetBinding(TextBlock.TextProperty,nameBinding);}
                         else if(property=="Size"||property=="Modified"){var valueBinding=new MultiBinding{Converter=new PanelValueConverter(),ConverterParameter=property=="Size"?"size":"date"};valueBinding.Bindings.Add(new Binding(property));valueBinding.Bindings.Add(new Binding("ModifiedTime"));valueBinding.Bindings.Add(new Binding("Bytes"));valueBinding.Bindings.Add(new Binding("IsDirectory"));valueBinding.Bindings.Add(new Binding("Clean"){Source=InterfaceTheme.State});text.SetBinding(TextBlock.TextProperty,valueBinding);text.SetBinding(FrameworkElement.ToolTipProperty,new Binding(property));}
             else text.SetBinding(TextBlock.TextProperty,new Binding(property.StartsWith("Meta:")?"MetadataValues["+property.Substring(5)+"]":property));
+            if (property == "FlatLocation" || property == "ComparisonLabel") text.SetBinding(FrameworkElement.ToolTipProperty, new Binding(property));
             text.SetValue(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center);
             text.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);
             text.SetValue(FrameworkElement.MarginProperty, new Thickness(0, 0, 3, 0));
@@ -300,7 +314,7 @@ namespace FileCompass
                 icon.SetValue(UIElement.SnapsToDevicePixelsProperty, true);
                 icon.SetValue(RenderOptions.BitmapScalingModeProperty, BitmapScalingMode.NearestNeighbor);
                 dock.AppendChild(icon);
-                var tags = new FrameworkElementFactory(typeof(TextBlock)); tags.SetBinding(TextBlock.TextProperty, new Binding("TagsLabel")); tags.SetValue(DockPanel.DockProperty, Dock.Right); tags.SetValue(TextBlock.ForegroundProperty, FluentTheme.Accent); tags.SetValue(TextBlock.FontSizeProperty, 11.0); tags.SetValue(FrameworkElement.MaxWidthProperty, 130.0); tags.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis); tags.SetValue(FrameworkElement.MarginProperty, new Thickness(6, 0, 6, 0)); tags.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center); dock.AppendChild(tags);
+                dock.AppendChild(TagBadgeStrip());
                 var percent = new FrameworkElementFactory(typeof(TextBlock)); percent.SetBinding(TextBlock.TextProperty, new Binding("DiskPercentText")); percent.SetBinding(UIElement.VisibilityProperty, new Binding("DiskUsageVisibility")); percent.SetValue(DockPanel.DockProperty, Dock.Right); percent.SetValue(FrameworkElement.MarginProperty, new Thickness(5,0,6,0)); percent.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center); percent.SetBinding(FrameworkElement.ToolTipProperty, new Binding("DiskUsageNote")); dock.AppendChild(percent);
                 dock.AppendChild(text);
                 var usage = new FrameworkElementFactory(typeof(ProgressBar)); usage.SetValue(System.Windows.Controls.Primitives.RangeBase.MaximumProperty, 100.0); usage.SetBinding(System.Windows.Controls.Primitives.RangeBase.ValueProperty, new Binding("DiskPercent") { Mode = BindingMode.OneWay }); usage.SetBinding(UIElement.VisibilityProperty, new Binding("DiskUsageVisibility")); usage.SetValue(FrameworkElement.HeightProperty, 21.0); usage.SetValue(Control.ForegroundProperty, CompactTheme.ThemeBrush("#DCEBFF")); usage.SetValue(Control.BackgroundProperty, Brushes.Transparent); usage.SetValue(Control.BorderThicknessProperty, new Thickness(0)); usage.SetValue(UIElement.IsHitTestVisibleProperty, false);
@@ -310,6 +324,36 @@ namespace FileCompass
             else column.CellTemplate = new DataTemplate { VisualTree = text };
             view.Columns.Add(column);
             InitializeColumnGrip(header, column);
+        }
+
+        static FrameworkElementFactory TagBadgeStrip()
+        {
+            var tags = new FrameworkElementFactory(typeof(ItemsControl));
+            tags.SetBinding(ItemsControl.ItemsSourceProperty, new Binding("TagBadges"));
+            tags.SetBinding(FrameworkElement.ToolTipProperty, new Binding("TagsLabel"));
+            tags.SetValue(DockPanel.DockProperty, Dock.Right);
+            tags.SetValue(FrameworkElement.MaxWidthProperty, 165.0);
+            tags.SetValue(UIElement.ClipToBoundsProperty, true);
+            tags.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+            var strip = new FrameworkElementFactory(typeof(StackPanel));
+            strip.SetValue(StackPanel.OrientationProperty, Orientation.Horizontal);
+            tags.SetValue(ItemsControl.ItemsPanelProperty, new ItemsPanelTemplate(strip));
+
+            var badge = new FrameworkElementFactory(typeof(Border));
+            badge.SetBinding(Border.BackgroundProperty, new Binding("Color"));
+            badge.SetValue(Border.CornerRadiusProperty, new CornerRadius(4));
+            badge.SetValue(Border.PaddingProperty, new Thickness(5, 1, 5, 1));
+            badge.SetValue(FrameworkElement.MarginProperty, new Thickness(2, 0, 3, 0));
+            var label = new FrameworkElementFactory(typeof(TextBlock));
+            label.SetBinding(TextBlock.TextProperty, new Binding("Name"));
+            label.SetBinding(FrameworkElement.ToolTipProperty, new Binding("Name"));
+            label.SetValue(TextBlock.ForegroundProperty, Brushes.White);
+            label.SetValue(TextBlock.FontSizeProperty, 11.0);
+            label.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis);
+            label.SetValue(FrameworkElement.MaxWidthProperty, 105.0);
+            badge.AppendChild(label);
+            tags.SetValue(ItemsControl.ItemTemplateProperty, new DataTemplate { VisualTree = badge });
+            return tags;
         }
 
         void ResizeColumns()
@@ -360,7 +404,7 @@ namespace FileCompass
         public void Navigate(string path, bool remember)
         {
             if (IsLoading) return;
-            EmptyPanel=false;projection = null;
+            EmptyPanel=false;ExitFlatLocationColumn();projection = null;
             if(ExtLocations.IsPath(path)){NavigationTask=NavigateExt(path,remember);return;}
             if (WindowsShell.IsLocation(path)) { NavigationTask = NavigateShell(path, remember); return; }
             if (NetworkBrowser.IsLocation(path)) { NavigationTask = NavigateNetwork(path, remember); return; }
@@ -460,7 +504,7 @@ namespace FileCompass
 
         static bool SameLocalRow(Entry a, Entry b)
         {
-            return a.Name == b.Name && a.Extension == b.Extension && a.IsDirectory == b.IsDirectory && a.IsParent == b.IsParent && a.IsLink == b.IsLink && a.IsHidden == b.IsHidden && a.IsSystem == b.IsSystem && (a.IsDirectory || a.Bytes == b.Bytes) && a.ModifiedTime == b.ModifiedTime && a.Attributes == b.Attributes && a.TagNames.SequenceEqual(b.TagNames);
+            return a.Name == b.Name && a.Extension == b.Extension && a.IsDirectory == b.IsDirectory && a.IsParent == b.IsParent && a.IsLink == b.IsLink && a.IsHidden == b.IsHidden && a.IsSystem == b.IsSystem && (a.IsDirectory || a.Bytes == b.Bytes) && a.ModifiedTime == b.ModifiedTime && a.Attributes == b.Attributes && a.TagNames.SequenceEqual(b.TagNames) && a.TagNames.All(name => a.TagColor(name) == b.TagColor(name));
         }
         void MergeLocalRows(System.Collections.ObjectModel.ObservableCollection<Entry> rows, List<Entry> loaded)
         {
@@ -523,7 +567,7 @@ namespace FileCompass
             if (navigation != null) await navigation.ConfigureAwait(false);
             await Dispatcher.InvokeAsync(delegate { if (CurrentPath == expected && CurrentPath != previous && from.Count > 0 && from.Peek() == expected) { from.Pop(); to.Push(previous); } });
         }
-        public void Up() { if(IsExt){string relative=ExtLocations.Relative(CurrentPath);if(relative!="/")Navigate(ExtLocations.Root(CurrentPath)+relative.Substring(0,relative.LastIndexOf('/')).TrimStart('/'),true);return;} if (IsShellBrowser) { if (CurrentPath != WindowsShell.Computer) Navigate(WindowsShell.Computer, true); return; } if (IsNetworkBrowser) { if (CurrentPath != NetworkBrowser.Root) Navigate(NetworkBrowser.Root, true); return; } if (IsArchive) { Navigate(ArchivePrefix.Length == 0 ? "archive-exit:" : "/" + (ArchivePrefix.Contains("/") ? ArchivePrefix.Substring(0, ArchivePrefix.LastIndexOf('/')) : ""), true); return; } if (IsRemote) { Navigate(RemoteConnection.Parent(CurrentPath), true); return; } if (CurrentPath != null) { var parent = Directory.GetParent(CurrentPath); if (parent != null) Navigate(parent.FullName, true); else if (CurrentPath.StartsWith("\\\\")) Navigate("\\\\" + CurrentPath.Trim('\\').Split('\\')[0], true); } }
+        public void Up() { if(IsFlatView){ToggleFlatView();return;} if(IsExt){string relative=ExtLocations.Relative(CurrentPath);if(relative!="/")Navigate(ExtLocations.Root(CurrentPath)+relative.Substring(0,relative.LastIndexOf('/')).TrimStart('/'),true);return;} if (IsShellBrowser) { if (CurrentPath != WindowsShell.Computer) Navigate(WindowsShell.Computer, true); return; } if (IsNetworkBrowser) { if (CurrentPath != NetworkBrowser.Root) Navigate(NetworkBrowser.Root, true); return; } if (IsArchive) { Navigate(ArchivePrefix.Length == 0 ? "archive-exit:" : "/" + (ArchivePrefix.Contains("/") ? ArchivePrefix.Substring(0, ArchivePrefix.LastIndexOf('/')) : ""), true); return; } if (IsRemote) { Navigate(RemoteConnection.Parent(CurrentPath), true); return; } if (CurrentPath != null) { var parent = Directory.GetParent(CurrentPath); if (parent != null) Navigate(parent.FullName, true); else if (CurrentPath.StartsWith("\\\\")) Navigate("\\\\" + CurrentPath.Trim('\\').Split('\\')[0], true); } }
         public List<Entry> Selected()
         {
             if (LocalLoading || IsShellBrowser) return new List<Entry>();
@@ -577,7 +621,7 @@ namespace FileCompass
                 if (a.IsParent != b.IsParent) return a.IsParent ? -1 : 1;
                 if (a.IsDirectory != b.IsDirectory) return a.IsDirectory ? -1 : 1;
                 if (foldersByName && a.IsDirectory) return FileBehavior.CompareNames(a.FullName, b.FullName, natural) * direction;
-                if (MetadataColumn.IsSort(property)) return MetadataColumn.Compare(a, b, property.Substring(5), direction, natural); int result = property == "Size" ? a.Bytes.CompareTo(b.Bytes) : property == "Modified" ? a.ModifiedTime.CompareTo(b.ModifiedTime) :
+                if (MetadataColumn.IsSort(property)) return MetadataColumn.Compare(a, b, property.Substring(5), direction, natural); int result = property == "ComparisonLabel" ? a.Difference.CompareTo(b.Difference) : property == "FlatLocation" ? FileBehavior.CompareNames(a.FlatLocation ?? "", b.FlatLocation ?? "", natural) : property == "Size" ? a.Bytes.CompareTo(b.Bytes) : property == "Modified" ? a.ModifiedTime.CompareTo(b.ModifiedTime) :
                     FileBehavior.CompareNames(property == "Extension" ? a.Extension : property == "Attributes" ? a.Attributes : a.FullName,
                         property == "Extension" ? b.Extension : property == "Attributes" ? b.Attributes : b.FullName, natural);
                 return (result == 0 ? FileBehavior.CompareNames(a.FullName, b.FullName, natural) : result) * direction;

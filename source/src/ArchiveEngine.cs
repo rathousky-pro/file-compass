@@ -78,16 +78,31 @@ namespace FileCompass
         public static string Run(string executable, IEnumerable<string> arguments, string directory, CancellationToken token, Action<string> progress = null)
         {
             token.ThrowIfCancellationRequested();
-            arguments = arguments.ToArray();
+            var args = arguments.ToArray();
             if (String.Equals(System.IO.Path.GetFullPath(executable), System.IO.Path.GetFullPath(SevenZipPath), StringComparison.OrdinalIgnoreCase))
-                return ArchiveWorker.Run(arguments.ToArray(), directory, token, progress);
+                return ArchiveWorker.Run(args, directory, token, progress);
+            return RunExternal(executable, args, directory, token, progress, false);
+        }
+
+        sealed class ArchiveProcessException : IOException
+        {
+            internal readonly int ExitCode;
+            internal ArchiveProcessException(int code, string details)
+                : base(L.Text("archive.processErrorPrefix") + code + "):\n" + details) { ExitCode = code; }
+        }
+
+        static string RunExternal(string executable, string[] arguments, string directory, CancellationToken token,
+            Action<string> progress, bool bundledSevenZip, bool directCreation = false)
+        {
+            bool completeProgressLines = directCreation ||
+                System.IO.Path.GetFileName(executable).Equals("Rar.exe", StringComparison.OrdinalIgnoreCase);
             if (arguments.Any(x => x.StartsWith("-p", StringComparison.OrdinalIgnoreCase) || x.StartsWith("-hp", StringComparison.OrdinalIgnoreCase))) throw new IOException(L.Text("archive.commandLinePasswordRejected"));
             var limits = ArchiveSettings.Load();
             if (!File.Exists(executable)) throw new IOException(L.Text("archive.archiverMissingPrefix") + executable);
             var info = new ProcessStartInfo(ArchiveSelfExtract.ExecutablePath(executable), String.Join(" ", arguments.Select(Quote))) { WorkingDirectory = directory ?? AppDomain.CurrentDomain.BaseDirectory,
                 UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true, RedirectStandardInput = true,
                 StandardOutputEncoding = Encoding.UTF8, StandardErrorEncoding = Encoding.UTF8 };
-            using (ArchivePluginInstaller.AcquireManagedExecutable(executable))
+            using (bundledSevenZip ? PluginIntegrity.Acquire(@"7zip\7z.exe", @"7zip\7z.dll") : ArchivePluginInstaller.AcquireManagedExecutable(executable))
             using (var job = new ArchiveProcessJob(limits.MaximumMemoryMiB))
             using (var process = new Process { StartInfo = info })
             {
@@ -108,7 +123,12 @@ namespace FileCompass
                         {
                             char c = buffer[i];
                             if (c == '\r' || c == '\n' || c == '\b') { if (line.Length > 0) { progress(line.ToString()); line.Clear(); } }
-                            else { line.Append(c); if (line.Length > 4096) line.Clear(); if (c == '%') { progress(line.ToString()); line.Clear(); } }
+                            else
+                            {
+                                line.Append(c);
+                                if (line.Length > (completeProgressLines ? 32768 : 4096)) line.Clear();
+                                if (!completeProgressLines && c == '%') { progress(line.ToString()); line.Clear(); }
+                            }
                         }
                     }
                     if (progress != null && line.Length > 0) progress(line.ToString());
@@ -116,7 +136,7 @@ namespace FileCompass
                 while (!process.WaitForExit(100))
                 {
                     OperationPause.HoldChild(process,token,clock);
-                    if (outputTask.IsFaulted || clock.Elapsed.TotalSeconds > limits.MaximumSeconds || token.IsCancellationRequested)
+                    if (outputTask.IsFaulted || (!directCreation && clock.Elapsed.TotalSeconds > limits.MaximumSeconds) || token.IsCancellationRequested)
                     { try { process.Kill(); } catch (InvalidOperationException) { } process.WaitForExit(); token.ThrowIfCancellationRequested(); if (outputTask.IsFaulted) outputTask.GetAwaiter().GetResult(); throw new IOException(L.Text("archive.operationTimeout")); }
                 }
                 process.WaitForExit(); outputTask.GetAwaiter().GetResult(); string error = errorTask.GetAwaiter().GetResult(); token.ThrowIfCancellationRequested();
@@ -126,7 +146,7 @@ namespace FileCompass
                     if (details.IndexOf("Wrong password", StringComparison.OrdinalIgnoreCase) >= 0 || details.IndexOf("Enter password", StringComparison.OrdinalIgnoreCase) >= 0)
                         throw new ArchivePasswordException();
                     if (details.Length > 1800) details = details.Substring(details.Length - 1800);
-                    throw new IOException(L.Text("archive.processErrorPrefix") + process.ExitCode + "):\n" + details);
+                    throw new ArchiveProcessException(process.ExitCode, details);
                 }
                 return output.ToString();
             }
@@ -356,6 +376,7 @@ namespace FileCompass
         static void CreateCore(string target, IEnumerable<string> sources, ArchiveSettings settings, CancellationToken token, Action<string> progress, ArchivePackOptions pack)
         {
             pack = pack ?? new ArchivePackOptions();
+            target = System.IO.Path.GetFullPath(target);
             string extension = System.IO.Path.GetExtension(target).ToLowerInvariant();
             if (!new[] { ".zip", ".7z", ".rar", ".tar", ".gz", ".bz2", ".xz", ".tgz", ".tbz2", ".txz", ".arj", ".lzh", ".lha" }.Contains(extension)) throw new IOException(L.Text("archive.outputExtensionRequired"));
             lock (Locks.GetOrAdd(System.IO.Path.GetFullPath(target), delegate { return new object(); }))
@@ -368,6 +389,7 @@ namespace FileCompass
                 if (streamFormat && (sourceFiles.Length != 1 || !File.Exists(sourceFiles[0]))) throw new IOException(L.Text("archive.singleStreamRequired"));
                 if (!String.IsNullOrEmpty(pack.Password) && extension != ".zip" && extension != ".7z") throw new IOException(L.Text("archive.passwordRequiresZipOr7z"));
                 string directRoot = sourceFiles.Length > 0 ? System.IO.Path.GetDirectoryName(sourceFiles[0]) : null;
+                if (TryCreateDirectArchive(target, sourceFiles, directRoot, extension, settings, pack, token, progress)) return;
                 bool direct = !legacy && sourceFiles.Length > 0 && sourceFiles.Length <= 128 && sourceFiles.All(x => File.Exists(x) && String.Equals(System.IO.Path.GetDirectoryName(x), directRoot, StringComparison.OrdinalIgnoreCase) && !String.Equals(x, System.IO.Path.GetFullPath(target), StringComparison.OrdinalIgnoreCase));
                 var preparation = new ArchivePreparationReporter(progress);
                 var inputLocks = new List<FileStream>(); string workingInput = direct ? directRoot : input.Path;
@@ -392,15 +414,22 @@ namespace FileCompass
                     var doc = new ArchiveDocument { FilePath = stage, Type = extension.TrimStart('.'), Password = pack.Password };
                     DateTime? newestFile = null; bool archiveDate = pack.NewestFileDate ?? ProgramSettings.Load().ArchiveNewestFileDate;
                     long originalBytes = 0; foreach (string file in direct ? sourceFiles : Directory.EnumerateFiles(input.Path, "*", SearchOption.AllDirectories)) { token.ThrowIfCancellationRequested(); originalBytes = checked(originalBytes + new FileInfo(file).Length); if (archiveDate) { DateTime written = File.GetLastWriteTimeUtc(file); if (!newestFile.HasValue || written > newestFile.Value) newestFile = written; } }
-                    if (originalBytes > budget.MaximumBytes) throw new IOException(L.Text("archive.actualExpandedDataLimit"));
+                    var rarFiles = direct && extension == ".rar" ? new HashSet<string>(
+                        sourceFiles.Select(System.IO.Path.GetFileName), StringComparer.OrdinalIgnoreCase) : null;
+                    string currentRarFile = null;
+                    double lastPercent = 0;
                     Action<string> compressionProgress = delegate(string text) {
                         if (progress == null) return;
                         ArchiveCompressionProgress nativeProgress; if (ArchiveCompressionProgress.TryParse(text, out nativeProgress)) { progress(text); return; }
 
-                        var match = System.Text.RegularExpressions.Regex.Match(text, @"(\d+)\s*%");
-                        if (!match.Success) { progress(text); return; }
+                        string member = rarFiles == null ? null : RarProgressMember(text);
+                        bool fileChanged = member != null && rarFiles.Contains(member);
+                        if (fileChanged) currentRarFile = member;
+                        var match = System.Text.RegularExpressions.Regex.Match(text, extension == ".rar" ? @"^\s*(\d{1,3})\s*%" : @"(\d+)\s*%");
+                        if (!match.Success && !fileChanged) { progress(text); return; }
+                        if (match.Success) lastPercent = Math.Min(99, Double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture));
                         long packed = 0; try { if (File.Exists(stage)) packed = new FileInfo(stage).Length; } catch (IOException) { }
-                        progress(new ArchiveCompressionProgress { Percent = Math.Min(99, Double.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture)), Original = originalBytes, Packed = packed }.Encode());
+                        progress(new ArchiveCompressionProgress { Percent = lastPercent, Original = originalBytes, Packed = packed, CurrentFile = currentRarFile }.Encode());
                     };
                     if (progress != null) progress(new ArchiveCompressionProgress { Original = originalBytes }.Encode());
                     var members = (direct ? sourceFiles : Directory.GetFileSystemEntries(input.Path)).Select(x => System.IO.Path.GetFileName(x)).ToList();
@@ -417,14 +446,153 @@ namespace FileCompass
                         try { VerifyLegacyArchive(Open(stage, pack.Password, token), input.Path, extension == ".arj" ? "arj" : "lzh", token); }
                         catch (IOException ex) { throw new IOException(L.Text("archive.legacyVerificationFailed") + "\n" + ex.Message, ex); }
                     }
-                    token.ThrowIfCancellationRequested();
-                    if (newestFile.HasValue) File.SetLastWriteTimeUtc(stage, newestFile.Value);
-                    if (previous != null)
-                    { if (!File.Exists(target) || Hash(target) != previous) throw new IOException(L.Text("archive.destinationChanged")); File.Replace(stage, target, null); }
-                    else File.Move(stage, target);
-                    if (progress != null) progress(new ArchiveCompressionProgress { Percent = 100, Original = originalBytes, Packed = new FileInfo(target).Length, Complete = true }.Encode());
+                    PublishArchive(stage, target, previous, newestFile, originalBytes, token, progress);
                 }
                 finally { foreach (var sourceLock in inputLocks) sourceLock.Dispose(); if (File.Exists(stage)) File.Delete(stage); }
+            }
+        }
+
+        static string RarProgressMember(string text)
+        {
+            // RAR localizes the action word and pads it before the filename.
+            int separator = text.IndexOf("  ", StringComparison.Ordinal);
+            return separator > 0 ? text.Substring(separator).Trim().Replace('\\', '/') : null;
+        }
+
+        static void PublishArchive(string stage, string target, string previous, DateTime? newestFile,
+            long originalBytes, CancellationToken token, Action<string> progress)
+        {
+            token.ThrowIfCancellationRequested();
+            if (newestFile.HasValue) File.SetLastWriteTimeUtc(stage, newestFile.Value);
+            if (previous != null)
+            {
+                if (!File.Exists(target) || Hash(target) != previous) throw new IOException(L.Text("archive.destinationChanged"));
+                File.Replace(stage, target, null);
+            }
+            else File.Move(stage, target);
+            if (progress != null) progress(new ArchiveCompressionProgress
+                { Percent = 100, Original = originalBytes, Packed = new FileInfo(target).Length, Complete = true }.Encode());
+        }
+
+        static bool TryCreateDirectArchive(string target, string[] sources, string root, string extension,
+            ArchiveSettings settings, ArchivePackOptions pack, CancellationToken token, Action<string> progress)
+        {
+            bool rar = extension == ".rar";
+            if ((!rar && extension != ".zip" && extension != ".7z") || !pack.Paths || !pack.Recursive || pack.ExcludeBase ||
+                !String.IsNullOrEmpty(pack.Password) || root == null ||
+                (pack.Inputs != null && pack.Inputs.Skipped.Count != 0))
+                return false;
+            if (!sources.Any(Directory.Exists)) return false;
+            string executable = rar ? settings.RarExecutable() : SevenZipPath;
+            if (!File.Exists(executable) || (rar && !System.IO.Path.GetFileName(executable).Equals("Rar.exe", StringComparison.OrdinalIgnoreCase)))
+                return false;
+            if (sources.Any(source => !String.Equals(System.IO.Path.GetDirectoryName(source), root, StringComparison.OrdinalIgnoreCase) ||
+                String.Equals(target, source, StringComparison.OrdinalIgnoreCase) ||
+                target.StartsWith(source.TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase)))
+                return false;
+
+            var budget = new ArchiveBudget(ArchiveSettings.Load());
+            var expected = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+            var pending = new Stack<string>(sources);
+            long bytes = 0;
+            int files = 0;
+            DateTime? newest = null;
+            bool useNewest = pack.NewestFileDate ?? ProgramSettings.Load().ArchiveNewestFileDate;
+            PathSafety.RejectLinks(root);
+            while (pending.Count != 0)
+            {
+                token.ThrowIfCancellationRequested();
+                budget.Item();
+                string path = pending.Pop();
+                string member = SafeMember(path.Substring(root.TrimEnd('\\').Length + 1));
+                var attributes = File.GetAttributes(path);
+                if ((attributes & FileAttributes.ReparsePoint) != 0)
+                    throw new IOException(L.Text("archive.addLinkRejectedPrefix") + path);
+                bool folder = (attributes & FileAttributes.Directory) != 0;
+                if (expected.ContainsKey(member)) throw new IOException(L.Text("archive.duplicateInputNamesPrefix") + member);
+                if (folder)
+                {
+                    expected.Add(member, -1);
+                    foreach (string child in Directory.EnumerateFileSystemEntries(path)) pending.Push(child);
+                }
+                else
+                {
+                    var file = new FileInfo(path);
+                    expected.Add(member, file.Length);
+                    files++;
+                    bytes = checked(bytes + file.Length);
+                    if (useNewest && (!newest.HasValue || file.LastWriteTimeUtc > newest.Value)) newest = file.LastWriteTimeUtc;
+                }
+            }
+
+            string previous = File.Exists(target) ? Hash(target) : null;
+            string stage = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(target), ".FileCompass-" + Guid.NewGuid().ToString("N") + extension);
+            using (var list = new ArchiveTemp())
+            {
+                string manifest = System.IO.Path.Combine(list.Path, "items.txt");
+                File.WriteAllLines(manifest, sources.Select(System.IO.Path.GetFileName), new UTF8Encoding(false));
+                var args = rar ? new List<string> { "a", "-cfg-", "-scflr", "-idc", "-y", ArchiveCompressionQuality.Rar(pack.Level) }
+                    : new List<string> { "a", "-scsUTF-8", "-sccUTF-8", "-bsp1", "-bb1", "-sse", "-spd", "-y", "-mx=" + pack.Level };
+                if (rar || extension == ".zip")
+                {
+                    int maximumThreads = rar ? 8 : Math.Min(4, files);
+                    int threads = pack.Level == 0 ? 1 : ArchiveMemoryPlan.ParallelThreads(budget.Settings.MaximumMemoryMiB,
+                        ArchiveMemoryPlan.AvailableBytes(), expected.Count, maximumThreads, Environment.ProcessorCount);
+                    args.Add(rar ? "-mt" + threads : "-mmt=" + threads);
+                }
+                else if (pack.Level > 0)
+                {
+                    var plan = ArchiveMemoryPlan.Choose(budget.Settings.MaximumMemoryMiB, ArchiveMemoryPlan.AvailableBytes(), expected.Count, pack.Level, false, 4);
+                    args.Add("-m0=lzma2:d=" + plan.DictionaryMiB + "m");
+                    args.Add("-mmt=" + plan.Threads);
+                }
+                if (!rar) args.Add("-i@" + manifest);
+                args.Add("--");
+                args.Add(stage);
+                if (rar) args.Add("@" + manifest);
+                try
+                {
+                    budget.Write(0, stage, false);
+                    progress?.Invoke(new ArchiveCompressionProgress { Original = bytes }.Encode());
+                    try
+                    {
+                        string currentFile = null;
+                        double percent = 0;
+                        var notifications = Stopwatch.StartNew();
+                        bool reportedFile = false;
+                        RunExternal(executable, args.ToArray(), root, token, text =>
+                        {
+                            string member = rar ? RarProgressMember(text) :
+                                text.StartsWith("+ ", StringComparison.Ordinal) ? text.Substring(2).Replace('\\', '/') : null;
+                            bool fileChanged = member != null && expected.TryGetValue(member, out long size) && size >= 0;
+                            if (fileChanged) currentFile = member;
+                            var match = System.Text.RegularExpressions.Regex.Match(text, @"^\s*(\d{1,3})\s*%");
+                            if (match.Success) percent = Math.Min(99, Int32.Parse(match.Groups[1].Value));
+                            if ((match.Success || fileChanged) && ((!reportedFile && fileChanged) || notifications.ElapsedMilliseconds >= 100))
+                            {
+                                budget.CheckFreeSpace(0, stage);
+                                var output = new FileInfo(stage);
+                                progress?.Invoke(new ArchiveCompressionProgress
+                                    { Percent = percent, Original = bytes, Packed = output.Exists ? output.Length : 0, CurrentFile = currentFile }.Encode());
+                                reportedFile |= currentFile != null;
+                                notifications.Restart();
+                            }
+                        }, !rar, true);
+                    }
+                    catch (ArchiveProcessException ex) when (pack.Inputs?.Decide != null &&
+                        (ex.ExitCode == 1 || ex.ExitCode == 2 || (rar && ex.ExitCode == 6)))
+                    {
+                        // The normal reader can offer Retry/Skip for sharing and read errors.
+                        return false;
+                    }
+                    var items = Open(stage, null, token).Items;
+                    if (items.Count != expected.Count || items.Any(item => !expected.TryGetValue(item.Path, out long length) ||
+                        (item.Directory ? length != -1 : length != item.Bytes)))
+                        throw new IOException(L.Text("transfer.sourceChangedDuringTransfer"));
+                    PublishArchive(stage, target, previous, newest, bytes, token, progress);
+                    return true;
+                }
+                finally { if (File.Exists(stage)) File.Delete(stage); }
             }
         }
         static void VerifyLegacyArchive(ArchiveDocument doc, string input, string expectedFormat, CancellationToken token)
@@ -480,9 +648,9 @@ namespace FileCompass
                 }
                 bool rar = doc.Type.StartsWith("Rar", StringComparison.OrdinalIgnoreCase);
                 if (rar && (!String.IsNullOrEmpty(doc.Password) || (doc.Items != null && doc.Items.Any(x => x.Encrypted)))) throw new IOException(L.Text("archive.encryptedRarWriteRejected"));
-                string manifest = System.IO.Path.Combine(lists.Path, "items.txt"); File.WriteAllLines(manifest, files.Select(x => x.Replace('/', '\\')), rar ? Encoding.Unicode : new UTF8Encoding(false));
+                string manifest = System.IO.Path.Combine(lists.Path, "items.txt"); File.WriteAllLines(manifest, files.Select(x => x.Replace('/', '\\')), new UTF8Encoding(false));
                 if (rar)
-                    Run(settings.RarExecutable(), new[] { delete ? "d" : "a", "-cfg-", "-scul", "-idc", "-y" }.Concat(extra ?? new string[0]).Concat(new[] { stage, "@" + manifest }), input, token, progress);
+                    Run(settings.RarExecutable(), new[] { delete ? "d" : "a", "-cfg-", "-scflr", "-idc", "-y" }.Concat(extra ?? new string[0]).Concat(new[] { stage, "@" + manifest }), input, token, progress);
                 else
                     Run(SevenZipPath, new[] { delete ? "d" : "a", "-scsUTF-8", "-bsp1", "-sse", "-i@" + manifest }.Concat(extra ?? new string[0]).Concat(Options(doc)).Concat(new[] { "--", stage }), input, token, progress);
             }

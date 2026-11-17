@@ -38,6 +38,28 @@ namespace FileCompass
                 Directory.CreateDirectory(longFolder); string longFile = Path.Combine(longFolder, "attachment.txt"); File.WriteAllText(longFile, "data");
                 AttachmentSecurity.MarkInternet(longFile);
                 check(AttachmentSecurity.ReadZone(longFile).Contains("ZoneId=3"), "attachment zone works when the alternate stream path exceeds MAX_PATH");
+                string longSource = Directory.CreateDirectory(Path.Combine(source, "!Drivery")).FullName;
+                string deep = longSource;
+                while (deep.Length < 365) deep = Path.Combine(deep, "dlouhá podsložka 0123456789");
+                Directory.CreateDirectory(deep);
+                Directory.CreateDirectory(Path.Combine(deep, "prázdná"));
+                string deepFile = Path.Combine(deep, "ovladač  50% [1].txt");
+                File.WriteAllText(deepFile, "driver payload");
+                string deepMember = deepFile.Substring(source.Length + 1).Replace('\\','/');
+                foreach (string extension in String.IsNullOrEmpty(settings.WinRarPath) ? new[] { ".zip", ".7z" } : new[] { ".zip", ".7z", ".rar" })
+                {
+                    string longArchive = Path.Combine(secondPanel, "long-path" + extension);
+                    var progress = new List<string>();
+                    ArchiveEngine.Create(longArchive, new[] { longSource }, settings, CancellationToken.None, progress.Add);
+                    var longDoc = ArchiveEngine.Open(longArchive);
+                    ArchiveEngine.Test(longDoc, CancellationToken.None);
+                    check(longDoc.Items.Any(item => item.Path == deepMember && item.Bytes == 14) &&
+                        longDoc.Items.Any(item => item.Directory && item.Path.EndsWith("/prázdná", StringComparison.Ordinal)) &&
+                        progress.All(update => !update.StartsWith("@archive-preparation|", StringComparison.Ordinal)),
+                        extension + " directly packs paths longer than 365 characters and preserves empty folders");
+                    check(progress.Any(update => ArchiveCompressionProgress.TryParse(update, out var state) &&
+                        state.CurrentFile == deepMember && !state.Complete), extension + " reports the current file during compression");
+                }
                 check(Path.GetDirectoryName(MainWindow.DefaultArchiveTarget(new[] { folder, neighbour }, source, secondPanel)) == secondPanel, "compression defaults to destination panel rather than source panel");
                 string childDir = Directory.CreateDirectory(Path.Combine(folder, "child")).FullName; File.WriteAllText(Path.Combine(childDir, "nested.txt"), "deep");
                 string shallow = Path.Combine(secondPanel, "shallow.zip");

@@ -91,6 +91,17 @@ def check(refresh=False, installation=None):
         for entry in current['binaries'] + current['originalNotices']:
             path = packaged(entry['file'])
             if path is not None: assert path.is_file() and digest(path) == entry['sha256'], f'Installed dependency/notice mismatch: {path}'
+        central = install / 'help/licenses'
+        for name in ('README.md', 'LICENSE.txt', 'LICENSING.md', 'THIRD-PARTY-NOTICES.md', 'DISTRIBUTION-AUDIT.md', 'dependencies.json'):
+            assert (central / name).is_file(), f'Missing central license document: {name}'
+        assert digest(central / 'LICENSE.txt') == digest(ROOT / 'LICENSE'), 'Central MIT license differs from source'
+        for name in ('LICENSING.md', 'THIRD-PARTY-NOTICES.md', 'DISTRIBUTION-AUDIT.md'):
+            assert digest(central / name) == digest(ROOT / 'docs' / name), f'Central document differs from source: {name}'
+        assert digest(central / 'dependencies.json') == digest(MANIFEST), 'Central dependency inventory differs from source'
+        for entry in current['originalNotices']:
+            if entry['file'] == 'plugins/smart/smartmontools-7.5.tar.gz': continue
+            path = central / 'original' / entry['file']
+            assert path.is_file() and digest(path) == entry['sha256'], f'Central notice mismatch: {path}'
         print('OK: packaged binaries, original licenses and SMART sources match the reviewed inventory')
     print(f'OK: {len(current["binaries"])} runtime binaries classified; {len(current["originalNotices"])} original notices/provenance files verified')
 

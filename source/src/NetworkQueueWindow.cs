@@ -120,7 +120,7 @@ namespace FileCompass
                 var update=job.Update();var metrics=job.Metrics();
                 presentation.Heading.Text=job.Move?L.Text("transfer.moveStatusPrefix"):L.Text("copy.title");
                 presentation.Route.SetPath("",job.Caption);presentation.Route.Visibility=Visibility.Visible;
-                presentation.Percent.Text=(Math.Max(0,Math.Min(1,update.Total))*100).ToString("F0")+" %";
+                presentation.Percent.Text=update.Preparing?"—":(Math.Max(0,Math.Min(1,update.Total))*100).ToString("F0")+" %";
                 presentation.Overall.Preparing=update.Preparing;presentation.Overall.Update(update.Total);
                 presentation.Remaining.Text=update.Phase+L.Text("transfer.remainingPrefix")+MainWindow.TransferTime(metrics.RemainingSeconds);
                 presentation.Totals.Text=CopyUi.Bytes(update.BytesDone)+" / "+CopyUi.Bytes(update.TotalBytes);

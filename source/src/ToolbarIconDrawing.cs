@@ -8,7 +8,24 @@ namespace FileCompass
     public static partial class DesktopIcons
     {
         public static ImageSource ToolbarDrawing(string name, ToolbarTheme theme) {
+            if (name == "label") return LabelToolbarIcon(theme);
             return ToolbarSymbols.Get(name,theme)??IconLibrary.Action(name,theme);
+        }
+        static ImageSource LabelToolbarIcon(ToolbarTheme theme)
+        {
+            bool outline = theme == ToolbarTheme.Outline;
+            var drawing = new DrawingGroup();
+            using (var context = drawing.Open())
+            {
+                context.DrawRectangle(Brushes.Transparent, null, new Rect(0, 0, 32, 32));
+                var ink = Brush(outline ? "#234B70" : "#5260BA");
+                Shape(context, "M4,4 H15 L28,17 Q29,18 28,19 L19,28 Q18,29 17,28 L4,15 Z",
+                    outline ? null : Brush("#8E96EB"), new Pen(ink, 1.6));
+                context.DrawEllipse(outline ? ink : Brushes.White, null, new Point(9.5, 9.5), 2, 2);
+            }
+            var image = new DrawingImage(drawing);
+            image.Freeze();
+            return image;
         }
         public static ImageSource BuildToolbarDrawing(string name, ToolbarTheme theme)
         {

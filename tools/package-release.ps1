@@ -27,6 +27,16 @@ if (!$InputDirectory) { throw 'Use -Build or specify a clean Release directory w
 $InputDirectory = [IO.Path]::GetFullPath($InputDirectory)
 $license = Join-Path $InputDirectory 'help\LICENSE.txt'
 if (!(Test-Path -LiteralPath $license) -or (Get-FileHash -LiteralPath $license -Algorithm SHA256).Hash -ne (Get-FileHash -LiteralPath (Join-Path $projectRoot 'LICENSE') -Algorithm SHA256).Hash) { throw 'The package must include the complete current MIT license at help/LICENSE.txt.' }
+$central = Join-Path $InputDirectory 'help\licenses'
+foreach ($name in @('README.md','LICENSE.txt','LICENSING.md','THIRD-PARTY-NOTICES.md','DISTRIBUTION-AUDIT.md','dependencies.json')) { if (!(Test-Path -LiteralPath (Join-Path $central $name) -PathType Leaf)) { throw "Missing central license document: $name" } }
+if ((Get-FileHash -LiteralPath (Join-Path $central 'LICENSE.txt') -Algorithm SHA256).Hash -ne (Get-FileHash -LiteralPath (Join-Path $projectRoot 'LICENSE') -Algorithm SHA256).Hash) { throw 'Central MIT license differs from source.' }
+foreach ($name in @('LICENSING.md','THIRD-PARTY-NOTICES.md','DISTRIBUTION-AUDIT.md')) { if ((Get-FileHash -LiteralPath (Join-Path $central $name) -Algorithm SHA256).Hash -ne (Get-FileHash -LiteralPath (Join-Path $projectRoot "docs\$name") -Algorithm SHA256).Hash) { throw "Central document differs from source: $name" } }
+if ((Get-FileHash -LiteralPath (Join-Path $central 'dependencies.json') -Algorithm SHA256).Hash -ne (Get-FileHash -LiteralPath (Join-Path $projectRoot 'source\dependencies.json') -Algorithm SHA256).Hash) { throw 'Central dependency inventory differs from source.' }
+$licenseInventory = Get-Content -LiteralPath (Join-Path $projectRoot 'source\dependencies.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+foreach ($entry in $licenseInventory.originalNotices) {
+    $notice = if ($entry.file -eq 'plugins/smart/smartmontools-7.5.tar.gz') { Join-Path $InputDirectory $entry.file } else { Join-Path (Join-Path $central 'original') $entry.file }
+    if (!(Test-Path -LiteralPath $notice -PathType Leaf) -or (Get-FileHash -LiteralPath $notice -Algorithm SHA256).Hash.ToLowerInvariant() -ne $entry.sha256) { throw "Missing or changed central notice: $($entry.file)" }
+}
 $exe = Join-Path $InputDirectory 'File Compass.exe'
 $information = [Diagnostics.FileVersionInfo]::GetVersionInfo($exe).ProductVersion
 if ($information -notmatch '^(?<version>\d+\.\d+\.\d+)(?:-(?<channel>alpha|beta|rc))?\+(?<build>\d{8}\.\d{2,9})$') { throw 'Invalid application version/build.' }
@@ -56,7 +66,7 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 $digest = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
 [IO.File]::WriteAllText(($zip+'.sha256'),($digest+'  FileCompass-win-x64.zip'+[Environment]::NewLine),(New-Object Text.UTF8Encoding($false)))
 $url = 'https://github.com/rathousky-pro/file-compass-web/releases/download/'+$tag+'/FileCompass-win-x64.zip'
-$notes = "File Compass $information`n`nWindows x64 portable beta. Original File Compass code is licensed under MIT, copyright (c) 2026 Jan Rathousky. Third-party components retain their own licenses; see help/LICENSE.txt and help/LICENSING.md in the package.`n`nThe executable is not digitally signed yet. Includes application files and the verified update manifest.`nSHA-256: $digest`n"
+$notes = "File Compass $information`n`nWindows x64 portable beta. Original File Compass code is licensed under MIT, copyright (c) 2026 Jan Rathousky. Third-party components retain their own licenses; see help/licenses/README.md in the package.`n`nThe executable is not digitally signed yet. Includes application files and the verified update manifest.`nSHA-256: $digest`n"
 $notesPath = Join-Path $OutputDirectory 'release-notes.md'; [IO.File]::WriteAllText($notesPath,$notes,(New-Object Text.UTF8Encoding($false)))
 [IO.File]::WriteAllText((Join-Path $OutputDirectory 'release-info.json'),(@{tag=$tag;url=$url;zip=$zip;sha256=$digest;prerelease=[bool]$channel}|ConvertTo-Json),(New-Object Text.UTF8Encoding($false)))
 if ($Publish) {

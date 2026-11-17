@@ -54,8 +54,9 @@ namespace FileCompass {
                 check(about.Logo.Source!=null&&about.Repository.NavigateUri.AbsoluteUri==ApplicationBrand.GitHubUrl,"About displays the application logo and exact repository URL");
                 check(FluentUiTests.Children<TextBlock>(about).Any(x=>x.Text==ApplicationBrand.Developer),"About displays the developer identity");
                 string canonical=L.Code("state.ready");
-                foreach(string language in new[]{"cs","de","fr","en","pl","es","pt","nl","en"}) {
+                foreach(string language in new[]{"cs","de","fr","en","pl","es","pt","nl","it","en"}) {
                     L.ChangeLanguage(language);LiveLanguage.Refresh(main);LiveLanguage.Refresh(probe);LiveLanguage.Refresh(about);
+                    check(FluentUiTests.Children<Button>(main).Where(x=>Convert.ToString(x.Tag)=="toolbar-action").Any(x=>FluentUiTests.Children<Image>(x).Any(i=>Convert.ToString(i.Tag)=="tools")&&FluentUiTests.Children<TextBlock>(x).Any(t=>t.Text==L.Text("operation.tools")+" ▾")),"tools toolbar caption switches to "+language);
                     check(label.Text==L.Text("action.copy"),"existing static caption switches to "+language);
                     check(formatted.Text==L.Format("delete.chooseFileAction","File"),"formatted caption switches without altering its argument: "+language);
                     check(userLabel.Text=="Copy"&&editor.Text=="Copy","equal user text and editable input are preserved: "+language);

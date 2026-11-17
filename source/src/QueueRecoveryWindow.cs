@@ -76,10 +76,24 @@ namespace FileCompass
         {
             if (networkStore == null) networkStore = new NetworkSettingsStore(NetworkSettingsStore.DefaultPath);
             var profile = id!=null&&id.StartsWith("cloud-")?CloudRuntime.SavedProfile(id.Substring(6)):networkStore.Settings.Connections.FirstOrDefault(x => x.Id == id);
-            if (profile == null || DurableQueue.Identity(profile) != identity) throw new IOException(L.Text("queue.connectionProfileChanged"));
-            var browsing = new[] { left.Remote,right.Remote }.FirstOrDefault(x => x != null && DurableQueue.Identity(x.Profile) == identity); if (browsing != null) return browsing.TransferConnection();
+            if (profile == null || (!profile.FtpNeedsUser && DurableQueue.Identity(profile) != identity)) throw new IOException(L.Text("queue.connectionProfileChanged"));
+            profile = profile.Clone();
+            bool legacyAnonymous = profile.FtpNeedsUser && DurableQueue.Identity(profile) == identity;
+            foreach (var browsing in new[] { left.Remote, right.Remote })
+            {
+                if (browsing == null || DurableQueue.Identity(browsing.Profile) != identity) continue;
+                var candidate = profile.Clone();
+                if (candidate.FtpNeedsUser) candidate.UserName = browsing.Profile.UserName;
+                if (DurableQueue.Identity(candidate) == identity) return browsing.TransferConnection();
+            }
             string password = NetworkSettingsStore.Unprotect(profile.EncryptedPassword); bool remember = false;
-            if (String.IsNullOrEmpty(password) && !(profile.IsSshTransfer && (profile.SshAgent || !String.IsNullOrEmpty(profile.PrivateKeyPath))) && !(profile.Protocol == NetworkProtocol.FTP && String.IsNullOrWhiteSpace(profile.UserName))) { password = RequestPassword(profile,out remember); if (password == null) throw new OperationCanceledException(L.Text("queue.restoreCancelled")); }
+            if (profile.FtpNeedsUser || (String.IsNullOrEmpty(password) && !profile.FtpAnonymous && !(profile.IsSshTransfer && (profile.SshAgent || !String.IsNullOrEmpty(profile.PrivateKeyPath)))))
+            {
+                password = RequestPassword(profile, out remember);
+                if (password == null) throw new OperationCanceledException(L.Text("queue.restoreCancelled"));
+            }
+            if (DurableQueue.Identity(profile) != identity && !(legacyAnonymous && profile.FtpAnonymous))
+                throw new IOException(L.Text("queue.connectionProfileChanged"));
             var connection = new RemoteConnection(profile); try {
                 bool retryPassword = false;
                 try { await Task.Run(delegate { connection.Open(connection.Options(password)); }); }
@@ -88,7 +102,7 @@ namespace FileCompass
                     retryPassword = true;
                 }
                 if (retryPassword) { connection.Dispose(); password = RequestPassword(profile,out remember); if (password == null) throw new OperationCanceledException(L.Text("queue.restoreCancelled")); connection = new RemoteConnection(profile); await Task.Run(delegate { connection.Open(connection.Options(password)); }); }
-                if (remember) { profile.EncryptedPassword = NetworkSettingsStore.Protect(password); networkStore.Put(profile); } return connection;
+                if (remember && !legacyAnonymous) { profile.EncryptedPassword = NetworkSettingsStore.Protect(password); networkStore.Put(profile); } return connection;
             } catch { connection.Dispose(); throw; }
         }
         async void SaveQueueAndExit()

@@ -40,6 +40,8 @@ namespace FileCompass
         public long BytesPerSecond;
         public double? RemainingSeconds;
         public int Completed, TotalFiles;
+        internal bool Preparing { get { return Phase == L.Code("copy.loadingFiles") || Phase == L.Code("copy.savingPlan"); } }
+        internal string DisplayPhase { get { return !Preparing ? Phase : L.Text(Phase == L.Code("copy.loadingFiles") ? "copy.loadingFiles" : "copy.savingPlan"); } }
     }
     public class CopyResult
     {
@@ -118,10 +120,16 @@ namespace FileCompass
         CopyRule rule;
         long totalBytes, doneBytes;
         long transferredBytes, transferTicks;
+        // The engine processes one stream at a time, including verification and append.
+        byte[] transferBuffer;
+        byte[] TransferBuffer { get { return transferBuffer ?? (transferBuffer = new byte[1024 * 1024]); } }
         int totalFiles, finishedFiles;
         DateTime lastReport = DateTime.MinValue;
         internal Action<List<DurableFile>> PlanReady;
         internal Action<string> PersistDone;
+        string performanceId;
+        long receiptTicks;
+        int receiptCount;
         internal Dictionary<string,string> RecoveryTargets;
 
         public CopyEngine(CopyOptions options, CopyControl control, Func<CopyConflict, CopyDecision> resolve, Action<CopyUpdate> report, Func<CopyFailure, CopyErrorChoice> resolveError = null)
@@ -129,6 +137,8 @@ namespace FileCompass
 
         public CopyResult Run(IEnumerable<string> sourcePaths)
         {
+            long started = PerformanceLog.Start;
+            if (started != 0) performanceId = Guid.NewGuid().ToString("N");
             string currentSource = "", currentTarget = "";
             try
             {
@@ -148,7 +158,10 @@ namespace FileCompass
                     var node = ScanSafe(new FileInfo(source), destination); if (node != null) nodes.Add(node);
                 }
                 Publish(currentSource, currentTarget, L.Code("copy.savingPlan"), 0, 0, true);
+                PerformanceLog.Write("local.scan", started, performanceId, "files=" + totalFiles + " planned_bytes=" + totalBytes);
+                long planStarted = PerformanceLog.Start;
                 if (PlanReady != null) { var plan = new List<DurableFile>(); foreach (var node in nodes) AddPlan(node,RecoveryTargets != null ? RecoveryTargets[node.Source] : options.TargetIsFile ? target : Path.Combine(target,Path.GetFileName(node.Source.TrimEnd('\\'))),plan); PlanReady(plan); }
+                PerformanceLog.Write("local.plan", planStarted, performanceId);
                 control.Check(); Directory.CreateDirectory(destinationFolder);
                 foreach (Node node in nodes)
                 {
@@ -158,7 +171,24 @@ namespace FileCompass
             }
             catch (OperationCanceledException) { result.Cancelled = true; }
             catch (Exception ex) { result.Errors.Add(ex.Message); result.Items.Add(new OperationItem { Source = currentSource, Target = currentTarget, Directory = Directory.Exists(currentSource), State = L.Code("state.error"), Error = ex.Message }); }
+            finally { transferBuffer = null; }
+            if (started != 0)
+                PerformanceLog.Write(options.Move ? "local.move" : "local.copy", started, performanceId,
+                    "copied=" + result.Copied + " skipped=" + result.Skipped + " errors=" + result.Errors.Count + " cancelled=" + result.Cancelled +
+                    " transferred_bytes=" + transferredBytes + " read_write_hash_ms=" + PerformanceLog.Milliseconds(transferTicks) +
+                    " receipt_calls=" + receiptCount + " receipt_ms=" + PerformanceLog.Milliseconds(receiptTicks));
             return result;
+        }
+
+        void RecordCompletion(string source)
+        {
+            if (PersistDone == null) return;
+            long started = PerformanceLog.Start;
+            try { PersistDone(source); }
+            finally
+            {
+                if (started != 0) { receiptTicks += System.Diagnostics.Stopwatch.GetTimestamp() - started; receiptCount++; }
+            }
         }
 
         void AddPlan(Node node,string target,List<DurableFile> result)
@@ -287,7 +317,7 @@ namespace FileCompass
                     if(undo!=null)result.Undo.Add(undo);
                     result.Items.Add(new OperationItem { Source = node.Source, Target = target, State = L.Code("state.completed") });
                     result.Copied++; doneBytes += node.Bytes; finishedFiles++;
-                    if (PersistDone != null) PersistDone(node.Source);
+                    RecordCompletion(node.Source);
                     Publish(node.Source, target, L.Code("state.completed"), node.Bytes, node.Bytes, true);
                 }
             }
@@ -344,14 +374,14 @@ namespace FileCompass
         void Skip(Node node, bool record = true)
         {
             if (node.Directory) { foreach (Node child in node.Children) Skip(child, record); }
-            else { if (record) result.Items.Add(new OperationItem { Source = node.Source, State = L.Code("state.skipped") }); result.Skipped++; finishedFiles++; doneBytes += node.Bytes; if (record && PersistDone != null) PersistDone(node.Source); }
+            else { if (record) result.Items.Add(new OperationItem { Source = node.Source, State = L.Code("state.skipped") }); result.Skipped++; finishedFiles++; doneBytes += node.Bytes; if (record) RecordCompletion(node.Source); }
         }
 
         void RecordRenamed(Node node, string target)
         {
             result.Items.Add(new OperationItem { Source = node.Source, Target = target, Directory = node.Directory, State = L.Code("state.completed") });
             if (node.Directory) foreach (var child in node.Children) RecordRenamed(child, Path.Combine(target, Path.GetFileName(child.Source)));
-            else { result.Copied++; finishedFiles++; doneBytes += node.Bytes; if (PersistDone != null) PersistDone(node.Source); }
+            else { result.Copied++; finishedFiles++; doneBytes += node.Bytes; RecordCompletion(node.Source); }
         }
         UndoReceipt CopyFile(Node node, string target, Stamp expected, bool append)
         {
@@ -367,8 +397,8 @@ namespace FileCompass
                 FileSecurity security;
                 byte[] expectedHash;
                 using (var hash = SHA256.Create())
-                using (var input = new FileStream(node.Source, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, FileOptions.SequentialScan))
-                using (var output = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1024 * 1024, FileOptions.SequentialScan))
+                using (var input = new FileStream(node.Source, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan))
+                using (var output = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.SequentialScan))
                 {
                     ownedTemp = true;
                     sourceTime = File.GetLastWriteTimeUtc(node.Source); sourceAttributes = File.GetAttributes(node.Source);
@@ -389,7 +419,7 @@ namespace FileCompass
                     using (var check = File.OpenRead(temp))
                     using (var hash = SHA256.Create())
                     {
-                        byte[] buffer = new byte[1024 * 1024]; int read;
+                        byte[] buffer = TransferBuffer; int read;
                         while ((read = check.Read(buffer, 0, buffer.Length)) > 0) { control.Check(); hash.TransformBlock(buffer, 0, read, null, 0); }
                         hash.TransformFinalBlock(new byte[0], 0, 0);
                         if (!expectedHash.SequenceEqual(hash.Hash)) throw new IOException(L.Text("copy.verificationFailedTargetPreserved"));
@@ -444,7 +474,7 @@ namespace FileCompass
         static extern bool SetFileInformationByHandle(Microsoft.Win32.SafeHandles.SafeFileHandle handle, int kind, ref int information, uint size);
         byte[] CheckedHash(Stream stream)
         {
-            using (var hash = SHA256.Create()) { byte[] buffer = new byte[1024 * 1024]; int count; while ((count = stream.Read(buffer, 0, buffer.Length)) > 0) { control.Check(); hash.TransformBlock(buffer, 0, count, null, 0); } hash.TransformFinalBlock(new byte[0], 0, 0); return hash.Hash; }
+            using (var hash = SHA256.Create()) { byte[] buffer = TransferBuffer; int count; while ((count = stream.Read(buffer, 0, buffer.Length)) > 0) { control.Check(); hash.TransformBlock(buffer, 0, count, null, 0); } hash.TransformFinalBlock(new byte[0], 0, 0); return hash.Hash; }
         }
         void RemoveVerifiedSource(Node node, string target)
         {
@@ -473,7 +503,7 @@ namespace FileCompass
         }
         void CopyStream(Stream input, Stream output, HashAlgorithm hash, Node node, string target, bool prefix)
         {
-            byte[] buffer = new byte[1024 * 1024]; int count; long written = 0;
+            byte[] buffer = TransferBuffer; int count; long written = 0;
             while (true)
             {
                 control.Check(); long started = System.Diagnostics.Stopwatch.GetTimestamp();

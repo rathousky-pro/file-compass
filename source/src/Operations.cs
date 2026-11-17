@@ -53,9 +53,11 @@ namespace FileCompass
         }
         public void Save()
         {
+            long started = PerformanceLog.Start;
             // Snapshot and serialize on the owner thread; queued disk writes cannot race with each other.
             string xml;
             using (var writer = new StringWriter()) { new XmlSerializer(typeof(List<OperationRecord>)).Serialize(writer, Records.Take(300).ToList()); xml = writer.ToString(); }
+            if (started != 0) PerformanceLog.Write("history.serialize", started, details: "records_in_memory=" + Records.Count + " xml_chars=" + xml.Length);
             writes = writes.ContinueWith(delegate
             {
                 string temp = path + ".tmp";

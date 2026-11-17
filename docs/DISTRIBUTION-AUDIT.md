@@ -19,7 +19,7 @@ This inventory describes the checked-in application, not a new public binary rel
 1. Prepare an exact corresponding-source bundle, build recipes and dependency notices for the pinned FFmpeg build. A mutable `latest` URL or a link to a different revision is insufficient. Consult the [FFmpeg license checklist](https://www.ffmpeg.org/legal.html).
 2. Retain the applicable Microsoft redistribution terms and publisher entitlement for the OpenMP runtime supplied in the official Magick.NET package. It is not relicensed under Apache. Consult [Microsoft's redistribution guidance](https://learn.microsoft.com/en-us/cpp/windows/determining-which-dlls-to-redistribute).
 3. If the user activates a vendor component update, review the license/source obligations for that exact downloaded version. In particular, the FFmpeg updater uses gyan.dev full static builds, which are distinct from the original BtbN LGPL shared package. The shipped-build notice must not be presented as covering arbitrary replacements.
-4. Keep publisher OAuth configuration, account tokens, credentials, user files and local profiles out of Git and release archives. Application update release URLs remain unconfigured; this source upload does not enable automatic application updates or publish a binary release.
+4. Keep publisher OAuth configuration, account tokens, credentials, user files and local profiles out of Git and release archives. The application updater uses the public website repository releases; publishing remains a separate operation.
 
 ## MIT follow-up - 4 November 2026
 
@@ -55,10 +55,10 @@ the remote release state, asset sizes and SHA-256 digests before committing link
 
 ## Documentation scope
 
-All eight interface catalogs are maintained together with equal key sets and format placeholders. Offline help is an external HTML package shared by the native viewer and browsers, with 44 topics and 28 screenshot scenes per language. It is maintained in Czech and English; other interface languages explicitly show English help. Original third-party legal notices are not translated. Historical validation records in ignored development directories are not current product specifications.
+All nine interface catalogs are maintained together with equal key sets and format placeholders. Offline help is an external HTML package shared by the native viewer and browsers, with 44 topics and 28 screenshot scenes per language. It is maintained in Czech and English; other interface languages explicitly show English help. Original third-party legal notices are not translated. Historical validation records in ignored development directories are not current product specifications.
 
 ## Current inventory and cleanup boundaries
 
-`source/dependencies.json` classifies all 49 pinned runtime DLL/EXE/SFX files and hashes 70 original notice/provenance files. `python tools/check-dependency-notices.py` checks the inventory without changing upstream notices; `--refresh` is reserved for a reviewed dependency change. The content checker runs it automatically. The SDK project and PowerShell build both package external HTML help; publisher OAuth credentials are excluded from both.
+`source/dependencies.json` classifies all 49 pinned runtime DLL/EXE/SFX files and hashes 71 original notice/provenance files. `python tools/check-dependency-notices.py` checks the inventory without changing upstream notices; `--refresh` is reserved for a reviewed dependency change. The content checker runs it automatically. The SDK project and PowerShell build both package external HTML help; publisher OAuth credentials are excluded from both.
 
 Maintenance removes ignored historical builds, test outputs and executable backups only after checking workspace boundaries, Git tracking, running programs and nested repositories. Compact test results are retained under ignored maintenance records. The installed application, local profiles, official dependency downloads, compiler/native build inputs, license texts and matching-source archives are preserved. Vendor update rollback packages in the user profile are retained.

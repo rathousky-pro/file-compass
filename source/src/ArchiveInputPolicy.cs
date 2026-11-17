@@ -47,7 +47,7 @@ namespace FileCompass {
                         var buffer=new byte[1048576];
                         while(true){
                             int count;try{count=input.Read(buffer,0,buffer.Length);}catch(IOException ex){failure=ex;break;}
-                            if(count==0)break;token.ThrowIfCancellationRequested();budget.Write(count,target,true);output.Write(buffer,0,count);preparation.Copied(count);copied+=count;
+                            if(count==0)break;token.ThrowIfCancellationRequested();budget.Write(count,target,false);output.Write(buffer,0,count);preparation.Copied(count);copied+=count;
                         }
                     }
                 }

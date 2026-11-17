@@ -11,9 +11,19 @@ namespace FileCompass
         {
             Directory.CreateDirectory(root); var checks = new List<string>(); string previousPath = ArchiveSettings.TestPath;
             try {
+                if (ArchiveMemoryPlan.ParallelThreads(1024, 8L * 1073741824, 1000, 4, 16) != 4 ||
+                    ArchiveMemoryPlan.ParallelThreads(1024, 256L * 1048576, 1000, 8, 16) != 1 ||
+                    ArchiveMemoryPlan.ParallelThreads(1024, 8L * 1073741824, 1000, 2, 16) != 2 ||
+                    ArchiveMemoryPlan.ParallelThreads(1024, 8L * 1073741824, 1000, 8, 16) != 8)
+                    throw new Exception("ZIP and RAR parallelism must respect available memory and configured thread caps.");
+                checks.Add("ZIP and RAR respect the available memory and their thread caps");
                 var high = ArchiveMemoryPlan.Choose(1024, 8L * 1073741824, 100, 9, false);
                 var low = ArchiveMemoryPlan.Choose(256, 8L * 1073741824, 100, 9, false);
                 var fallback = ArchiveMemoryPlan.Choose(1024, 8L * 1073741824, 100, 9, true);
+                var parallel = ArchiveMemoryPlan.Choose(1024, 8L * 1073741824, 100, 6, false, 4);
+                if (parallel.Threads != Math.Min(4, Environment.ProcessorCount) || parallel.DictionaryMiB != 16)
+                    throw new Exception("A direct 7z job should use more workers with the same dictionary when memory permits.");
+                checks.Add("7z direct compression can use four threads without reducing the dictionary");
                 if (high.DictionaryMiB > 32 || high.Threads > 2 || low.DictionaryMiB >= high.DictionaryMiB || fallback.DictionaryMiB > 2 || fallback.Threads != 1) throw new Exception("Adaptive compression plan exceeds conservative bounds.");
                 checks.Add("dictionary and thread count follow memory limit; fallback is smaller and single threaded");
                 bool rejected = false; try { ArchiveMemoryPlan.Choose(64, 8L * 1073741824, 0, 9, false); } catch (ArchiveMemoryException) { rejected = true; } if (!rejected) throw new Exception("Insufficient process budget not rejected.");

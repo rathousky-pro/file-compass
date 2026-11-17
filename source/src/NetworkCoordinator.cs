@@ -73,15 +73,30 @@ namespace FileCompass
         {
             var window = new Window(); CopyUi.Style(window, this, L.Text("network.loginTitlePrefix") + profile.Name, 440);
             var panel = new StackPanel { Margin = new Thickness(12) }; window.Content = panel;
-            panel.Children.Add(CopyUi.Label(L.Text("network.passwordForPrefix") + profile.UserName + "@" + profile.Host + ":"));
+            TextBox user = null;
+            if (profile.FtpNeedsUser)
+            {
+                panel.Children.Add(CopyUi.Label(profile.Host));
+                panel.Children.Add(CopyUi.Label(L.Text("network.usernameLabel")));
+                user = new TextBox { Margin = new Thickness(2, 4, 2, 8), MinHeight = 24 };
+                panel.Children.Add(user);
+                panel.Children.Add(CopyUi.Label(L.Text("network.passwordLabel")));
+            }
+            else panel.Children.Add(CopyUi.Label(L.Text("network.passwordForPrefix") + profile.UserName + "@" + profile.Host + ":"));
             var input = new PasswordBox { Margin = new Thickness(2, 4, 2, 8), MinHeight = 24 }; panel.Children.Add(input);
             var save = new CheckBox { Content = L.Text("network.rememberConnectionPassword"), Margin = new Thickness(2, 0, 2, 10) }; panel.Children.Add(save);
             var buttons = new System.Windows.Controls.Primitives.UniformGrid { Columns = 2 };
-            var ok = CopyUi.Button(L.Text("action.append"), delegate { window.DialogResult = true; }); ok.IsDefault = true; buttons.Children.Add(ok);
+            var ok = CopyUi.Button(L.Text("ssh.loginContinue"), delegate { window.DialogResult = true; }); ok.IsDefault = true; buttons.Children.Add(ok);
             var cancel = CopyUi.Button(L.Text("action.cancel"), delegate { window.DialogResult = false; }); cancel.IsCancel = true; buttons.Children.Add(cancel); panel.Children.Add(buttons);
-            window.Loaded += delegate { input.Focus(); };
+            if (user != null)
+            {
+                ok.IsEnabled = false;
+                user.TextChanged += delegate { ok.IsEnabled = !String.IsNullOrWhiteSpace(user.Text); };
+            }
+            window.Loaded += delegate { if (user != null) user.Focus(); else input.Focus(); };
             bool accepted = window.ShowDialog() == true;
             remember = accepted && save.IsChecked == true;
+            if (accepted && user != null) profile.UserName = user.Text.Trim();
             return accepted ? input.Password : null;
         }
         void NetworkBusy(bool value, string text)
@@ -103,10 +118,10 @@ namespace FileCompass
                 profile.Validate();
                 if (panel.NfsDrive != null) throw new IOException(L.Text("nfs.disconnectBeforeConnecting"));
                 string password = NetworkSettingsStore.Unprotect(profile.EncryptedPassword);
-                bool needsPassword = profile.Protocol != NetworkProtocol.NFS && String.IsNullOrEmpty(profile.EncryptedPassword) &&
+                bool needsPassword = profile.FtpNeedsUser || (profile.Protocol != NetworkProtocol.NFS && String.IsNullOrEmpty(profile.EncryptedPassword) &&
                     (profile.Protocol != NetworkProtocol.SMB || !String.IsNullOrEmpty(profile.UserName)) &&
-                    (profile.Protocol != NetworkProtocol.FTP || !String.IsNullOrWhiteSpace(profile.UserName)) &&
-                    (!profile.IsSshTransfer || (!profile.SshAgent && String.IsNullOrEmpty(profile.PrivateKeyPath)));
+                    !profile.FtpAnonymous &&
+                    (!profile.IsSshTransfer || (!profile.SshAgent && String.IsNullOrEmpty(profile.PrivateKeyPath))));
                 bool rememberPassword = false;
                 if (needsPassword) { password = RequestPassword(profile, out rememberPassword); if (password == null) return; }
                 NetworkBusy(true, L.Text("network.connectingPrefix") + profile.Name);
@@ -267,6 +282,7 @@ namespace FileCompass
             await job.QueuePlanning(delegate
             {
                 Exception planningError = null;
+                long planningStarted = PerformanceLog.Start;
                 try
                 {
                     using (planner)
@@ -277,7 +293,11 @@ namespace FileCompass
                     }
                 }
                 catch (Exception ex) { planningError = ex; }
-                finally { job.PlanningDone(planningError, String.Join("; ", entries.Select(x => x.FullPath)), destination, entries, rule); }
+                finally
+                {
+                    if (planningStarted != 0) PerformanceLog.Write("network.plan", planningStarted, details: "download=" + download + " roots=" + entries.Length + " failed=" + (planningError != null));
+                    job.PlanningDone(planningError, String.Join("; ", entries.Select(x => x.FullPath)), destination, entries, rule);
+                }
             });
             await job.Completion;
             if (target != null && target.CurrentPath == destination && !target.IsLoading && (download ? !target.IsRemote : target.Remote == browsing)) target.Refresh();
@@ -285,15 +305,19 @@ namespace FileCompass
         }
         async Task RunNetworkJob(NetworkTransferJob job, RemoteConnection connection, RemoteConnection relayTarget = null)
         {
+            long started = PerformanceLog.Start;
+            string outcome = "failed";
             try
             {
                 var result = await Task.Run(delegate { using (connection) using (relayTarget) return relayTarget == null ? NetworkCopyWorker.Run(job, connection) : NetworkRelay.Run(job, connection, relayTarget); });
                 bool errors = job.SnapshotItems().Any(x => x.State.StartsWith(L.Code("state.error")));
                 bool skippedMove = job.Move && result.Skipped > 0;
+                outcome = errors || skippedMove ? "completed_with_errors" : "completed";
                 job.Finish(errors || skippedMove ? L.Text("state.completedWithErrors") : L.Code("state.completed"));
                 job.Activity.Finish((errors ? L.Text("state.completedWithErrors") : skippedMove ? L.Text("transfer.moveSkippedStatus") : L.Code("state.completed")) + " · " + job.Caption + (job.Move ? L.Text("copy.movedCountPrefix") : L.Text("copy.copiedCountPrefix")) + result.Copied + L.Text("copy.skippedCountSeparator") + result.Skipped + " · " + CopyUi.Bytes(job.TotalBytes) + L.Text("queue.clickToOpenSuffix"), !errors && !skippedMove);
             }
             catch (OperationCanceledException) {
+                outcome = "cancelled";
                 job.Cancel(); bool kept = job.RelayTarget == null || job.KeepPartialOnCancel; job.Finish(kept ? L.Code("state.interrupted") : L.Code("state.cancelled"));
                 job.Activity.Finish((kept ? L.Text("transfer.interruptedPartialPreserved") : L.Text("transfer.cancelledStatus") + (job.PartialCleanupError == null ? "" : L.Text("transfer.partialCleanupFailedSuffix") + job.PartialCleanupError)) + " · " + job.Caption,false);
                 if (kept) job.Activity.Record.State = L.Code("state.interrupted");
@@ -302,6 +326,8 @@ namespace FileCompass
             try { await job.PlanningCompletion; }
             finally
             {
+                if (started != 0) PerformanceLog.Write(relayTarget == null ? "network.job" : "network.relay", started,
+                    details: "outcome=" + outcome + " planned_bytes=" + job.TotalBytes + " move=" + job.Move);
                 FinishDurable(job);
                 job.Activity.Record.Items.AddRange(job.SnapshotItems().Select(x => new OperationItem { Source = x.Source, Target = x.Destination, Directory = x.Directory, State = x.State.StartsWith(L.Code("state.error")) ? L.Code("state.error") : x.State, Error = x.State.StartsWith(L.Code("state.error")) ? x.State : "" }));
                 operationJournal.Save(); networkCopies--;

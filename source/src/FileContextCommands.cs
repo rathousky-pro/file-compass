@@ -1,4 +1,4 @@
-﻿using System;using System.Collections.Generic;using System.Linq;using System.Windows;using System.Windows.Controls;using System.Windows.Input;using System.Windows.Media;using System.Windows.Threading;
+using System;using System.Collections.Generic;using System.Linq;using System.Windows;using System.Windows.Controls;using System.Windows.Input;using System.Windows.Media;using System.Windows.Threading;
 namespace FileCompass {
  public partial class FilePanel {
   bool contextPending;Entry contextPressedEntry;int contextPressTimestamp;
@@ -48,28 +48,61 @@ namespace FileCompass {
    if(native&&CanShowWindowsMenu){try{await ShellMenuWorker.Show(Window.GetWindow(this),Selected().Where(x=>!x.IsParent).Select(x=>x.FullPath).ToArray());if(IsLoaded)Refresh();}catch(OperationCanceledException){}catch(Exception ex){if(IsLoaded)MessageBox.Show(Window.GetWindow(this),ex.Message,L.Text("context.windows"));}return;}if(List.ContextMenu!=null){List.ContextMenu.PlacementTarget=List;List.ContextMenu.IsOpen=true;}}
  }
  public partial class MainWindow {
+  internal static FrameworkElement MenuCommandIcon(string icon)
+  {
+   string glyph;
+   switch (icon)
+   {
+    case "label": glyph = "\uE8EC"; break;
+    case "close": glyph = "\uE711"; break;
+    case "history": glyph = "\uE81C"; break;
+    case "unlock": glyph = "\uE785"; break;
+    case "terminal": glyph = "\uE756"; break;
+    default: return DesktopIcons.Toolbar(icon,16);
+   }
+   return new TextBlock { Text = glyph, FontFamily = new FontFamily("Segoe MDL2 Assets"),
+       FontSize = 15, Foreground = FluentTheme.Accent, HorizontalAlignment = HorizontalAlignment.Center };
+  }
+
   internal void AddFileContextCommands(ContextMenu menu,FilePanel panel){
-   menu.MinWidth=350;var previous=menu.Items.Cast<object>().ToArray();menu.Items.Clear();var extra=new MenuItem{Header=L.Text("context.more")};foreach(var old in previous){var item=old as MenuItem;if(item!=null&&new[]{L.Text("action.copyToClipboard"),L.Text("action.cut"),L.Text("action.paste"),L.Text("shell.propertiesShortcut")}.Contains(Convert.ToString(item.Header)))continue;extra.Items.Add(old);}
+   menu.MinWidth=350;var previous=menu.Items.Cast<object>().ToArray();menu.Items.Clear();var extra=new MenuItem{Header=L.Text("context.more")};foreach(var old in previous){var item=old as MenuItem;if(item!=null&&new[]{L.Text("action.copyToClipboard"),L.Text("action.cut"),L.Text("action.paste"),L.Text("shell.propertiesShortcut"),L.Text("action.createChecksums"),L.Text("clipboard.copyFullPaths"),L.Text("tags.edit")}.Contains(Convert.ToString(item.Header)))continue;extra.Items.Add(old);}
    var commands=new List<Tuple<MenuItem,Func<bool>>>();int index=0;Func<Entry[]> selected=()=>panel.Selected().Where(x=>!x.IsParent).ToArray();Func<bool> any=()=>selected().Length>0;
    Func<bool> file=()=>selected().Length==1&&!selected()[0].IsDirectory;Func<bool> ready=()=>!busy&&!PanelsLoading&&fileToolsRunning==0;
-   Action<string,string,string,Action,Func<bool>> add=(key,shortcut,icon,run,allowed)=>{var item=new MenuItem{Header=L.Text(key),InputGestureText=shortcut,Tag=key};if(icon!=null)item.Icon=DesktopIcons.Toolbar(icon,16);item.Click+=delegate{SetActive(panel);if(ready()&&allowed())run();};menu.Items.Insert(index++,item);commands.Add(Tuple.Create(item,allowed));};
+   Action<string,string,string,Action,Func<bool>> add=(key,shortcut,icon,run,allowed)=>{var item=new MenuItem{Header=L.Text(key),InputGestureText=shortcut,Tag=key};if(icon!=null)item.Icon=MenuCommandIcon(icon);item.Click+=delegate{SetActive(panel);if(ready()&&allowed())run();};menu.Items.Insert(index++,item);commands.Add(Tuple.Create(item,allowed));};
+   Func<bool> local = () => !panel.IsArchive && !panel.IsRemote && !panel.IsVirtualBrowser;
+   Func<bool> localFolder = () => local() && selected().Length == 1 && selected()[0].IsDirectory;
    add("context.open","Enter","folder",()=>panel.OpenSelected(),()=>panel.List.SelectedItem is Entry);
+   add("context.folderNewTab","","folder",async delegate
+   {
+    await panel.OpenLocationTab(new SavedTab { Path = selected()[0].FullPath });
+   },localFolder);
+   add("context.folderOtherPanel","","folder",delegate
+   {
+    var target = panel == left ? right : left;
+    if (!target.IsLoading && !target.LocalLoading) target.Navigate(selected()[0].FullPath,true);
+   },localFolder);
+   add("action.findFiles","","search",()=>FindFilesInFolder(selected()[0].FullPath),localFolder);
    add("context.preview","F3","view",()=>panel.ViewSelected(),file);
    add("action.edit","F4","edit",EditSelected,()=>file()&&!panel.IsExt);add("codeEditor.external","Shift+F4","edit",EditExternalSelected,()=>file()&&!panel.IsExt);
    Func<bool> convertible=()=>!panel.IsRemote&&!panel.IsArchive&&!panel.IsVirtualBrowser&&any()&&selected().All(x=>!x.IsDirectory&&(MediaCatalog.IsImage(x.FullPath)||MediaCatalog.IsAudio(x.FullPath)));
    add("media.contextConvert","","sync",delegate{var cursor=panel.List.SelectedItem as Entry;var first=cursor!=null&&selected().Contains(cursor)?cursor:selected()[0];OpenMediaConverter(MediaCatalog.IsImage(first.FullPath));},convertible);
    var convert=commands.Last().Item1;
+   var contextualKeys=new HashSet<string>{"context.folderNewTab","context.folderOtherPanel","action.findFiles","action.batchRename","action.createChecksums"};
    menu.Items.Insert(index++,new Separator());
    add("action.copy","F5","copy",()=>Transfer(false),any);add("action.move","F6","move",()=>Transfer(true),()=>any()&&!panel.IsArchive&&!panel.IsVirtualBrowser);
    add("action.copyToClipboard","Ctrl+C","copy",()=>CopyClipboard(false),any);add("action.cut","Ctrl+X","cut",()=>CopyClipboard(true),()=>any()&&!panel.IsArchive&&!panel.IsRemote&&!panel.IsExt);add("action.paste","Ctrl+V","paste",PasteClipboard,()=>!panel.IsVirtualBrowser&&!String.IsNullOrEmpty(panel.CurrentPath));
+   add("tags.edit","","label",EditTags,()=>local()&&any()&&selected().All(item=>!item.IsLink));
+   add("clipboard.copyFullPaths","Ctrl+Shift+C","copy",()=>CopyNames(true),any);
+   add("action.batchRename","Ctrl+M","rename",MultiRename,()=>local()&&selected().Length>1);
    add("action.rename","Shift+F6","rename",Rename,()=>selected().Length==1&&!panel.IsVirtualBrowser);add("action.delete","F8","delete",DeleteSelected,()=>any()&&!panel.IsVirtualBrowser);
    menu.Items.Insert(index++,new Separator());
    add("action.compress","Alt+F5","pack",CreateArchive,()=>any()&&!panel.IsRemote&&!panel.IsArchive&&!panel.IsVirtualBrowser);
    add("action.extract","Alt+F9","unpack",ExtractArchives,()=>panel.IsArchive||any()&&!panel.IsRemote&&!panel.IsExt&&!panel.IsVirtualBrowser&&selected().All(x=>!x.IsDirectory));
    menu.Items.Insert(index++,new Separator());
+   add("action.createChecksums","",null,CreateChecksumsDialog,()=>local()&&any()&&selected().All(x=>!x.IsDirectory));
    add("shell.propertiesShortcut","",null,ShowProperties,()=>any()&&!panel.IsRemote&&!panel.IsArchive&&!panel.IsExt);menu.Items.Add(extra);
    var system=new MenuItem{Header=L.Text("context.windows"),Tag="context.windows",ToolTip=L.Text("context.windowsHint")};system.Click+=delegate{panel.ShowFileContextMenu(true);};menu.Items.Add(new Separator());menu.Items.Add(system);
-   menu.Opened+=delegate{SetActive(panel);foreach(var command in commands)command.Item1.IsEnabled=ready()&&command.Item2();convert.Visibility=convertible()?Visibility.Visible:Visibility.Collapsed;system.Visibility=panel.CanShowWindowsMenu?Visibility.Visible:Visibility.Collapsed;system.IsEnabled=ready();};
+   menu.Opened+=delegate{SetActive(panel);foreach(var command in commands){bool applicable=command.Item2();command.Item1.IsEnabled=ready()&&applicable;if(contextualKeys.Contains((string)command.Item1.Tag))command.Item1.Visibility=applicable?Visibility.Visible:Visibility.Collapsed;}convert.Visibility=convertible()?Visibility.Visible:Visibility.Collapsed;system.Visibility=panel.CanShowWindowsMenu?Visibility.Visible:Visibility.Collapsed;system.IsEnabled=ready();};
   }
  }
 }

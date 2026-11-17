@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -30,7 +30,14 @@ namespace FileCompass
         public bool IsHidden { get; set; }
         public bool IsSystem { get; set; }
         string[] tagNames = new string[0];
-        public string[] TagNames { get { return tagNames; } set { tagNames = value ?? new string[0]; if (PropertyChanged != null) { PropertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs("TagsLabel")); PropertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs("NameToolTip")); } } }
+        public string[] TagNames { get { return tagNames; } set { tagNames = value ?? new string[0]; if (PropertyChanged != null) { PropertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs("TagsLabel")); PropertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs("TagBadges")); PropertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs("NameToolTip")); } } }
+        internal Dictionary<string,string> TagColors;
+        internal string TagColor(string name)
+        {
+            return TagColors != null && TagColors.TryGetValue(name, out var value) ? value : null;
+        }
+
+        public FileTagBadge[] TagBadges { get { return tagNames.Take(3).Select(name => new FileTagBadge(name, TagColor(name))).ToArray(); } }
         public string TagsLabel { get { return String.Join(" · ", tagNames); } }
         public string Name { get; set; }
         public string Extension { get; set; }
@@ -76,6 +83,21 @@ namespace FileCompass
         GridSplitter panelSplitter;
         internal Task StartupRestoration;
         WindowState lastVisibleWindowState = WindowState.Normal;
+        internal void TrackStartupPerformance()
+        {
+            if (PerformanceLog.Start == 0) return;
+            EventHandler rendered = null;
+            rendered = async delegate
+            {
+                ContentRendered -= rendered;
+                PerformanceLog.Write("startup.first_render", PerformanceLog.Entry);
+                await StartupRestoration;
+                await Task.WhenAll(left.NavigationTask, right.NavigationTask);
+                PerformanceLog.Write("startup.panels_settled", PerformanceLog.Entry);
+                PerformanceLog.Sample("memory.startup");
+            };
+            ContentRendered += rendered;
+        }
         public MainWindow(string initialDirectory = null, ProgramSettings preferences = null)
         {
             FluentTheme.Ensure(); InitializeOperations(initialDirectory);
@@ -92,7 +114,7 @@ namespace FileCompass
             operation.Cursor = Cursors.Hand; operation.MouseLeftButtonUp += delegate { ShowCopyProgress(); };
             var split = panelSplit = new Grid { Margin = new Thickness(8, 6, 8, 7) };
             split.ColumnDefinitions.Add(new ColumnDefinition()); split.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(6) }); split.ColumnDefinitions.Add(new ColumnDefinition());
-            left = new FilePanel(SetActive); right = new FilePanel(SetActive);
+            left = new FilePanel(SetActive); right = new FilePanel(SetActive); InitializePanelComparison();
             left.DeferAutomaticRefresh = right.DeferAutomaticRefresh = delegate { return copyProgress != null && copyProgress.IsVisible; };
             left.PathChanged += delegate { UpdatePrompt(); }; right.PathChanged += delegate { UpdatePrompt(); };
             left.LoadingChanged += delegate { UpdateNetworkActions(); }; right.LoadingChanged += delegate { UpdateNetworkActions(); };
@@ -255,12 +277,15 @@ namespace FileCompass
         [STAThread]
         public static int Main(string[] args)
         {
+            PerformanceLog.Begin(args);
             try{using(RuntimeIntegrity.Acquire())return RunVerified(args);}
             catch(Exception ex){if(args.Any(x=>x.StartsWith("--",StringComparison.Ordinal)))Console.Error.WriteLine(ex.Message);else MessageBox.Show(ex.Message,ApplicationBrand.Name,MessageBoxButton.OK,MessageBoxImage.Error);return 2;}
+            finally { PerformanceLog.End(); }
         }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
         static int RunVerified(string[] args)
         {
+            PerformanceLog.Write("startup.runtime_verified", PerformanceLog.Entry);
 #if APP_TESTS
             if(args.Length==3&&args[0]=="--application-package-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[2]),"profile");return ApplicationUpdatesTests.VerifyPackage(Path.GetFullPath(args[1]),Path.GetFullPath(args[2]));}
             if(args.Length==2&&args[0]=="--application-updates-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return ApplicationUpdatesTests.Run(args[1]);}
@@ -466,14 +491,19 @@ namespace FileCompass
             if (args.Contains("--scp-test")) return NativeNetworkTests.Scp(args[1], Int32.Parse(args[2]));
 #endif
             try {
+                long settingsStarted = PerformanceLog.Start;
                 var preferences = ProgramSettings.Load(); string folder = InstanceCoordinator.FolderArgument(args);
+                PerformanceLog.Write("startup.settings", settingsStarted);
                 using (var instance = preferences.SingleInstance ? new InstanceCoordinator(InstanceCoordinator.Identity) : null) {
                     if (instance != null && !instance.Primary) { instance.Forward(folder); return 0; }
                     var app = new Application(); FluentTheme.Ensure();
+                    PerformanceLog.Write("startup.theme_ready", PerformanceLog.Entry);
                     app.DispatcherUnhandledException += delegate(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
                     { MessageBox.Show(e.Exception.Message, L.Text("app.errorTitle"), MessageBoxButton.OK, MessageBoxImage.Error); e.Handled = true; };
                     UpdateRegistry.Startup();
                     var window = new MainWindow(null, preferences);
+                    PerformanceLog.Write("startup.window_created", PerformanceLog.Entry);
+                    window.TrackStartupPerformance();
                     window.Loaded += delegate { window.AcceptLaunch(""); };
                     window.Loaded += async delegate { await System.Threading.Tasks.Task.Delay(2500); if(!window.UpdateHostClosed)await window.Updates.StartAutomatic(); };
                     if (folder.Length > 0) window.AcceptLaunch(folder);

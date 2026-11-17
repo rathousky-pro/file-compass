@@ -42,6 +42,10 @@ If you find the project useful, consider **[starring this repository](https://gi
 
 Please [open an issue](https://github.com/rathousky-pro/file-compass/issues/new) to report bugs or propose improvements. Include the build number, Windows version, reproduction steps and expected vs. actual results. Before posting screenshots or logs, remove private paths, credentials and access tokens. Pull requests are welcome for review; please discuss substantial changes in an issue first.
 
+## Licenses
+
+Original File Compass code is MIT licensed. See the [license index](LICENSES.md) for the MIT text, bundled third-party components, original notices and outstanding distribution requirements.
+
 ## Technical details
 
 ## Run and help

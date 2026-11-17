@@ -50,6 +50,8 @@ namespace FileCompass
         public bool UsePowerShell7;
         public bool SshfsConnectOnStartup;
         public bool SshfsKeepMounted = true;
+        internal bool FtpNeedsUser { get { return Protocol == NetworkProtocol.FTP && String.IsNullOrWhiteSpace(UserName); } }
+        internal bool FtpAnonymous { get { return Protocol == NetworkProtocol.FTP && String.Equals(UserName, "anonymous", StringComparison.OrdinalIgnoreCase); } }
         [XmlIgnore] public bool IsSshTransfer { get { return Protocol == NetworkProtocol.SFTP || Protocol == NetworkProtocol.SCP; } }
         [XmlIgnore] public bool CanOpenSsh { get { return Protocol == NetworkProtocol.SSH || IsSshTransfer || Protocol == NetworkProtocol.SSHFS; } }
         [XmlIgnore] public string DisplayLabel {get{return String.IsNullOrEmpty(CloudAccountId)?Protocol+" · "+Host:CloudProvider+" · "+Name;}} public override string ToString() { return Name + "  (" + Protocol + ")"; }

@@ -15,6 +15,10 @@ Original notices are in `plugins/network/licenses`; `BUILD-MANIFEST.txt` lists e
 
 Sources: https://curl.se/windows/ and https://libssh2.org/.
 
+## libnfs
+
+The network adapter also statically links libnfs, licensed under LGPL-2.1-or-later. Its original license and build provenance are in `plugins/network/licenses/libnfs/COPYING` and `plugins/network/BUILD-MANIFEST.txt`. Corresponding source and relinking materials for the exact network DLL remain to be prepared and verified for public redistribution.
+
 ## External SSHFS support
 
 WinFsp — Windows File System Proxy, Copyright (C) Bill Zissimopoulos: https://github.com/winfsp/winfsp (GPLv3 with FLOSS exception; commercial licensing https://winfsp.dev/com/).
@@ -115,4 +119,4 @@ The internal editor validates YAML using the unmodified YamlDotNet net47 assembl
 
 ## Scope of this inventory
 
-Reviewed against the checked-in runtime layout on 1 November 2026. The shipped 7-Zip remains 26.04 even if a local user has activated a newer vendor package. The inventory covers 49 pinned runtime binaries and 70 original notice/provenance files; exact paths and SHA-256 values are recorded in `source/dependencies.json` and checked by `tools/check-dependency-notices.py`. It also covers the 7z.sfx module and all document-preview JavaScript notices. Original upstream notices have not been rewritten or translated. Original File Compass application code is MIT-licensed; this third-party inventory does not relicense the components. Optional tool downloads retain their own vendor terms. See [distribution audit](DISTRIBUTION-AUDIT.md) for outstanding public-release requirements and restore constraints.
+Reviewed against the checked-in runtime layout on 1 November 2026. The shipped 7-Zip remains 26.04 even if a local user has activated a newer vendor package. The inventory covers 49 pinned runtime binaries and 71 original notice/provenance files; exact paths and SHA-256 values are recorded in `source/dependencies.json` and checked by `tools/check-dependency-notices.py`. It also covers the 7z.sfx module and all document-preview JavaScript notices. Original upstream notices have not been rewritten or translated. Original File Compass application code is MIT-licensed; this third-party inventory does not relicense the components. Optional tool downloads retain their own vendor terms. See [distribution audit](DISTRIBUTION-AUDIT.md) for outstanding public-release requirements and restore constraints.

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -93,14 +93,14 @@ namespace FileCompass
             check(reloaded.PanelLayout == "Single" && !reloaded.LeftView.DetailExpanded && reloaded.LeftView.DetailConfigured && reloaded.LeftView.Tree, "settings round trip preserves layout and a deliberately collapsed detail");
             check(reloaded.LastDualLayout == "Stacked", "single-panel settings preserve the preceding dual-panel layout");
             SetPanelLayout("SideBySide"); UpdateLayout(); check(left.IsVisible && right.IsVisible && right.CurrentPath == destination, "returning to two panels restores the original destination");
-            check(!FluentUiTests.Children<TreeView>(left).Single().IsVisible && !FluentUiTests.Children<TreeView>(right).Single().IsVisible && left.List.TranslatePoint(new Point(), left).X <= left.BorderThickness.Left+left.Padding.Left+left.List.Margin.Left+1, "returning from one panel to side-by-side hides both trees and releases their width");
+            check(left.FolderTreeVisible && !right.FolderTreeVisible, "returning to side-by-side preserves the left tree");
             left.SwitchTab(1); await left.TabNavigationTask; left.SwitchTab(0); await left.TabNavigationTask; UpdateLayout();
-            check(!FluentUiTests.Children<TreeView>(left).Single().IsVisible, "restoring a tab with a saved tree cannot show it in a dual-panel layout");
+            check(left.FolderTreeVisible, "restoring a tab with a saved tree also shows it in dual-pane layout");
             left.RestorePanelView(reloaded.LeftView); UpdateLayout();
-            check(!FluentUiTests.Children<TreeView>(left).Single().IsVisible && left.List.TranslatePoint(new Point(), left).X <= left.BorderThickness.Left+left.Padding.Left+left.List.Margin.Left+1, "legacy saved views with Tree=true stay full-width in dual-panel mode");
+            check(left.FolderTreeVisible, "saved views with Tree=true reopen a tree in the selected pane");
             NextStageTests.Draw(this, Path.Combine(root, "panely-vedle-sebe-bez-stromu.png"));
             SetPanelLayout("Stacked"); SwapPanels(); UpdateLayout();
-            check(!FluentUiTests.Children<TreeView>(left).Single().IsVisible && !FluentUiTests.Children<TreeView>(right).Single().IsVisible, "stacked layout also keeps both trees hidden after swapping panels");
+            check(left.FolderTreeVisible != right.FolderTreeVisible, "stacked layout preserves the individual tree state after swapping panels");
             check(Grid.GetRow(left) == 0 && Grid.GetRow(right) == 2 && left.CurrentPath == destination && right.CurrentPath == source, "swapping panels respects the stacked layout");
             SwapPanels(); SetPanelLayout("SideBySide"); SetActive(left);
             SetActive(right); SetPanelLayout("Single"); UpdateLayout(); check(right.IsVisible && !left.IsVisible, "single-panel mode retains the previously active right panel");
@@ -143,13 +143,18 @@ namespace FileCompass
             check(toolbarAllFilesButton.Content is Image,"hidden files use an icon without a visible caption");
             check(name(toolbarLayoutButton)==L.Text("toolbar.panelsSideBySide"),"layout switch exposes the current layout to accessibility");
             var viewButtons=((Panel)toolbarAllFilesButton.Parent).Children.OfType<Button>().ToArray();int hiddenIndex=Array.IndexOf(viewButtons,toolbarAllFilesButton);
-            check(name(viewButtons[hiddenIndex+1])==L.Text("selection.invertMarks")+" (Num *)"&&name(viewButtons[hiddenIndex+2])==L.Text("undoHistory.title"),"selection and undo immediately follow hidden files");
+            check(viewButtons[hiddenIndex+1]==toolbarFolderViewButton &&
+                System.Windows.Automation.AutomationProperties.GetAutomationId(viewButtons[hiddenIndex+2])=="PanelFavorites" &&
+                name(viewButtons[hiddenIndex+3])==L.Text("selection.invertMarks")+" (Num *)"&&name(viewButtons[hiddenIndex+4])==L.Text("undoHistory.title"),"view menu, selection and undo follow hidden files");
             var fileButtons=((Panel)toolbarPreviewButton.Parent).Children.OfType<Button>().ToArray();
             check(fileButtons[0]==toolbarPreviewButton&&fileButtons[1]==toolbarThumbnailsButton&&name(fileButtons[2])==L.Text("toolbar.edit"),"preview and thumbnails stay together before edit");
             var toolsButton=FluentUiTests.Children<Button>(this).Single(x=>x.Content is StackPanel&&((StackPanel)x.Content).Children.OfType<Image>().Any(i=>(string)i.Tag=="tools"));
             check(toolsButton.ContextMenu.Items.OfType<MenuItem>().Select(x=>Convert.ToString(x.Header)).SequenceEqual(new[]{L.Text("analyzer.title"),L.Text("smart.title"),L.Text("media.convertImages"),L.Text("media.convertAudio")}),"tools menu offers analyzer, SMART, image and audio converters");
             click(toolsButton);check(toolsButton.ContextMenu.IsOpen,"tools button opens its menu");toolsButton.ContextMenu.IsOpen=false;
-            var syncButton=FluentUiTests.Children<Button>(this).Single(x=>name(x)==L.Text("action.synchronize"));click(syncButton);
+            var syncButton=FluentUiTests.Children<Button>(this).Single(x=>name(x)==L.Text("tabCompare.toolbar"));click(syncButton);
+            var syncCommand=syncButton.ContextMenu.Items.OfType<MenuItem>().Single(item=>Equals(item.Header,L.Text("action.synchronizeFolders")));
+            syncButton.ContextMenu.IsOpen=false;
+            syncCommand.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
             var sync=OwnedWindows.OfType<DirectorySyncWindow>().Single();check(sync.IsVisible&&sync.Title.Contains(L.Text("sync.title")),"synchronize opens the existing folder synchronization setup");sync.Close();
             var samePreview = quickPreview;
             click(toolbarThumbnailsButton); check(left.DisplayMode == "Thumbnails" && quickPreview == samePreview, "thumbnails change the file list without toggling file preview");

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -15,7 +15,7 @@ namespace FileCompass {
    var retry=CopyUi.Button(L.Text("tabs.retry"),delegate{SwitchTab(tabIndex);});retry.HorizontalAlignment=HorizontalAlignment.Left;content.Children.Add(retry);tabNotice.Child=content;Grid.SetRow(tabNotice,3);Panel.SetZIndex(tabNotice,500);grid.Children.Add(tabNotice);
   }
   void ShowTabUnavailable(PanelTab tab,string reason){
-   tab.Pending=true;tab.Error=reason;tab.Remote=null;CurrentPath=null;Remote=null;CloseArchiveContext();projection=null;List.ItemsSource=new Entry[0];tabNoticeText.Text=reason+"\n\n"+(String.IsNullOrEmpty(tab.Saved.Caption)?"":tab.Saved.Caption+"\n")+(tab.Saved.Locked?tab.Saved.Home:tab.Saved.Path);tabNotice.Visibility=Visibility.Visible;address.Text=tab.Saved.Locked?tab.Saved.Home:tab.Saved.Path;status.Text=reason.Split('\n')[0];status.ToolTip=reason;capacity.Text=L.Text("tabs.unavailableTitle");capacity.ToolTip=reason;ConfigureWatcher();RenderTabs();RenderCrumbs();if(PathChanged!=null)PathChanged(this,EventArgs.Empty);
+   tab.Pending=true;tab.Error=reason;tab.Remote=null;CurrentPath=null;Remote=null;CloseArchiveContext();ExitFlatLocationColumn();ResetFolderViewTracking();projection=null;List.ItemsSource=new Entry[0];tabNoticeText.Text=reason+"\n\n"+(String.IsNullOrEmpty(tab.Saved.Caption)?"":tab.Saved.Caption+"\n")+(tab.Saved.Locked?tab.Saved.Home:tab.Saved.Path);tabNotice.Visibility=Visibility.Visible;address.Text=tab.Saved.Locked?tab.Saved.Home:tab.Saved.Path;status.Text=reason.Split('\n')[0];status.ToolTip=reason;capacity.Text=L.Text("tabs.unavailableTitle");capacity.ToolTip=reason;ConfigureWatcher();RenderTabs();RenderCrumbs();if(PathChanged!=null)PathChanged(this,EventArgs.Empty);
   }
   static string LocalTabError(string path,Exception error){
    string title=L.Text("tabs.unavailableFolder");int code=error.HResult&65535;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -108,7 +108,7 @@ namespace FileCompass
         }
         void SaveFavorites() { var settings = ProgramSettings.Load(); settings.Favorites = favorites; settings.Save(); }
         void ShowFavorites(){ShowFavorites(false);}
-        void ShowFavorites(bool newTab)
+        void ShowFavorites(bool newTab, FrameworkElement anchor = null)
         {
             var menu = new ContextMenu();
             if(newTab)menu.Items.Add(new MenuItem{Header=L.Text("favorites.openInNewTab"),IsEnabled=false});
@@ -119,7 +119,13 @@ namespace FileCompass
             }
             if (menu.Items.Count > 0) menu.Items.Add(new Separator());
             FavoriteMenuAction(menu, L.Text("favorites.addCurrentFolder"), delegate { AddFavorite(false); }); FavoriteMenuAction(menu, L.Text("favorites.savePanelPair"), delegate { AddFavorite(true); }); FavoriteMenuAction(menu, L.Text("favorites.manage"), ManageFavorites);
-            menu.PlacementTarget = active; menu.IsOpen = true;
+            menu.PlacementTarget = anchor ?? active;
+            if (anchor != null)
+            {
+                menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+                anchor.ContextMenu = menu;
+            }
+            menu.IsOpen = true;
         }
         static void FavoriteMenuAction(ContextMenu menu, string title, Action action) { var item = new MenuItem { Header = title }; item.Click += delegate { action(); }; menu.Items.Add(item); }
         void ManageFavorites()

@@ -63,7 +63,7 @@ namespace FileCompass {
         }
     }
     public partial class MainWindow {
-        internal void RefreshLanguageLabels(){left.RefreshLanguageLabels();right.RefreshLanguageLabels();UpdatePrompt();UpdateViewToolbarControls();}
+        internal void RefreshLanguageLabels(){if(toolsToolbarLabel!=null)toolsToolbarLabel.Text=L.Text("operation.tools")+" ▾";left.RefreshLanguageLabels();right.RefreshLanguageLabels();UpdatePrompt();UpdateViewToolbarControls();}
     }
     public partial class FilePanel {
         internal void RefreshLanguageLabels(){UpdateStatus();UpdateConnectionButtons();}

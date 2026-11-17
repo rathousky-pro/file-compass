@@ -25,7 +25,18 @@ namespace FileCompass {
     var heading=new DockPanel();var close=new Button{Content="×",FontSize=22,Width=42,Height=34,MinWidth=0,Margin=new Thickness(20,0,0,0),Padding=new Thickness(0),Background=Brushes.Transparent,BorderBrush=FluentTheme.Accent,BorderThickness=new Thickness(1),Foreground=FluentTheme.Text,ToolTip=L.Text("action.close")};close.Click+=delegate{w.Close();};DockPanel.SetDock(close,Dock.Right);heading.Children.Add(close);
     var caption=new TextBlock{Text=title,FontSize=24,FontWeight=FontWeights.SemiBold,Foreground=FluentTheme.Text,VerticalAlignment=VerticalAlignment.Center,TextWrapping=TextWrapping.Wrap};
     if(w is NetworkProfileDialog)caption.SetBinding(TextBlock.TextProperty,new System.Windows.Data.Binding("Title"){Source=w});
-    heading.Children.Add(caption);
+    var originalHeading = oldHeading?.Parent as Panel;
+    var detail = originalHeading?.Children.OfType<FrameworkElement>()
+        .FirstOrDefault(element => Equals(element.Tag, "dialog-title-detail"));
+    if (detail == null) heading.Children.Add(caption);
+    else
+    {
+     originalHeading.Children.Remove(detail);
+     var captionRows = new StackPanel();
+     captionRows.Children.Add(caption);
+     captionRows.Children.Add(detail);
+     heading.Children.Add(captionRows);
+    }
     var header=new Border{Tag="fluent-title",Background=CompactTheme.PanelSurface,Padding=new Thickness(24,14,22,14),Child=heading,BorderBrush=CompactTheme.Line,BorderThickness=new Thickness(0,0,0,1)};
     header.MouseLeftButtonDown+=delegate(object sender,System.Windows.Input.MouseButtonEventArgs e){if(e.ClickCount==1&&e.OriginalSource is TextBlock)w.DragMove();};DockPanel.SetDock(header,Dock.Top);shell.Children.Add(header);shell.Children.Add(content);
     shell.SizeChanged+=delegate{shell.Clip=new RectangleGeometry(new Rect(0,0,shell.ActualWidth,shell.ActualHeight),15,15);};

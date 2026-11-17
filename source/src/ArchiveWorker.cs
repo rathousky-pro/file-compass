@@ -160,14 +160,19 @@ namespace FileCompass
             if (command == "a" || command == "d") { WriteArchive(archive, args, archiveIndex, directory, scratch, password, command == "d", budget, progress); return ""; }
             using (var extractor = Open(archive, password))
             {
-                var entries = Entries(extractor, budget);
+                var entries = Entries(extractor, budget, command != "l");
                 if (command == "l")
                 {
                     var result = new StringBuilder("Type = " + Format(extractor.Format) + "\nMultivolume = " + (extractor.VolumeFileNames.Count > 1 ? "+" : "-") + "\n----------\n");
+                    int bytes = Encoding.UTF8.GetByteCount(result.ToString());
                     foreach (var item in entries)
                     {
-                        result.Append("Path = ").Append(item.FileName).Append("\nFolder = ").Append(item.IsDirectory ? "+" : "-").Append("\nSize = ").Append(item.Size).Append("\nModified = ").Append(item.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture)).Append("\nEncrypted = ").Append(item.Encrypted ? "+" : "-").Append("\n\n");
-                        if (result.Length > budget.Settings.MaximumListingMiB * 1048576L / 3) throw new IOException(L.Text("archive.workerListingLimit"));
+                        string record = "Path = " + item.FileName + "\nFolder = " + (item.IsDirectory ? "+" : "-") +
+                            "\nSize = " + item.Size + "\nModified = " + item.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture) +
+                            "\nEncrypted = " + (item.Encrypted ? "+" : "-") + "\n\n";
+                        bytes += Encoding.UTF8.GetByteCount(record);
+                        if (bytes > budget.Settings.MaximumListingMiB * 1048576L) throw new IOException(L.Text("archive.workerListingLimit"));
+                        result.Append(record);
                     }
                     return result.ToString();
                 }
@@ -222,7 +227,7 @@ namespace FileCompass
             catch (ArgumentException ex) { if (extractor != null) extractor.Dispose(); throw new IOException(L.Text("archive.unreadableListing"), ex); }
             catch { if (extractor != null) extractor.Dispose(); throw; }
         }
-        static List<ArchiveFileInfo> Entries(SharpSevenZipExtractor extractor, ArchiveBudget budget)
+        static List<ArchiveFileInfo> Entries(SharpSevenZipExtractor extractor, ArchiveBudget budget, bool enforceExpandedSize = true)
         {
             if (extractor.FilesCount > budget.Settings.MaximumItems) throw new IOException(L.Text("archive.itemLimitExceeded"));
             var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase); long total = 0;
@@ -232,8 +237,11 @@ namespace FileCompass
                 budget.Check(); var item = original; item.FileName = ArchiveEngine.SafeMember(item.FileName);
                 if (!names.Add(item.FileName)) throw new IOException(L.Text("archive.duplicateMemberNames"));
                 if ((item.Attributes & (uint)FileAttributes.ReparsePoint) != 0 || ((item.Attributes >> 16) & 0xf000) == 0xa000) throw new IOException(L.Text("archive.containsLink"));
-                if (item.Size > (ulong)budget.MaximumBytes || total > budget.MaximumBytes - (long)item.Size) throw new IOException(L.Text("archive.expandedSizeLimit"));
-                total += (long)item.Size; result.Add(item);
+                if (item.Size > Int64.MaxValue || (enforceExpandedSize &&
+                    (item.Size > (ulong)budget.MaximumBytes || total > budget.MaximumBytes - (long)item.Size)))
+                    throw new IOException(L.Text("archive.expandedSizeLimit"));
+                if (enforceExpandedSize) total += (long)item.Size;
+                result.Add(item);
             }
             return result;
         }
@@ -347,7 +355,7 @@ namespace FileCompass
         {
             budget.Item(); RejectLinks(source); preparation.Visit(source);
             if (Directory.Exists(source)) { Directory.CreateDirectory(target); foreach (string child in Directory.EnumerateFileSystemEntries(source)) Copy(child, Path.Combine(target, Path.GetFileName(child)), budget, preparation); }
-            else { Directory.CreateDirectory(Path.GetDirectoryName(target)); using (var input = File.OpenRead(source)) using (var output = new FileStream(target, FileMode.Create, FileAccess.Write)) using (var bounded = new ArchiveOutputStream(output, budget, target)) { var buffer = new byte[1048576]; int n; while ((n = input.Read(buffer, 0, buffer.Length)) > 0) { bounded.Write(buffer, 0, n); preparation.Copied(n); } } File.SetLastWriteTime(target, File.GetLastWriteTime(source)); }
+            else { Directory.CreateDirectory(Path.GetDirectoryName(target)); using (var input = File.OpenRead(source)) using (var output = new FileStream(target, FileMode.Create, FileAccess.Write)) using (var bounded = new ArchiveOutputStream(output, budget, target, false)) { var buffer = new byte[1048576]; int n; while ((n = input.Read(buffer, 0, buffer.Length)) > 0) { bounded.Write(buffer, 0, n); preparation.Copied(n); } } File.SetLastWriteTime(target, File.GetLastWriteTime(source)); }
         }
     }
 
@@ -364,6 +372,10 @@ namespace FileCompass
         internal void Write(int count, string path, bool extracted)
         {
             Check(); if (extracted) { if (written > MaximumBytes - count) throw Fail(L.Text("archive.actualExpandedDataLimit")); written += count; }
+            CheckFreeSpace(count, path);
+        }
+        internal void CheckFreeSpace(int count, string path)
+        {
             if (path != null) { ulong free, total, available; if (!GetDiskFreeSpaceEx(Path.GetDirectoryName(path), out free, out total, out available)) throw Fail(L.Text("archive.freeSpaceQueryFailed")); if (free < (ulong)(Settings.MinimumFreeMiB * 1048576L + count)) throw Fail(L.Text("archive.freeSpaceReserveReached")); }
         }
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] static extern bool GetDiskFreeSpaceEx(string path, out ulong free, out ulong total, out ulong available);
@@ -375,8 +387,8 @@ namespace FileCompass
         public override void Write(byte[] buffer, int offset, int count) { budget.Write(count, path, extracted); output.Write(buffer, offset, count); }
         public override bool CanRead { get { return output.CanRead; } } public override bool CanSeek { get { return output.CanSeek; } } public override bool CanWrite { get { return true; } }
         public override long Length { get { return output.Length; } } public override long Position { get { return output.Position; } set { output.Position = value; } }
+        public override void SetLength(long value) { if (extracted && value > budget.MaximumBytes) throw new IOException(L.Text("archive.outputFileLengthLimit")); output.SetLength(value); }
         public override void Flush() { output.Flush(); } public override long Seek(long offset, SeekOrigin origin) { return output.Seek(offset, origin); }
-        public override void SetLength(long value) { if (value > budget.MaximumBytes) throw new IOException(L.Text("archive.outputFileLengthLimit")); output.SetLength(value); }
         public override int Read(byte[] buffer, int offset, int count) { return output.Read(buffer, offset, count); }
     }
 

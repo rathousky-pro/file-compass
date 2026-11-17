@@ -40,7 +40,7 @@ namespace FileCompass
             var info = Connection.Session.GetFileInfo(path); if (info.FileType == 'L') throw new IOException(L.Text("sync.linksUnsupportedPrefix") + path);
             return new SyncStamp { Directory = info.IsDirectory,Length = info.IsDirectory ? 0 : info.Length,Modified = info.LastWriteTime.ToUniversalTime(),Attributes = info.IsDirectory ? FileAttributes.Directory : 0 };
         }
-        internal Dictionary<string,SyncStamp> Scan(StringComparer comparer,Action check)
+        internal Dictionary<string,SyncStamp> Scan(StringComparer comparer,Action check,bool recursive = true)
         {
             var root = Read(""); if (root == null || !root.Directory) throw new IOException(L.Text("compare.folderUnavailablePrefix") + Location.Caption);
             if (Connection != null) for (string path = Location.Root; path != "/"; path = RemoteConnection.Parent(path)) if (Connection.Session.GetFileInfo(path).FileType == 'L') throw new IOException(L.Text("sync.rootContainsLink"));
@@ -48,7 +48,7 @@ namespace FileCompass
             while (folders.Count > 0) {
                 check(); string relative = folders.Pop(), path = PathFor(relative);
                 var names = Connection == null ? Directory.EnumerateFileSystemEntries(path).Select(Path.GetFileName).ToArray() : Connection.Session.ListDirectory(path).Files.Where(x => !x.IsParentDirectory && !x.IsThisDirectory).Select(x => x.Name).ToArray();
-                foreach (var name in names) { check(); RemoteConnection.ValidateRemoteName(name); string child = relative.Length == 0 ? name : relative + "/" + name; var stamp = Read(child); if (stamp == null) throw new IOException(L.Text("sync.itemMissingPrefix") + child); result.Add(child,stamp); if (stamp.Directory) folders.Push(child); }
+                foreach (var name in names) { check(); RemoteConnection.ValidateRemoteName(name); string child = relative.Length == 0 ? name : relative + "/" + name; var stamp = Read(child); if (stamp == null) throw new IOException(L.Text("sync.itemMissingPrefix") + child); result.Add(child,stamp); if (recursive && stamp.Directory) folders.Push(child); }
             } return result;
         }
         internal string ContentHash(string relative,SyncStamp stamp,Action check)

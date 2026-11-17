@@ -5,6 +5,7 @@ namespace FileCompass {
   static void Open(Window w){SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));w.Left=-18000;w.Top=-18000;w.ShowInTaskbar=false;w.ShowActivated=false;w.WindowStartupLocation=WindowStartupLocation.Manual;w.Show();NavigationTests.Wait(Task.Delay(100));w.UpdateLayout();}
   internal static int Run(string root){Directory.CreateDirectory(root);var checks=new List<string>();Action<bool,string> check=(yes,text)=>{if(!yes)throw new Exception(text);checks.Add(text);};string original=AppearanceTheme.Motif;try{L.ChangeLanguage("cs");FluentTheme.Ensure();AppearanceTheme.Apply("Light");
    foreach(string motif in new[]{"Classic","Clean"}){AppearanceTheme.SetMotif(motif);
+    VerifyArchiveHeader(motif,check);
     using(var control=new CopyControl()){var copy=new CopyProgressDialog(null,control);try{copy.Update(new CopyUpdate{Phase="Kopírování dokumentů",Source=@"C:\Dokumenty\Prezentace.pptx",Target=@"D:\Záloha\Prezentace.pptx",FileDone=58,FileTotal=100,TotalDone=54,TotalBytes=100,Completed=18,TotalFiles=42,BytesPerSecond=135000000,RemainingSeconds=12});Open(copy);Verify(copy,motif+"-copy",root,check);var detail=FluentUiTests.Children<Expander>(copy).Single();check(FluentUiTests.Children<TextBlock>(detail).Any(x=>x.Text.Contains("MiB/s")&&x.IsVisible),motif+": measured copy speed appears only inside expanded details");}finally{copy.Finish();}}
     using(var cancel=new CancellationTokenSource()){var archive=new ArchiveProgressDialog(null,"Komprimování dokumentů",cancel);try{Open(archive);archive.UpdatePreparation(new ArchivePreparationProgress{Path=@"C:\Filmy\Pepíček 50.mp4",Items=6,Bytes=1997716684});archive.UpdateLayout();check(FluentUiTests.Children<LocalCopyProgressBar>(archive).All(x=>!x.IsVisible),motif+": preparation shows no progress bars");check(!FluentUiTests.Children<TextBlock>(archive).Any(x=>x.FontSize==32&&x.IsVisible),motif+": preparation shows no unknown total percentage");check(FluentUiTests.Children<TextBlock>(archive).Any(x=>x.IsVisible&&x.Text.Contains("Pepíček"))&&FluentUiTests.Children<TextBlock>(archive).Any(x=>x.IsVisible&&x.Text.Contains("6")),motif+": preparation retains current file and item summary");NextStageTests.Draw(archive,Path.Combine(root,motif+"-preparation.png"));archive.Update("Komprimování",.54,true);archive.UpdateCompression(new ArchiveCompressionProgress{CurrentFile=@"Fotografie\Žluťoučký obrázek.png",Original=1000,Processed=540,Packed=300,Percent=54,FileDone=58,FileTotal=100});archive.UpdateLayout();check(FluentUiTests.Children<LocalCopyProgressBar>(archive).All(x=>x.IsVisible),motif+": compression restores the two progress bars");Verify(archive,motif+"-archive",root,check);archive.UpdateCompression(new ArchiveCompressionProgress{CurrentFile="unknown.bin",Original=1000,Processed=700,Packed=400,Percent=70});archive.UpdateLayout();check(FluentUiTests.Children<TextBlock>(archive).Any(x=>x.Text=="—"),motif+": archive without per-file measurements does not invent a percentage");}finally{archive.Finish();}}
    }
@@ -13,6 +14,29 @@ namespace FileCompass {
    check(!ArchiveCompressionProgress.TryParse(message.Substring(0,message.LastIndexOf('|'))+"|-1",out decoded),"invalid per-file measurements are rejected");
    File.WriteAllLines(Path.Combine(root,"result.txt"),checks.Concat(new[]{"PASS: "+checks.Count+" checks"}));return 0;
   }catch(Exception ex){File.WriteAllLines(Path.Combine(root,"result.txt"),checks.Concat(new[]{"FAIL: "+ex}));return 1;}finally{AppearanceTheme.SetMotif(original);}}
+  static void VerifyArchiveHeader(string motif,Action<bool,string> check){
+   const string heading="Vytváření archivu";
+   string path=@"G:\Temp\"+String.Join("\\",Enumerable.Repeat("Velmi dlouhá složka s podklady",8))+@"\!Drivery.rar";
+   using(var cancel=new CancellationTokenSource()){
+    var dialog=new ArchiveProgressDialog(null,heading,cancel,path);
+    try{
+     Open(dialog);
+     var header=FluentUiTests.Children<Border>(dialog).Single(border=>border.IsVisible&&
+      (Equals(border.Tag,"dialog-header")||Equals(border.Tag,"fluent-title")));
+     var title=FluentUiTests.Children<TextBlock>(header).Single(text=>text.Text==heading);
+     var route=FluentUiTests.Children<PathTextBlock>(header).Single();
+     double routeTop=route.TranslatePoint(new Point(),header).Y;
+     double titleBottom=title.TranslatePoint(new Point(0,title.ActualHeight),header).Y;
+     check(route.IsVisible&&routeTop+1>=titleBottom,
+      motif+": archive path appears below the heading ("+routeTop+" / "+titleBottom+")");
+     check(route.Text.StartsWith(@"G:\Temp\")&&route.Text.Contains("…")&&route.Text.EndsWith("!Drivery.rar")&&Equals(route.ToolTip,path),
+      motif+": the long archive path keeps both ends and its full tooltip");
+     const string shortPath=@"G:\Temp\!Drivery.rar";
+     route.SetPath("",shortPath);dialog.UpdateLayout();
+     check(route.Text==shortPath,motif+": a short archive path is shown in full");
+    }finally{dialog.Finish();}
+   }
+  }
   static void Verify(Window w,string name,string root,Action<bool,string> check){
    var bars=FluentUiTests.Children<LocalCopyProgressBar>(w).ToArray();var details=FluentUiTests.Children<Expander>(w).Single();
    check(bars.Length==2&&bars[0].Height==8&&bars[1].Height==3&&bars[0].TranslatePoint(new Point(),w).Y<bars[1].TranslatePoint(new Point(),w).Y,name+": total bar is above and thicker than current-file bar");

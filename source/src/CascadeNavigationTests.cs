@@ -17,6 +17,15 @@ namespace FileCompass {
    main.VerifyCascadeCommands(check,FluentUiTests.Children<Menu>(drawer).SelectMany(All).ToArray());
    var filter=FluentUiTests.Children<TextBox>(drawer).Single(x=>System.Windows.Automation.AutomationProperties.GetAutomationId(x)=="DrawerCommandSearch");filter.Text="prejmenovani";Pump();var matches=FluentUiTests.Children<Button>(drawer).Where(x=>x.IsVisible).SelectMany(x=>FluentUiTests.Children<TextBlock>(x)).Select(x=>x.Text).ToArray();check(matches.Contains(L.Text("action.rename"))&&matches.Contains(L.Text("action.batchRename")),"drawer filter exposes both rename commands without category clicks");filter.Clear();Pump();
    var hover=roots.First(x=>x.HasItems);hover.RaiseEvent(new System.Windows.Input.MouseEventArgs(Mouse.PrimaryDevice,0){RoutedEvent=Mouse.MouseEnterEvent});Pump();check(hover.IsSubmenuOpen,"drawer categories respond to hover immediately without an activation click");CascadeNavigation.Close(menu);
+   var shortcuts=FluentUiTests.Children<UniformGrid>(drawer).Single().Children.OfType<Button>();
+   foreach(var control in new FrameworkElement[]{filter}.Concat(shortcuts))
+   {
+    hover.IsSubmenuOpen=true;
+    Pump();
+    var center=new Point(control.ActualWidth/2,control.ActualHeight/2);
+    main.CloseDrawerSubmenuOverControl(menu,control.TranslatePoint(center,drawer));
+    check(drawer.IsVisible&&!hover.IsSubmenuOpen,"drawer control can dismiss the flyout without closing the drawer: "+control);
+   }
    foreach(var root in roots){root.IsSubmenuOpen=true;Pump();root.ApplyTemplate();var popup=root.Template.FindName("PART_Popup",root) as Popup;check(popup!=null&&popup.IsOpen&&popup.Placement==PlacementMode.Right,"category opens a native right-hand flyout: "+root.Header);check(popup.Child.RenderSize.Width>150&&popup.Child.RenderSize.Height>20,"flyout content is measured: "+root.Header);if(Convert.ToString(root.Header)==L.Text("media.menu"))Draw((FrameworkElement)popup.Child,Path.Combine(path,"media.png"));root.IsSubmenuOpen=false;}
    var file=roots.First(x=>Convert.ToString(x.Header)==L.Text("menu.file"));file.IsSubmenuOpen=true;Pump();var nested=file.Items.OfType<MenuItem>().First(x=>x.HasItems);nested.IsSubmenuOpen=true;Pump();var nestedPopup=(Popup)nested.Template.FindName("PART_Popup",nested);check(nestedPopup.IsOpen&&nestedPopup.Placement==PlacementMode.Right,"nested submenu also opens to the right");Draw((FrameworkElement)nestedPopup.Child,Path.Combine(path,"nested.png"));
    NextStageTests.Draw(main,Path.Combine(path,"sidebar.png"));Draw((FrameworkElement)((Popup)file.Template.FindName("PART_Popup",file)).Child,Path.Combine(path,"file.png"));nested.IsSubmenuOpen=false;Pump();DrawCascade(main,file,Path.Combine(path,"cascade-preview.png"));

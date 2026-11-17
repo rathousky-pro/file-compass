@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
@@ -72,9 +72,21 @@ namespace FileCompass {
             Navigate(images,false);await NavigationTask;SetAutomaticFolderViews(false);check(DisplayMode=="Details"&&MetadataColumnKeys.Length==0,"Disabling automation immediately restores the baseline");
             var rules=new FolderViewRules();rules.Rules.Add(new FolderViewRule{Path=root,IncludeChildren=true,View=new PanelView{Display="Short",MetadataColumns=new[]{"title"}}});rules.Rules.Add(new FolderViewRule{Path=docs,View=new PanelView{Display="Details",MetadataColumns=new[]{"author"}}});
             check(rules.Match(docs).Path==docs&&rules.Match(images).Path==root&&rules.Match(root+"-other")==null,"Folder rules prefer the nearest path and respect directory boundaries");
-            rules.Save();SetAutomaticFolderViews(true);check(DisplayMode=="Short"&&MetadataColumnKeys.SequenceEqual(new[]{"title"}),"An inherited saved folder view overrides content detection");
-            Navigate(docs,false);await NavigationTask;check(MetadataColumnKeys.SequenceEqual(new[]{"author"}),"An exact folder rule overrides inherited views");
-            SetAutomaticFolderViews(false);
+            rules.Rules[0].View.GroupBy = "Extension";
+            rules.Save();
+            ApplyAutomaticFolderView();
+            check(!automaticFolderViews && DisplayMode == "Short" && MetadataColumnKeys.SequenceEqual(new[]{"title"}) &&
+                panelGrouping == "Extension", "An inherited saved view applies with content detection disabled and keeps grouping");
+            var folderMenu = new ContextMenu();
+            AddFolderViewOptions(folderMenu);
+            var reset = folderMenu.Items.OfType<MenuItem>().Single(item => Equals(item.Header, L.Text("columns.useDefault")));
+            reset.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            check(DisplayMode == "Details" && activeFolderViewRule == null && panelGrouping == "", "Folder view menu restores the default view");
+            Navigate(docs,false);await NavigationTask;
+            check(MetadataColumnKeys.SequenceEqual(new[]{"author"}),"An exact folder rule overrides inherited views");
+            // Keep the later tab-state assertions independent of the folder rules.
+            new FolderViewRules().Save();
+            ApplyAutomaticFolderView();
             check(MetadataColumn.SortValue("dimensions","100 × 900 px").Equals(90000d),"Resolution sorts by pixel count");
             check(MetadataColumn.SortValue("duration","00:10:00") is TimeSpan,"Media durations have typed sort values");
             check(DetectFolderKind(new[]{new Entry{Extension="png"},new Entry{Extension="png"},new Entry{Extension="png"},new Entry{Extension="txt"},new Entry{Extension="zip"}})=="images","Content detection uses the sixty percent threshold");

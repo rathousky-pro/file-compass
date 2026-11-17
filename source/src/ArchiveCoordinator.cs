@@ -20,13 +20,14 @@ namespace FileCompass
             if (!archiveEditors.Values.Any(x => x())) return true;
             return MessageBox.Show(this, L.Text("archive.confirmDiscardEditorChanges"), L.Text("archive.unsavedChangesTitle"), MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) == MessageBoxResult.Yes;
         }
-        async Task<bool> ArchiveOperation(string title, Action<CancellationToken, Action<string>> work, Action retryAction = null, bool startBackground = false)
+        async Task<bool> ArchiveOperation(string heading, Action<CancellationToken, Action<string>> work, Action retryAction = null, bool startBackground = false, string archivePath = null)
         {
+            string title = archivePath == null ? heading : heading + " · " + archivePath;
             archiveOperations++;
             using (var cancel = new CancellationTokenSource())
             using (var pause = OperationPause.Create(cancel.Token))
             {
-                var dialog = new ArchiveProgressDialog(this, title, cancel);
+                var dialog = new ArchiveProgressDialog(this, heading, cancel, archivePath);
                 var activity = AddCopyActivity(title, cancel.Cancel, dialog.RestoreProgress);activity.CompactDock=false;
                 activity.TransferTitle = title; activity.Backgrounded = startBackground;
                 activity.PauseAction=pause.Toggle;activity.IsPaused=delegate{return pause.Paused;};
@@ -47,7 +48,7 @@ namespace FileCompass
                     ArchiveCompressionProgress compression;
                     if (ArchiveCompressionProgress.TryParse(text, out compression)) {
                         fraction = compression.Percent / 100; known = true;
-                        activity.TransferRoute = compression.Summary();
+                        activity.TransferRoute = compression.CurrentFile ?? compression.Summary();
                         activity.Update(title + " · " + compression.Summary(), fraction, fraction, false);
                         dialog.Update(L.Text("archive.compressingStatus"), fraction, true); dialog.UpdateCompression(compression); dialog.UpdateCurrentFile(compression.CurrentFile); return;
                     }
@@ -65,7 +66,7 @@ namespace FileCompass
                 }
                 catch (ArchiveAllInputsSkippedException) { activity.Finish(title+" · "+L.Text("archive.allInputsSkipped"),true);return true; }
                 catch (OperationCanceledException) { activity.Finish(title + L.Text("state.cancelledSuffix"), false); return false; }
-                catch (Exception ex) { activity.Record.Items.Add(new OperationItem { Source = title, State = L.Code("state.error"), Error = ex.Message }); activity.Record.Retry = retryAction ?? delegate { var retry = ArchiveOperation(title, work); }; activity.Finish(title + L.Text("state.errorSuffix"), false); MessageBox.Show(this, ex.Message, title, MessageBoxButton.OK, MessageBoxImage.Warning); return false; }
+                catch (Exception ex) { activity.Record.Items.Add(new OperationItem { Source = title, State = L.Code("state.error"), Error = ex.Message }); activity.Record.Retry = retryAction ?? delegate { var retry = ArchiveOperation(heading, work, archivePath: archivePath); }; activity.Finish(title + L.Text("state.errorSuffix"), false); MessageBox.Show(this, ex.Message, title, MessageBoxButton.OK, MessageBoxImage.Warning); return false; }
                 finally { dialog.Finish(); archiveOperations--; }
             }
         }
@@ -294,7 +295,7 @@ namespace FileCompass
             for (int i = 0; i < targets.Length; i++)
             {
                 string archiveTarget = targets[i]; string[] archiveSources = options.Separate ? new[] { files[i] } : files;
-                if (!await ArchiveOperation(L.Text("archive.creatingPrefix") + archiveTarget, delegate(CancellationToken token, Action<string> progress) { ArchiveEngine.Create(archiveTarget, archiveSources, settings, token, progress, options); })) break;
+                if (!await ArchiveOperation(L.Text("archive.creatingPrefix").TrimEnd(' ', '·'), delegate(CancellationToken token, Action<string> progress) { ArchiveEngine.Create(archiveTarget, archiveSources, settings, token, progress, options); }, archivePath: archiveTarget)) break;
                 foreach (var panel in new[] { left, right }) if (!panel.IsArchive && !panel.IsRemote && (panel.CurrentPath == Path.GetDirectoryName(archiveTarget) || options.Move)) panel.Refresh();
             }
             if(options.Inputs.Skipped.Count>0)MessageBox.Show(this,L.Text("archive.skippedInputs")+" "+options.Inputs.Skipped.Count+"\n"+String.Join("\n",options.Inputs.Skipped.Take(10))+(options.Inputs.Skipped.Count>10?"\n…":""),L.Text("archive.packFilesTitle"),MessageBoxButton.OK,MessageBoxImage.Warning);

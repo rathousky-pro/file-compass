@@ -6,7 +6,7 @@ namespace FileCompass {
  public partial class FilePanel {
   internal bool EmptyPanel {get;private set;}
   internal void ClearEmptyPanel(bool notify=true){
-   CancelNavigation();RememberRemote();Remote=null;CloseArchiveContext();projection=null;history.Clear();forwardHistory.Clear();CurrentPath=null;EmptyPanel=true;tabs.Clear();tabs.Add(new PanelTab());tabIndex=0;switchingTabs=false;
+   CancelNavigation();RememberRemote();Remote=null;CloseArchiveContext();ExitFlatLocationColumn();ResetFolderViewTracking();projection=null;history.Clear();forwardHistory.Clear();CurrentPath=null;EmptyPanel=true;tabs.Clear();tabs.Add(new PanelTab());tabIndex=0;switchingTabs=false;
    SetQuickFilter("");List.ItemsSource=new Entry[0];tabNotice.Visibility=Visibility.Collapsed;address.Text="";capacity.Text="";capacity.ToolTip=null;selectingDrive=true;driveSelector.SelectedIndex=-1;selectingDrive=false;RenderCrumbs();RenderTabs();ConfigureWatcher();UpdateConnectionButtons();RefreshCleanDrives();UpdateStatus();if(PathChanged!=null)PathChanged(this,EventArgs.Empty);if(notify)NotifyTabsChanged();
   }
   bool ConfirmRemoteTabClose(PanelTab tab){

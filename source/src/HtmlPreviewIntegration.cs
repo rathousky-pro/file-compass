@@ -17,7 +17,7 @@ namespace FileCompass {
   }
   void UpdateHtmlControls() {
    bool html=current!=null&&DocumentPreview.IsHtml(current)&&currentMode==PreviewMode.Auto;
-   htmlControls.Visibility=html?Visibility.Visible:Visibility.Collapsed;
+   htmlControls.Visibility=html&&!hoverPreviewOnly?Visibility.Visible:Visibility.Collapsed;
    formatted.Visibility=html?Visibility.Collapsed:Visibility.Visible;
    if(!html)return;
    updatingHtml=true;htmlPage.IsChecked=!htmlCodeMode;htmlCode.IsChecked=htmlCodeMode;updatingHtml=false;

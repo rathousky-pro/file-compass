@@ -88,7 +88,9 @@ namespace FileCompass
             AddMenu(commands, L.Text("action.findFiles"), FindFiles, "Alt+F7");
             AddMenu(commands,L.Text("duplicates.title"),FindDuplicates);
             AddMenu(commands, L.Text("action.batchRename"), MultiRename, "Ctrl+M");
+            AddMenu(commands, L.Text("panelCompare.command"), CompareOpenPanels);
             AddMenu(commands, L.Text("action.compareFiles"), CompareFilesByContent, "Ctrl+Shift+D");
+            AddMenu(commands, L.Text("tabCompare.title"), ShowTabComparison);
             AddMenu(commands, L.Text("action.compareFolders"), delegate { CompareFolders(false); }); AddMenu(commands, L.Text("action.synchronizeFolders"), delegate { CompareFolders(true); });
             var media = MenuRoot(menus,L.Text("media.menu"));
             var network = MenuRoot(menus, L.Text("connections.title"));
@@ -103,13 +105,12 @@ namespace FileCompass
             AddMenu(display, L.Text("panel.quickPreviewOtherPanel"), ToggleQuickPreview, "Ctrl+Q");
 
             AddMenu(display, L.Text("tags.filter"), FilterTags);
-            AddMenu(display, L.Text("projection.flat"), ShowFlatView);
+            AddMenu(display, L.Text("projection.includeChildren"), ShowFlatView);
             AddMenu(display, L.Text("projection.normal"), delegate { if (active.CurrentPath != null) active.Navigate(active.CurrentPath, false); });
             var cancelListing = new MenuItem { Header = L.Text("projection.cancelLoading"), InputGestureText = "Esc" }; cancelListing.Click += delegate { active.CancelNavigation(); }; display.Items.Add(cancelListing);
             AddMenu(display, L.Text("panel.quickSearchFilter"), delegate { active.FocusFilter(); }, "Ctrl+F"); AddMenu(display, L.Text("panel.editPath"), delegate { active.FocusAddress(); }, "Ctrl+L");
             AddMenu(display, L.Text("panel.allFiles"), delegate { active.Refresh(); }); AddMenu(display, L.Text("panel.detailsView"), delegate { active.SetDisplay("Details"); });
             AddMenu(display,L.Text("panel.shortView"),delegate { active.SetDisplay("Short"); }); AddMenu(display,L.Text("action.preview"),delegate { active.SetDisplay("Thumbnails"); }); AddMenu(display,L.Text("panel.folderTree"),delegate { active.ToggleTree(); });
-            var treeMenu = (MenuItem)display.Items[display.Items.Count - 1]; display.SubmenuOpened += delegate { treeMenu.IsEnabled = panelLayout == "Single"; };
             var config = MenuRoot(menus, L.Text("menu.configuration"));
             AddMenu(config, L.Text("action.settings"), delegate { new ConfigurationDialog(this).ShowDialog(); });
             config.Items.Add(new Separator()); AddMenu(config, L.Text("settings.saveView"), SaveView);
@@ -131,7 +132,17 @@ namespace FileCompass
             var directions=new StackPanel{Orientation=Orientation.Horizontal};
             Tool(directions,"forward",L.Text("toolbar.folderLeftToRight"),delegate{OpenFolderInOtherPanel(left);});
             Tool(directions,"back",L.Text("toolbar.folderRightToLeft"),delegate{OpenFolderInOtherPanel(right);});navigation.Children.Add(directions);
-            Tool(navigation,"sync",L.Text("action.synchronizeFolders"),delegate{CompareFolders(true);},L.Text("action.synchronize"));
+            Button folderTools = null;
+            folderTools = Tool(navigation,"sync",L.Text("tabCompare.toolbarHelp"),delegate
+            {
+                var menu = new ContextMenu { PlacementTarget=folderTools, Placement=System.Windows.Controls.Primitives.PlacementMode.Bottom };
+                AddToolbarMenuItem(menu,"action.synchronizeFolders",delegate{CompareFolders(true);});
+                AddToolbarMenuItem(menu,"panelCompare.command",CompareOpenPanels);
+                AddToolbarMenuItem(menu,"tabCompare.title",ShowTabComparison);
+                folderTools.ContextMenu = menu;
+                menu.IsOpen = true;
+            },L.Text("tabCompare.toolbar")+" ▾");
+            System.Windows.Automation.AutomationProperties.SetName(folderTools,L.Text("tabCompare.toolbar"));
             updateDirectionTools=delegate{directions.Visibility=panelLayout=="Single"?Visibility.Collapsed:Visibility.Visible;};
             var files=ToolbarGroup(tools,"files");
             toolbarPreviewButton=Tool(files,"view",L.Text("toolbar.filePreviewHelp"),ToggleQuickPreview,L.Text("toolbar.filePreview"));
@@ -222,11 +233,13 @@ namespace FileCompass
         readonly System.Collections.Generic.HashSet<Button> refreshActions=new System.Collections.Generic.HashSet<Button>();
         internal void RefreshPanels(){if(!left.IsLoading)left.Refresh();if(!right.IsLoading)right.Refresh();}
         StackPanel ToolbarGroup(Panel toolbar,string name){var group=new StackPanel{Orientation=Orientation.Horizontal,Tag="toolbar-group-"+name,Margin=new Thickness(0,0,5,0)};bool first=toolbar.Children.Count==0;toolbar.Children.Add(group);if(!first)ToolSeparator(group);return group;}
+        TextBlock toolsToolbarLabel;
         void AddToolsToolbarButton(Panel toolbar){
             Button button=null;
             button=Tool(toolbar,"tools",L.Text("operation.tools"),delegate{
                 button.ContextMenu.PlacementTarget=button;button.ContextMenu.IsOpen=true;
             },L.Text("operation.tools")+" ▾");
+            toolsToolbarLabel=((StackPanel)button.Content).Children.OfType<TextBlock>().Single();
             var menu=new ContextMenu{Placement=PlacementMode.Bottom};button.ContextMenu=menu;
             Action<string,Action> add=(key,run)=>{
                 var item=new MenuItem{Header=L.Text(key)};

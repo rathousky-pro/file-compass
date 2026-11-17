@@ -34,7 +34,7 @@ namespace FileCompass {
             if(!available) {
                 documentLoading=false;if(DocumentPreview.IsHtml(path))htmlCodeMode=true;
                 documentNoticeText.Text=L.Text("preview.webviewMissing");
-                webviewInstall.Visibility=Visibility.Visible;documentNotice.Visibility=Visibility.Visible;return;
+                webviewInstall.Visibility=hoverPreviewOnly?Visibility.Collapsed:Visibility.Visible;documentNotice.Visibility=Visibility.Visible;return;
             }
             var preview=new DocumentPreview {Visibility=Visibility.Hidden};
             documentPreview=preview;content.Children.Add(preview);

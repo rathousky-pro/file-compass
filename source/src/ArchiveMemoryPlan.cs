@@ -10,7 +10,16 @@ namespace FileCompass
         [StructLayout(LayoutKind.Sequential)] sealed class MemoryStatus { public uint Length = (uint)Marshal.SizeOf(typeof(MemoryStatus)), Load; public ulong TotalPhysical, AvailablePhysical, TotalPageFile, AvailablePageFile, TotalVirtual, AvailableVirtual, AvailableExtended; }
         [DllImport("kernel32.dll", SetLastError = true)] static extern bool GlobalMemoryStatusEx([In, Out] MemoryStatus status);
         internal static long AvailableBytes() { var status = new MemoryStatus(); if (!GlobalMemoryStatusEx(status)) return 256L * 1048576; return (long)Math.Min(status.AvailablePhysical, status.AvailablePageFile); }
-        internal static ArchiveMemoryPlan Choose(int limitMiB, long availableBytes, int items, int level, bool fallback)
+        internal static int ParallelThreads(int limitMiB, long availableBytes, int items, int maximumThreads, int processors)
+        {
+            // Leave room for metadata, the codec and the operating system before allowing parallel buffers.
+            long budget = Math.Min(limitMiB - Math.Max(64, limitMiB / 5), availableBytes / 2097152);
+            long metadataMiB = ((long)items * 2048 + 1048575) / 1048576;
+            long memoryThreads = Math.Max(1, (budget - 96 - metadataMiB) / 64);
+            return (int)Math.Max(1, Math.Min(memoryThreads, Math.Min(processors, maximumThreads)));
+        }
+
+        internal static ArchiveMemoryPlan Choose(int limitMiB, long availableBytes, int items, int level, bool fallback, int maximumThreads = 2)
         {
             // Conservative estimate, including managed/native overhead and file metadata.
             // The OS job remains the hard limit; this is a planning budget, not a guarantee.
@@ -20,7 +29,8 @@ namespace FileCompass
             int desired = fallback ? 2 : level <= 3 ? 4 : level <= 7 ? 16 : 32;
             int dictionary = desired; while (dictionary > 1 && reserve + 16 * dictionary > budget) dictionary /= 2;
             if (reserve + 16 * dictionary > budget) throw new ArchiveMemoryException();
-            return new ArchiveMemoryPlan { DictionaryMiB = dictionary, Threads = fallback || dictionary < 4 ? 1 : Math.Min(2, Environment.ProcessorCount) };
+            int threads = reserve + 32 * dictionary <= budget ? maximumThreads : Math.Min(2, maximumThreads);
+            return new ArchiveMemoryPlan { DictionaryMiB = dictionary, Threads = fallback || dictionary < 4 ? 1 : Math.Min(threads, Environment.ProcessorCount) };
         }
         internal static bool IsFailure(Exception exception)
         {

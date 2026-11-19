@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "reviewed": "2026-11-01",
+  "reviewed": "2026-11-19",
   "scope": "Pinned source distribution; optional vendor updates have independent versions and terms.",
   "binaries": [
     {
@@ -50,7 +50,7 @@
     },
     {
       "file": "ui/Magick.NET-Q8-OpenMP-x64.dll",
-      "sha256": "61138fca0bf01eb2424b8a562047450c1667f5136f66348fcb80a97cf047d048",
+      "sha256": "a1f8071b90ed55bbdfb14953e1a8a9703883a0e098309b6fbb8cea93a9b703c3",
       "component": "magick",
       "license": "Apache-2.0 wrapper plus native dependency licenses",
       "notices": [
@@ -60,7 +60,7 @@
     },
     {
       "file": "ui/Magick.NET.Core.dll",
-      "sha256": "477ca5cea07e25ba4867f3da12e374bc1e9c4f848135eca556f4787f5c41d19c",
+      "sha256": "3db1ad381f1ca1646dae5062a57b7523dcdac1f1299a64a8076a1b76cb6e989f",
       "component": "magick",
       "license": "Apache-2.0 wrapper plus native dependency licenses",
       "notices": [
@@ -309,7 +309,7 @@
     },
     {
       "file": "plugins/cloud/rclone.exe",
-      "sha256": "41eab3e118d264920b62c3327966c5ece0dc4dd715ee617d9e30450d8ead95a4",
+      "sha256": "acd80683e23151e93bbe0d6ffa74d26e542ec510332f630beecb9944f8d1a623",
       "component": "cloud",
       "license": "MIT",
       "notices": [
@@ -404,7 +404,7 @@
     },
     {
       "file": "plugins/media/Magick.Native-Q8-OpenMP-x64.dll",
-      "sha256": "9a1b0a0103641671c8c3248c53c52ac6b3f146a30b2c09bf664fce4aedea6909",
+      "sha256": "f94a5c3fb32692d0a9fcedc71f405f7839c103c24f1eb96d50e4ea94ea854028",
       "component": "magick",
       "license": "Apache-2.0 wrapper plus native dependency licenses",
       "notices": [
@@ -436,7 +436,7 @@
     },
     {
       "file": "plugins/media/vcomp140.dll",
-      "sha256": "bcbdf73bfe9eadd849739671a5fe82ebb94346141b586d6a0aa405e6f93b5bec",
+      "sha256": "7b4b46258b0536786b73893cd12a69ddd5055149080a0732a9657550de1c01f7",
       "component": "openmp",
       "license": "Microsoft Visual C++ redistribution terms; publisher entitlement required",
       "notices": [
@@ -446,7 +446,7 @@
     },
     {
       "file": "plugins/network/FileCompassNetwork.dll",
-      "sha256": "adafe40a1ebc1afcd6bbec77961d664c7f94afacb10218a7277b0b9fe3982ab3",
+      "sha256": "eaaa0e074bd704485f88e1fb9c00102cc5d2bc2e2f6727fc96be8b2b3fd915ac",
       "component": "network",
       "license": "curl, libnfs LGPL-2.1-or-later, BSD, MIT, ISC and dependency-specific terms",
       "notices": [
@@ -498,19 +498,19 @@
     },
     {
       "file": "plugins/media/MAGICK-NOTICE.txt",
-      "sha256": "a08ce0f18e36f83c971ab35a7504523fa25a797e99eec57e67c96ab4648b1409"
+      "sha256": "d66c427812efbf0fccb98957e47dde3fc47b41b991cb79e7b5f11d5a76185efe"
     },
     {
       "file": "plugins/media/README.txt",
-      "sha256": "32b7c1b153d61b5175968ad3083c5d127ed6c0985e2f220dd0f26558f3499961"
+      "sha256": "3b5d604914f6767a9da5ed785e97a133ebbb782f0812cf61780d1090a4fbe13f"
     },
     {
       "file": "plugins/media/SOURCE.json",
-      "sha256": "592b88fa2a63a3574fb0425bcca89ee0ab89a90018ab7b875ae16166fe16cc9c"
+      "sha256": "94fefea32f5460160d458aa98958be13b71da5ce54ab0ce5dfbb2632b050953f"
     },
     {
       "file": "plugins/network/BUILD-MANIFEST.txt",
-      "sha256": "6cb042b1d7681773d215036947c68b924a03bb9365736889942e8fd3361bdedb"
+      "sha256": "098473946341e3c1ea99ce4e2e9143e164077059ef90e528ea063e90b6c0bfe3"
     },
     {
       "file": "plugins/network/licenses/brotli/LICENSE.txt",
@@ -570,7 +570,7 @@
     },
     {
       "file": "plugins/network/manifest.json",
-      "sha256": "b9242d0ad71a9b078fc196d0294e21d36617b70056bb4a706efffd3f462d398f"
+      "sha256": "ae84560953c3da2db46b9ecce0c1f87c02145df97cee79102ad10894abdde7d7"
     },
     {
       "file": "plugins/smart/LICENSE.txt",

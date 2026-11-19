@@ -252,7 +252,7 @@ namespace FileCompass
         }
         async void ArchiveNewFolder()
         {
-            var document = active.Archive; string prefix = active.ArchivePrefix;
+            var panel=active; var document = panel.Archive; string prefix = panel.ArchivePrefix;
             if (!ArchivePassword(document, document.Items.Select(x => x.Path))) return;
             string name = Ask(L.Text("archive.newFolderTitle"), L.Text("folder.nameLabel"), ""); if (name == null) return;
             try
@@ -261,7 +261,10 @@ namespace FileCompass
                 using (var temp = new ArchiveTemp())
                 {
                     string folder = Directory.CreateDirectory(Path.Combine(temp.Path, name)).FullName;
-                    if (await ArchiveOperation(L.Text("archive.newFolderTitle"), delegate(CancellationToken token, Action<string> progress) { using (var retryInput = new ArchiveTemp()) { string retryFolder = Directory.CreateDirectory(Path.Combine(retryInput.Path, name)).FullName; ArchiveEngine.Add(document, prefix, new[] { retryFolder }, false, ArchiveSettings.Load(), token, progress); } })) RefreshArchivePanels(document);
+                    if (await ArchiveOperation(L.Text("archive.newFolderTitle"), delegate(CancellationToken token, Action<string> progress) { using (var retryInput = new ArchiveTemp()) { string retryFolder = Directory.CreateDirectory(Path.Combine(retryInput.Path, name)).FullName; ArchiveEngine.Add(document, prefix, new[] { retryFolder }, false, ArchiveSettings.Load(), token, progress); } })) {
+                        foreach(var otherPanel in new[]{left,right}) if(otherPanel!=panel && otherPanel.IsArchive && otherPanel.Archive.Root.FilePath.Equals(document.Root.FilePath,StringComparison.OrdinalIgnoreCase)) otherPanel.Refresh();
+                        if(panel.Archive==document && panel.ArchivePrefix==prefix) { await panel.RefreshAndSelect("/"+(String.IsNullOrEmpty(prefix)?name:prefix+"/"+name)); if(active==panel && panel.Archive==document && panel.ArchivePrefix==prefix)panel.FocusFiles(); }
+                    }
                 }
             }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, L.Text("archive.newFolderTitle")); }

@@ -5,6 +5,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Web.Script.Serialization;
 namespace FileCompass.Updating {
@@ -13,6 +15,24 @@ namespace FileCompass.Updating {
  public sealed class InstallRequest { public int ParentId;public long ParentStarted;public string Target,Package,OriginalHash,ManifestHash;public ReleaseManifest Release; }
  public sealed class RestoreFile {public string Relative,Hash;public bool Existed;}
  public static class UpdateContract {
+  [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)] struct TrustFile { public uint Size; [MarshalAs(UnmanagedType.LPWStr)] public string Path; public IntPtr Handle,Subject; }
+  [StructLayout(LayoutKind.Sequential)] struct TrustData { public uint Size; public IntPtr Policy,Sip; public uint Ui,Revocation,Union; public IntPtr File; public uint Action; public IntPtr State,Url; public uint Flags,Context; }
+  [DllImport("wintrust.dll",ExactSpelling=true)] static extern int WinVerifyTrust(IntPtr window,ref Guid action,ref TrustData data);
+  static void VerifyAuthenticode(string path){
+   var file=new TrustFile{Size=(uint)Marshal.SizeOf(typeof(TrustFile)),Path=Path.GetFullPath(path)};IntPtr pointer=Marshal.AllocHGlobal(Marshal.SizeOf(typeof(TrustFile)));Marshal.StructureToPtr(file,pointer,false);
+   var data=new TrustData{Size=(uint)Marshal.SizeOf(typeof(TrustData)),Ui=2,Union=1,File=pointer,Action=1};var action=new Guid("00AAC56B-CD44-11d0-8CC2-00C04FC295EE");
+   try{if(WinVerifyTrust(new IntPtr(-1),ref action,ref data)!=0)throw new IOException("Update Authenticode verification failed.");}finally{data.Action=2;WinVerifyTrust(new IntPtr(-1),ref action,ref data);Marshal.DestroyStructure(pointer,typeof(TrustFile));Marshal.FreeHGlobal(pointer);}
+  }
+  static X509Certificate2 Signer(string path){try{return new X509Certificate2(X509Certificate.CreateFromSignedFile(path));}catch(CryptographicException){return null;}}
+  public static void VerifyPublisher(string current,string candidate){
+   using(var installed=Signer(current))using(var incoming=Signer(candidate)){
+    // Existing unsigned beta builds do not possess a trusted publisher identity.
+    if(installed==null){if(incoming!=null)VerifyAuthenticode(candidate);return;}
+    if(incoming==null)throw new IOException("A signed installation cannot accept an unsigned update.");
+    VerifyAuthenticode(current);VerifyAuthenticode(candidate);
+    if(!installed.RawData.SequenceEqual(incoming.RawData))throw new IOException("Update publisher certificate does not match the installed application.");
+   }
+  }
   public const string ManifestName="file-compass-release.json",Executable="File Compass.exe";
   public static bool ValidIdentity(string version,string channel,string build){Version v;DateTime day;return Regex.IsMatch(version??"",@"^\d{1,4}\.\d{1,4}\.\d{1,4}$")&&System.Version.TryParse(version,out v)&&new[]{"","alpha","beta","rc"}.Contains(channel??"")&&Regex.IsMatch(build??"",@"^\d{8}\.[0-9]{2,9}$")&&DateTime.TryParseExact(build.Substring(0,8),"yyyyMMdd",CultureInfo.InvariantCulture,DateTimeStyles.None,out day);}
   public static int Compare(string version,string channel,string build,string otherVersion,string otherChannel,string otherBuild){

@@ -1,0 +1,30 @@
+name: dependency-audit
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 4 * * 1'
+  pull_request:
+    paths:
+      - 'source/dependencies.json'
+      - 'source/plugins/**'
+      - 'source/ui/**'
+      - 'source/preview/**'
+      - 'tools/New-DependencySbom.ps1'
+      - '.github/workflows/dependency-audit.yml'
+permissions:
+  contents: read
+jobs:
+  scan:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate distribution inventory
+        run: python tools/check-dependency-notices.py
+      - name: Generate SBOM and check package advisories
+        shell: powershell
+        run: ./tools/New-DependencySbom.ps1 -OutputPath "$env:RUNNER_TEMP\file-compass.cdx.json" -Audit
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-sbom
+          path: ${{ runner.temp }}/file-compass.cdx.json

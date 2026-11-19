@@ -45,6 +45,14 @@ their release manifest, ZIP and SHA-256 checksums. Published unsigned assets
 will not be silently replaced with different signed bytes.
 
 Signatures and timestamp information must be verified before publication.
+The release packaging script now requires a valid Authenticode signature on
+the application from version 0.9.8 onward. Existing unsigned beta versions
+continue to use the HTTPS and digest-based update validation. Once a signed
+version is installed, the updater verifies Windows Authenticode trust and
+requires the exact same publisher certificate on subsequent updates. A
+certificate renewal therefore needs an explicitly reviewed migration or a
+manual trusted installation. The initial signed release is not yet protected
+by a pre-pinned SignPath certificate: the certificate identity is pending.
 Tokens are held in CI secrets, never in source code, download packages or the
 website. A custom build must not be presented as an official signed release.
 

@@ -2,7 +2,13 @@ param([string]$Compiler, [string]$Libraries)
 $ErrorActionPreference='Stop'
 $workspace=Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 if(!$Compiler){$Compiler=(Get-ChildItem -LiteralPath (Join-Path $workspace 'tools/native') -Recurse -Filter 'x86_64-w64-mingw32-clang.exe' | Select-Object -First 1).FullName}
-if(!$Libraries){$Libraries=Join-Path $workspace 'source/downloads/network/curl-8.22.0_3-win64-mingw'}
+if(!$Libraries){
+ $package=Join-Path $workspace 'source/downloads/curl-8.23.0_9-win64-mingw.zip'
+ if(!(Test-Path -LiteralPath $package) -or (Get-FileHash -LiteralPath $package -Algorithm SHA256).Hash -ne '89cb71930f4242d884e8e349463455932ab1d089b20f4f99318261a3cbff9167'){throw 'Missing or unverified curl 8.23.0_9 archive.'}
+ $extract=Join-Path $workspace 'source/downloads/security-20261119/curl-8.23.0_9-win64-mingw'
+ $Libraries=Join-Path $extract 'curl-8.23.0_9-win64-mingw'
+ if(!(Test-Path -LiteralPath (Join-Path $Libraries 'lib/libcurl.a'))){Expand-Archive -LiteralPath $package -DestinationPath $extract -Force}
+}
 if(!$Compiler -or !(Test-Path -LiteralPath $Compiler)){throw 'Chybí LLVM-MinGW x64. Zadejte cestu parametrem -Compiler.'}
 if(!(Test-Path -LiteralPath (Join-Path $Libraries 'lib/libcurl.a'))){throw 'Chybí statické knihovny curl. Zadejte cestu parametrem -Libraries.'}
 $output=Join-Path (Split-Path $PSScriptRoot -Parent) 'plugins/network'

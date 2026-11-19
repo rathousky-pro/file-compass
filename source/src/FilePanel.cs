@@ -413,9 +413,9 @@ namespace FileCompass
             if (remember && tabs.Count > 0 && tabs[tabIndex].Pending && !switchingTabs) tabs[tabIndex].Pending = false;
             if (IsArchive && (path.StartsWith("/") || path == "archive-exit:")) { NavigateArchive(path, remember); return; }
             if (IsRemote && !System.IO.Path.IsPathRooted(path.Replace('/', '\\')) && path.IndexOf(':') < 0)
-            { NavigateRemote(RemoteConnection.Combine(CurrentPath, path), remember); return; }
+            { NavigationTask = NavigateRemote(RemoteConnection.Combine(CurrentPath, path), remember); return; }
             if (IsRemote && (path.StartsWith("/") || path.StartsWith(Remote.Display("/"))))
-            { NavigateRemote(path.StartsWith("/") ? path : path.Substring(Remote.Display("/").Length - 1), remember); return; }
+            { NavigationTask = NavigateRemote(path.StartsWith("/") ? path : path.Substring(Remote.Display("/").Length - 1), remember); return; }
             NavigationTask = NavigateLocal(path, remember);
         }
         async Task NavigateLocal(string path, bool remember, string returnCursor = null)
@@ -561,7 +561,17 @@ namespace FileCompass
             return ((attributes & FileAttributes.ReadOnly) != 0 ? "r" : "-") + ((attributes & FileAttributes.Archive) != 0 ? "a" : "-") +
                 ((attributes & FileAttributes.Hidden) != 0 ? "h" : "-") + ((attributes & FileAttributes.System) != 0 ? "s" : "-");
         }
-        public void Refresh() { if (projection != null) { NavigationTask = LoadProjection(projection); return; } if (IsArchive) { RefreshArchive(); return; } if (CurrentPath != null) Navigate(CurrentPath, false); }
+        public void Refresh() { if (projection != null) { NavigationTask = LoadProjection(projection); return; } if (IsArchive) { NavigationTask = RefreshArchive(); return; } if (CurrentPath != null) Navigate(CurrentPath, false); }
+        internal async Task RefreshAndSelect(string path)
+        {
+            string parent = CurrentPath; var remote = Remote; var archive = Archive;
+            Refresh(); var pending=NavigationTask; if(pending!=null) await pending;
+            if(CurrentPath!=parent || Remote!=remote || Archive!=archive) return;
+            var comparison=IsRemote ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+            var row=List.Items.Cast<Entry>().FirstOrDefault(x=>!x.IsParent && String.Equals(x.FullPath,path,comparison));
+            if(row==null && !String.IsNullOrEmpty(QuickFilterText)){SetQuickFilter("");row=List.Items.Cast<Entry>().FirstOrDefault(x=>!x.IsParent&&String.Equals(x.FullPath,path,comparison));}
+            if(row!=null){List.SelectedItem=row;List.ScrollIntoView(row);}
+        }
         public async void Back() { if (IsArchive && history.Count == 0 && ArchivePrefix.Length == 0) { ExitArchive(); return; } if (IsRemote) { await RemoteHistory(false); return; } if (history.Count > 0) { string previous = CurrentPath; string expected = history.Peek(); Navigate(expected, false); NavigationTask = CompleteHistory(NavigationTask, previous, expected, history, forwardHistory); await NavigationTask; } }
         public async void Forward() { if (IsRemote) { await RemoteHistory(true); return; } if (forwardHistory.Count > 0) { string previous = CurrentPath; string expected = forwardHistory.Peek(); Navigate(expected, false); NavigationTask = CompleteHistory(NavigationTask, previous, expected, forwardHistory, history); await NavigationTask; } }
         async Task CompleteHistory(Task navigation, string previous, string expected, Stack<string> from, Stack<string> to)

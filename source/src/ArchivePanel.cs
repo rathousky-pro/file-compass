@@ -108,7 +108,7 @@ namespace FileCompass
             var row = List.Items.Cast<Entry>().FirstOrDefault(x => !x.IsParent && String.Equals(x.FullPath.TrimStart('/'), member.TrimStart('/'), StringComparison.OrdinalIgnoreCase));
             if (row != null) { List.SelectedItem = row; List.ScrollIntoView(row); }
         }
-        internal async void RefreshArchive()
+        internal async Task RefreshArchive()
         {
             var document = Archive; Loading(true);
             try { await Task.Run(delegate { ArchiveEngine.Reload(document, CancellationToken.None); }); if (Archive == document) ApplyArchiveRows(); }

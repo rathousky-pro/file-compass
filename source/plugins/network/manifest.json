@@ -2,19 +2,19 @@
   "name": "File Compass Network",
   "architecture": "windows-x64",
   "components": {
-    "libcurl": "8.22.0",
-    "libressl": "4.3.3",
+    "libcurl": "8.23.0",
+    "libressl": "4.4.1",
     "libssh2": "1.11.1",
     "libnfs": "18.0.0 (commit 331d391a9a224cca3782f782ed4835eec8fa33f8)"
   },
   "dll": {
     "file": "FileCompassNetwork.dll",
-    "sha256": "adafe40a1ebc1afcd6bbec77961d664c7f94afacb10218a7277b0b9fe3982ab3"
+    "sha256": "eaaa0e074bd704485f88e1fb9c00102cc5d2bc2e2f6727fc96be8b2b3fd915ac"
   },
   "package": {
-    "local": "source/downloads/network/curl-8.22.0_3-win64-mingw.zip",
-    "sha256": "f38b0ac2e3a280fd414b607c874a21e6dd4d1ed0e2ae622afbf0020917446561",
-    "url": "https://curl.se/windows/dl-8.22.0_3/curl-8.22.0_3-win64-mingw.zip"
+    "local": "source/downloads/curl-8.23.0_9-win64-mingw.zip",
+    "sha256": "89cb71930f4242d884e8e349463455932ab1d089b20f4f99318261a3cbff9167",
+    "url": "https://curl.se/windows/dl-8.23.0_9/curl-8.23.0_9-win64-mingw.zip"
   },
   "compiler": {
     "url": "https://github.com/mstorsjo/llvm-mingw/releases/download/20261006/llvm-mingw-20261006-ucrt-x86_64.zip",
@@ -31,7 +31,7 @@
     "NFSv4.0": "libnfs: experimental; read/write state tracking needs additional testing",
     "NFSv4.2": "libnfs (experimental; server support required)"
   },
-  "builtAt": "2026-11-15",
+  "builtAt": "2026-11-19",
   "nfsBuild": {
     "source": "https://github.com/sahlberg/libnfs",
     "commit": "331d391a9a224cca3782f782ed4835eec8fa33f8",

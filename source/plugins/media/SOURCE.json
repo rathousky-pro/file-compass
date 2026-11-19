@@ -10,15 +10,15 @@
     },
     {
       "name": "Magick.NET-Q8-OpenMP-x64",
-      "version": "15.0.0",
-      "url": "https://api.nuget.org/v3-flatcontainer/magick.net-q8-openmp-x64/15.0.0/magick.net-q8-openmp-x64.15.0.0.nupkg",
-      "sha256": "cc86dcedf1b7c6c495b383d30302a9a8a6f15b8bc86987bed983f3ce71cfefeb"
+      "version": "15.1.0",
+      "url": "https://api.nuget.org/v3-flatcontainer/magick.net-q8-openmp-x64/15.1.0/magick.net-q8-openmp-x64.15.1.0.nupkg",
+      "sha256": "e818224f4c5e2cae6105a8313e5bc3d865b7165831843db4c47aa142d003a794"
     },
     {
       "name": "Magick.NET.Core",
-      "version": "15.0.0",
-      "url": "https://api.nuget.org/v3-flatcontainer/magick.net.core/15.0.0/magick.net.core.15.0.0.nupkg",
-      "sha256": "9936d4ea3ed1991a6672056e8df47b75b43c00afa884bff78e136cd2141798b3"
+      "version": "15.1.0",
+      "url": "https://api.nuget.org/v3-flatcontainer/magick.net.core/15.1.0/magick.net.core.15.1.0.nupkg",
+      "sha256": "461232bfc8188ee3c244c7a73119a8c8d4ada46f109d7ff97952f29729bdd438"
     }
   ],
   "ffmpegCommit": "9a9b70bb8c",

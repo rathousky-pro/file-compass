@@ -57,3 +57,28 @@ Use `source/build.ps1 -Release` for distribution and `source/build.ps1` for a de
 ## Settings saves and executable approvals
 
 Saving language or appearance no longer reads or rewrites the executable approval list for unchanged archiver paths. File existence and approval are checked only for paths edited or explicitly selected in the dialog. A replaced executable at an unchanged path is not silently approved. Invalid approval data still blocks executable acquisition; it does not block unrelated language changes. Regression coverage reproduces an invalid trusted-tools.xml, saves and applies a new language, checks that approval bytes remain untouched, rejects modified executables and confirms explicit new-path approval.
+
+## November 19 dependency review follow-up
+
+The build workflow runs the three existing security audit suites and checks
+the pinned binary/notice inventory. The separate dependency-audit workflow
+generates a CycloneDX 1.5 inventory weekly and checks the identified NuGet,
+npm and Go packages through OSV and selected native libraries through NVD.
+Findings fail the audit for human review; this is not an automatic determination
+of application exploitability. Other native/transitive components still need
+upstream advisory review. Release packaging includes the generated SBOM in
+`help/licenses/file-compass.cdx.json`.
+
+Updated on November 19: Magick.NET 15.1.0 (native ImageMagick 7.1.2-35),
+libcurl 8.23.0 with LibreSSL 4.4.1, and rclone 1.76.0. The curl archive
+matches the publisher's SHA-256, and rclone matches the supplied official
+SHA256SUMS list. The Magick.NET archives came from the official NuGet links;
+the local SHA-256 values are recorded, but independent NuGet signature
+verification was unavailable because this environment has no .NET SDK.
+ImageMagick 7.1.2-36 or later remains a follow-up once a compatible
+Magick.NET release is available. Do not refresh inventory to accept
+unreviewed replacements.
+
+Signed applications now require a matching trusted Authenticode signer for
+updates; see CODE-SIGNING.md for the currently unsigned bootstrap and
+certificate migration limitations.

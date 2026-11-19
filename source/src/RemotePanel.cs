@@ -87,7 +87,7 @@ namespace FileCompass
             RememberRemote(); UpdateConnectionButtons();
             if (PathChanged != null) PathChanged(this, EventArgs.Empty);
         }
-        async void NavigateRemote(string path, bool remember)
+        async Task NavigateRemote(string path, bool remember)
         {
             if (IsLoading) return;
             Loading(true);

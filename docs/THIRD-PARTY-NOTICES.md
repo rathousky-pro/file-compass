@@ -7,9 +7,9 @@ See [licensing](LICENSING.md) and the complete MIT text in the repository's
 `LICENSE` or the portable package's `help/LICENSE.txt`. This does not change any
 third-party component's license below.
 
-## libcurl 8.22.0 and libssh2 1.11.1
+## libcurl 8.23.0 and libssh2 1.11.1
 
-Network operations use the native `FileCompassNetwork.dll` adapter in `plugins/network`. It statically links libcurl (curl/MIT-like license), libssh2 (BSD-3-Clause) and dependencies from the official curl 8.22.0_3 Windows x64 package. libcurl handles FTP/FTPS; libssh2 handles SFTP/SCP/SSH. LibreSSL 4.3.3 supplies cryptography. Dependencies include zlib-ng, zstd, Brotli, libpsl, the public suffix list, nghttp2, nghttp3 and ngtcp2.
+Network operations use the native `FileCompassNetwork.dll` adapter in `plugins/network`. It statically links libcurl (curl/MIT-like license), libssh2 (BSD-3-Clause) and dependencies from the official curl 8.23.0_9 Windows x64 package. libcurl handles FTP/FTPS; libssh2 handles SFTP/SCP/SSH. LibreSSL 4.4.1 supplies cryptography. Dependencies include zlib-ng, zstd, Brotli, libpsl, the public suffix list, nghttp2, nghttp3 and ngtcp2.
 
 Original notices are in `plugins/network/licenses`; `BUILD-MANIFEST.txt` lists exact components/source links and the plugin manifest records package provenance/hashes. Static libraries/headers/original downloads are build-time inputs under `source/downloads/network`; adapter sources/build scripts are in `source/native`. No separate runtime installation is required. FluentFTP, SSH.NET and WinSCP are no longer runtime components.
 
@@ -73,11 +73,11 @@ Copyright 2022 David Carpenter, MIT. Source and SDK https://www.voidtools.com/su
 
 PdfPig 0.1.16 (Apache-2.0), https://github.com/UglyToad/PdfPig; Microsoft.Bcl.HashCode 6.0.0 (MIT). License texts and package metadata are in libraries/licenses/.
 
-## rclone 1.75.2 — cloud storage
+## rclone 1.76.0 — cloud storage
 
 Google Drive, OneDrive and Dropbox use official rclone for Windows x64.
-Source/license: https://github.com/rclone/rclone/tree/v1.75.2
-Package: https://downloads.rclone.org/v1.75.2/rclone-v1.75.2-windows-amd64.zip
+Source/license: https://github.com/rclone/rclone/tree/v1.76.0
+Package: https://downloads.rclone.org/v1.76.0/rclone-v1.76.0-windows-amd64.zip
 MIT license: `plugins/cloud/LICENSE.txt`; original documentation: `README.txt`. The executable hash is compiled into PluginHashes.cs and checked before execution. The package was checked against official SHA256SUMS; build-time downloads are under `source/downloads/rclone`.
 
 ## Local document preview
@@ -96,7 +96,7 @@ Source: https://github.com/smartmontools/smartmontools/releases/tag/RELEASE_7_5
 
 ## Media conversion
 
-- Magick.NET 15.0.0 Q8 OpenMP x64 and Magick.NET.Core 15.0.0: Apache-2.0 wrapper; ImageMagick and native dependencies have their own licenses. The complete package notice is `plugins/media/MAGICK-NOTICE.txt`.
+- Magick.NET 15.1.0 Q8 OpenMP x64 and Magick.NET.Core 15.1.0: Apache-2.0 wrapper; ImageMagick and native dependencies have their own licenses. The complete package notice is `plugins/media/MAGICK-NOTICE.txt`.
 - FFmpeg `n9.0.2-35-g9a9b70bb8c-20261024`: BtbN Windows x64 **LGPL shared** build, separate processes. `FFMPEG-LICENSE.txt` and `GPL-3.0.txt` contain LGPLv3 and its incorporated GPLv3 terms. This is not the GPL/nonfree build. Runtime decoding/encoding is limited to local files by protocol/demuxer allowlists. Package SHA-256 and source links are in `plugins/media/SOURCE.json`.
 - Microsoft Visual C++ OpenMP runtime `vcomp140.dll`: Microsoft-licensed native runtime supplied unchanged inside the pinned official Magick.NET Q8 OpenMP package. It is not covered by the Apache license of the wrapper. App-local redistribution is subject to the applicable Microsoft Visual Studio / Visual C++ redistribution terms. See https://learn.microsoft.com/en-us/cpp/windows/determining-which-dlls-to-redistribute . The publisher must retain the applicable redistribution entitlement/terms before public release. Managed/native Magick.NET and this runtime are updated as one set.
 - Roslyn compiler 4.14.0: MIT, build dependency only, not distributed with the application.

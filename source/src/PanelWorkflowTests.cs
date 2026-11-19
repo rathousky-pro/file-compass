@@ -33,6 +33,29 @@ namespace FileCompass
                 File.WriteAllLines(Path.Combine(directory, "navigation-result.txt"), checks.Concat(new[] { "PASS: " + checks.Count + " checks" })); return 0;
             } catch (Exception ex) { File.WriteAllText(Path.Combine(directory, "navigation-result.txt"), "FAIL after " + checks.Count + " checks\n" + String.Join("\n", checks) + "\n" + ex); return 1; }
         }
+        internal static int RunFolderAndMove(string directory)
+        {
+            MainWindow main=null;var checks=new List<string>();Action<bool,string> check=(valid,label)=>{if(!valid)throw new Exception(label);checks.Add(label);};
+            try {
+                Directory.CreateDirectory(directory);string root=Directory.CreateDirectory(Path.Combine(directory,"files")).FullName;
+                SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));
+                main=new MainWindow(root,new ProgramSettings{AutoRefresh=false}){WindowStartupLocation=WindowStartupLocation.Manual,Left=-20000,Top=-20000,ShowActivated=false};main.Show();NavigationTests.WaitPanels(main);
+                var panels=FluentUiTests.Children<FilePanel>(main).ToArray();var panel=panels[0];
+                string folder=Directory.CreateDirectory(Path.Combine(root,"new-active-folder")).FullName;
+                NavigationTests.Wait(panel.RefreshAndSelect(folder));check(((Entry)panel.List.SelectedItem).FullPath==folder,"new folder is selected after refresh");
+                panel.SetQuickFilter("not-a-match");NavigationTests.Wait(panel.RefreshAndSelect(folder));check(((Entry)panel.List.SelectedItem).FullPath==folder,"new folder stays reachable even when an old filter hides it");
+                check(!MainWindow.MoveDestinationUnavailable(panel),"ordinary folder allows a move");
+                check(panels[1].TestArchiveMoveDestination(),"archive destination restricts F6 to rename");
+                File.WriteAllLines(Path.Combine(directory,"result.txt"),checks.Concat(new[]{"PASS: "+checks.Count+" checks"}));return 0;
+            }catch(Exception ex){File.WriteAllLines(Path.Combine(directory,"result.txt"),checks.Concat(new[]{"FAIL: "+ex}));return 1;}finally{if(main!=null)main.Close();}
+        }
+    }
+    public partial class FilePanel
+    {
+        internal bool TestArchiveMoveDestination()
+        {
+            var old=Archive;try{Archive=new ArchiveDocument{Type="ISO",Items=new List<ArchiveItem>()};return IsArchive&&MainWindow.MoveDestinationUnavailable(this);}finally{Archive=old;}
+        }
     }
     public partial class MainWindow
     {

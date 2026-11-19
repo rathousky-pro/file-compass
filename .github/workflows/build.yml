@@ -2,6 +2,8 @@ name: build
 on:
   push:
   pull_request:
+permissions:
+  contents: read
 jobs:
   build-and-test:
     runs-on: windows-latest
@@ -13,6 +15,8 @@ jobs:
       - name: Validate translations and help
         shell: powershell
         run: python tools/check-release-content.py
+      - name: Verify pinned dependencies
+        run: python tools/check-dependency-notices.py
       - name: Build
         shell: powershell
         working-directory: source
@@ -22,7 +26,7 @@ jobs:
         run: |
           $exe = Join-Path $env:RUNNER_TEMP 'out\File Compass.exe'
           $failures = @()
-          foreach ($test in 'self-test', 'copy-test', 'archive-test', 'preview-refresh-test', 'toolbar-dialog-test', 'language-test', 'help-window-test', 'vendor-updates-test', 'application-updates-test', 'disk-analyzer-test', 'disk-smart-test', 'integrity-test', 'fluent-preview-test', 'rename-fluent-test', 'undo-history-test', 'cascade-navigation-test', 'unified-search-test', 'task-dock-grouping-test', 'profile-protocol-ux-test') {
+          foreach ($test in 'self-test', 'copy-test', 'archive-test', 'preview-refresh-test', 'toolbar-dialog-test', 'language-test', 'help-window-test', 'vendor-updates-test', 'application-updates-test', 'disk-analyzer-test', 'disk-smart-test', 'integrity-test', 'security-audit-test', 'medium-audit-test', 'low-audit-test', 'folder-move-test', 'fluent-preview-test', 'rename-fluent-test', 'undo-history-test', 'cascade-navigation-test', 'unified-search-test', 'task-dock-grouping-test', 'profile-protocol-ux-test') {
             $work = Join-Path $env:RUNNER_TEMP "w-$test"; New-Item -ItemType Directory $work -Force | Out-Null
             $process = Start-Process $exe -ArgumentList "--$test", "`"$work`"" -Wait -PassThru
             if ($process.ExitCode -ne 0) {

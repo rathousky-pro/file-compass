@@ -17,6 +17,7 @@ namespace FileCompass.Updating {
   }
   internal static void Install(InstallRequest request,string job,Action<int> afterWrite=null){
    UpdateContract.Verify(request.Package,request.Release);if(UpdateContract.Hash(Path.Combine(request.Package,UpdateContract.ManifestName))!=request.ManifestHash)throw new IOException("Prepared manifest changed.");UpdateContract.RejectLinks(request.Target);string original=UpdateContract.SafePath(request.Target,UpdateContract.Executable);if(UpdateContract.Hash(original)!=request.OriginalHash)throw new IOException("Installed application changed before the update.");
+   UpdateContract.VerifyPublisher(original,UpdateContract.SafePath(request.Package,UpdateContract.Executable));
    string backup=Path.Combine(job,"backup");Directory.CreateDirectory(backup);var restore=new List<RestoreFile>();var files=request.Release.Files.Select(x=>x.Relative).Concat(new[]{UpdateContract.ManifestName}).ToArray();
    // Back up everything before replacing the first installed file.
    foreach(string relative in files){string target=UpdateContract.SafePath(request.Target,relative);var item=new RestoreFile{Relative=relative,Existed=File.Exists(target)};if(item.Existed){string saved=UpdateContract.SafePath(backup,relative);Directory.CreateDirectory(Path.GetDirectoryName(saved));Retry(()=>File.Copy(target,saved,false));item.Hash=UpdateContract.Hash(saved);}restore.Add(item);}

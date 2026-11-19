@@ -71,7 +71,7 @@ def inventory():
             if not path.is_file(): continue
             name = path.name.lower()
             if any(term in name for term in ('license', 'copying', 'notice', 'source.json', 'manifest.json')) or path.suffix == '.nuspec' or name == 'build-manifest.txt': legal.add(path)
-    return dict(schema=1, reviewed='2026-11-01', scope='Pinned source distribution; optional vendor updates have independent versions and terms.', binaries=entries, originalNotices=[dict(file=p.relative_to(SOURCE).as_posix(), sha256=digest(p)) for p in sorted(legal)])
+    return dict(schema=1, reviewed='2026-11-19', scope='Pinned source distribution; optional vendor updates have independent versions and terms.', binaries=entries, originalNotices=[dict(file=p.relative_to(SOURCE).as_posix(), sha256=digest(p)) for p in sorted(legal)])
 
 
 def check(refresh=False, installation=None):

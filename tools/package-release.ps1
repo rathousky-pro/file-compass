@@ -41,6 +41,11 @@ $exe = Join-Path $InputDirectory 'File Compass.exe'
 $information = [Diagnostics.FileVersionInfo]::GetVersionInfo($exe).ProductVersion
 if ($information -notmatch '^(?<version>\d+\.\d+\.\d+)(?:-(?<channel>alpha|beta|rc))?\+(?<build>\d{8}\.\d{2,9})$') { throw 'Invalid application version/build.' }
 $releaseVersion = $Matches.version; $channel = $Matches.channel; $buildId = $Matches.build
+$signature = Get-AuthenticodeSignature -LiteralPath $exe
+if ($signature.Status -ne 'Valid' -and $signature.Status -ne 'NotSigned') { throw 'Invalid Authenticode signature on release executable.' }
+$signed = $signature.Status -eq 'Valid'
+if ([version]$releaseVersion -ge [version]'0.9.8' -and !$signed) { throw 'Release 0.9.8 and later require a valid Authenticode signature before packaging.' }
+& (Join-Path $PSScriptRoot 'New-DependencySbom.ps1') -OutputPath (Join-Path $central 'file-compass.cdx.json')
 $tag = 'v'+$releaseVersion+$(if($channel){'-'+$channel})+'-build.'+$buildId
 $manifestName = 'file-compass-release.json'
 $files = @()
@@ -66,7 +71,8 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 $digest = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
 [IO.File]::WriteAllText(($zip+'.sha256'),($digest+'  FileCompass-win-x64.zip'+[Environment]::NewLine),(New-Object Text.UTF8Encoding($false)))
 $url = 'https://github.com/rathousky-pro/file-compass-web/releases/download/'+$tag+'/FileCompass-win-x64.zip'
-$notes = "File Compass $information`n`nWindows x64 portable beta. Original File Compass code is licensed under MIT, copyright (c) 2026 Jan Rathousky. Third-party components retain their own licenses; see help/licenses/README.md in the package.`n`nThe executable is not digitally signed yet. Includes application files and the verified update manifest.`nSHA-256: $digest`n"
+$signatureNote=if($signed){'The executable has a valid Authenticode signature.'}else{'The executable is not digitally signed yet.'}
+$notes = "File Compass $information`n`nWindows x64 portable beta. Original File Compass code is licensed under MIT, copyright (c) 2026 Jan Rathousky. Third-party components retain their own licenses; see help/licenses/README.md in the package.`n`n$signatureNote Includes application files and the verified update manifest.`nSHA-256: $digest`n"
 $notesPath = Join-Path $OutputDirectory 'release-notes.md'; [IO.File]::WriteAllText($notesPath,$notes,(New-Object Text.UTF8Encoding($false)))
 [IO.File]::WriteAllText((Join-Path $OutputDirectory 'release-info.json'),(@{tag=$tag;url=$url;zip=$zip;sha256=$digest;prerelease=[bool]$channel}|ConvertTo-Json),(New-Object Text.UTF8Encoding($false)))
 if ($Publish) {

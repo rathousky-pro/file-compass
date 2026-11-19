@@ -335,15 +335,15 @@ namespace FileCompass
         }
         async void RemoteNewFolder()
         {
-            var panel = active; string name = Ask(L.Text("network.newFolderTitle"), L.Text("folder.nameLabel"), ""); if (name == null) return;
+            var panel = active; var connection=panel.Remote; string parent=panel.CurrentPath; string created=null; string name = Ask(L.Text("network.newFolderTitle"), L.Text("folder.nameLabel"), ""); if (name == null) return;
             try
             {
-                RemoteConnection.ValidateRemoteName(name); string path = RemoteConnection.Combine(panel.CurrentPath, name);
+                RemoteConnection.ValidateRemoteName(name); string path = RemoteConnection.Combine(parent, name);
                 NetworkBusy(true, L.Text("network.creatingFolderTitle"));
-                await Task.Run(delegate { if (panel.Remote.Session.FileExists(path)) throw new IOException(L.Text("error.itemAlreadyExists")); panel.Remote.Session.CreateDirectory(path); });
+                await Task.Run(delegate { if (connection.Session.FileExists(path)) throw new IOException(L.Text("error.itemAlreadyExists")); connection.Session.CreateDirectory(path); }); created=path;
             }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, L.Text("folder.createFailed")); }
-            finally { NetworkBusy(false, null); panel.Refresh(); }
+            finally { NetworkBusy(false, null); if(panel.Remote==connection && panel.CurrentPath==parent) { if(created!=null) { await panel.RefreshAndSelect(created); if(active==panel && panel.CurrentPath==parent && panel.Remote==connection)panel.FocusFiles(); } else panel.Refresh(); } }
         }
         async void RemoteRename()
         {

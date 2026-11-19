@@ -208,8 +208,19 @@ namespace FileCompass
             else if (e.Key == Key.Tab && Keyboard.Modifiers == ModifierKeys.None && panelLayout != "Single") { (active == left ? right : left).FocusFiles(); e.Handled = true; }
             else if (e.Key == Key.R && Keyboard.Modifiers == ModifierKeys.Control) { left.Refresh(); right.Refresh(); e.Handled = true; }
         }
+        internal static bool MoveDestinationUnavailable(FilePanel panel)
+        {
+            if(panel.EmptyPanel || panel.IsArchive || panel.IsVirtualBrowser || panel.IsProjection) return true;
+            if(!panel.IsRemote && !String.IsNullOrEmpty(panel.CurrentPath)) {
+                try { return new DriveInfo(Path.GetPathRoot(panel.CurrentPath)).DriveType==DriveType.CDRom; }
+                catch(ArgumentException) { } catch(IOException) { } catch(UnauthorizedAccessException) { }
+            }
+            return false;
+        }
         void Transfer(bool move)
         {
+            var destinationPanel = active == left ? right : left;
+            if (move && !active.EmptyPanel && !active.IsVirtualBrowser && MoveDestinationUnavailable(destinationPanel)) { Rename(); return; }
             if(active.EmptyPanel||(active==left?right:left).EmptyPanel){MessageBox.Show(this,L.Text("tabs.emptyTransfer"),ApplicationBrand.Name);return;}
             if(active.IsExt){ExportExtToOther(move);return;}if((active==left?right:left).IsExt){MessageBox.Show(this,L.Text("ext.readOnly"),L.Text("ext.title"));return;}
             if (active.IsShellBrowser || (active == left ? right : left).IsShellBrowser) { MessageBox.Show(this, L.Text("tree.openFolderFirst"), ApplicationBrand.Name); return; }
@@ -235,7 +246,7 @@ namespace FileCompass
             var targetPanel=active; string parent=targetPanel.CurrentPath;
             try { FileOperations.ValidateName(name); string path=Path.Combine(parent,name);var create=Task.Factory.StartNew(delegate{if(File.Exists(path)||Directory.Exists(path))throw new IOException(L.Text("error.itemAlreadyExists"));Directory.CreateDirectory(path);return UndoReceipt.Capture(path,null,false);},System.Threading.CancellationToken.None,TaskCreationOptions.LongRunning,TaskScheduler.Default);
                 if(await Task.WhenAny(create,Task.Delay(TimeSpan.FromSeconds(15)))!=create){var observe=create.ContinueWith(t=>{var error=t.Exception;},TaskScheduler.Default);MessageBox.Show(this,L.Text("folder.networkPending"),L.Text("folder.createFailed"));return;}
-                var receipt=await create;RecordUndoTransaction(L.Text("action.newFolder"),new[]{receipt});if(targetPanel.CurrentPath==parent)targetPanel.Refresh(); }
+                var receipt=await create;RecordUndoTransaction(L.Text("action.newFolder"),new[]{receipt});if(targetPanel.CurrentPath==parent){await targetPanel.RefreshAndSelect(path);if(active==targetPanel && targetPanel.CurrentPath==parent)targetPanel.FocusFiles();} }
             catch (Exception ex) { MessageBox.Show(ex.Message, L.Text("folder.createFailed")); }
         }
         async void Rename()
@@ -376,9 +387,9 @@ namespace FileCompass
             if (args.Length == 2 && args[0] == "--release-tools-test") return ReleaseToolsTests.Run(args[1]);
             if (args.Length == 2 && args[0] == "--help-window-test") return HelpWindowTests.Run(args[1]);
             if (args.Length == 2 && args[0] == "--live-language-test") return LiveLanguageTests.Run(args[1]);
-            if (args.Length == 2 && args[0] == "--low-audit-test") return LowAuditTests.Run(args[1]);
-            if (args.Length == 2 && args[0] == "--security-audit-test") return SecurityAuditTests.Run(args[1]);
-            if (args.Length == 2 && args[0] == "--medium-audit-test") return MediumAuditTests.Run(args[1]);
+            if (args.Length == 2 && args[0] == "--low-audit-test") { AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile"); return LowAuditTests.Run(args[1]); }
+            if (args.Length == 2 && args[0] == "--security-audit-test") { AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile"); return SecurityAuditTests.Run(args[1]); }
+            if (args.Length == 2 && args[0] == "--medium-audit-test") { AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile"); return MediumAuditTests.Run(args[1]); }
             if (args.Length > 1 && args.Any(x => x.EndsWith("-test", StringComparison.Ordinal)))
             {
                 WorkflowStore.TestRoot = Path.Combine(Path.GetFullPath(args[1]), "workflow-profile");
@@ -402,7 +413,8 @@ namespace FileCompass
             if (args.Contains("--resume-once-test")) return NetworkResumeTests.Once(args);
             if (args.Length==2&&args[0]=="--icloud-test")return CloudICloudTests.Run(args[1]);
             if (args.Length==2&&args[0]=="--navigation-focus-test")return NavigationFocusTests.Run(args[1]);
-            if (args.Contains("--navigation-test")) return PanelWorkflowTests.Run(args.Length > 1 ? args[1] : Path.GetTempPath());
+            if (args.Length==2 && args[0]=="--folder-move-test") { AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile"); return PanelWorkflowTests.RunFolderAndMove(args[1]); }
+            if (args.Length==2 && args[0]=="--navigation-test") { AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile"); return PanelWorkflowTests.Run(args[1]); }
             if (args.Contains("--improvements-test")) return ImprovementsTests.Run(args.Length > 1 ? args[1] : Path.GetTempPath());
             if (args.Contains("--ui-test")) return FluentUiTests.Run(args.Length > 1 ? args[1] : Path.GetTempPath());
             if (args.Contains("--usability-test")) return UsabilityTests.Run(Path.GetFullPath(args[1]));

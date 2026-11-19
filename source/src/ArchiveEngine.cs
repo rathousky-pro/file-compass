@@ -21,7 +21,8 @@ namespace FileCompass
     {
         public string FilePath, Password, Type, Stamp;
         public ArchiveDocument Parent;
-        public bool MultiVolume;
+        public bool MultiVolume, ImageAudioOmitted;
+        internal DataIso Iso;
         public string ParentMember;
         public List<ArchiveItem> Items;
         public string Display { get { return Parent == null ? FilePath : Parent.Display + "\\" + ParentMember.Replace('/', '\\'); } }
@@ -46,7 +47,7 @@ namespace FileCompass
         internal static string OutputSuffix(string path)
         { string lower = path.ToLowerInvariant(); return new[] { ".tar.gz", ".tar.bz2", ".tar.xz" }.FirstOrDefault(lower.EndsWith) ?? System.IO.Path.GetExtension(path); }
         public static bool Recognized(string path)
-        { return (path.EndsWith(".zip.001", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".7z.001", StringComparison.OrdinalIgnoreCase)) || new[] { ".zip", ".7z", ".rar", ".tar", ".gz", ".bz2", ".xz", ".tgz", ".tbz", ".txz", ".zst", ".cab", ".iso", ".wim", ".arj", ".lzh", ".lha", ".tbz2", ".bzip2", ".gzip", ".lzma", ".z", ".cpio", ".deb", ".rpm", ".xar", ".dmg", ".udf", ".vhd", ".vhdx", ".squashfs", ".apk", ".jar", ".epub" }.Contains(System.IO.Path.GetExtension(path).ToLowerInvariant()); }
+        { string ext=System.IO.Path.GetExtension(path).ToLowerInvariant();return (path.EndsWith(".zip.001", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".7z.001", StringComparison.OrdinalIgnoreCase)) || ext==".cue" || (ext==".bin"&&DiscImageSource.AssociatedCue(path)!=null) || ((ext==".img"||ext==".ima"||ext==".raw"||ext==".dd")&&DiscImageSource.IsRawImage(path)) || new[] { ".zip", ".7z", ".rar", ".tar", ".gz", ".bz2", ".xz", ".tgz", ".tbz", ".txz", ".zst", ".cab", ".iso", ".wim", ".arj", ".lzh", ".lha", ".tbz2", ".bzip2", ".gzip", ".lzma", ".z", ".cpio", ".deb", ".rpm", ".xar", ".dmg", ".udf", ".vhd", ".vhdx", ".squashfs", ".apk", ".jar", ".epub" }.Contains(ext); }
         public static string SafeMember(string raw)
         {
             string name = raw.Replace('\\', '/').TrimEnd('/');
@@ -154,6 +155,7 @@ namespace FileCompass
         static string[] Options(ArchiveDocument doc) { return new[] { "-sccUTF-8", "-y", "-spd" }.Concat(doc.Password == null ? new string[0] : new[] { PasswordArgument(doc.Password) }).ToArray(); }
         public static ArchiveDocument Open(string file, string password = null, CancellationToken token = default(CancellationToken))
         {
+            file = DiscImageSource.AssociatedCue(file) ?? file;
             var doc = new ArchiveDocument { FilePath = System.IO.Path.GetFullPath(file), Password = password };
             Reload(doc, token); return doc;
         }
@@ -205,9 +207,12 @@ namespace FileCompass
                     else { if (items.Count >= limits.MaximumItems) throw new IOException(L.Text("archive.itemLimitExceeded")); items.Add(parent, new ArchiveItem { Path = parent, Directory = true }); }
                 }
             }
+            doc.Iso = System.IO.Path.GetExtension(doc.FilePath).Equals(".iso", StringComparison.OrdinalIgnoreCase)
+                ? DataIso.Inspect(doc.FilePath, doc.Type) : null;
             if (ReadStamp(doc.FilePath) != stamp) throw new IOException(L.Text("archive.changedDuringLoading"));
             doc.Items = items.Values.ToList();
             doc.Stamp = stamp;
+            doc.ImageAudioOmitted = DiscImageSource.IsCue(doc.FilePath) && DiscImageSource.ReadCue(doc.FilePath).HasAudio;
         }
         public static List<ArchiveItem> Select(ArchiveDocument doc, IEnumerable<string> members)
         {
@@ -282,9 +287,17 @@ namespace FileCompass
                 if (File.Exists(extracted)) AttachmentSecurity.WriteZone(extracted, zone);
             }
         }
-        public static bool Writable(ArchiveDocument doc) { return !System.IO.Path.GetExtension(doc.FilePath).Equals(".exe",StringComparison.OrdinalIgnoreCase) && !doc.MultiVolume && new[] { "zip", "7z", "rar", "rar5" }.Contains(doc.Type.ToLowerInvariant()) && (!doc.Type.StartsWith("Rar", StringComparison.OrdinalIgnoreCase) || (String.IsNullOrEmpty(doc.Password) && (doc.Items == null || !doc.Items.Any(x => x.Encrypted)))) && (doc.Parent == null || Writable(doc.Parent)); }
+        public static bool Writable(ArchiveDocument doc)
+        {
+            if (doc.MultiVolume || System.IO.Path.GetExtension(doc.FilePath).Equals(".exe", StringComparison.OrdinalIgnoreCase))
+                return false;
+            bool writableFormat = doc.Iso != null ? doc.Iso.CanRebuild : new[] { "zip", "7z", "rar", "rar5" }.Contains(doc.Type.ToLowerInvariant());
+            bool encryptedRar = doc.Type.StartsWith("Rar", StringComparison.OrdinalIgnoreCase) &&
+                (!String.IsNullOrEmpty(doc.Password) || (doc.Items != null && doc.Items.Any(item => item.Encrypted)));
+            return writableFormat && !encryptedRar && (doc.Parent == null || Writable(doc.Parent));
+        }
         static string Hash(string path) { using (var stream = File.OpenRead(path)) using (var sha = SHA256.Create()) return Convert.ToBase64String(sha.ComputeHash(stream)); }
-        static string ReadStamp(string path) { var info = new FileInfo(path); return info.Length + ":" + info.LastWriteTimeUtc.Ticks + ":" + info.CreationTimeUtc.Ticks + ArchiveExtended.VolumeStamp(path); }
+        static string ReadStamp(string path) { var info = new FileInfo(path); return info.Length + ":" + info.LastWriteTimeUtc.Ticks + ":" + info.CreationTimeUtc.Ticks + ArchiveExtended.VolumeStamp(path) + (DiscImageSource.IsCue(path)?DiscImageSource.CueStamp(path):""); }
         static void CheckCurrent(ArchiveDocument doc)
         { if (ReadStamp(doc.FilePath) != doc.Stamp || ReadStamp(doc.Root.FilePath) != doc.Root.Stamp) throw new IOException(L.Text("archive.changedBeforeUpdate")); }
         static void CopyInput(string source, string destination, CancellationToken token, ArchiveBudget budget = null, ArchivePreparationReporter preparation = null)
@@ -351,6 +364,9 @@ namespace FileCompass
         }
         public static void Create(string target, IEnumerable<string> sources, ArchiveSettings settings, CancellationToken token, Action<string> progress = null, ArchivePackOptions pack = null)
         {
+            if (System.IO.Path.GetExtension(target).Equals(".iso", StringComparison.OrdinalIgnoreCase) && pack != null &&
+                (pack.SelfExtracting || pack.VolumeBytes > 0))
+                throw new IOException(L.Text("archive.readOnlyFormat"));
             settings.ValidateCreationTool(target);
             if(pack!=null)ArchiveCompressionQuality.Validate(pack.Level);
             if (pack != null && (pack.Move || pack.VolumeBytes > 0)) { ArchiveExtended.Create(target,sources,settings,token,progress,pack); return; }
@@ -378,11 +394,12 @@ namespace FileCompass
             pack = pack ?? new ArchivePackOptions();
             target = System.IO.Path.GetFullPath(target);
             string extension = System.IO.Path.GetExtension(target).ToLowerInvariant();
-            if (!new[] { ".zip", ".7z", ".rar", ".tar", ".gz", ".bz2", ".xz", ".tgz", ".tbz2", ".txz", ".arj", ".lzh", ".lha" }.Contains(extension)) throw new IOException(L.Text("archive.outputExtensionRequired"));
+            if (!new[] { ".zip", ".7z", ".rar", ".tar", ".gz", ".bz2", ".xz", ".tgz", ".tbz2", ".txz", ".arj", ".lzh", ".lha", ".iso" }.Contains(extension)) throw new IOException(L.Text("archive.outputExtensionRequired"));
             lock (Locks.GetOrAdd(System.IO.Path.GetFullPath(target), delegate { return new object(); }))
             using (var input = new ArchiveTemp())
             {
                 bool legacy = extension == ".arj" || extension == ".lzh" || extension == ".lha";
+                bool iso = extension == ".iso";
                 if (legacy) settings.LegacyExecutable(extension == ".arj");
                 var sourceFiles = sources.Select(System.IO.Path.GetFullPath).ToArray();
                 bool streamFormat = new[] { ".gz", ".bz2", ".xz", ".tgz", ".tbz2", ".txz" }.Contains(extension);
@@ -390,7 +407,7 @@ namespace FileCompass
                 if (!String.IsNullOrEmpty(pack.Password) && extension != ".zip" && extension != ".7z") throw new IOException(L.Text("archive.passwordRequiresZipOr7z"));
                 string directRoot = sourceFiles.Length > 0 ? System.IO.Path.GetDirectoryName(sourceFiles[0]) : null;
                 if (TryCreateDirectArchive(target, sourceFiles, directRoot, extension, settings, pack, token, progress)) return;
-                bool direct = !legacy && sourceFiles.Length > 0 && sourceFiles.Length <= 128 && sourceFiles.All(x => File.Exists(x) && String.Equals(System.IO.Path.GetDirectoryName(x), directRoot, StringComparison.OrdinalIgnoreCase) && !String.Equals(x, System.IO.Path.GetFullPath(target), StringComparison.OrdinalIgnoreCase));
+                bool direct = !legacy && !iso && sourceFiles.Length > 0 && sourceFiles.Length <= 128 && sourceFiles.All(x => File.Exists(x) && String.Equals(System.IO.Path.GetDirectoryName(x), directRoot, StringComparison.OrdinalIgnoreCase) && !String.Equals(x, System.IO.Path.GetFullPath(target), StringComparison.OrdinalIgnoreCase));
                 var preparation = new ArchivePreparationReporter(progress);
                 var inputLocks = new List<FileStream>(); string workingInput = direct ? directRoot : input.Path;
                 string previous = File.Exists(target) ? Hash(target) : null;
@@ -414,6 +431,12 @@ namespace FileCompass
                     var doc = new ArchiveDocument { FilePath = stage, Type = extension.TrimStart('.'), Password = pack.Password };
                     DateTime? newestFile = null; bool archiveDate = pack.NewestFileDate ?? ProgramSettings.Load().ArchiveNewestFileDate;
                     long originalBytes = 0; foreach (string file in direct ? sourceFiles : Directory.EnumerateFiles(input.Path, "*", SearchOption.AllDirectories)) { token.ThrowIfCancellationRequested(); originalBytes = checked(originalBytes + new FileInfo(file).Length); if (archiveDate) { DateTime written = File.GetLastWriteTimeUtc(file); if (!newestFile.HasValue || written > newestFile.Value) newestFile = written; } }
+                    if (iso)
+                    {
+                        BuildVerifiedIso(input.Path, stage, "FILE_COMPASS", token, progress);
+                        PublishArchive(stage, target, previous, newestFile, originalBytes, token, progress);
+                        return;
+                    }
                     var rarFiles = direct && extension == ".rar" ? new HashSet<string>(
                         sourceFiles.Select(System.IO.Path.GetFileName), StringComparer.OrdinalIgnoreCase) : null;
                     string currentRarFile = null;
@@ -676,16 +699,21 @@ namespace FileCompass
             string stage = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(doc.FilePath), ".FileCompass-" + Guid.NewGuid().ToString("N") + System.IO.Path.GetExtension(doc.FilePath));
             try
             {
-                token.ThrowIfCancellationRequested(); File.Copy(doc.FilePath, stage);
-                if (beforeDelete != null) Write(doc, stage, null, beforeDelete, true, settings, token, progress);
-                Write(doc, stage, input, files, delete, settings, token, progress);
-                // WinRAR removes the container when its last item is deleted.
-                // Keep a valid empty folder-like container (RARLAB RAR5 header specification).
-                if (delete && !File.Exists(stage) && doc.Type.StartsWith("Rar", StringComparison.OrdinalIgnoreCase)) EmptyRar(stage);
-                if (progress != null) progress(L.Text("archive.verifyingStatus"));
-                Run(SevenZipPath, new[] { "t" }.Concat(Options(doc)).Concat(new[] { "--", stage }), null, token);
-                // Validate paths in the newly written archive before it replaces the original.
-                var checkedDoc = Open(stage, doc.Password, token);
+                token.ThrowIfCancellationRequested();
+                ArchiveDocument checkedDoc;
+                if (doc.Iso != null)
+                    checkedDoc = RebuildIso(doc, stage, input, files, delete, beforeDelete, token, progress);
+                else
+                {
+                    File.Copy(doc.FilePath, stage);
+                    if (beforeDelete != null) Write(doc, stage, null, beforeDelete, true, settings, token, progress);
+                    Write(doc, stage, input, files, delete, settings, token, progress);
+                    // WinRAR removes the container when its last item is deleted.
+                    if (delete && !File.Exists(stage) && doc.Type.StartsWith("Rar", StringComparison.OrdinalIgnoreCase)) EmptyRar(stage);
+                    if (progress != null) progress(L.Text("archive.verifyingStatus"));
+                    Run(SevenZipPath, new[] { "t" }.Concat(Options(doc)).Concat(new[] { "--", stage }), null, token);
+                    checkedDoc = Open(stage, doc.Password, token);
+                }
                 if (doc.Parent != null)
                 {
                     using (var parentInput = new ArchiveTemp())
@@ -699,10 +727,66 @@ namespace FileCompass
                 File.Replace(stage, doc.FilePath, null);
                 doc.Items = checkedDoc.Items;
                 doc.Type = checkedDoc.Type; doc.MultiVolume = checkedDoc.MultiVolume;
+                doc.Iso = checkedDoc.Iso;
                 doc.Stamp = ReadStamp(doc.FilePath);
             }
             catch (ArchivePasswordException) { doc.Password = null; throw; }
             finally { if (File.Exists(stage)) File.Delete(stage); }
+        }
+        static ArchiveDocument BuildVerifiedIso(string input, string stage, string label, CancellationToken token, Action<string> progress)
+        {
+            DataIso.Build(input, stage, label, token, progress);
+            if (progress != null) progress(L.Text("archive.verifyingStatus"));
+            var result = Open(stage, null, token);
+            if (result.Iso == null || !result.Iso.CanRebuild) throw new IOException(L.Text("discImage.isoVerificationFailed"));
+            using (var verify = new ArchiveTemp())
+            {
+                var expectedFiles = Directory.GetFiles(input, "*", SearchOption.AllDirectories);
+                var expectedFolders = Directory.GetDirectories(input, "*", SearchOption.AllDirectories);
+                var expected = new HashSet<string>(expectedFiles.Concat(expectedFolders).Select(
+                    path => path.Substring(input.Length + 1).Replace('\\', '/')), StringComparer.Ordinal);
+                if (!expected.SetEquals(result.Items.Select(item => item.Path)))
+                    throw new IOException(L.Text("discImage.isoVerificationFailed"));
+                if (result.Items.Count > 0) Extract(result, result.Items.Select(item => item.Path), verify.Path, token);
+                foreach (string file in expectedFiles)
+                {
+                    token.ThrowIfCancellationRequested();
+                    string extracted = System.IO.Path.Combine(verify.Path, file.Substring(input.Length + 1));
+                    if (!File.Exists(extracted) || Hash(file) != Hash(extracted))
+                        throw new IOException(L.Text("discImage.isoVerificationFailed"));
+                }
+            }
+            return result;
+        }
+
+        static ArchiveDocument RebuildIso(ArchiveDocument doc, string stage, string input, List<string> files,
+            bool delete, List<string> beforeDelete, CancellationToken token, Action<string> progress)
+        {
+            if (!doc.Iso.CanRebuild || !DataIso.Inspect(doc.FilePath, doc.Type).CanRebuild)
+                throw new IOException(L.Text("archive.readOnlyFormat"));
+            using (var contents = new ArchiveTemp())
+            {
+                var removed = new HashSet<string>(delete ? files : beforeDelete ?? new List<string>(), StringComparer.OrdinalIgnoreCase);
+                var replaced = new HashSet<string>(delete ? Enumerable.Empty<string>() : files, StringComparer.OrdinalIgnoreCase);
+                var retained = doc.Items.Where(item => !removed.Contains(item.Path) && (item.Directory || !replaced.Contains(item.Path))).ToArray();
+                // Extract files individually by exact member so removed descendants are not selected again.
+                var retainedFiles = retained.Where(item => !item.Directory).Select(item => item.Path).ToArray();
+                if (retainedFiles.Length > 0) Extract(doc, retainedFiles, contents.Path, token, progress);
+                foreach (var folder in retained.Where(item => item.Directory))
+                    Directory.CreateDirectory(DiskPath(contents.Path, folder.Path));
+                if (!delete)
+                {
+                    var budget = new ArchiveBudget(ArchiveSettings.Load());
+                    foreach (string member in files)
+                    {
+                        string source = DiskPath(input, member);
+                        string destination = DiskPath(contents.Path, member);
+                        if (Directory.Exists(source)) Directory.CreateDirectory(destination);
+                        else CopyInput(source, destination, token, budget);
+                    }
+                }
+                return BuildVerifiedIso(contents.Path, stage, doc.Iso.VolumeName, token, progress);
+            }
         }
         static void EmptyRar(string path)
         {

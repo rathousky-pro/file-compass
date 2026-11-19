@@ -65,7 +65,7 @@ namespace FileCompass
             check(savedPanel.Tree && savedPanel.DetailExpanded && left.DetailExpanded, "single-panel explorer defaults to tree, folder contents and expanded detail");
             check(left.List.Visibility == Visibility.Visible && left.List.ActualHeight > 80, "bottom preview leaves the folder list visible and usable");
             check(FluentUiTests.Children<ICSharpCode.AvalonEdit.TextEditor>(left).Any(x => x.IsVisible && x.Text.Contains("class Ukazka") && x.SyntaxHighlighting != null), "selected source code appears in a bottom preview with syntax highlighting");
-            check(FluentUiTests.Children<TreeView>(left).Single().SelectedItem is TreeViewItem && String.Equals((string)((TreeViewItem)FluentUiTests.Children<TreeView>(left).Single().SelectedItem).Tag, source, StringComparison.OrdinalIgnoreCase), "tree reveals and selects the current nested folder");
+            check(FluentUiTests.Children<TreeView>(left).Single(tree => System.Windows.Automation.AutomationProperties.GetName(tree) != L.Text("networkScan.tree")).SelectedItem is TreeViewItem && String.Equals((string)((TreeViewItem)FluentUiTests.Children<TreeView>(left).Single(tree => System.Windows.Automation.AutomationProperties.GetName(tree) != L.Text("networkScan.tree")).SelectedItem).Tag, source, StringComparison.OrdinalIgnoreCase), "tree reveals and selects the current nested folder");
             NextStageTests.Draw(this, Path.Combine(root, "jeden-panel-kod.png"));
             left.List.SelectedItem = left.List.Items.Cast<Entry>().Single(x => x.FullPath == picture); left.List.SelectedItem = selected;
             await SettleDetailForTests(left);
@@ -84,7 +84,7 @@ namespace FileCompass
             grip.RaiseEvent(new DragDeltaEventArgs(0, -45) { RoutedEvent = Thumb.DragDeltaEvent }); UpdateLayout();
             var detailAfter = new PanelView(); left.SavePanelView(detailAfter); check(detailAfter.DetailRatio > detailBefore.DetailRatio, "dragging the bottom divider resizes the detail area");
             left.Navigate(nested, false); await left.NavigationTask; if (left.TreeLoadingTask != null) await left.TreeLoadingTask;
-            check(String.Equals((string)((TreeViewItem)FluentUiTests.Children<TreeView>(left).Single().SelectedItem).Tag, nested, StringComparison.OrdinalIgnoreCase), "tree selection follows folder navigation without changing the current tab");
+            check(String.Equals((string)((TreeViewItem)FluentUiTests.Children<TreeView>(left).Single(tree => System.Windows.Automation.AutomationProperties.GetName(tree) != L.Text("networkScan.tree")).SelectedItem).Tag, nested, StringComparison.OrdinalIgnoreCase), "tree selection follows folder navigation without changing the current tab");
             left.Navigate(source, false); await left.NavigationTask;
             left.List.SelectedItem = left.List.Items.Cast<Entry>().Single(x => x.FullPath == code);
             left.SetDetailExpanded(false); ToggleQuickPreview(); check(left.DetailExpanded && quickPreview == null, "Ctrl+Q toggles the bottom preview in single-panel mode"); ToggleQuickPreview();
@@ -108,7 +108,7 @@ namespace FileCompass
             SwapPanels(); UpdateLayout(); check(active.IsVisible && left.IsVisible && !right.IsVisible, "swapping a single panel keeps the active folder visible"); SwapPanels();
             RestorePanelLayout(reloaded); left.RestorePanelView(reloaded.LeftView); right.RestorePanelView(reloaded.RightView); UpdateLayout();
             check(active == left && left.IsVisible && !right.IsVisible && !left.DetailExpanded, "restoring a saved single-panel view preserves its collapsed detail");
-            check(FluentUiTests.Children<TreeView>(left).Single().IsVisible, "single-panel restore still displays its saved tree");
+            check(FluentUiTests.Children<TreeView>(left).Single(tree => System.Windows.Automation.AutomationProperties.GetName(tree) != L.Text("networkScan.tree")).IsVisible, "single-panel restore still displays its saved tree");
             for (int mask = 0; mask < 2; mask++) {
                 var stored = new ProgramSettings { SaveViewOnExit = mask != 0, PanelLayout = "SideBySide" };
                 ExitPreferences.Merge(stored, reloaded);
@@ -154,6 +154,7 @@ namespace FileCompass
             click(toolsButton);check(toolsButton.ContextMenu.IsOpen,"tools button opens its menu");toolsButton.ContextMenu.IsOpen=false;
             SetActive(left);left.MarkAll(false);var previousSelection=left.List.SelectedItem;left.List.SelectedItem=left.List.Items.Cast<Entry>().Single(x=>x.FullPath==picture);toolsButton.ContextMenu.Items.OfType<MenuItem>().Single(x=>Convert.ToString(x.Header)==L.Text("mediaEditor.title")).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));var metadata=OwnedWindows.OfType<MediaEditorWindow>().Single();if(metadata.Work!=null)await metadata.Work;check(metadata.IsVisible,"tools menu opens the metadata editor for the selected file");metadata.Close();left.List.SelectedItem=previousSelection;if(quickPreview!=null&&quickPreview.LoadingTask!=null)await quickPreview.LoadingTask;
             var syncButton=FluentUiTests.Children<Button>(this).Single(x=>name(x)==L.Text("tabCompare.toolbar"));click(syncButton);
+            check(syncButton.ContextMenu.Items.OfType<MenuItem>().Any(item=>Equals(item.Header,L.Text("duplicates.title"))),"comparison and synchronization menu includes duplicate search");
             var syncCommand=syncButton.ContextMenu.Items.OfType<MenuItem>().Single(item=>Equals(item.Header,L.Text("action.synchronizeFolders")));
             syncButton.ContextMenu.IsOpen=false;
             syncCommand.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));

@@ -124,7 +124,7 @@ namespace FileCompass
             var pathEditor=new Grid();pathEditor.Children.Add(cleanBreadcrumbDock);pathEditor.Children.Add(address);
             cleanBreadcrumbFrame=new Border{Tag="panel-path",Child=pathEditor,Background=Brushes.Transparent,BorderBrush=CompactTheme.Line,BorderThickness=new Thickness(0,0,0,1),Margin=new Thickness(8,4,8,4),Padding=new Thickness(0,0,0,0),Height=43};
             System.Windows.Automation.AutomationProperties.SetAutomationId(cleanBreadcrumbFrame,"PanelBreadcrumb");cleanBreadcrumbFrame.MouseLeftButtonDown+=delegate(object sender,MouseButtonEventArgs e){activate(this);if(e.ClickCount==2){FocusAddress();e.Handled=true;}};
-            pathStack.Children.Add(cleanBreadcrumbFrame);InitializePanelViewActions(pathStack);Grid.SetRow(pathStack,2);grid.Children.Add(pathStack);
+            pathStack.Children.Add(cleanBreadcrumbFrame);InitializePanelViewActions(pathStack);InitializeNetworkRangeBar(pathStack);Grid.SetRow(pathStack,2);grid.Children.Add(pathStack);
 
             AddColumn(L.Text("column.name"), "Name", 230); AddColumn(L.Text("column.extension"), "Extension", 80);
             AddColumn(L.Text("column.size"), "Size", 90); AddColumn(L.Text("column.date"), "Modified", 130); AddColumn(L.Text("attributes.title"), "Attributes", 70);
@@ -185,6 +185,7 @@ namespace FileCompass
             PreviewGotKeyboardFocus += delegate { activate(this); };
             PreviewMouseDown += delegate { activate(this); };
             InitializePanelTools();
+            networkRangeTree.ContextMenu = List.ContextMenu;
             InitializeDisplay(grid); InitializeMetadataColumns();
             InitializeFileDetail(grid);
         }
@@ -518,6 +519,7 @@ namespace FileCompass
         }
         internal void FocusFiles()
         {
+            if (CurrentPath == NetworkBrowser.Root && networkRangeTree != null && networkRangeTree.IsVisible) { networkRangeTree.Focus(); return; }
             List.Focus();
             if (List.SelectedItem == null) return;
             List.ScrollIntoView(List.SelectedItem); List.UpdateLayout();
@@ -589,6 +591,7 @@ namespace FileCompass
         {
             var entry = List.SelectedItem as Entry; if (entry == null) return;
             if (IsRecycleBin) return;
+            if (OpenUnidentifiedNetworkAddress(entry)) return;
             if(entry.NetworkServiceProfile!=null){var main=Window.GetWindow(this) as MainWindow;if(main!=null)main.OpenDiscoveredService(this,entry);return;}
             if(entry.NetworkDeviceTarget!=null){try{Process.Start(new ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows),"explorer.exe"),SshTerminal.QuoteWindowsArgument("shell:"+entry.NetworkDeviceTarget)){UseShellExecute=true});}catch(Exception ex){MessageBox.Show(ex.Message,L.Text("error.cannotOpenFile"));}return;}
             if (entry.IsDirectory) Navigate(entry.IsLink && !IsRemote && !IsArchive && !IsExt && !IsVirtualBrowser ? DirectoryLinkTarget.Resolve(entry.FullPath) : entry.FullPath, true);

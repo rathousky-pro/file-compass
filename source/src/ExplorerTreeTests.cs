@@ -53,7 +53,7 @@ namespace FileCompass
             check(!left.FolderTreeVisible && right.FolderTreeVisible, "stacking preserves each panel's tree preference");
             SetActive(left);
             SetPanelLayout("Single"); if (left.TreeLoadingTask != null) await left.TreeLoadingTask;
-            check(FluentUiTests.Children<TreeView>(left).Single().IsVisible, "returning to one panel restores Explorer navigation");
+            check(FluentUiTests.Children<TreeView>(left).Single(tree => System.Windows.Automation.AutomationProperties.GetName(tree) != L.Text("networkScan.tree")).IsVisible, "returning to one panel restores Explorer navigation");
         }
     }
     public partial class FilePanel

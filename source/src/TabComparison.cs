@@ -58,7 +58,7 @@ namespace FileCompass
     internal static class TabComparison
     {
         internal static List<SyncRow> Run(SyncLocation left, SyncLocation right, TabComparisonCriteria criteria,
-            bool recursive, bool showMatches, CopyControl control)
+            bool recursive, bool showMatches, CopyControl control, Action<List<SyncRow>> completedGroup = null, Action<string> startedGroup = null)
         {
             var comparer = left.Template == null && right.Template == null ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
             using (var first = left.Open(control.Token))
@@ -67,8 +67,13 @@ namespace FileCompass
                 var a = first.Scan(comparer, control.Check, recursive);
                 var b = second.Scan(comparer, control.Check, recursive);
                 var rows = new List<SyncRow>();
-                foreach (string name in a.Keys.Union(b.Keys, comparer).OrderBy(key => key, comparer))
+                var groups = a.Keys.Union(b.Keys, comparer).GroupBy(key => { int slash = key.IndexOf('/'); return slash < 0 ? key : key.Substring(0, slash); }, comparer).OrderBy(group => group.Key, comparer);
+                foreach (var group in groups)
                 {
+                  control.Check(); if (startedGroup != null) startedGroup(group.Key);
+                  int groupStart = rows.Count;
+                  foreach (string name in group.OrderBy(key => key, comparer))
+                  {
                     control.Check();
                     a.TryGetValue(name, out var source);
                     b.TryGetValue(name, out var target);
@@ -103,6 +108,8 @@ namespace FileCompass
                         SourcePath = source == null ? null : first.PathFor(name), TargetPath = target == null ? null : second.PathFor(name),
                         Difference = reasons.Count == 0 ? L.Text("tabCompare.match") : String.Join(" · ", reasons)
                     });
+                  }
+                  if (completedGroup != null) completedGroup(rows.GetRange(groupStart, rows.Count - groupStart));
                 }
                 return rows;
             }
@@ -128,10 +135,12 @@ namespace FileCompass
         internal List<SyncRow> Rows { get; private set; }
         CopyControl control;
         bool closed;
+        readonly bool panelMode;
 
-        internal TabComparisonWindow(MainWindow owner, TabComparisonLocation[] locations, TabComparisonLocation preferredFirst, TabComparisonLocation preferredSecond)
+        internal TabComparisonWindow(MainWindow owner, TabComparisonLocation[] locations, TabComparisonLocation preferredFirst, TabComparisonLocation preferredSecond, bool panelMode = false)
         {
-            string title = L.Text("tabCompare.title");
+            this.panelMode = panelMode;
+            string title = L.Text(panelMode ? "panelCompare.command" : "tabCompare.title");
             CopyUi.Style(this, owner, title, 1040);
             StackPanel actions;
             var body = SettingsUx.Frame(this, title, out actions);
@@ -151,11 +160,17 @@ namespace FileCompass
 
             DockPanel.SetDock(options, Dock.Top);
             body.Children.Add(options);
-            AddTabChoice(first, "tabCompare.first", locations);
-            AddTabChoice(second, "tabCompare.second", locations);
+            AddTabChoice(first, panelMode ? "compare.leftPrefix" : "tabCompare.first", locations);
+            AddTabChoice(second, panelMode ? "compare.rightPrefix" : "tabCompare.second", locations);
             first.SelectedItem = preferredFirst ?? locations[0];
             second.SelectedItem = preferredSecond != null && preferredSecond != first.SelectedItem
                 ? preferredSecond : locations.First(location => location != first.SelectedItem);
+            if (panelMode)
+            {
+                first.IsEnabled = second.IsEnabled = false;
+                date.IsChecked = false;
+                content.IsChecked = true;
+            }
             var criteria = new WrapPanel { Margin = new Thickness(0, 7, 0, 0) };
             foreach (var option in new[] { missing, size, date, content, recursive, matches })
             {
@@ -167,8 +182,8 @@ namespace FileCompass
             body.Children.Add(status);
             var columns = new GridView();
             columns.Columns.Add(new GridViewColumn { Header = L.Text("column.item"), DisplayMemberBinding = new Binding("Relative"), Width = 240 });
-            columns.Columns.Add(new GridViewColumn { Header = L.Text("tabCompare.first"), DisplayMemberBinding = new Binding("SourceInfo"), Width = 205 });
-            columns.Columns.Add(new GridViewColumn { Header = L.Text("tabCompare.second"), DisplayMemberBinding = new Binding("TargetInfo"), Width = 205 });
+            columns.Columns.Add(new GridViewColumn { Header = L.Text(panelMode ? "compare.leftPrefix" : "tabCompare.first"), DisplayMemberBinding = new Binding("SourceInfo"), Width = 205 });
+            columns.Columns.Add(new GridViewColumn { Header = L.Text(panelMode ? "compare.rightPrefix" : "tabCompare.second"), DisplayMemberBinding = new Binding("TargetInfo"), Width = 205 });
             columns.Columns.Add(new GridViewColumn { Header = L.Text("column.difference"), DisplayMemberBinding = new Binding("Difference"), Width = 290 });
             VirtualizingPanel.SetIsVirtualizing(list, true);
             VirtualizingPanel.SetVirtualizationMode(list, VirtualizationMode.Recycling);
@@ -210,7 +225,7 @@ namespace FileCompass
             list.ItemsSource = null;
             bool different = first.SelectedItem != null && second.SelectedItem != null && first.SelectedItem != second.SelectedItem;
             compare.IsEnabled = different && control == null;
-            status.Text = L.Text(different ? "tabCompare.help" : "tabCompare.chooseDifferent");
+            status.Text = panelMode ? "" : L.Text(different ? "tabCompare.help" : "tabCompare.chooseDifferent");
         }
 
         internal async Task RunComparison()
@@ -271,21 +286,6 @@ namespace FileCompass
             menu.Items.Add(item);
         }
 
-        async void ShowTabComparison()
-        {
-            var first = left.ComparisonLocations(true).ToArray();
-            var second = right.ComparisonLocations(false).ToArray();
-            var choices = first.Concat(second).ToArray();
-            if (choices.Length < 2)
-            {
-                MessageBox.Show(this, L.Text("tabCompare.chooseDifferent"), L.Text("tabCompare.title"));
-                return;
-            }
-            var dialog = new TabComparisonWindow(this, choices, first.FirstOrDefault(item => item.Active), second.FirstOrDefault(item => item.Active));
-            if (dialog.ShowDialog() == true && dialog.Rows != null)
-                await ShowTabComparisonInPanels(dialog.FirstLocation, dialog.SecondLocation, dialog.Rows);
-        }
-
         internal async Task ShowTabComparisonInPanels(TabComparisonLocation first, TabComparisonLocation second, List<SyncRow> rows)
         {
             if (panelLayout == "Single") SetPanelLayout("SideBySide");
@@ -297,10 +297,16 @@ namespace FileCompass
             await OpenComparisonLocation(secondPanel, second);
             if (!PanelShowsLocation(first.Panel, first) || !PanelShowsLocation(secondPanel, second))
             {
-                MessageBox.Show(this, L.Text("panelCompare.requiresFolders"), L.Text("tabCompare.title"));
+                MessageBox.Show(this, L.Text("panelCompare.requiresFolders"), L.Text("panelCompare.command"));
                 return;
             }
 
+            ApplyComparisonResults(first, second, rows, secondPanel);
+        }
+
+        void ApplyComparisonResults(TabComparisonLocation first, TabComparisonLocation second, List<SyncRow> rows, FilePanel secondPanel = null)
+        {
+            if (secondPanel == null) secondPanel = second.Panel;
             bool caseSensitive = first.Remote != null || second.Remote != null;
             var comparer = caseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase;
             var top = new Dictionary<string, PanelDifference>(comparer);

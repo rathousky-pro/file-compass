@@ -74,6 +74,7 @@ namespace FileCompass
             var button = CompactTheme.Button(text, text, delegate { action(); });
             button.ClearValue(Wpf.Ui.Controls.Button.MouseOverBackgroundProperty); button.ClearValue(Wpf.Ui.Controls.Button.MouseOverBorderBrushProperty);
             button.Height = 30; button.MinWidth = text.Length <= 3 && text != "OK" ? 28 : 86; button.Margin = new Thickness(3); button.Padding = new Thickness(12, 3, 12, 3);
+            if (text == L.Text("action.start") || text == L.Text("action.search") || text == L.Text("action.compare")) FluentTheme.Primary(button);
             return button;
         }
         public static TextBlock Label(string text) { return new TextBlock { Text = text, Margin = new Thickness(2, 4, 2, 7), TextWrapping = TextWrapping.Wrap }; }

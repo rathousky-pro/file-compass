@@ -24,8 +24,26 @@ namespace FileCompass
             NavigationTests.Wait(right.NavigationTask);
 
             main.CompareOpenPanels();
+            Check(left.PanelComparisonRows().All(x => x.Difference == PanelDifference.None), "opening panel comparison does not start a scan", checks);
+            var start = FluentUiTests.Children<Button>(left).Single(button => Equals(button.Content, L.Text("panelCompare.start")));
+            var animated = new Entry { IsDirectory = true }; animated.SetComparisonLoading(true);
+            Check(animated.ComparisonLabel == ".", "current folder displays animated comparison dots", checks);
+            NavigationTests.Wait(Task.Delay(450));
+            Check(animated.ComparisonLabel == "..", "comparison dots advance with the folder size animation timing", checks);
+            animated.SetDifference(PanelDifference.Different);
+            Check(animated.ComparisonLabel == L.Text("panelCompare.Different"), "finishing comparison clears the animation", checks);
+            start.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            NavigationTests.Wait(main.PanelComparisonTask);
             var leftRows = left.PanelComparisonRows();
             var rightRows = right.PanelComparisonRows();
+            var includeChildren = FluentUiTests.Children<CheckBox>(left).Single(item => Equals(item.Content, L.Text("projection.includeChildren")));
+            includeChildren.IsChecked = true;
+            includeChildren.RaiseEvent(new RoutedEventArgs(CheckBox.ClickEvent));
+            Check(left.PanelComparisonRows().All(x => x.Difference == PanelDifference.None), "changing comparison options waits for start", checks);
+            main.StartPanelComparison();
+            NavigationTests.Wait(main.PanelComparisonTask);
+            Check(FluentUiTests.Children<CheckBox>(right).Single(item => Equals(item.Content, L.Text("projection.includeChildren"))).IsChecked == true,
+                "the subfolder option stays in sync on both panels", checks);
             Check(leftRows.Any(x => x.FullName == "one.txt" && x.Difference == PanelDifference.Different) &&
                 leftRows.Any(x => x.FullName == "nested" && x.Difference == PanelDifference.LeftOnly) &&
                 rightRows.Any(x => x.FullName == "right.txt" && x.Difference == PanelDifference.RightOnly),
@@ -74,6 +92,11 @@ namespace FileCompass
                 Check(rows(TabComparisonCriteria.Content,false).SequenceEqual(new[]{"content.txt","size.txt"}),"tab comparison detects content differences with equal size and time",checks);
                 Check(rows(TabComparisonCriteria.Missing,false).SequenceEqual(new[]{"missing.txt"}) &&
                     rows(TabComparisonCriteria.Missing,true).Contains("nested/nested.txt"),"tab comparison compares one level or includes descendants",checks);
+                var completed = new List<List<SyncRow>>();
+                TabComparison.Run(x,y,TabComparisonCriteria.Missing | TabComparisonCriteria.Content,true,true,control, group => completed.Add(group));
+                Check(completed.Any(group => group.Any(row => row.Relative == "nested") && group.Any(row => row.Relative == "nested/nested.txt")) &&
+                    completed.Any(group => group.Count == 1 && group[0].Relative == "content.txt"),
+                    "incremental results publish complete top-level groups including descendants",checks);
             }
 
             var matches = new Entry();
@@ -91,6 +114,26 @@ namespace FileCompass
             var first = locations.Single(item => item.Path == a);
             var second = locations.Single(item => item.Path == b);
             Check(!first.Active && second.Active,"inactive and active tabs in the same panel are selectable",checks);
+            var panelDialog = new TabComparisonWindow(main, new[]{first,second}, first, second, true)
+                { WindowStartupLocation=WindowStartupLocation.Manual, Left=-18000, Top=-18000, ShowActivated=false };
+            panelDialog.Show();
+            try
+            {
+                var childOption = FluentUiTests.Children<CheckBox>(panelDialog).Single(x => Equals(x.Content, L.Text("projection.includeChildren")));
+                childOption.IsChecked = true;
+                NavigationTests.Wait(panelDialog.RunComparison());
+                Check(panelDialog.Rows.Any(row => row.Relative == "nested/nested.txt" && row.TabDifference != PanelDifference.Same) &&
+                    panelDialog.Rows.Any(row => row.Relative == "content.txt" && row.TabDifference == PanelDifference.Different),
+                    "panel comparison checks nested paths and file contents", checks);
+                NavigationTests.Wait(main.ShowTabComparisonInPanels(first,second,panelDialog.Rows));
+                Check(right.PanelComparisonRows().Single(row => row.FullName == "nested").Difference == PanelDifference.Different,
+                    "nested differences mark the containing panel folder", checks);
+            }
+            finally { panelDialog.Close(); }
+            NavigationTests.Wait(right.OpenLocationTab(new SavedTab{Path=b}));
+            locations = right.ComparisonLocations(false).ToArray();
+            first = locations.First(item => item.Path == a);
+            second = locations.Last(item => item.Path == b);
             var dialog=new TabComparisonWindow(main,locations,first,second)
             {
                 WindowStartupLocation=WindowStartupLocation.Manual, Left=-18000, Top=-18000, ShowActivated=false

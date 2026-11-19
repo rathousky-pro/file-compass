@@ -108,6 +108,11 @@ namespace FileCompass
                 if (IsArchive) CloseArchiveContext(); if (IsRemote) { RememberRemote(); Remote = null; }
                 if (remember && CurrentPath != null && CurrentPath != path) { history.Push(CurrentPath); forwardHistory.Clear(); }
                 bool locationChanged=CurrentPath!=path;CurrentPath = path;
+                if (path == NetworkBrowser.Root) {
+                    var known=new HashSet<string>(rows.Select(x=>x.FullPath),StringComparer.OrdinalIgnoreCase);
+                    foreach(var entry in customNetworkEntries.Values) if(known.Add(entry.FullPath)) rows.Add(entry);
+                    RefreshNetworkTree(rows);
+                }
                 if (path != NetworkBrowser.Root) rows.Insert(0, new Entry { Name = "[..]", FullPath = NetworkBrowser.Root, IsParent = true, IsDirectory = true, Icon = DesktopIcons.FileIcon("", true) });
                 var selected=List.SelectedItem as Entry;
                 bool changed=List.ItemsSource==null||!List.Items.Cast<Entry>().Select(x=>x.FullPath).SequenceEqual(rows.Select(x=>x.FullPath));

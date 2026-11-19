@@ -90,7 +90,6 @@ namespace FileCompass
             AddMenu(commands, L.Text("action.batchRename"), MultiRename, "Ctrl+M");
             AddMenu(commands, L.Text("panelCompare.command"), CompareOpenPanels);
             AddMenu(commands, L.Text("action.compareFiles"), CompareFilesByContent, "Ctrl+Shift+D");
-            AddMenu(commands, L.Text("tabCompare.title"), ShowTabComparison);
             AddMenu(commands, L.Text("action.compareFolders"), delegate { CompareFolders(false); }); AddMenu(commands, L.Text("action.synchronizeFolders"), delegate { CompareFolders(true); });
             var media = MenuRoot(menus,L.Text("media.menu"));
             var network = MenuRoot(menus, L.Text("connections.title"));
@@ -138,7 +137,7 @@ namespace FileCompass
                 var menu = new ContextMenu { PlacementTarget=folderTools, Placement=System.Windows.Controls.Primitives.PlacementMode.Bottom };
                 AddToolbarMenuItem(menu,"action.synchronizeFolders",delegate{CompareFolders(true);});
                 AddToolbarMenuItem(menu,"panelCompare.command",CompareOpenPanels);
-                AddToolbarMenuItem(menu,"tabCompare.title",ShowTabComparison);
+                AddToolbarMenuItem(menu,"duplicates.title",FindDuplicates);
                 folderTools.ContextMenu = menu;
                 menu.IsOpen = true;
             },L.Text("tabCompare.toolbar")+" ▾");

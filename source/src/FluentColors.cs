@@ -24,11 +24,17 @@ new FluentPalette("sky","Světlá modrá","Jemný nebeský rám","#2068A4","#284
 new FluentPalette("mint","Světlá zelená","Svěží světlý zelený rám","#39764A","#2E5038","#E4F0E5","#F4F9F3","#D8EBD9","#BCD5BF","#263F2D"),
 new FluentPalette("silver","Světlá šedá","Neutrální stříbrný rám","#536373","#374652","#ECEFF2","#F7F8FA","#DFE6ED","#C9D1D9","#2B343F")};
   internal static FluentPalette Current=All[0];
+  sealed class ActionColorState : DependencyObject { internal static readonly DependencyProperty ValueProperty=DependencyProperty.Register("Value",typeof(Color),typeof(ActionColorState)); public Color Value {get{return (Color)GetValue(ValueProperty);}set{SetValue(ValueProperty,value);}} }
+  static readonly ActionColorState actionColor=new ActionColorState { Value=ActionColor(All[0]) };
+  internal static readonly SolidColorBrush ActionAccent=CreateActionAccent();
+  static SolidColorBrush CreateActionAccent(){var brush=new SolidColorBrush();System.Windows.Data.BindingOperations.SetBinding(brush,SolidColorBrush.ColorProperty,new System.Windows.Data.Binding("Value"){Source=actionColor});return brush;}
+  static double Channel(byte value){double c=value/255.0;return c<=0.04045?c/12.92:Math.Pow((c+0.055)/1.055,2.4);}
+  static Color ActionColor(FluentPalette palette){var c=(Color)ColorConverter.ConvertFromString(palette.Accent);while((1.05/(0.2126*Channel(c.R)+0.7152*Channel(c.G)+0.0722*Channel(c.B)+0.05))<4.5)c=Color.FromRgb((byte)(c.R*.95),(byte)(c.G*.95),(byte)(c.B*.95));return c;}
   internal static readonly SolidColorBrush Navigation=new SolidColorBrush((Color)ColorConverter.ConvertFromString(All[0].Navigation));
   internal static readonly SolidColorBrush SectionLine=new SolidColorBrush(SectionColor(All[0]));
   static Color SectionColor(FluentPalette palette){var line=(Color)ColorConverter.ConvertFromString(palette.Line);var ink=(Color)ColorConverter.ConvertFromString(palette.Ink);return Color.FromRgb((byte)((line.R+ink.R)/2),(byte)((line.G+ink.G)/2),(byte)((line.B+ink.B)/2));}
   internal static string Normalize(string id){foreach(var p in All)if(p.Id==id)return id;return "azure";}
-  internal static void Select(string id){foreach(var p in All)if(p.Id==Normalize(id)){Current=p;break;}Navigation.Color=(Color)ColorConverter.ConvertFromString(Current.Navigation);SectionLine.Color=SectionColor(Current);AppearanceTheme.Apply(AppearanceTheme.Mode);}
+  internal static void Select(string id){foreach(var p in All)if(p.Id==Normalize(id)){Current=p;break;}actionColor.Value=ActionColor(Current);Navigation.Color=(Color)ColorConverter.ConvertFromString(Current.Navigation);SectionLine.Color=SectionColor(Current);AppearanceTheme.Apply(AppearanceTheme.Mode);}
   internal static string Map(string original,string fallback){
    var p=Current;
    switch(original.ToUpperInvariant()){

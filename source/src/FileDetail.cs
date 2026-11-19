@@ -38,6 +38,7 @@ namespace FileCompass
             SizeChanged+=delegate{if(fileDetail!=null&&detailExpanded&&detailLayoutVisible)DetailPreviewMinimum(fileDetail.SelectedPreviewPath,fileDetail.SelectionCount);};
             grid.Children.Remove(List); Grid.SetRow(detailGrid, 3); Grid.SetColumn(detailGrid, 1); grid.Children.Add(detailGrid);
             Grid.SetRow(List, 0); Grid.SetColumn(List, 0); detailGrid.Children.Add(List);
+            Grid.SetRow(networkRangeTree, 0); Grid.SetColumn(networkRangeTree, 0); detailGrid.Children.Add(networkRangeTree);
             detailSplitter = new Thumb { Height = 6, HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch, Background = CompactTheme.Chrome, Cursor = Cursors.SizeNS, Visibility = Visibility.Collapsed };
             Grid.SetRow(detailSplitter, 1); detailGrid.Children.Add(detailSplitter);
             detailSplitter.DragCompleted += delegate { RememberDetailRatio(); };

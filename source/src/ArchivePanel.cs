@@ -71,6 +71,15 @@ namespace FileCompass
             finally { synchronizingSelection = false; }
             SyncWindowsSelection();
             capacity.Text = Path.GetFileName(Archive.FilePath) + " · " + Archive.Type + " · " + (ArchiveEngine.Writable(Archive) ? L.Text("archive.shortTitle") : L.Text("archive.readOnlyStatus")); capacity.ToolTip = Archive.Display;
+            if (Archive.Iso != null)
+            {
+                string boot = L.Text(Archive.Iso.BootStatus == IsoBootStatus.Bootable ? "discImage.isoBootable" :
+                    Archive.Iso.BootStatus == IsoBootStatus.Data ? "discImage.isoData" : "discImage.isoBootUnknown");
+                string write = L.Text(ArchiveEngine.Writable(Archive) ? "discImage.isoWritable" : "archive.readOnlyStatus");
+                capacity.Text = boot + " · " + write + " · " + Path.GetFileName(Archive.FilePath);
+                capacity.ToolTip = capacity.Text + "\n" + Archive.Display;
+            }
+            if (Archive.ImageAudioOmitted) { capacity.Text += " · " + L.Text("discImage.audioOmitted"); capacity.ToolTip = Archive.Display + "\n" + L.Text("discImage.audioOmitted"); }
             foreach (var button in driveButtons.Values) button.Background = CompactTheme.WhiteSurface;
             UpdateStatus(); UpdateConnectionButtons(); if (PathChanged != null) PathChanged(this, EventArgs.Empty);
         }

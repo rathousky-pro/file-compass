@@ -102,6 +102,8 @@ namespace FileCompass {
    menu.Items.Insert(index++,new Separator());
    add("action.createChecksums","",null,CreateChecksumsDialog,()=>local()&&any()&&selected().All(x=>!x.IsDirectory));
    add("shell.propertiesShortcut","",null,ShowProperties,()=>any()&&!panel.IsRemote&&!panel.IsArchive&&!panel.IsExt);menu.Items.Add(extra);
+   add("ownership.title","",null,()=>TakeFileOwnership(panel,selected()),()=>local()&&any()&&selected().All(x=>FileOwnership.IsCandidate(x.FullPath)&&!x.IsLink));
+   contextualKeys.Add("ownership.title");
    var system=new MenuItem{Header=L.Text("context.windows"),Tag="context.windows",ToolTip=L.Text("context.windowsHint")};system.Click+=delegate{panel.ShowFileContextMenu(true);};menu.Items.Add(new Separator());menu.Items.Add(system);
    menu.Opened+=delegate{SetActive(panel);foreach(var command in commands){bool applicable=command.Item2();command.Item1.IsEnabled=ready()&&applicable;if(contextualKeys.Contains((string)command.Item1.Tag))command.Item1.Visibility=applicable?Visibility.Visible:Visibility.Collapsed;}convert.Visibility=convertible()?Visibility.Visible:Visibility.Collapsed;system.Visibility=panel.CanShowWindowsMenu?Visibility.Visible:Visibility.Collapsed;system.IsEnabled=ready();};
   }

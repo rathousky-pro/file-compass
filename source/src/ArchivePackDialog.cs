@@ -36,7 +36,7 @@ namespace FileCompass
             var compressionGroup=OperationDialogLayout.Group(body,L.Text("operation.format"));
             var settingsRow=new Grid();settingsRow.ColumnDefinitions.Add(new ColumnDefinition());settingsRow.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(140)});compressionGroup.Children.Add(settingsRow);
             var formatPanel=new StackPanel{Margin=new Thickness(0,0,12,0)};settingsRow.Children.Add(formatPanel);OperationDialogLayout.Label(formatPanel,L.Text("archive.archiverLabel"));
-            var formats=new ComboBox{ItemsSource=new[]{"ZIP","7-ZIP","RAR*","TAR","GZ","ARJ*","LHA*"},SelectedIndex=0};formatPanel.Children.Add(formats);
+            var formats=new ComboBox{ItemsSource=new[]{"ZIP","7-ZIP","RAR*","TAR","GZ","ARJ*","LHA*","ISO"},SelectedIndex=0};formatPanel.Children.Add(formats);
             var levelPanel=new StackPanel();Grid.SetColumn(levelPanel,1);settingsRow.Children.Add(levelPanel);OperationDialogLayout.Label(levelPanel,L.Text("archive.compressionLevelLabel"));
             var level=new ComboBox();for(int i=0;i<=9;i++)level.Items.Add(i);level.SelectedIndex=6;level.ToolTip=L.Text("archive.memoryPolicy");levelPanel.Children.Add(level);
             var contents=OperationDialogLayout.Group(body,L.Text("operation.contents"));
@@ -62,7 +62,7 @@ namespace FileCompass
             toolsGroup.Children.Add(CopyUi.Button(L.Text("action.help"),delegate{HelpService.Open(this,"archives");}));
             Action applyFormat=delegate{
                 string name=(string)formats.SelectedItem;format=name=="7-ZIP"?"7z":name=="LHA*"?"lzh":name.TrimEnd('*').ToLowerInvariant();
-                level.IsEnabled=format!="tar"&&format!="lzh";
+                level.IsEnabled=format!="tar"&&format!="lzh"&&format!="iso";
                 level.ToolTip=L.Text(level.IsEnabled?"archive.compressionQualityHelp":"archive.fixedCompressionHelp");ToolTipService.SetShowOnDisabled(level,true);target.Text=ChangeFormat(target.Text,sfx.IsChecked==true?"exe":format);
                 bool supported=format=="zip"||format=="7z";volumes.IsEnabled=supported&&(sfx.IsChecked!=true||format=="7z");password.IsEnabled=supported;if(!volumes.IsEnabled)volumes.IsChecked=false;sfx.IsEnabled=ArchiveSelfExtract.Supports(format);if(!sfx.IsEnabled)sfx.IsChecked=false;
                 if(!supported){volumes.IsChecked=false;password.IsChecked=false;}

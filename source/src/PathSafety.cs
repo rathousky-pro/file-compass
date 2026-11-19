@@ -34,6 +34,21 @@ namespace FileCompass
                 return lease;
             }catch{lease.Dispose();throw;}
         }
+        internal static IDisposable LockOrdinaryItem(string path, out FileAttributes attributes)
+        {
+            var handle = Open(path, 0, 3, IntPtr.Zero, 3, 0x02200000, IntPtr.Zero);
+            try
+            {
+                if (handle.IsInvalid || !GetFileInformationByHandle(handle, out var info))
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                attributes = (FileAttributes)info.Attributes;
+                if ((attributes & FileAttributes.ReparsePoint) != 0 ||
+                    ((attributes & FileAttributes.Directory) == 0 && info.Links > 1))
+                    throw new IOException(path);
+                return handle;
+            }
+            catch { handle.Dispose(); throw; }
+        }
         internal static void DeleteTree(string path)
         {
             DeleteOperations.Validate(path,false);

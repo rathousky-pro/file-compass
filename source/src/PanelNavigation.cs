@@ -58,9 +58,11 @@ namespace FileCompass
             var row = tabRow;
 
             newTabButton=CompactTheme.Button("+",L.Text("tabs.newShortcutTooltip"),delegate{NewTab();});
-            newTabButton.Tag="panel-tab";newTabButton.Width=36;newTabButton.Height=36;newTabButton.MinWidth=0;newTabButton.Padding=new Thickness(0);newTabButton.Margin=new Thickness(6,0,0,0);newTabButton.Background=CompactTheme.PanelSurface;newTabButton.BorderThickness=new Thickness(0);newTabButton.FontSize=16;
+            newTabButton.Tag="panel-tab";newTabButton.Width=32;newTabButton.Height=36;newTabButton.MinWidth=0;newTabButton.Padding=new Thickness(0);newTabButton.Margin=new Thickness(2,0,0,0);newTabButton.Background=Brushes.Transparent;newTabButton.BorderThickness=new Thickness(0);newTabButton.FontSize=16;
+            newTabButton.Content=new TextBlock{Text="+",FontSize=24,FontWeight=FontWeights.Medium,Foreground=FluentTheme.Text,VerticalAlignment=VerticalAlignment.Center,HorizontalAlignment=HorizontalAlignment.Center};
             System.Windows.Automation.AutomationProperties.SetAutomationId(newTabButton,"PanelNewTab");
-            tabScroller=new ScrollViewer { Content = tabStrip, HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled };tabScroller.PreviewMouseWheel+=delegate(object sender,MouseWheelEventArgs e){tabScroller.ScrollToHorizontalOffset(tabScroller.HorizontalOffset-e.Delta/3.0);e.Handled=true;};DockPanel.SetDock(newTabButton,Dock.Right);row.Children.Add(newTabButton);row.Children.Add(tabScroller);row.SizeChanged+=delegate(object sender,SizeChangedEventArgs e){if(e.WidthChanged)RenderTabs();};
+            var tabContents=new StackPanel{Orientation=Orientation.Horizontal};tabContents.Children.Add(tabStrip);tabContents.Children.Add(newTabButton);
+            tabScroller=new ScrollViewer { Content = tabContents, HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled };tabScroller.PreviewMouseWheel+=delegate(object sender,MouseWheelEventArgs e){tabScroller.ScrollToHorizontalOffset(tabScroller.HorizontalOffset-e.Delta/3.0);e.Handled=true;};row.Children.Add(tabScroller);row.SizeChanged+=delegate(object sender,SizeChangedEventArgs e){if(e.WidthChanged)RenderTabs();};
             DockPanel.SetDock(quickBar, Dock.Bottom); wrapper.Children.Add(quickBar);
             quickMode.Items.Add(L.Text("action.filter")); quickMode.Items.Add(L.Text("action.find")); quickMode.SelectedIndex = 0;
             quickBar.Children.Add(new TextBlock { Text = L.Text("navigation.quickPrefix"), VerticalAlignment = VerticalAlignment.Center });
@@ -216,7 +218,11 @@ namespace FileCompass
         {
             if (EmptyPanel || IsLoading || LocalLoading || index < 0 || index >= tabs.Count) return;
             CaptureTab();if(!ConfirmRemoteTabClose(tabs[index]))return;
-            if(tabs.Count==1){ClearEmptyPanel();return;}
+            if(tabs.Count==1){
+                string first=null;foreach(var drive in DriveInfo.GetDrives().OrderBy(d=>d.Name,StringComparer.OrdinalIgnoreCase)){try{if(drive.DriveType!=DriveType.Network&&drive.IsReady){first=drive.Name;break;}}catch(IOException){}catch(UnauthorizedAccessException){}}
+                if(String.IsNullOrEmpty(first))first=Path.GetPathRoot(Environment.SystemDirectory);
+                ClearEmptyPanel(false);EmptyPanel=false;Navigate(first,false);NotifyTabsChanged();return;
+            }
             CaptureTab(); bool selected = index == tabIndex; tabs.RemoveAt(index);
             if (index < tabIndex) tabIndex--; else if (tabIndex >= tabs.Count) tabIndex = tabs.Count - 1;
             if(selected)switchingTabs=true;RenderTabs();NotifyTabsChanged(); if (selected) { SwitchTabWithoutCapture(tabIndex); }
@@ -247,7 +253,7 @@ namespace FileCompass
                 if(i==tabIndex){
                     var fullCaption=new TextBlock{Text=TabPrefix(i)+TabPath(i),FontFamily=System.Windows.Documents.TextElement.GetFontFamily(this),FontSize=System.Windows.Documents.TextElement.GetFontSize(this)};fullCaption.Measure(new Size(Double.PositiveInfinity,30));
                     if(fullCaption.DesiredSize.Width+TabPath(i).Count(c=>c=='\\'||c=='/')*12+40>widths[i]){var compact=new DockPanel{Width=Math.Max(20,widths[i]-2)};var edit=CompactTheme.Button("✎",L.Text("navigation.editPathShortcutTooltip"),delegate{FocusAddress();});if(AppearanceTheme.IsClean)edit.Height=20;DockPanel.SetDock(edit,Dock.Right);compact.Children.Add(edit);compact.Children.Add(new PathTextBlock{FullPath=TabPath(i),Prefix=TabPrefix(i),Foreground=FluentTheme.Accent,Margin=new Thickness(5,0,2,0)});crumbScroll.Content=compact;}else crumbScroll.Content=crumbs;
-                    crumbScroll.ScrollToHorizontalOffset(0);activeTabFace=new Border{Child=crumbScroll,Width=widths[i],Height=30,Margin=new Thickness(2,1,2,1),Background=CompactTheme.ActivePath,BorderBrush=FluentTheme.Accent,BorderThickness=new Thickness(AppearanceTheme.IsClean?1:2),CornerRadius=new CornerRadius(AppearanceTheme.IsClean?6:4),ToolTip=button.ToolTip,ContextMenu=menu};activeTabFace.MouseLeftButtonDown+=delegate{activate(this);};tabStrip.Children.Add(activeTabFace);}else tabStrip.Children.Add(button);
+                    crumbScroll.ScrollToHorizontalOffset(0);activeTabFace=new Border{Child=crumbScroll,Width=widths[i],Height=30,Margin=new Thickness(2,1,2,1),Background=CompactTheme.ActivePath,BorderBrush=FluentTheme.Accent,BorderThickness=new Thickness(AppearanceTheme.IsClean?1:2),CornerRadius=new CornerRadius(AppearanceTheme.IsClean?6:4),ToolTip=button.ToolTip,ContextMenu=menu};activeTabFace.MouseLeftButtonDown+=delegate{activate(this);ShowNetworkRange();};tabStrip.Children.Add(activeTabFace);}else tabStrip.Children.Add(button);
             }
             if (cleanBreadcrumbFrame != null) cleanBreadcrumbFrame.ContextMenu = activeTabFace?.ContextMenu;
             RevealActiveTab();

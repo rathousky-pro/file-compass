@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -33,10 +34,23 @@ namespace FileCompass
                 }
             }
         }
-        public string ComparisonLabel { get { return Difference == PanelDifference.None ? "" : L.Text("panelCompare." + Difference); } }
+        bool comparisonLoading;
+        int comparisonFrame;
+        System.Windows.Threading.DispatcherTimer comparisonTimer;
+        public string ComparisonLabel { get { return comparisonLoading ? new string('.', 1 + comparisonFrame % 3) : Difference == PanelDifference.None ? "" : L.Text("panelCompare." + Difference); } }
+
+        internal void SetComparisonLoading(bool loading)
+        {
+            if (loading && !IsDirectory) return;
+            comparisonLoading = loading;
+            if (loading) { comparisonFrame = 0; if (comparisonTimer == null) { comparisonTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) }; comparisonTimer.Tick += delegate { comparisonFrame++; if (PropertyChanged != null) PropertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs("ComparisonLabel")); }; } comparisonTimer.Start(); }
+            else if (comparisonTimer != null) { comparisonTimer.Stop(); comparisonTimer = null; }
+            if (PropertyChanged != null) PropertyChanged(this, new System.ComponentModel.PropertyChangedEventArgs("ComparisonLabel"));
+        }
 
         internal void SetDifference(PanelDifference difference)
         {
+            if (comparisonLoading) SetComparisonLoading(false);
             if (Difference == difference) return;
             Difference = difference;
             if (PropertyChanged != null)
@@ -50,7 +64,9 @@ namespace FileCompass
     public partial class FilePanel
     {
         ComboBox comparisonFilter;
-        StackPanel comparisonActions;
+        DockPanel comparisonActions;
+        CheckBox comparisonChildren;
+        TextBlock comparisonStatus;
         Entry[] comparedRows;
         GridViewColumn flatLocationColumn;
 
@@ -62,9 +78,25 @@ namespace FileCompass
 
         void InitializePanelViewActions(StackPanel host)
         {
-            comparisonActions = new StackPanel { Orientation = Orientation.Horizontal, Visibility = Visibility.Collapsed,
+            comparisonActions = new DockPanel { LastChildFill = true, Visibility = Visibility.Collapsed,
                 Margin = new Thickness(9, 2, 9, 2) };
             host.Children.Add(comparisonActions);
+            var close = PanelViewButton("panelCompare.close", delegate { var owner = Window.GetWindow(this) as MainWindow; if (owner != null) owner.ClearPanelComparison(); });
+            close.Content = "×"; close.Width = 26; close.Padding = new Thickness(0); close.Margin = new Thickness(4, 0, 0, 0);
+            System.Windows.Automation.AutomationProperties.SetName(close, L.Text("panelCompare.close"));
+            DockPanel.SetDock(close, Dock.Right); comparisonActions.Children.Add(close);
+            var scroll = new ScrollViewer { HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled };
+            comparisonActions.Children.Add(scroll);
+            var controls = new StackPanel { Orientation = Orientation.Horizontal }; scroll.Content = controls;
+            var start = PanelViewButton("panelCompare.start", delegate { var owner = Window.GetWindow(this) as MainWindow; if (owner != null) owner.StartPanelComparison(); });
+            FluentTheme.Primary(start); controls.Children.Add(start);
+            comparisonChildren = new CheckBox { Content = L.Text("projection.includeChildren"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) };
+            comparisonChildren.Click += delegate {
+                var owner = Window.GetWindow(this) as MainWindow;
+                if (owner != null) owner.SetPanelComparisonChildren(comparisonChildren.IsChecked == true);
+            };
+            controls.Children.Add(comparisonChildren);
+            comparisonStatus = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) };
             comparisonFilter = new ComboBox { MinWidth = 120, Margin = new Thickness(4, 0, 4, 0) };
             comparisonFilter.Items.Add(new ComboBoxItem { Content = L.Text("panelCompare.showAll"), Tag = PanelDifference.None });
             foreach (var difference in new[] { PanelDifference.LeftOnly, PanelDifference.RightOnly, PanelDifference.Different, PanelDifference.Same })
@@ -79,18 +111,14 @@ namespace FileCompass
             }
             comparisonFilter.SelectedIndex = 0;
             comparisonFilter.SelectionChanged += delegate { if (comparedRows != null) ApplyQuickFilter(); };
-            comparisonActions.Children.Add(comparisonFilter);
-            comparisonActions.Children.Add(PanelViewButton("panelCompare.mark", MarkComparisonRows));
-            comparisonActions.Children.Add(PanelViewButton("panelCompare.content", delegate
+            controls.Children.Add(comparisonFilter);
+            controls.Children.Add(PanelViewButton("panelCompare.mark", MarkComparisonRows));
+            controls.Children.Add(PanelViewButton("panelCompare.content", delegate
             {
                 var owner = Window.GetWindow(this) as MainWindow;
                 if (owner != null) owner.CompareMatchingPanelFiles(this);
             }));
-            comparisonActions.Children.Add(PanelViewButton("panelCompare.close", delegate
-            {
-                var owner = Window.GetWindow(this) as MainWindow;
-                if (owner != null) owner.ClearPanelComparison();
-            }));
+            controls.Children.Add(comparisonStatus);
         }
 
         Button PanelViewButton(string label, Action action)
@@ -115,7 +143,13 @@ namespace FileCompass
             comparedRows = rows;
             comparisonFilter.SelectedIndex = 0;
             comparisonActions.Visibility = Visibility.Visible;
-            SetComparisonColumn(true);
+            if (comparisonColumn == null) SetComparisonColumn(true);
+        }
+
+        internal void SetComparisonOptions(bool children, bool busy)
+        {
+            comparisonChildren.IsChecked = children;
+            comparisonStatus.Text = busy ? L.Text("compare.runningInBackground") : "";
         }
 
         internal void ClearPanelComparison()
@@ -181,6 +215,10 @@ namespace FileCompass
 
     public partial class MainWindow
     {
+        CopyControl panelComparisonControl;
+        bool panelComparisonChildren;
+        internal Task PanelComparisonTask { get; private set; }
+
         void InitializePanelComparison()
         {
             left.PathChanged += delegate { ClearPanelComparison(); };
@@ -189,11 +227,34 @@ namespace FileCompass
 
         internal void ClearPanelComparison()
         {
+            if (panelComparisonControl != null) { panelComparisonControl.Cancel(); panelComparisonControl = null; }
             left.ClearPanelComparison();
             right.ClearPanelComparison();
         }
 
+        internal void SetPanelComparisonChildren(bool value)
+        {
+            panelComparisonChildren = value;
+            ClearPanelComparison();
+            CompareOpenPanels();
+        }
+
         internal void CompareOpenPanels()
+        {
+            if (panelLayout == "Single" || !left.CanComparePanel || !right.CanComparePanel ||
+                !left.ComparisonLocations(true).Any(item => item.Active) || !right.ComparisonLocations(false).Any(item => item.Active))
+            {
+                MessageBox.Show(this, L.Text("panelCompare.requiresFolders"), L.Text("panelCompare.command")); return;
+            }
+            ClearPanelComparison();
+            left.SetComparisonOptions(panelComparisonChildren, false); right.SetComparisonOptions(panelComparisonChildren, false);
+            left.DisplayPanelComparison(left.PanelComparisonRows()); right.DisplayPanelComparison(right.PanelComparisonRows());
+            PanelComparisonTask = Task.FromResult(0);
+        }
+
+        internal void StartPanelComparison() { PanelComparisonTask = CompareOpenPanelsAsync(); }
+
+        async Task CompareOpenPanelsAsync()
         {
             if (panelLayout == "Single" || !left.CanComparePanel || !right.CanComparePanel)
             {
@@ -201,12 +262,69 @@ namespace FileCompass
                 return;
             }
 
+            var first = left.ComparisonLocations(true).FirstOrDefault(item => item.Active);
+            var second = right.ComparisonLocations(false).FirstOrDefault(item => item.Active);
+            if (first == null || second == null)
+            {
+                MessageBox.Show(this, L.Text("panelCompare.requiresFolders"), L.Text("panelCompare.command"));
+                return;
+            }
             ClearPanelComparison();
-            var leftRows = left.PanelComparisonRows();
-            var rightRows = right.PanelComparisonRows();
-            ComparePanelRows(leftRows, rightRows, left.IsRemote || right.IsRemote);
-            left.DisplayPanelComparison(leftRows);
-            right.DisplayPanelComparison(rightRows);
+            var operation = new CopyControl();
+            panelComparisonControl = operation;
+            bool children = panelComparisonChildren;
+            left.SetComparisonOptions(children, true);
+            right.SetComparisonOptions(children, true);
+            left.DisplayPanelComparison(left.PanelComparisonRows());
+            right.DisplayPanelComparison(right.PanelComparisonRows());
+            var comparer = first.Remote != null || second.Remote != null ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase;
+            var leftEntries = left.PanelComparisonRows().ToLookup(FilePanel.EntryName, comparer);
+            var rightEntries = right.PanelComparisonRows().ToLookup(FilePanel.EntryName, comparer);
+            try
+            {
+                var rows = await Task.Run(delegate {
+                    using (var a = new SyncLocation(first.Path, first.Remote))
+                    using (var b = new SyncLocation(second.Path, second.Remote))
+                        return TabComparison.Run(a, b, TabComparisonCriteria.Missing | TabComparisonCriteria.Size | TabComparisonCriteria.Content, children, true, operation, group => {
+                            var root = group.FirstOrDefault(row => row.Relative.IndexOf('/') < 0);
+                            if (root == null) return;
+                            var difference = root.TabDifference;
+                            if (difference == PanelDifference.Same && group.Any(row => row.TabDifference != PanelDifference.Same)) difference = PanelDifference.Different;
+                            Dispatcher.Invoke(delegate {
+                                if (!Object.ReferenceEquals(panelComparisonControl, operation)) return;
+                                foreach (var entry in leftEntries[root.Relative]) entry.SetDifference(difference);
+                                foreach (var entry in rightEntries[root.Relative]) entry.SetDifference(difference);
+                            });
+                        }, name => Dispatcher.Invoke(delegate {
+                            if (!Object.ReferenceEquals(panelComparisonControl, operation)) return;
+                            foreach (var entry in leftEntries[name]) entry.SetComparisonLoading(true);
+                            foreach (var entry in rightEntries[name]) entry.SetComparisonLoading(true);
+                        }));
+                });
+                if (!Object.ReferenceEquals(panelComparisonControl, operation)) return;
+                left.ClearPanelComparison();
+                right.ClearPanelComparison();
+                ApplyComparisonResults(first, second, rows);
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex)
+            {
+                if (Object.ReferenceEquals(panelComparisonControl, operation))
+                {
+                    left.ClearPanelComparison(); right.ClearPanelComparison();
+                    MessageBox.Show(this, L.Text("compare.failedPrefix") + ex.Message, L.Text("panelCompare.command"));
+                }
+            }
+            finally
+            {
+                if (Object.ReferenceEquals(panelComparisonControl, operation))
+                {
+                    panelComparisonControl = null;
+                    left.SetComparisonOptions(children, false);
+                    right.SetComparisonOptions(children, false);
+                }
+                operation.Dispose();
+            }
         }
 
         internal void CompareMatchingPanelFiles(FilePanel panel)

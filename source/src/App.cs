@@ -175,6 +175,7 @@ namespace FileCompass
         }
         void HandleKeys(object sender, KeyEventArgs e)
         {
+            if (e.Key == Key.Escape && Keyboard.Modifiers == ModifierKeys.None && ((active != null && active.CancelNetworkRangeScan()) || (left != active && left != null && left.CancelNetworkRangeScan()) || (right != active && right != null && right.CancelNetworkRangeScan()))) { e.Handled = true; return; }
             if(active!=null&&active.List.IsKeyboardFocusWithin&&active.HandleQuickSearchKey(e))return;
             if (HandleReleaseKeys(e)) return;
             if (e.Key == Key.Q && Keyboard.Modifiers == ModifierKeys.Control) { ToggleQuickPreview(); e.Handled = true; return; }
@@ -286,6 +287,7 @@ namespace FileCompass
         static int RunVerified(string[] args)
         {
             PerformanceLog.Write("startup.runtime_verified", PerformanceLog.Entry);
+            if (args.Length == 5 && args[0] == "--take-file-ownership") return FileOwnership.Run(args);
 #if APP_TESTS
             if(args.Length==3&&args[0]=="--application-package-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[2]),"profile");return ApplicationUpdatesTests.VerifyPackage(Path.GetFullPath(args[1]),Path.GetFullPath(args[2]));}
             if(args.Length==2&&args[0]=="--application-updates-test"){AppPaths.TestProfileDirectory=Path.Combine(Path.GetFullPath(args[1]),"profile");return ApplicationUpdatesTests.Run(args[1]);}

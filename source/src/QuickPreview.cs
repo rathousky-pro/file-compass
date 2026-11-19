@@ -610,10 +610,11 @@ namespace FileCompass
         {
             if (quickPreview == null) return;
             panelSplit.Children.Remove(quickPreview);
-            previewTarget.List.Visibility = previewTarget.Visibility = Visibility.Visible;
+            previewTarget.Visibility = Visibility.Visible;
+            previewTarget.List.Visibility = previewTarget.CurrentPath == NetworkBrowser.Root ? Visibility.Collapsed : Visibility.Visible;
             quickPreview.DisposePreview(); quickPreview = null; previewSource = previewTarget = null;
             UpdateViewToolbarControls();
-            if (active != null) active.List.Focus();
+            if (active != null) active.FocusFiles();
         }
     }
 }

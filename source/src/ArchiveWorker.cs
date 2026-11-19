@@ -213,6 +213,7 @@ namespace FileCompass
         }
         static SharpSevenZipExtractor Open(string path, string password)
         {
+            if (DiscImageSource.IsCue(path)) { var stream=DiscImageSource.OpenCue(path);SharpSevenZipExtractor image=null;try { image=new SharpSevenZipExtractor(stream,false);var count=image.FilesCount;return image; } catch { if(image!=null)image.Dispose();stream.Dispose();throw; } }
             SharpSevenZipExtractor extractor = null;
             try { extractor = password == null ? new SharpSevenZipExtractor(path) : new SharpSevenZipExtractor(path, password); var count = extractor.FilesCount; return extractor; }
             catch (SharpSevenZipException) {

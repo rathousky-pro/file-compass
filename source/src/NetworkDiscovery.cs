@@ -27,6 +27,56 @@ namespace FileCompass {
         static bool PrivateAddress(byte[] ip){return ip[0]==10||(ip[0]==172&&ip[1]>=16&&ip[1]<=31)||(ip[0]==192&&ip[1]==168)||(ip[0]==169&&ip[1]==254)||(ip[0]==100&&ip[1]>=64&&ip[1]<=127);}
         static uint Number(byte[] bytes){return ((uint)bytes[0]<<24)|((uint)bytes[1]<<16)|((uint)bytes[2]<<8)|bytes[3];}
         static string Address(uint value){return new IPAddress(new[]{(byte)(value>>24),(byte)(value>>16),(byte)(value>>8),(byte)value}).ToString();}
+        internal static string DefaultRange(IEnumerable<Tuple<IPAddress,IPAddress,bool,int>> candidates) {
+            foreach(var candidate in candidates.OrderByDescending(x=>x.Item3).ThenBy(x=>x.Item4)) {
+                if(candidate.Item1==null||candidate.Item2==null||candidate.Item1.AddressFamily!=AddressFamily.InterNetwork||candidate.Item2.AddressFamily!=AddressFamily.InterNetwork)continue;
+                var bytes=candidate.Item1.GetAddressBytes();if(!PrivateAddress(bytes))continue;uint mask=Number(candidate.Item2.GetAddressBytes());int prefix=0;while(prefix<32&&(mask&(0x80000000u>>prefix))!=0)prefix++;
+                uint expected=prefix==0?0u:UInt32.MaxValue<<(32-prefix);if(mask!=expected||prefix==0)continue;
+                uint network=Number(bytes)&mask;if(prefix%8!=0)return Address(network)+"/"+prefix;
+                if(prefix==32)return candidate.Item1.ToString();var value=new[]{(network>>24)&255,(network>>16)&255,(network>>8)&255,network&255};
+                return String.Join(".",value.Select((octet,index)=>index<prefix/8?octet.ToString():"*"));
+            }
+            return "";
+        }
+        internal static string DefaultLocalRange() {
+            var candidates=new List<Tuple<IPAddress,IPAddress,bool,int>>();
+            try { foreach(var adapter in NetworkInterface.GetAllNetworkInterfaces()) {
+                if(adapter.OperationalStatus!=OperationalStatus.Up||adapter.NetworkInterfaceType==NetworkInterfaceType.Loopback)continue;
+                try {var properties=adapter.GetIPProperties();bool gateway=properties.GatewayAddresses.Any(x=>x.Address.AddressFamily==AddressFamily.InterNetwork&&!IPAddress.Any.Equals(x.Address));
+                    int index=properties.GetIPv4Properties()?.Index??Int32.MaxValue;
+                    foreach(var address in properties.UnicastAddresses)if(address.Address.AddressFamily==AddressFamily.InterNetwork)candidates.Add(Tuple.Create(address.Address,address.IPv4Mask,gateway,index));
+                }catch(NetworkInformationException){}catch(NotSupportedException){}
+            }} catch(NetworkInformationException){}
+            return DefaultRange(candidates);
+        }
+        internal sealed class ScanRange { internal uint First,Last; internal long Count {get{return (long)Last-First+1;}} }
+        internal static ScanRange ParseRange(string input) {
+            string text=(input??"").Trim();string[] parts=text.Split('/');if(parts.Length>2)throw new FormatException(L.Text("networkScan.invalid"));
+            string[] octets=parts[0].Split('.');if(octets.Length!=4)throw new FormatException(L.Text("networkScan.invalid"));
+            byte[] bytes=new byte[4];bool wildcard=false;int fixedOctets=0;
+            for(int i=0;i<4;i++){string item=octets[i].Trim();if(item=="*"||item.Equals("x",StringComparison.OrdinalIgnoreCase)){wildcard=true;continue;}byte value;if(wildcard||!Byte.TryParse(item,out value))throw new FormatException(L.Text("networkScan.invalid"));bytes[i]=value;fixedOctets++;}
+            int prefix=wildcard?fixedOctets*8:32;if(parts.Length==2&&(wildcard||!Int32.TryParse(parts[1],out prefix)||prefix<0||prefix>32))throw new FormatException(L.Text("networkScan.invalid"));
+            uint mask=prefix==0?0u:UInt32.MaxValue<<(32-prefix);uint first=Number(bytes)&mask,last=first|~mask;
+            if(!PrivateAddress(new[]{(byte)(first>>24),(byte)(first>>16),(byte)(first>>8),(byte)first})||!PrivateAddress(new[]{(byte)(last>>24),(byte)(last>>16),(byte)(last>>8),(byte)last}))throw new FormatException(L.Text("networkScan.privateOnly"));
+            if(prefix<=30){first++;last--;}
+            return new ScanRange{First=first,Last=last};
+        }
+        internal static string SubnetLabel(uint address) {return (address>>24)+"."+((address>>16)&255)+"."+((address>>8)&255)+".*";}
+        internal static async Task ScanRangeAsync(ScanRange range,CancellationToken token,Action<Entry> publish,Action<long,long,string> progress,Func<string,int,int,Task<bool>> probe=null) {
+            long done=0,lastUpdate=0;probe=probe??PortOpen;
+            for(long first=range.First;first<=range.Last;){
+                token.ThrowIfCancellationRequested();long end=Math.Min((long)range.Last,first|255L),next=first-1;string subnet=SubnetLabel((uint)first);
+                progress(Interlocked.Read(ref done),range.Count,subnet);
+                var workers=Enumerable.Range(0,32).Select(async ignored=>{
+                    while(true){token.ThrowIfCancellationRequested();long value=Interlocked.Increment(ref next);if(value>end)break;string host=Address((uint)value);
+                        var open=await Task.WhenAll(Ports.Select(async port=>await probe(host,port,450).ConfigureAwait(false)?port:0)).ConfigureAwait(false);
+                        token.ThrowIfCancellationRequested();foreach(int port in open.Where(p=>p!=0))publish(Service(host,port));
+                        long count=Interlocked.Increment(ref done),now=DateTime.UtcNow.Ticks,previous=Interlocked.Read(ref lastUpdate);
+                        if(count==range.Count||(now-previous>=TimeSpan.TicksPerMillisecond*250&&Interlocked.CompareExchange(ref lastUpdate,now,previous)==previous))progress(count,range.Count,subnet);
+                    }
+                }).ToArray();await Task.WhenAll(workers).ConfigureAwait(false);first=end+1;
+            }
+        }
         internal static Entry Service(string host,int port,string name=null) {
             IPAddress address;
             if(!IPAddress.TryParse(host,out address)||address.AddressFamily!=AddressFamily.InterNetwork)return null;

@@ -12,11 +12,13 @@ namespace FileCompass
         sealed class CopyJob
         {
             public string[] Sources; public CopyOptions Options; public OperationRecord Record;
+            internal ExtSource EjectDestination;
             internal DurableTransfer Durable; internal Dictionary<string,string> RecoveryTargets;
             public override string ToString() { return String.Join("; ", Sources) + "\n→ " + Options.Target; }
         }
         readonly Queue<CopyJob> copyJobs = new Queue<CopyJob>();
         readonly List<string> copyTargets = new List<string>();
+        readonly Dictionary<string, CopyJob> copyEjectRequests = new Dictionary<string, CopyJob>(StringComparer.OrdinalIgnoreCase);
         bool copyRunning;
         CopyProgressDialog copyProgress;
         CopyJob runningCopyJob;
@@ -30,12 +32,12 @@ namespace FileCompass
             if (active.IsRemote || (active == left ? right : left).IsRemote) { NetworkTransfer(move); return; }
             var entries = active.Selected(); var other = active == left ? right : left;
             if (entries.Count == 0 || other.CurrentPath == null) return;
-            var setup = new CopySetupDialog(this, entries, other.CurrentPath, copyTargets, move);
+            var setup = new CopySetupDialog(this, entries, other.CurrentPath, copyTargets, move, allowUsbEject:true);
             var sourcePanel = active;
             bool accepted = setup.ShowDialog() == true; sourcePanel.FocusFiles(); if (!accepted) return;
             copyTargets.Remove(setup.Options.Target); copyTargets.Insert(0, setup.Options.Target); if (copyTargets.Count > 15) copyTargets.RemoveAt(15);
             setup.Options.Move = move;
-            EnqueueCopy(new CopyJob { Sources = entries.Select(x => x.FullPath).ToArray(), Options = setup.Options });
+            EnqueueCopy(new CopyJob { Sources = entries.Select(x => x.FullPath).ToArray(), Options = setup.Options, EjectDestination = setup.EjectDestination });
             operation.Visibility = Visibility.Visible;
             if (!copyRunning) RunCopyQueue();
             else operation.Text = L.Text("copy.runningWithWaitingCount") + copyJobs.Count + L.Text("progress.clickToShowSuffix");
@@ -109,7 +111,7 @@ namespace FileCompass
                                 return copied;
                             });
                         }
-                        catch (Exception ex) { durableQueue.Finish(job.Durable,false); activity.Finish(L.Text("copy.failedPrefix") + ex.Message, false); throw; }
+                        catch (Exception ex) { RecordCopyEject(job,false); durableQueue.Finish(job.Durable,false); activity.Finish(L.Text("copy.failedPrefix") + ex.Message, false); throw; }
                         finally { dialog.Finish(); activeCopyJobs.Remove(job); if (copyProgress == dialog) { var remaining = activeCopyJobs.LastOrDefault(); copyProgress = remaining.Value == null ? null : remaining.Value.Item2; copyControl = remaining.Value == null ? null : remaining.Value.Item1; runningCopyJob = remaining.Key; } }
                         if (!left.IsRemote && (job.Options.Move || left.CurrentPath == job.Options.Target)) left.Refresh();
                         if (!right.IsRemote && (job.Options.Move || right.CurrentPath == job.Options.Target)) right.Refresh();
@@ -118,12 +120,48 @@ namespace FileCompass
                         activity.Record.Items.AddRange(result.Items);
                         durableQueue.Finish(job.Durable,(result.Cancelled && !preserveQueueOnExit) || (!result.Cancelled && result.Errors.Count == 0 && !result.Items.Any(x => x.State == L.Code("state.error"))));
                         activity.Finish(operation.Text, !result.Cancelled && result.Errors.Count == 0 && !result.Items.Any(x => x.State == L.Code("state.error")));
+                        RecordCopyEject(job,!result.Cancelled && result.Skipped == 0 && result.Errors.Count == 0 && !result.Items.Any(x => x.State == L.Code("state.error")));
                         if (result.Errors.Count > 0) ShowCopyErrors(result);
                     }
                 }
             }
             catch (Exception ex) { operation.Text = L.Text("copy.failedPrefix") + ex.Message; MessageBox.Show(this, ex.Message, L.Code("copy.title"), MessageBoxButton.OK, MessageBoxImage.Error); }
-            finally { activeCopyWorkers--; copyRunning = activeCopyWorkers > 0; if (!copyRunning) { copyProgress = null; copyControl = null; runningCopyJob = null; if (copyJobs.Count > 0) RunCopyQueue(); } }
+            finally {
+                activeCopyWorkers--; copyRunning = activeCopyWorkers > 0;
+                if (!copyRunning) {
+                    copyProgress = null; copyControl = null; runningCopyJob = null;
+                    if (copyJobs.Count > 0) RunCopyQueue();
+                    else await EjectCompletedCopyDestinations();
+                }
+            }
+        }
+
+        void RecordCopyEject(CopyJob job, bool complete) {
+            string root=System.IO.Path.GetPathRoot(job.Options.Target);
+            if(String.IsNullOrEmpty(root))return;
+            if(!complete) {
+                foreach(var request in copyEjectRequests.Where(x=>x.Key==job.EjectDestination?.Token ||
+                    UsbDriveActions.OnRoots(x.Value.Options.Target,new[]{root})).ToArray())copyEjectRequests.Remove(request.Key);
+                return;
+            }
+            if(job.EjectDestination!=null)copyEjectRequests[job.EjectDestination.Token]=job;
+        }
+
+        async Task EjectCompletedCopyDestinations() {
+            if(copyEjectRequests.Count==0)return;
+            var requests=copyEjectRequests.Values.ToArray();
+            copyEjectRequests.Clear();
+            try {
+                await Task.WhenAll(left.NavigationTask??Task.CompletedTask,right.NavigationTask??Task.CompletedTask);
+                foreach(var job in requests) {
+                    if(!IsLoaded)return;
+                    var target=await Task.Run(()=>UsbDriveActions.ResolveCopyDestination(job.Options.Target));
+                    var source=job.EjectDestination;
+                    if(target==null || target.Device!=source.Device || target.Token!=source.Token || target.Length!=source.Length)
+                        throw new System.IO.IOException(L.Text("ext.changed"));
+                    await RunUsbDriveAction(System.IO.Path.GetPathRoot(job.Options.Target),source,false);
+                }
+            } catch(Exception ex) { MessageBox.Show(this,ex.Message,L.Text("usb.eject"),MessageBoxButton.OK,MessageBoxImage.Warning); }
         }
 
         void ShowCopyProgress()

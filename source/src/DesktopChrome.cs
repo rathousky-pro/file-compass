@@ -121,6 +121,7 @@ namespace FileCompass
             AddReleaseTools(edit, commands, config);
             AddMediaMenu(media,file,commands);
             AddMenu(commands,L.Text("ext.title"),delegate{new ExtBrowserWindow(this).Show();});
+            AddMenu(commands,L.Text("usb.devices"),ShowUsbDevices);
             OrganizeMainMenus(file, select, edit, commands, network, display);
             menuRow.Children.Add(menus); top.Children.Add(menuRow);
                         var tools = new WrapPanel { Orientation = Orientation.Horizontal };

@@ -33,33 +33,60 @@ namespace FileCompass.NetworkTransport
             NativeNetwork.Ensure(); check();
             int proxy = Int32.Parse(options.Raw("ProxyMethod", "0"));
             string host = proxy == 0 ? options.HostName : options.Raw("ProxyHost", ""); int port = proxy == 0 ? options.PortNumber : Int32.Parse(options.Raw("ProxyPort", "8080"));
-            var addresses = Resolve(host); Exception last = null;
+            IPAddress[] addresses;
+            try { addresses = Resolve(host); }
+            catch (SocketException ex) { throw new IOException(L.Format("ssh.dnsFailedFormat", host, ex.Message), ex); }
+            Exception last = null;
             foreach (var address in addresses)
             {
                 check(); socket = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp); socket.NoDelay = true;
                 try { var ar = socket.BeginConnect(address, port, null, null); var timer = Stopwatch.StartNew(); while (!ar.IsCompleted) { check(); if (timer.Elapsed > options.Timeout) throw new TimeoutException(L.Text("ssh.serverNotResponding")); Thread.Sleep(20); } socket.EndConnect(ar); last = null; break; }
                 catch (Exception ex) { socket.Close(); last = ex; check(); }
             }
-            if (last != null) throw new IOException(L.Text("ssh.connectionFailed"), last);
-            if (proxy != 0) Proxy(proxy);
+            if (last != null) throw new IOException(L.Format("ssh.tcpFailedFormat", host, port, last.Message), last);
+            if (proxy != 0)
+            {
+                try { Proxy(proxy); }
+                catch (Exception ex) when (ex is IOException || ex is SocketException || ex is TimeoutException)
+                { throw new IOException(L.Format("ssh.proxyFailedFormat", ex.Message), ex); }
+            }
             socket.Blocking = false; session = NativeNetwork.libssh2_session_init_ex(IntPtr.Zero, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
             if (session == IntPtr.Zero) throw new IOException(L.Text("ssh.sessionCreationFailed"));
             NativeNetwork.libssh2_session_set_blocking(session, 0);
             if (options.Raw("Compression", "off") == "on") { NativeNetwork.libssh2_session_flag(session, 2, 1); NativeNetwork.libssh2_session_method_pref(session, 6, NativeNetwork.Bytes("zlib@openssh.com,zlib,none")); NativeNetwork.libssh2_session_method_pref(session, 7, NativeNetwork.Bytes("zlib@openssh.com,zlib,none")); }
             if (!String.IsNullOrWhiteSpace(options.SshHostKeyFingerprint) && options.SshHostKeyFingerprint.Contains(" "))
             { string algorithm = options.SshHostKeyFingerprint.Split(' ')[0]; if (algorithm == "ssh-rsa") algorithm = "rsa-sha2-512,rsa-sha2-256,ssh-rsa"; NativeNetwork.libssh2_session_method_pref(session, 1, NativeNetwork.Bytes(algorithm)); }
-            Retry(delegate { return NativeNetwork.libssh2_session_handshake(session, socket.Handle); });
+            int handshake = Retry(delegate { return NativeNetwork.libssh2_session_handshake(session, socket.Handle); }, false);
+            if (handshake != 0) throw new SessionRemoteException(AuthDetail("ssh.handshakeFailed", handshake));
             UIntPtr length; int type; IntPtr hostKey = NativeNetwork.libssh2_session_hostkey(session, out length, out type);
             if (hostKey == IntPtr.Zero) throw new IOException(L.Text("ssh.serverKeyMissing")); var key = new byte[checked((int)length.ToUInt64())]; Marshal.Copy(hostKey, key, 0, key.Length);
             using (var sha = SHA256.Create()) Fingerprint = KeyAlgorithm(key) + " SHA256:" + Convert.ToBase64String(sha.ComputeHash(key)).TrimEnd('=');
             KnownHostKey = KeyAlgorithm(key) + " " + Convert.ToBase64String(key);
             if (probe) return;
             if (!Trusted(options.SshHostKeyFingerprint, key)) throw new SessionRemoteException(L.Text("ssh.hostKeyMismatch"));
-            var user = NativeNetwork.Bytes(options.UserName); int auth = options.Raw("Agent", "off") == "on" ? AgentAuth(user) : -1;
-            if (auth != 0 && !String.IsNullOrEmpty(options.SshPrivateKeyPath))
-            { byte[] privateKey = File.ReadAllBytes(options.SshPrivateKeyPath); try { auth = Retry(delegate { return NativeNetwork.libssh2_userauth_publickey_frommemory(session, user, (UIntPtr)(user.Length - 1), IntPtr.Zero, UIntPtr.Zero, privateKey, (UIntPtr)privateKey.Length, IntPtr.Zero); }, false); } finally { Array.Clear(privateKey, 0, privateKey.Length); } }
+            var user = NativeNetwork.Bytes(options.UserName);
+            var failures = new List<string>();
+            int auth = -1;
+            if (!String.IsNullOrEmpty(options.SshPrivateKeyPath))
+            {
+                auth = KeyAuth(user, failures);
+            }
+            if (auth != 0 && options.Raw("Agent", "off") == "on")
+            {
+                auth = AgentAuth(user);
+                if (auth != 0) failures.Add(L.Text("ssh.agentAuthenticationFailed"));
+            }
+            // Let the UI present key failures before the user chooses a password retry.
+            if (auth != 0 && (!String.IsNullOrEmpty(options.SshPrivateKeyPath) ||
+                (failures.Count != 0 && String.IsNullOrEmpty(options.Password))))
+                throw new SshAuthenticationException(String.Join(Environment.NewLine, failures));
             if (auth != 0)
-            { var password = NativeNetwork.Bytes(options.Password); try { auth = Retry(delegate { return NativeNetwork.libssh2_userauth_password_ex(session, user, (uint)user.Length - 1, password, (uint)password.Length - 1, IntPtr.Zero); }, false); } finally { Array.Clear(password, 0, password.Length); } }
+            {
+                var password = NativeNetwork.Bytes(options.Password);
+                try { auth = Retry(delegate { return NativeNetwork.libssh2_userauth_password_ex(session, user, (uint)user.Length - 1, password, (uint)password.Length - 1, IntPtr.Zero); }, false); }
+                finally { Array.Clear(password, 0, password.Length); }
+                if (auth != 0) failures.Add(AuthDetail("ssh.passwordAuthenticationFailed", auth));
+            }
             if (auth != 0)
             {
                 NativeNetwork.Keyboard reply = delegate(IntPtr name, int nl, IntPtr instruction, int il, int count, IntPtr prompts, IntPtr responses, IntPtr data)
@@ -77,7 +104,11 @@ namespace FileCompass.NetworkTransport
                 };
                 auth = Retry(delegate { return NativeNetwork.libssh2_userauth_keyboard_interactive_ex(session, user, (uint)user.Length - 1, reply); }, false); GC.KeepAlive(reply);
             }
-            if (auth != 0) throw new SessionRemoteException(L.Text("ssh.authenticationRejected"));
+            if (auth != 0)
+            {
+                failures.Add(AuthDetail("ssh.interactiveAuthenticationFailed", auth));
+                throw new SshAuthenticationException(String.Join(Environment.NewLine, failures));
+            }
             int seconds; if (Int32.TryParse(options.Raw("KeepAlive", "0"), out seconds) && seconds > 0)
             {
                 NativeNetwork.libssh2_keepalive_config(session, 0, (uint)Math.Max(2, seconds));
@@ -93,6 +124,121 @@ namespace FileCompass.NetworkTransport
         internal void Remove(string path, bool directory) { lock (sync) { RemoveCore(path, directory); } }
         internal void SetTime(string path, DateTime time) { lock (sync) { SetTimeCore(path, time); } }
         internal void Transfer(string path, Stream local, long size, bool upload, Action<long> progress, long offset = 0) { lock (sync) { TransferCore(path, local, size, upload, progress, offset); } }
+        string AuthDetail(string phase, int code)
+        {
+            IntPtr detail;
+            int length;
+            NativeNetwork.libssh2_session_last_error(session, out detail, out length, 0);
+            return L.Text(phase) + " (libssh2 " + code + ")" +
+                (detail == IntPtr.Zero || length <= 0 ? "" : ": " + Marshal.PtrToStringAnsi(detail, length));
+        }
+
+        int KeyAuth(byte[] user, List<string> failures)
+        {
+            byte[] privateKey = null;
+            byte[] phrase = null;
+            try
+            {
+                privateKey = File.ReadAllBytes(options.SshPrivateKeyPath);
+                int result;
+                if (Encoding.ASCII.GetString(privateKey, 0, Math.Min(20, privateKey.Length)).StartsWith("PuTTY-User-Key-File-", StringComparison.Ordinal))
+                {
+                    result = PpkAuth(user, privateKey);
+                }
+                else
+                {
+                    if (!String.IsNullOrEmpty(options.SshPrivateKeyPassphrase))
+                        phrase = NativeNetwork.Bytes(options.SshPrivateKeyPassphrase);
+                    result = Retry(delegate
+                    {
+                        return NativeNetwork.libssh2_userauth_publickey_frommemory(session, user, (UIntPtr)(user.Length - 1),
+                            IntPtr.Zero, UIntPtr.Zero, privateKey, (UIntPtr)privateKey.Length, phrase);
+                    }, false);
+                }
+                if (result != 0) failures.Add(AuthDetail("ssh.keyAuthenticationFailed", result));
+                return result;
+            }
+            catch (IOException ex) when (!(ex is TransientNetworkException))
+            {
+                failures.Add(L.Text("ssh.keyAuthenticationFailed") + ": " + ex.Message);
+                return -1;
+            }
+            catch (Exception ex) when (ex is Renci.SshNet.Common.SshException || ex is FormatException || ex is NotSupportedException || ex is ArgumentException || ex is CryptographicException)
+            {
+                failures.Add(L.Text("ssh.keyAuthenticationFailed") + ": " + ex.Message);
+                return -1;
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                failures.Add(L.Text("ssh.keyAuthenticationFailed") + ": " + ex.Message);
+                return -1;
+            }
+            finally
+            {
+                if (privateKey != null) Array.Clear(privateKey, 0, privateKey.Length);
+                if (phrase != null) Array.Clear(phrase, 0, phrase.Length);
+            }
+        }
+
+        int PpkAuth(byte[] user, byte[] privateKey)
+        {
+            using (var stream = new MemoryStream(privateKey, false))
+            using (var key = new Renci.SshNet.PrivateKeyFile(stream, options.SshPrivateKeyPassphrase ?? ""))
+            {
+                var algorithms = key.HostKeyAlgorithms.OfType<Renci.SshNet.Security.KeyHostAlgorithm>().ToArray();
+                byte[] publicKey = algorithms.First().Data;
+                NativeNetwork.SignPublicKey sign = delegate(IntPtr _, out IntPtr signature, out UIntPtr signatureLength,
+                    IntPtr payload, UIntPtr payloadLength, IntPtr context)
+                {
+                    signature = IntPtr.Zero;
+                    signatureLength = UIntPtr.Zero;
+                    try
+                    {
+                        var data = new byte[checked((int)payloadLength.ToUInt64())];
+                        Marshal.Copy(payload, data, 0, data.Length);
+                        // The signed SSH request carries the selected algorithm, including RSA SHA-2 variants.
+                        int offset = 0;
+                        ReadSshField(data, ref offset);
+                        if (data[offset++] != 50) return -16;
+                        ReadSshField(data, ref offset); // username
+                        ReadSshField(data, ref offset); // service
+                        ReadSshField(data, ref offset); // authentication method
+                        if (data[offset++] != 1) return -16;
+                        string name = Encoding.ASCII.GetString(ReadSshField(data, ref offset));
+                        var algorithm = algorithms.FirstOrDefault(x => x.Name == name);
+                        if (algorithm == null) return -51;
+                        byte[] raw = algorithm.DigitalSignature.Sign(data);
+                        signature = NativeNetwork.cn_alloc((UIntPtr)raw.Length);
+                        if (signature == IntPtr.Zero) return -6;
+                        Marshal.Copy(raw, 0, signature, raw.Length);
+                        signatureLength = (UIntPtr)raw.Length;
+                        return 0;
+                    }
+                    catch (Exception)
+                    {
+                        // Exceptions must never cross the native callback boundary.
+                        return -16;
+                    }
+                };
+                return Retry(delegate
+                {
+                    return NativeNetwork.libssh2_userauth_publickey(session, user, publicKey, (UIntPtr)publicKey.Length, sign, IntPtr.Zero);
+                }, false);
+            }
+        }
+
+        static byte[] ReadSshField(byte[] data, ref int offset)
+        {
+            if (offset > data.Length - 4) throw new InvalidDataException();
+            int length = (data[offset] << 24) | (data[offset + 1] << 16) | (data[offset + 2] << 8) | data[offset + 3];
+            offset += 4;
+            if (length < 0 || length > data.Length - offset) throw new InvalidDataException();
+            var field = new byte[length];
+            Buffer.BlockCopy(data, offset, field, 0, length);
+            offset += length;
+            return field;
+        }
+
         int AgentAuth(byte[] user)
         {
             IntPtr agent = NativeNetwork.libssh2_agent_init(session); if (agent == IntPtr.Zero) return -1;
@@ -170,20 +316,39 @@ namespace FileCompass.NetworkTransport
             }
             finally { if (socket != null && socket.Connected) { try { Retry(delegate { return NativeNetwork.libssh2_channel_free(channel); }); } catch { } } }
         }
-        void Sftp() { if (sftp == IntPtr.Zero) sftp = Obtain(delegate { return NativeNetwork.libssh2_sftp_init(session); }); }
+        void Sftp()
+        {
+            if (sftp != IntPtr.Zero) return;
+            try { sftp = Obtain(delegate { return NativeNetwork.libssh2_sftp_init(session); }); }
+            catch (SessionRemoteException ex) { throw new SessionRemoteException(L.Format("ssh.sftpInitFailedFormat", ex.Message), ex); }
+        }
         byte[] PathBytes(string path) { return encoding.GetBytes(path); }
         RemoteFileInfo Info(string path, NativeNetwork.Attributes attr)
         { uint mode = attr.Permissions & 61440; return new RemoteFileInfo { Name = RemoteConnection.Name(path), FullName = path, Length = (long)attr.Size, FileType = mode == 40960 ? 'L' : mode == 16384 ? 'D' : '-', LastWriteTime = new DateTime(1970,1,1,0,0,0,DateTimeKind.Utc).AddSeconds(attr.Mtime).ToLocalTime(), FilePermissions = Convert.ToString(attr.Permissions & 4095, 8) }; }
-        internal RemoteFileInfo StatCore(string path, bool missing = false)
+        internal RemoteFileInfo StatCore(string path, bool missing = false, bool followLink = false)
         {
-            Sftp(); var b = PathBytes(path); var attrs = new NativeNetwork.Attributes(); int result = Retry(delegate { return NativeNetwork.libssh2_sftp_stat_ex(sftp, b, (uint)b.Length, 1, ref attrs); }, false);
+            Sftp(); var b = PathBytes(path); var attrs = new NativeNetwork.Attributes(); int result = Retry(delegate { return NativeNetwork.libssh2_sftp_stat_ex(sftp, b, (uint)b.Length, followLink ? 0 : 1, ref attrs); }, false);
             if (result < 0) { uint error = NativeNetwork.libssh2_sftp_last_error(sftp); if (missing && (error == 2 || error == 10)) return null; throw Error(); } return Info(path, attrs);
         }
         internal RemoteDirectoryInfo ListCore(string path)
         {
             Sftp(); var b = PathBytes(path); var directory = Obtain(delegate { return NativeNetwork.libssh2_sftp_open_ex(sftp, b, (uint)b.Length, 0, 0, 1); }); var result = new RemoteDirectoryInfo();
             try { var buffer = new byte[65536]; while (true) { var attrs = new NativeNetwork.Attributes(); int count = Retry(delegate { return NativeNetwork.libssh2_sftp_readdir_ex(directory, buffer, (UIntPtr)buffer.Length, IntPtr.Zero, UIntPtr.Zero, out attrs); }); if (count == 0) break; string name = encoding.GetString(buffer, 0, count); if (name == "." || name == "..") continue; RemoteConnection.ValidateRemoteName(name); result.Files.Add(Info(RemoteConnection.Combine(path, name), attrs)); } }
-            finally { Retry(delegate { return NativeNetwork.libssh2_sftp_close_handle(directory); }); } return result;
+            finally { Retry(delegate { return NativeNetwork.libssh2_sftp_close_handle(directory); }); }
+            ResolveDirectoryLinks(result.Files, delegate(string link)
+            {
+                try { return StatCore(link, true, true); }
+                catch (SessionRemoteException) { return null; }
+            });
+            return result;
+        }
+        internal static void ResolveDirectoryLinks(IEnumerable<RemoteFileInfo> files, Func<string, RemoteFileInfo> statTarget)
+        {
+            foreach (var file in files.Where(x => x.FileType == 'L'))
+            {
+                var target = statTarget(file.FullName);
+                file.LinksToDirectory = target != null && target.IsDirectory;
+            }
         }
         internal void MkdirCore(string path) { Sftp(); var b = PathBytes(path); Retry(delegate { return NativeNetwork.libssh2_sftp_mkdir_ex(sftp,b,(uint)b.Length,493); }); }
         internal void RenameCore(string source, string target) { Sftp(); var a = PathBytes(source); var b = PathBytes(target); Retry(delegate { return NativeNetwork.libssh2_sftp_rename_ex(sftp,a,(uint)a.Length,b,(uint)b.Length,0); }); }

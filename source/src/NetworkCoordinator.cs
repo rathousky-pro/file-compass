@@ -99,6 +99,74 @@ namespace FileCompass
             if (accepted && user != null) profile.UserName = user.Text.Trim();
             return accepted ? input.Password : null;
         }
+        bool RequestSshFallback(NetworkProfile profile, string reason, bool offerKey, out string phrase, out bool usePassword)
+        {
+            var window = new Window();
+            CopyUi.Style(window, this, L.Text("network.loginTitlePrefix") + profile.Name, 500);
+            var panel = new StackPanel { Margin = new Thickness(12) };
+            window.Content = panel;
+            panel.Children.Add(new TextBlock { Text = reason, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(2, 0, 2, 10) });
+            var input = new PasswordBox { Margin = new Thickness(2, 4, 2, 8), MinHeight = 24 };
+            if (offerKey)
+            {
+                panel.Children.Add(CopyUi.Label(L.Text("ssh.keyPassphraseLabel")));
+                panel.Children.Add(input);
+            }
+            bool password = false;
+            var buttons = new System.Windows.Controls.Primitives.UniformGrid { Columns = offerKey ? 3 : 2 };
+            if (offerKey)
+            {
+                var key = CopyUi.Button(L.Text("ssh.retryKey"), delegate { window.DialogResult = true; });
+                key.IsDefault = true;
+                key.IsEnabled = false;
+                input.PasswordChanged += delegate { using (var value = input.SecurePassword) key.IsEnabled = value.Length > 0; };
+                buttons.Children.Add(key);
+                window.Loaded += delegate { input.Focus(); };
+            }
+            buttons.Children.Add(CopyUi.Button(L.Text("ssh.tryAccountPassword"), delegate { password = true; window.DialogResult = true; }));
+            var cancel = CopyUi.Button(L.Text("action.cancel"), delegate { window.DialogResult = false; });
+            cancel.IsCancel = true;
+            buttons.Children.Add(cancel);
+            panel.Children.Add(buttons);
+            bool accepted = window.ShowDialog() == true;
+            phrase = accepted && !password ? input.Password : null;
+            usePassword = accepted && password;
+            return accepted;
+        }
+        async Task<bool?> OpenWithSshFallback(RemoteConnection connection, SessionOptions options, Action<bool> connecting = null)
+        {
+            bool remember = false;
+            while (true)
+            {
+                try
+                {
+                    await Task.Run(delegate { connection.Open(options); });
+                    return remember;
+                }
+                catch (SessionRemoteException ex) when (ex.InnerException is SshAuthenticationException &&
+                    (!String.IsNullOrEmpty(options.SshPrivateKeyPath) || (options.Raw("Agent", "off") == "on" && String.IsNullOrEmpty(options.Password))))
+                {
+                    if (connecting != null) connecting(false);
+                    string phrase;
+                    bool usePassword;
+                    if (!RequestSshFallback(connection.Profile, ex.InnerException.Message, !String.IsNullOrEmpty(options.SshPrivateKeyPath), out phrase, out usePassword))
+                        return null;
+                    if (usePassword)
+                    {
+                        if (String.IsNullOrEmpty(options.Password))
+                        {
+                            options.Password = RequestPassword(connection.Profile, out remember);
+                            if (options.Password == null) return null;
+                        }
+                        options.SshPrivateKeyPath = null;
+                        options.SshPrivateKeyPassphrase = null;
+                        options.AddRawSettings("Agent", "off");
+                    }
+                    else options.SshPrivateKeyPassphrase = phrase;
+                    if (connecting != null) connecting(true);
+                }
+            }
+        }
         void NetworkBusy(bool value, string text)
         {
             busy = value; actions.ForEach(b => b.IsEnabled = !value && (!PanelsLoading||refreshActions.Contains(b)));
@@ -148,16 +216,11 @@ namespace FileCompass
                         profile.HostKeyFingerprint = fingerprint; connection.Profile.HostKeyFingerprint = fingerprint; options.SshHostKeyFingerprint = fingerprint;
                         // Trust is saved only after a successful authenticated connection and directory listing.
                     }
-                    Exception authenticationFailure = null;
-                    try { await Task.Run(delegate { connection.Open(options); }); }
-                    catch (SessionRemoteException ex) { authenticationFailure = ex; }
-                    if (authenticationFailure != null)
-                    {
-                        if (!profile.IsSshTransfer || needsPassword || !String.IsNullOrEmpty(password) || authenticationFailure.ToString().IndexOf(L.Text("network.authenticationRejectedMatch"), StringComparison.OrdinalIgnoreCase) < 0) throw authenticationFailure;
-                        NetworkBusy(false, null); password = RequestPassword(profile, out rememberPassword); if (password == null) return;
-                        connection.Dispose(); connection = new RemoteConnection(profile); options = connection.Options(password);
-                        NetworkBusy(true, L.Text("network.connectingPrefix") + profile.Name); await Task.Run(delegate { connection.Open(options); });
-                    }
+                    bool? fallbackRemember = await OpenWithSshFallback(connection, options,
+                        connecting => NetworkBusy(connecting, connecting ? L.Text("network.connectingPrefix") + profile.Name : null));
+                    if (!fallbackRemember.HasValue) return;
+                    rememberPassword |= fallbackRemember.Value;
+                    password = options.Password;
                     await panel.AttachRemote(connection); connection = null;
                 }
                 if (rememberPassword || source.HostKeyFingerprint != profile.HostKeyFingerprint)

@@ -24,6 +24,9 @@ namespace FileCompass
                 connection.login.AddRawSettings("UtfAuto", login.Raw("UtfAuto", "1"));
             }
             connection.login.SshHostKeyFingerprint = login.SshHostKeyFingerprint;
+            connection.login.SshPrivateKeyPath = login.SshPrivateKeyPath;
+            connection.login.SshPrivateKeyPassphrase = login.SshPrivateKeyPassphrase;
+            connection.login.AddRawSettings("Agent", login.Raw("Agent", "off"));
             return connection;
         }
         public void OpenTransfer() { if(!String.IsNullOrEmpty(Profile.CloudAccountId))CloudRuntime.ApplyEndpoint(Profile,login); Session.Open(login); }

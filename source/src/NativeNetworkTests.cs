@@ -9,6 +9,68 @@ namespace FileCompass
 {
     public static class NativeNetworkTests
     {
+        public static int SshTransfer(string workspace, int scpPort, int sftpPort)
+        {
+            var passed = new List<string>();
+            Action<bool, string> check = delegate(bool value, string name) { if (!value) throw new Exception(name); passed.Add(name); };
+            string report = Path.Combine(workspace, "ssh-transfer-test-result.txt");
+            try
+            {
+                foreach (var protocol in new[] { NetworkProtocol.SCP, NetworkProtocol.SFTP })
+                {
+                    var profile = new NetworkProfile { Protocol = protocol, Host = "127.0.0.1",
+                        Port = protocol == NetworkProtocol.SCP ? scpPort : sftpPort, UserName = "tester",
+                        Path = "/", SshAgent = false };
+                    using (var probe = new RemoteConnection(profile))
+                        profile.HostKeyFingerprint = probe.Session.ScanFingerprint(probe.Options(""), "SHA-256");
+                    foreach (var key in new[] { "id_encrypted", "id_v2.ppk", "id_v3.ppk" })
+                    {
+                        profile.PrivateKeyPath = Path.Combine(workspace, key);
+                        using (var wrong = new RemoteConnection(profile))
+                        {
+                            // A valid account password must never conceal a failed explicit key attempt.
+                            var options = wrong.Options("test-password");
+                            options.SshPrivateKeyPassphrase = "wrong phrase";
+                            bool rejected = false;
+                            try { wrong.Open(options); }
+                            catch (SessionRemoteException ex) { rejected = ex.InnerException is SshAuthenticationException; }
+                            check(rejected, protocol + " reports rejected key separately from account password (" + key + ")");
+                        }
+                        using (var connection = new RemoteConnection(profile))
+                        {
+                            var options = connection.Options("");
+                            options.SshPrivateKeyPassphrase = "fixture key phrase";
+                            connection.Open(options);
+                            var listing = connection.Session.ListDirectory("/").Files;
+                            check(listing.Any(x => x.Name == "český soubor.txt"), protocol + " lists entries with " + key);
+                            var link = listing.Single(x => x.Name == "folder link");
+                            check(link.FileType == 'L' && !link.IsDirectory && link.LinksToDirectory &&
+                                !listing.Single(x => x.Name == "broken link").LinksToDirectory &&
+                                !listing.Single(x => x.Name == "file link").LinksToDirectory,
+                                protocol + " detects directory links while preserving link type (" + key + ")");
+                            check(connection.Session.ListDirectory(link.FullName).Files.Count > 0 &&
+                                connection.Session.GetFileInfo(link.FullName).FileType == 'L',
+                                protocol + " navigates through a link and stats the link itself (" + key + ")");
+                            using (var worker = connection.TransferConnection())
+                            {
+                                worker.OpenTransfer();
+                                string target = Path.Combine(workspace, protocol + "-" + key + ".txt");
+                                worker.Session.GetFiles("/český soubor.txt", target).Check();
+                                check(File.ReadAllText(target) == "Příliš žluťoučký kůň", protocol + " transfer worker reuses key credentials (" + key + ")");
+                            }
+                        }
+                    }
+                }
+                File.WriteAllLines(report, passed.Concat(new[] { "PASS: " + passed.Count + " checks" }));
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                File.WriteAllLines(report, passed.Concat(new[] { "FAIL: " + ex }));
+                return 1;
+            }
+        }
+
         public static int Scp(string workspace, int port)
         {
             Directory.CreateDirectory(workspace); var passed = new List<string>();

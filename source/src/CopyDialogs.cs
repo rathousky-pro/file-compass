@@ -91,6 +91,8 @@ namespace FileCompass
     public partial class CopySetupDialog : Window
     {
         public CopyOptions Options;
+        internal ExtSource EjectDestination { get; private set; }
+        readonly CheckBox ejectDestination = new CheckBox { Content = L.Text("usb.ejectAfterCopy"), Margin = new Thickness(2, 4, 2, 8) };
         readonly ComboBox destination = new ComboBox { IsEditable = true, Height = 26 };
         readonly ComboBox filter = new ComboBox { IsEditable = true, Text = "*.*", Height = 26 };
         readonly ConflictChoiceSelector<CopyRule> rule = new ConflictChoiceSelector<CopyRule>(
@@ -106,7 +108,7 @@ namespace FileCompass
         readonly CheckBox fileTarget = new CheckBox { Content = L.Text("copy.destinationIncludesNewName"), Margin = new Thickness(2, 4, 2, 4) };
         readonly string sourceDirectory, initialMoveTarget;
         readonly bool moving, single;
-        public CopySetupDialog(Window owner, IList<Entry> entries, string target, IEnumerable<string> recent, bool move = false, ProgramSettings defaults = null)
+        public CopySetupDialog(Window owner, IList<Entry> entries, string target, IEnumerable<string> recent, bool move = false, ProgramSettings defaults = null, bool allowUsbEject = false)
         {
             CopyUi.Style(this, owner, move ? L.Text("copy.moveDialogTitle") : L.Text("copy.copyDialogTitle"), 650);
             defaults = defaults ?? ProgramSettings.Load();
@@ -132,6 +134,10 @@ namespace FileCompass
             destination.Text = initialMoveTarget ?? target.TrimEnd('\\') + "\\"; foreach (string path in recent) destination.Items.Add(path);
             destination.Height = filter.Height = 32;
             destinationSection.Children.Add(destination);
+            if (allowUsbEject && !moving) {
+                ejectDestination.ToolTip = L.Text("usb.ejectAfterCopyHelp");
+                destinationSection.Children.Add(ejectDestination);
+            }
             var pathActions = new WrapPanel { Margin = new Thickness(0,5,0,12) };
             pathActions.Children.Add(CopyUi.Button(L.Text("copy.designBrowse"), Browse));
             pathActions.Children.Add(CopyUi.Button(L.Text("copy.designNewFolder"), NewFolder)); layout.AddNavigationAction(L.Text("copy.designBrowse"),Browse);layout.AddNavigationAction(L.Text("copy.designNewFolder"),NewFolder);
@@ -169,6 +175,10 @@ namespace FileCompass
             try
             {
                 Options = CreateOptions(queue);
+                if (ejectDestination.IsChecked == true) {
+                    EjectDestination = UsbDriveActions.ResolveCopyDestination(Options.Target);
+                    if (EjectDestination == null) throw new IOException(L.Text("usb.copyTargetRequired"));
+                }
                 DialogResult = true;
             }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, L.Text("copy.destinationTitle"), MessageBoxButton.OK, MessageBoxImage.Warning); }

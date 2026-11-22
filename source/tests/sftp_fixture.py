@@ -15,7 +15,10 @@ import paramiko
 
 auth_mode = sys.argv[4] if len(sys.argv) > 4 else "password"
 user_key = None
-if auth_mode.startswith("key-"):
+links = {"folder link": "sub", "broken link": "missing", "file link": "český soubor.txt"} if auth_mode == "ssh-regression" else {}
+if auth_mode == "ssh-regression":
+    user_key = paramiko.RSAKey(data=base64.b64decode(pathlib.Path(sys.argv[5]).read_text().split()[1]))
+elif auth_mode.startswith("key-"):
     keyfile = pathlib.Path(sys.argv[3]).parent / "id_test"
     if auth_mode == "key-ed25519":
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -77,7 +80,7 @@ class Auth(paramiko.ServerInterface):
         return True
 
     def check_auth_password(self, username, password):
-        return paramiko.AUTH_SUCCESSFUL if auth_mode == "password" and (username, password) == ("tester", "test-password") else paramiko.AUTH_FAILED
+        return paramiko.AUTH_SUCCESSFUL if auth_mode in ("password", "ssh-regression") and (username, password) == ("tester", "test-password") else paramiko.AUTH_FAILED
 
     def check_auth_publickey(self, username, key):
         return paramiko.AUTH_SUCCESSFUL if username == "tester" and user_key is not None and key == user_key else paramiko.AUTH_FAILED
@@ -103,7 +106,11 @@ class Files(paramiko.SFTPServerInterface):
         self.handles = []
 
     def local(self, path):
-        result = (root / path.lstrip("/")).resolve()
+        relative = pathlib.PurePosixPath(path.lstrip("/"))
+        parts = relative.parts
+        if parts and parts[0] in links:
+            relative = pathlib.PurePosixPath(links[parts[0]], *parts[1:])
+        result = (root / relative).resolve()
         if not result.is_relative_to(root):
             raise PermissionError(errno.EACCES, "Outside fixture root")
         return result
@@ -118,6 +125,8 @@ class Files(paramiko.SFTPServerInterface):
                 attrs = paramiko.SFTPAttributes.from_stat(item.stat())
                 attrs.filename = item.name
                 entries.append(attrs)
+            if self.local(path) == root:
+                entries.extend(self.link_attributes(link) for link in links)
             return entries
         except OSError as exc:
             return paramiko.SFTPServer.convert_errno(exc.errno)
@@ -128,7 +137,17 @@ class Files(paramiko.SFTPServerInterface):
         except OSError as exc:
             return paramiko.SFTPServer.convert_errno(exc.errno)
 
-    lstat = stat
+    @staticmethod
+    def link_attributes(name):
+        attrs = paramiko.SFTPAttributes()
+        attrs.filename = name
+        attrs.st_mode = 0o120777
+        return attrs
+
+    def lstat(self, path):
+        if (name := path.lstrip("/")) in links:
+            return self.link_attributes(name)
+        return self.stat(path)
 
     def open(self, path, flags, attr):
         try:

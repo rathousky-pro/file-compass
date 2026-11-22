@@ -283,7 +283,19 @@ namespace FileCompass
                 panel.SwitchTab(1); Wait(panel.TabNavigationTask);
                 assert(panel.Remote == browsing && panel.CurrentPath == "/sub", "second remote tab retains its folder");
                 var remoteTabs = panel.SaveTabs(); assert(remoteTabs[1].ProfileId == browsing.Profile.Id && remoteTabs[1].Path == "/sub", "saved remote tabs reference profile without credentials");
-                panel.CloseTab(1); Wait(panel.TabNavigationTask);
+                var closeConfirmation = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
+                closeConfirmation.Tick += delegate
+                {
+                    var dialog = Application.Current.Windows.Cast<Window>().FirstOrDefault(x => x.Title == L.Text("tabs.remoteCloseTitle"));
+                    if (dialog == null) return;
+                    closeConfirmation.Stop();
+                    var closeOnly = FluentUiTests.Children<Button>(dialog).Single(x => Convert.ToString(x.Content) == L.Text("tabs.closeOnly"));
+                    closeOnly.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                };
+                closeConfirmation.Start();
+                try { panel.CloseTab(1); }
+                finally { closeConfirmation.Stop(); }
+                Wait(panel.TabNavigationTask);
                 assert(panel.TabCount == 1 && panel.Remote == browsing && panel.CurrentPath == "/" && browsing.Session.FileExists("/sub"), "closing remote tab keeps shared connection usable");
                 var secondConnection = browsing.TransferConnection(); secondConnection.Profile.Id = Guid.NewGuid().ToString("N"); secondConnection.Profile.Name = "Druhý server"; secondConnection.OpenTransfer();
                 Wait(panel.AttachRemote(secondConnection));
@@ -405,7 +417,7 @@ namespace FileCompass
                 var connectedButton = panel.connectionButtons.Children.Cast<Button>().Single(x => x.Tag == panel.Remote);
                 assert(((StackPanel)connectedButton.Content).Children.OfType<TextBlock>().Single().Text == panel.Remote.Profile.Protocol.ToString(), "server button shows protocol only");
                 var disconnectItem = connectedButton.ContextMenu.Items.Cast<MenuItem>().Single();
-                assert((string)disconnectItem.Header == "Odpojit", "server icon context menu offers disconnect");
+                assert((string)disconnectItem.Header == L.Text("action.disconnect"), "server icon context menu offers disconnect");
                 disconnectItem.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
                 NavigationTests.Wait(panel.NavigationTask); assert(!panel.IsRemote && panel.CurrentPath == Path.GetFullPath(workspace) && panel.connectionButtons.Children.Count == 0, "FTP context-menu disconnect removes icon and returns to local folder");
                 File.WriteAllLines(Path.Combine(workspace, sftp ? "sftp-test-result.txt" : "ftp-test-result.txt"), passed.Select(x => sftp && !x.StartsWith("FTP and SFTP") && !x.StartsWith("FTP upload queue") ? x.Replace("SFTP", "FTP").Replace("FTP", "SFTP") : x).Concat(new[] { "PASS: " + passed.Count + " checks" })); return 0;

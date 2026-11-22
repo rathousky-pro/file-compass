@@ -1,0 +1,6 @@
+Renci.SshNet 2026.0.1 MIT https://www.nuget.org/packages/ssh.net/2026.0.1 SHA256 55C3CA42294ADEDD5C1A7ABAE2C596368FA2BB52601361D66DD4F442822B0469
+BouncyCastle.Cryptography 2.7.0 MIT https://www.nuget.org/packages/bouncycastle.cryptography/2.7.0 SHA256 4F96977E9C67334742C683410B3A361258219F0D3084A5E0BC10FBA96CF23A0D
+Microsoft.Extensions.Logging.Abstractions 8.0.3 MIT https://www.nuget.org/packages/microsoft.extensions.logging.abstractions/8.0.3 SHA256 B4E0E778AFDC76403792390B056F68DE0CED742D16C5B0347D9CCA6930F4761B
+Microsoft.Extensions.DependencyInjection.Abstractions 8.0.2 MIT https://www.nuget.org/packages/microsoft.extensions.dependencyinjection.abstractions/8.0.2 SHA256 19EDD4F5E69A4589DC314909B5854A22F89C4B9AB040591771397B2CB1A17BA6
+Microsoft.Bcl.AsyncInterfaces 8.0.0 MIT https://www.nuget.org/packages/microsoft.bcl.asyncinterfaces/8.0.0 SHA256 80678203BD0203A6594F4E330B22543C0DE5059382BB1C9334B7868B8F31B1BC
+System.Formats.Asn1 10.0.15 MIT https://www.nuget.org/packages/system.formats.asn1/10.0.15 SHA256 379526B7F6D3D84DD75E9838847991231E9CAE8BC510BA1FEA906DE9E8F9674C

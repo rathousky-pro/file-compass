@@ -95,13 +95,11 @@ namespace FileCompass
             if (DurableQueue.Identity(profile) != identity && !(legacyAnonymous && profile.FtpAnonymous))
                 throw new IOException(L.Text("queue.connectionProfileChanged"));
             var connection = new RemoteConnection(profile); try {
-                bool retryPassword = false;
-                try { await Task.Run(delegate { connection.Open(connection.Options(password)); }); }
-                catch (FileCompass.NetworkTransport.SessionRemoteException ex) {
-                    if (!profile.IsSshTransfer || !String.IsNullOrEmpty(password) || ex.ToString().IndexOf(L.Text("network.authenticationRejectedMatch"),StringComparison.OrdinalIgnoreCase) < 0) throw;
-                    retryPassword = true;
-                }
-                if (retryPassword) { connection.Dispose(); password = RequestPassword(profile,out remember); if (password == null) throw new OperationCanceledException(L.Text("queue.restoreCancelled")); connection = new RemoteConnection(profile); await Task.Run(delegate { connection.Open(connection.Options(password)); }); }
+                var options = connection.Options(password);
+                bool? fallbackRemember = await OpenWithSshFallback(connection, options);
+                if (!fallbackRemember.HasValue) throw new OperationCanceledException(L.Text("queue.restoreCancelled"));
+                remember |= fallbackRemember.Value;
+                password = options.Password;
                 if (remember && !legacyAnonymous) { profile.EncryptedPassword = NetworkSettingsStore.Protect(password); networkStore.Put(profile); } return connection;
             } catch { connection.Dispose(); throw; }
         }

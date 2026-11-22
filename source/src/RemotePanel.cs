@@ -43,14 +43,15 @@ namespace FileCompass
             foreach (var file in directory.Files)
             {
                 if (file.Name == "." || file.Name == "..") continue;
+                bool directoryRow = file.IsDirectory || file.LinksToDirectory;
                 int dot = file.Name.LastIndexOf('.');
-                string extension = file.IsDirectory || dot <= 0 ? "" : file.Name.Substring(dot);
+                string extension = directoryRow || dot <= 0 ? "" : file.Name.Substring(dot);
                 string iconPath = extension.IndexOfAny(Path.GetInvalidFileNameChars()) < 0 ? "file" + extension : "file";
-                rows.Add(new Entry { Name = file.IsDirectory ? "[" + file.Name + "]" : extension.Length == 0 ? file.Name : file.Name.Substring(0, dot),
-                    FullPath = RemoteConnection.Combine(path, file.Name), Extension = extension.TrimStart('.'), IsDirectory = file.IsDirectory,
+                rows.Add(new Entry { Name = directoryRow ? "[" + file.Name + "]" : extension.Length == 0 ? file.Name : file.Name.Substring(0, dot),
+                    FullPath = RemoteConnection.Combine(path, file.Name), Extension = extension.TrimStart('.'), IsDirectory = directoryRow,
                     IsHidden = file.Name.StartsWith(".", StringComparison.Ordinal),
-                    Bytes = file.IsDirectory ? 0 : file.Length, ModifiedTime = file.LastWriteTime, Modified = file.LastWriteTime.ToString("dd.MM.yyyy HH:mm"),
-                    Attributes = file.FilePermissions == null ? "" : file.FilePermissions.ToString(), Icon = DesktopIcons.FileIcon(iconPath, file.IsDirectory) });
+                    Bytes = directoryRow ? 0 : file.Length, ModifiedTime = file.LastWriteTime, Modified = file.LastWriteTime.ToString("dd.MM.yyyy HH:mm"),
+                    Attributes = file.FilePermissions == null ? "" : file.FilePermissions.ToString(), Icon = DesktopIcons.FileIcon(iconPath, directoryRow) });
             }
             return rows;
         }

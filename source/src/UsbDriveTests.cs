@@ -8,6 +8,9 @@ namespace FileCompass {
    check(UsbDriveActions.OnRoots(@"H:\Photos\one.jpg",new[]{@"H:\",@"I:\"}),"Files on source volume are detected");
    check(UsbDriveActions.OnRoots(@"I:\",new[]{@"H:\",@"I:\"}),"Other partitions on same device are detected");
    check(!UsbDriveActions.OnRoots(@"C:\Backup\H",new[]{@"H:\"}),"Unrelated paths are excluded");
+   check(UsbDriveActions.EjectFailure(23,3,"test.exe").StartsWith(L.Text("usb.vetoApp")) && UsbDriveActions.EjectFailure(23,3,"test.exe").Contains("test.exe"),"Application veto shows the Windows module name");
+   check(UsbDriveActions.EjectFailure(23,4,"test-service").StartsWith(L.Text("usb.vetoService")),"Service veto is distinguished from an application");
+   check(UsbDriveActions.EjectFailure(23,5,"").StartsWith(L.Text("usb.vetoOpen")),"Open handles receive their own diagnosis");
    var parents=new Dictionary<uint,uint>{{1,2},{2,3},{3,4}};Func<uint,uint?> parent=x=>parents.ContainsKey(x)?(uint?)parents[x]:null;
    Func<uint,string> ids=x=>x==1?@"SCSI\Disk":x==2?@"USBSTOR\Disk":x==3?@"USB\VID_1234&PID_5678\FLASH":@"USB\ROOT_HUB30";
    check(UsbDriveActions.FindEjectNode(1,parent,ids,x=>x==3)==3,"Safe removal selects removable parent of storage disk");

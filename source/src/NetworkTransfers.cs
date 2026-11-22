@@ -38,6 +38,8 @@ namespace FileCompass
             var options = new TransferOptions { TransferMode = TransferMode.Binary, PreserveTimestamp = true, OverwriteMode = OverwriteMode.Overwrite, Resume = rule == NetworkCopyRule.Resume && (target == null || String.IsNullOrEmpty(target.Profile.CloudAccountId)) };
             if (source != null)
             {
+                if (entry.IsDirectory && source.Profile.IsSshTransfer && source.Session.GetFileInfo(entry.FullPath).FileType == 'L')
+                    throw new IOException(L.Text("transfer.linkUnsupportedPrefix") + entry.FullPath);
                 string name = RemoteConnection.Name(entry.FullPath); FileOperations.ValidateName(name);
                 string destination = Path.Combine(targetPath, name);
                 bool exists = File.Exists(destination) || Directory.Exists(destination);

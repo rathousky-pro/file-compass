@@ -1,7 +1,9 @@
 """Loopback SSH/SCP fixture. No SFTP subsystem; no real shell commands executed."""
-import datetime, os, pathlib, shlex, shutil, socket, sys, threading, time
+import base64, datetime, os, pathlib, shlex, shutil, socket, sys, threading, time
 sys.path.insert(0, sys.argv[1])
 import paramiko
+authorized = paramiko.RSAKey(data=base64.b64decode(pathlib.Path(sys.argv[4]).read_text().split()[1])) if len(sys.argv) > 4 else None
+links = {"folder link": "sub", "broken link": "missing", "file link": "český soubor.txt"} if authorized else {}
 root = pathlib.Path(sys.argv[2]).resolve()
 root.mkdir(parents=True, exist_ok=True)
 (root / "sub").mkdir(exist_ok=True)
@@ -11,7 +13,11 @@ root.mkdir(parents=True, exist_ok=True)
 (root / "sub" / "nested.txt").write_text("nested", encoding="utf-8")
 
 def local(path):
-    result = (root / path.lstrip("/")).resolve()
+    relative = pathlib.PurePosixPath(path.lstrip("/"))
+    parts = relative.parts
+    if parts and parts[0] in links:
+        relative = pathlib.PurePosixPath(links[parts[0]], *parts[1:])
+    result = (root / relative).resolve()
     if not result.is_relative_to(root): raise PermissionError("Outside fixture root")
     return result
 def line(channel):
@@ -68,6 +74,20 @@ def execute(channel, raw):
                         if target.name == "slow.bin": time.sleep(.008)
                 channel.sendall(b"\0"); ack(channel)
             else: raise IOError("Unsupported SCP operation")
+        elif authorized and args[0] == "find":
+            raise IOError("find: unrecognized option: -printf")
+        elif authorized and args[0] == "ls":
+            folder = local(args[-1])
+            listing = ["total 20", "router banner", "crw-rw-rw- 1 0 0 1, 3 Jan  1 12:05 device"]
+            for item in folder.iterdir():
+                mode = "drwxr-xr-x" if item.is_dir() else "-rw-r--r--"
+                listing.append(f"{mode} 1 0 0 {item.stat().st_size} Jan  1 12:05 {item.name}")
+            if folder == root:
+                listing.extend(f"lrwxrwxrwx 1 0 0 3 Jan  1 12:05 {name} -> {target}" for name, target in links.items())
+            channel.sendall(("\n".join(listing) + "\n").encode("utf-8"))
+        elif authorized and args[:3] == ["for", "p", "in"]:
+            operands = args[3:args.index("do")]
+            channel.sendall("".join("1" if local(path.rstrip(";")).is_dir() else "0" for path in operands).encode("ascii"))
         elif args[0] == "find":
             folder = local(args[1]); values = []
             for item in folder.iterdir():
@@ -96,7 +116,9 @@ def execute(channel, raw):
 class Auth(paramiko.ServerInterface):
     def check_auth_password(self, username, password):
         return paramiko.AUTH_SUCCESSFUL if (username, password) == ("tester", "test-password") else paramiko.AUTH_FAILED
-    def get_allowed_auths(self, username): return "password"
+    def check_auth_publickey(self, username, key):
+        return paramiko.AUTH_SUCCESSFUL if username == "tester" and authorized is not None and key == authorized else paramiko.AUTH_FAILED
+    def get_allowed_auths(self, username): return "publickey,password" if authorized is not None else "password"
     def check_channel_request(self, kind, chanid):
         return paramiko.OPEN_SUCCEEDED if kind == "session" else paramiko.OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
     def check_channel_exec_request(self, channel, command):

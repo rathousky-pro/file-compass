@@ -74,3 +74,4 @@
 "/source/ui/licenses/YamlDotNet/LICENSE-libyaml.txt" -text
 "/source/ui/licenses/YamlDotNet/LICENSE.txt" -text
 "/source/ui/licenses/YamlDotNet/SOURCE.json" -text
+"/source/ui/licenses/ssh-keys/*.txt" -text -whitespace

@@ -222,13 +222,13 @@ namespace FileCompass
                 }
                 return;
             }
-            var setup = new CopySetupDialog(this, entries, destination, copyTargets, move); if (setup.ShowDialog() != true) return;
+            var setup = new CopySetupDialog(this, entries, destination, copyTargets, move, allowUsbEject:true); if (setup.ShowDialog() != true) return;
             setup.Options.Move = move;
-            QueueExternalCopy(entries.Select(x => x.FullPath).ToArray(), setup.Options);
+            QueueExternalCopy(entries.Select(x => x.FullPath).ToArray(), setup.Options, setup.EjectDestination);
         }
-        internal void QueueExternalCopy(string[] paths, CopyOptions options)
+        internal void QueueExternalCopy(string[] paths, CopyOptions options, ExtSource ejectDestination = null)
         {
-            EnqueueCopy(new CopyJob { Sources = paths, Options = options }); if (!copyRunning) RunCopyQueue();
+            EnqueueCopy(new CopyJob { Sources = paths, Options = options, EjectDestination = ejectDestination }); if (!copyRunning) RunCopyQueue();
         }
         async void QueuePanelDrop(FilePanel source, FilePanel target, Entry[] entries, bool move)
         {

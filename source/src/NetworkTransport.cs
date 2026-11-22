@@ -19,6 +19,7 @@ namespace FileCompass.NetworkTransport
     {
         public Protocol Protocol;
         public string HostName, UserName, Password, SshHostKeyFingerprint, SshPrivateKeyPath, TlsClientCertificatePath;
+        internal string SshPrivateKeyPassphrase;
         public int PortNumber;
         public TimeSpan Timeout;
         public FtpMode FtpMode; public FtpSecure FtpSecure;
@@ -32,6 +33,7 @@ namespace FileCompass.NetworkTransport
         public string Name, FullName, FilePermissions;
         public long Length; public DateTime LastWriteTime;
         public char FileType;
+        internal bool LinksToDirectory;
         public bool IsDirectory { get { return FileType == 'D'; } }
         public bool IsParentDirectory { get { return Name == ".."; } }
         public bool IsThisDirectory { get { return Name == "."; } }
@@ -41,6 +43,10 @@ namespace FileCompass.NetworkTransport
     {
         public SessionRemoteException(string message) : base(message) { }
         public SessionRemoteException(string message, Exception inner) : base(message, inner) { }
+    }
+    internal sealed class SshAuthenticationException : IOException
+    {
+        internal SshAuthenticationException(string message) : base(message) { }
     }
     public sealed class TransferOptions
     {
@@ -89,7 +95,15 @@ namespace FileCompass.NetworkTransport
                 else { ssh = new NativeSsh(settings, CheckAbort,Traffic); ssh.Open(false); }
                 CheckAbort();
             }
-            catch (Exception ex) { Dispose(); CheckAbort(); throw new SessionRemoteException(L.Text("network.connectionToPrefix") + settings.HostName + " selhalo: " + ex.Message, ex); }
+            catch (Exception ex)
+            {
+                Dispose();
+                CheckAbort();
+                string message = settings.Protocol == Protocol.Scp || settings.Protocol == Protocol.Sftp
+                    ? L.Format("ssh.connectionOpenFailedFormat", settings.HostName, ex.Message)
+                    : L.Text("network.connectionToPrefix") + settings.HostName + " selhalo: " + ex.Message;
+                throw new SessionRemoteException(message, ex);
+            }
         }
         public string ScanFingerprint(SessionOptions settings, string algorithm)
         { using (var probe = new NativeSsh(settings, CheckAbort)) { probe.Open(true); return probe.Fingerprint; } }
@@ -102,7 +116,12 @@ namespace FileCompass.NetworkTransport
             if (options.Protocol == Protocol.Nfs) return NfsNative.List(options.HostName, options.Raw("NfsExport", "/"), Int32.Parse(options.Raw("NfsVersion", "3")), path);
             if (options.Protocol == Protocol.Sftp) return ssh.List(path);
             var result = new RemoteDirectoryInfo();
-            if (options.Protocol == Protocol.Scp) { result.Files.AddRange(ShellListing(path)); return result; }
+            if (options.Protocol == Protocol.Scp)
+            {
+                result.Files.AddRange(ShellListing(path));
+                ResolveScpDirectoryLinks(result.Files, Command);
+                return result;
+            }
             string mode = options.Raw("FtpUseMlsd", "auto"); bool machine = mode != "off"; byte[] data;
             try { data = Curl.Listing(path, machine ? "MLSD" : options.Raw("FtpListAll", "auto") == "on" ? "LIST -a" : "LIST"); }
             catch (SessionRemoteException) { if (!machine || mode == "on") throw; machine = false; data = Curl.Listing(path, options.Raw("FtpListAll", "auto") == "on" ? "LIST -a" : "LIST"); }
@@ -161,9 +180,10 @@ namespace FileCompass.NetworkTransport
             // GNU find is lossless for filenames with whitespace; a traditional Unix ls
             // fallback permits browsing servers with BusyBox/BSD userland.
             string listing;
+            string operand = path == "/" ? "/" : path + "/.";
             try
             {
-                listing = Command("LC_ALL=C find " + Quote(path) + " -mindepth 1 -maxdepth 1 -printf '%y\\0%s\\0%T@\\0%f\\0'");
+                listing = Command("LC_ALL=C find " + Quote(operand) + " -mindepth 1 -maxdepth 1 -printf '%y\\0%s\\0%T@\\0%f\\0'");
                 var parts = listing.Split('\0'); var files = new List<RemoteFileInfo>();
                 for (int i = 0; i + 3 < parts.Length; i += 4)
                 {
@@ -175,15 +195,19 @@ namespace FileCompass.NetworkTransport
                 }
                 return files;
             }
-            catch (SessionRemoteException) { listing = Command("LC_ALL=C ls -lan -- " + Quote(path)); }
+            catch (SessionRemoteException) { listing = Command("LC_ALL=C ls -lan -- " + Quote(operand)); }
+            return ParseScpListing(path, listing);
+        }
+        internal static List<RemoteFileInfo> ParseScpListing(string path, string listing)
+        {
             var fallback = new List<RemoteFileInfo>();
             foreach (string line in listing.Split('\n'))
             {
                 if (String.IsNullOrWhiteSpace(line) || line.StartsWith("total ")) continue;
                 var match = Regex.Match(line, @"^([dl-][rwxstST-]{9}[+@.]?)\s+\d+\s+\S+\s+\S+\s+(\d+)\s+(\w+)\s+(\d+)\s+([\d:]+)\s(.*)$");
-                if (!match.Success) throw new SessionRemoteException(L.Text("scp.unsupportedListingFormat"));
+                if (!match.Success) continue;
                 string name = match.Groups[6].Value.TrimEnd('\r');
-                if (match.Groups[1].Value[0] == 'l') { int arrow = name.LastIndexOf(" -> ", StringComparison.Ordinal); if (arrow >= 0) name = name.Substring(0, arrow); }
+                if (match.Groups[1].Value[0] == 'l') { int arrow = name.IndexOf(" -> ", StringComparison.Ordinal); if (arrow >= 0) name = name.Substring(0, arrow); }
                 string date = match.Groups[3].Value + " " + match.Groups[4].Value + " " + match.Groups[5].Value;
                 DateTime time; bool recent = date.IndexOf(':') >= 0;
                 if (!DateTime.TryParseExact(date, recent ? "MMM d HH:mm" : "MMM d yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AllowWhiteSpaces, out time)) time = new DateTime(1970, 1, 1);
@@ -193,7 +217,24 @@ namespace FileCompass.NetworkTransport
                 fallback.Add(new RemoteFileInfo { Name = name, FullName = RemoteConnection.Combine(path, name), Length = Int64.Parse(match.Groups[2].Value),
                     LastWriteTime = time, FileType = match.Groups[1].Value[0] == 'd' ? 'D' : match.Groups[1].Value[0] == 'l' ? 'L' : '-', FilePermissions = match.Groups[1].Value });
             }
+            if (fallback.Count == 0 && !listing.Split('\n').Any(line => Regex.IsMatch(line, @"^\s*total\s+0\s*$") ||
+                Regex.IsMatch(line, @"^d[rwxstST-]{9}[+@.]?\s+.*\s\.\.?\s*$")) && !String.IsNullOrWhiteSpace(listing))
+                throw new SessionRemoteException(L.Text("scp.unsupportedListingFormat"));
             return fallback;
+        }
+        internal static void ResolveScpDirectoryLinks(IEnumerable<RemoteFileInfo> files, Func<string, string> command)
+        {
+            var links = files.Where(x => x.FileType == 'L').ToArray();
+            for (int start = 0; start < links.Length; start += 64)
+            {
+                var batch = links.Skip(start).Take(64).ToArray();
+                string script = "for p in " + String.Join(" ", batch.Select(x => Quote(x.FullName))) +
+                    "; do if [ -d \"$p\" ]; then printf '1'; else printf '0'; fi; done";
+                string response = command(script);
+                if (response.Length != batch.Length || response.Any(c => c != '0' && c != '1'))
+                    throw new SessionRemoteException(L.Text("scp.invalidListing"));
+                for (int i = 0; i < batch.Length; i++) batch[i].LinksToDirectory = response[i] == '1';
+            }
         }
         public RemoteFileInfo GetFileInfo(string path)
         {

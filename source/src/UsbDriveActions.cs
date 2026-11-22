@@ -30,8 +30,39 @@ namespace FileCompass {
             } catch { return null; }
         }
         internal static ExtSource ResolvePhysical(ExtSource expected){if(expected==null||!expected.Physical)return null;uint number;if(!expected.Device.StartsWith(@"\\.\PHYSICALDRIVE",StringComparison.OrdinalIgnoreCase)||!UInt32.TryParse(expected.Device.Substring(17),out number))return null;try{var now=UsbStorageDevice.Find(number).Source;uint system=ExtDiskStream.DiskNumber(Path.GetPathRoot(Environment.SystemDirectory)),app=ExtDiskStream.DiskNumber(Path.GetPathRoot(Process.GetCurrentProcess().MainModule.FileName));if(!Eligible(now,number,system,app)||now.Token!=expected.Token||now.Length!=expected.Length)return null;return now;}catch{return null;}}
-        internal static void Verify(string root, ExtSource expected) {
-            var now=ExtLocations.IsPath(root)?ResolvePhysical(expected):Resolve(root);
+        static bool PhysicalTarget(string root, ExtSource source) {
+            return ExtLocations.IsPath(root) || String.Equals(root,source.Device,StringComparison.OrdinalIgnoreCase);
+        }
+        internal static ExtSource ResolveEjectDrive(string root) {
+            try { return Ejectable(UsbStorageDevice.Find(ExtDiskStream.DiskNumber(root))); }
+            catch (Exception ex) when (ex is IOException || ex is System.ComponentModel.Win32Exception || ex is UnauthorizedAccessException) { return null; }
+        }
+        internal static ExtSource ResolveCopyDestination(string target) {
+            string root=Path.GetPathRoot(target);
+            if(String.IsNullOrEmpty(root) || root.Length!=3 || root[1]!=':')return null;
+            // A junction, symbolic link or mounted volume may redirect the copy to a different disk.
+            for(string path=target.TrimEnd('\\'); path.Length>root.TrimEnd('\\').Length; path=Path.GetDirectoryName(path)) {
+                try { if((File.GetAttributes(path)&FileAttributes.ReparsePoint)!=0)return null; }
+                catch (FileNotFoundException) {}
+                catch (DirectoryNotFoundException) {}
+                catch (UnauthorizedAccessException) { return null; }
+            }
+            return ResolveEjectDrive(root);
+        }
+        internal static ExtSource Ejectable(UsbStorageDevice.Device disk) {
+            if(disk.Source==null)return null;
+            try {
+                var target=FindEjectNode(disk.Node,Parent,DeviceId,Removable);
+                ProtectEjectNode(target);
+                return disk.Source;
+            } catch (Exception ex) when (ex is IOException || ex is System.ComponentModel.Win32Exception || ex is UnauthorizedAccessException) { return null; }
+        }
+        internal static void Verify(string root, ExtSource expected, bool eject = false) {
+            if(expected==null)throw new IOException(L.Text("ext.changed"));
+            ExtSource now;
+            if(!eject) now=ExtLocations.IsPath(root)?ResolvePhysical(expected):Resolve(root);
+            else if(PhysicalTarget(root,expected)) now=Ejectable(UsbStorageDevice.Find(UInt32.Parse(expected.Device.Substring(17))));
+            else now=ResolveEjectDrive(root);
             if(expected==null || now==null || !String.Equals(now.Device,expected.Device,StringComparison.OrdinalIgnoreCase) || now.Token!=expected.Token || now.Length!=expected.Length) throw new IOException(L.Text("ext.changed"));
         }
         internal static int DriveIndex(string root) {
@@ -43,7 +74,11 @@ namespace FileCompass {
             return roots.Any(root=>String.Equals(path,root.TrimEnd('\\'),StringComparison.OrdinalIgnoreCase) || path.StartsWith(root,StringComparison.OrdinalIgnoreCase));
         }
         internal static string[] VolumeRoots(string root, ExtSource source) {
-            Verify(root,source); uint disk=ExtLocations.IsPath(root)?UInt32.Parse(source.Device.Substring(17)):ExtDiskStream.DiskNumber(root); var roots=new List<string>{root};
+            Verify(root,source,true);
+            return VolumeRoots(UInt32.Parse(source.Device.Substring(17)));
+        }
+        internal static string[] VolumeRoots(uint disk) {
+            var roots=new List<string>();
             foreach(var drive in DriveInfo.GetDrives()) {
                 try { if((drive.DriveType==DriveType.Removable || drive.DriveType==DriveType.Fixed) && ExtDiskStream.DiskNumber(drive.Name)==disk && !roots.Contains(drive.Name,StringComparer.OrdinalIgnoreCase)) roots.Add(drive.Name); }
                 catch(IOException) {} catch(System.ComponentModel.Win32Exception) {} catch(UnauthorizedAccessException) {}
@@ -80,11 +115,28 @@ namespace FileCompass {
             }
         }
         internal static void Eject(string root, ExtSource source) {
-            Verify(root,source);string pnp=source.Token.Substring(0,source.Token.LastIndexOf('|'));uint node;
+            Verify(root,source,true);string pnp=source.Token.Substring(0,source.Token.LastIndexOf('|'));uint node;
             if(CM_Locate_DevNodeW(out node,pnp,0)!=0)throw new IOException(L.Text("ext.changed"));
-            uint target=FindEjectNode(node,Parent,DeviceId,Removable);ProtectEjectNode(target);Verify(root,source);
+            uint target=FindEjectNode(node,Parent,DeviceId,Removable);
+            ProtectEjectNode(target);
+            if(UsbStorageDevice.Enumerate().Any(disk=>disk.Node!=node && AncestorContains(disk.Node,target,Parent)))
+                throw new IOException(L.Text("usb.sharedDevice"));
+            Verify(root,source,true);
             int veto;var name=new StringBuilder(260);uint status=CM_Request_Device_EjectW(target,out veto,name,name.Capacity,0);
-            if(status!=0)throw new IOException(L.Format("usb.ejectFailed",status,veto,name.ToString()));
+            if(status!=0)throw new IOException(EjectFailure(status,veto,name.ToString()));
+        }
+        internal static string EjectFailure(uint status, int veto, string name) {
+            string reason;
+            switch(veto) {
+                case 3: reason=L.Text("usb.vetoApp"); break;
+                case 4: reason=L.Text("usb.vetoService"); break;
+                case 2: case 5: reason=L.Text("usb.vetoOpen"); break;
+                case 1: case 6: case 7: case 8: case 10: case 11: reason=L.Text("usb.vetoDevice"); break;
+                case 12: reason=L.Text("usb.vetoPermission"); break;
+                default: reason=L.Text("usb.vetoUnknown"); break;
+            }
+            return reason + (String.IsNullOrWhiteSpace(name) ? "" : "\n" + name)
+                + "\n\n" + L.Format("usb.ejectCodes",status,veto);
         }
     }
 
@@ -94,7 +146,7 @@ namespace FileCompass {
             if(IsRemote || (!ext&&!UsbDriveActions.OnRoots(CurrentPath,roots) && !(IsArchive && UsbDriveActions.OnRoots(Archive.FilePath,roots))))return;
             CancelNavigation();DisposePanelTools();detailRequest++;if(fileDetail!=null)fileDetail.ShowMessage("");
             Navigate(fallback,false);if(NavigationTask!=null)await NavigationTask;
-            if(UsbDriveActions.OnRoots(CurrentPath,roots) || (IsArchive && UsbDriveActions.OnRoots(Archive.FilePath,roots)))throw new IOException(L.Text("usb.busy"));
+            if((ext && IsExt) || UsbDriveActions.OnRoots(CurrentPath,roots) || (IsArchive && UsbDriveActions.OnRoots(Archive.FilePath,roots)))throw new IOException(L.Text("usb.busy"));
         }
     }
 
@@ -105,18 +157,25 @@ namespace FileCompass {
             var menu=new ContextMenu();
             var heading=new MenuItem{Header=(ExtLocations.IsPath(root)?"EXT":root)+"  "+source.Name,IsEnabled=false};menu.Items.Add(heading);menu.Items.Add(new Separator());
             var eject=new MenuItem{Header=L.Text("usb.eject"),Icon=new Image{Source=DesktopIcons.FlashDriveIcon,Width=16,Height=16},IsEnabled=!UsbActionsBlocked};eject.Click+=delegate{invoke(false);};menu.Items.Add(eject);
-            var format=new MenuItem{Header=L.Text("usb.format"),IsEnabled=!UsbActionsBlocked};format.Click+=delegate{invoke(true);};if(!ExtLocations.IsPath(root))menu.Items.Add(format);
+            var format=new MenuItem{Header=L.Text("usb.format"),IsEnabled=!UsbActionsBlocked};format.Click+=delegate{invoke(true);};if(source.Removable&&!ExtLocations.IsPath(root))menu.Items.Add(format);
+            var devices=new MenuItem{Header=L.Text("usb.devices")};devices.Click+=delegate{ShowUsbDevices();};menu.Items.Add(devices);
             menu.Items.Add(new Separator());var linux=new MenuItem{Header=L.Text("ext.title")};linux.Click+=delegate{new ExtBrowserWindow(this).Show();};menu.Items.Add(linux);
             return menu;
         }
         internal async void OpenUsbDriveMenu(string root, FrameworkElement target) {
             try {
-                var source=await Task.Run(()=>ExtLocations.IsPath(root)?UsbDriveActions.ResolvePhysical(ExtLocations.Get(root).Source):UsbDriveActions.Resolve(root));if(source==null || !target.IsLoaded)return;
-                var menu=CreateUsbDriveMenu(root,source,format=>RunUsbDriveAction(root,source,format));menu.PlacementTarget=target;menu.IsOpen=true;
+                var source=await Task.Run(()=>ExtLocations.IsPath(root)?UsbDriveActions.ResolvePhysical(ExtLocations.Get(root).Source):UsbDriveActions.ResolveEjectDrive(root)??UsbDriveActions.Resolve(root));if(source==null || !target.IsLoaded)return;
+                var menu=CreateUsbDriveMenu(root,source,async format=>await RunUsbDriveAction(root,source,format));menu.PlacementTarget=target;menu.IsOpen=true;
             } catch(Exception ex) { MessageBox.Show(this,ex.Message,ApplicationBrand.Name); }
         }
-        internal async void RunUsbDriveAction(string root, ExtSource source, bool format) {
-            if(UsbActionsBlocked){MessageBox.Show(this,L.Text("app.fileOperationBusy"),ApplicationBrand.Name);return;}
+        string UsbBlockReason() {
+            if(copyRunning || copyJobs.Count>0 || networkCopies>0 || networkJobs.Any(x=>x.Planning>0))return L.Text("usb.copyBusy");
+            if(PanelsLoading)return L.Text("usb.panelsBusy");
+            return L.Text("app.fileOperationBusy");
+        }
+        internal async Task RunUsbDriveAction(string root, ExtSource source, bool format, Window owner = null, Action<string> report = null) {
+            Action<string> failure = report ?? (message=>MessageBox.Show(owner??this,message,L.Text(format?"usb.format":"usb.eject"),MessageBoxButton.OK,MessageBoxImage.Warning));
+            if(UsbActionsBlocked){failure(UsbBlockReason());return;}
             usbActionRunning=true;fileToolsRunning++;bool enabled=IsEnabled;IsEnabled=false;
             try {
                 using(await ExtIoGate.PauseAsync(source))using(await ExtDiscovery.SuspendAsync()){
@@ -127,9 +186,14 @@ namespace FileCompass {
                 await Task.WhenAll(left.ReleaseUsbRoots(roots,fallback,source),right.ReleaseUsbRoots(roots,fallback,source));
                 if(UsbDriveActions.OnRoots(Environment.CurrentDirectory,roots))Environment.CurrentDirectory=fallback;
                 if(format)UsbDriveActions.Format(this,root,source);
-                else {await Task.Run(()=>UsbDriveActions.Eject(root,source));MessageBox.Show(this,L.Format("usb.removed",root),L.Text("usb.eject"),MessageBoxButton.OK,MessageBoxImage.Information);}
+                else {
+                    await Task.Run(()=>UsbDriveActions.Eject(root,source));
+                    string message=L.Format("usb.removed",source.Name);
+                    if(report!=null)report(message);
+                    else MessageBox.Show(owner??this,message,L.Text("usb.eject"),MessageBoxButton.OK,MessageBoxImage.Information);
                 }
-            } catch(Exception ex) { MessageBox.Show(this,ex.Message,L.Text(format?"usb.format":"usb.eject"),MessageBoxButton.OK,MessageBoxImage.Warning); }
+                }
+            } catch(Exception ex) { failure(ex.Message); }
             finally {IsEnabled=enabled;fileToolsRunning--;usbActionRunning=false;left.RefreshDriveBar();right.RefreshDriveBar();}
         }
     }

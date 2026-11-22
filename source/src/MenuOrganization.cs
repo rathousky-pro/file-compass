@@ -18,7 +18,7 @@ namespace FileCompass {
             GroupMenu(commands, "menuGroup.workspace", "favorites.openMenu", "workspace.title", "projection.addToBasket", "projection.basket", "projection.removeFromBasket");
             GroupMenu(commands, "menuGroup.operations", "queue.copyTitle", "queue.restoreSaved", "queue.saveAndExit", "queue.networkCopyTitle");
             GroupMenu(commands, "menuGroup.compare", "action.compareFiles", "action.compareFolders", "action.synchronizeFolders");
-            GroupMenu(commands, "analyzer.menuGroup", "analyzer.title", "smart.title", "diskUsage.title", "ext.title");
+            GroupMenu(commands, "analyzer.menuGroup", "analyzer.title", "smart.title", "diskUsage.title", "ext.title", "usb.devices");
             var duplicate = commands.Items.OfType<MenuItem>().FirstOrDefault(x => Convert.ToString(x.Header) == L.Text("action.batchRename")); if (duplicate != null) commands.Items.Remove(duplicate);
             GroupMenu(network, "menuGroup.networkDrives", "network.mapDriveMenu", "network.browseDevices");
             GroupMenu(network, "menuGroup.networkSession", "network.openActiveSshTerminal", "network.disconnectActivePanel");

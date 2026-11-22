@@ -32,6 +32,7 @@ namespace FileCompass.NetworkTransport
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] internal delegate int Progress(IntPtr user, long total, long done, long uploadTotal, long uploadDone);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] internal delegate int HostKey(IntPtr user, int type, IntPtr key, UIntPtr length);
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)] internal delegate void Keyboard(IntPtr name, int nameLength, IntPtr instruction, int instructionLength, int count, IntPtr prompts, IntPtr responses, IntPtr user);
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] internal delegate int SignPublicKey(IntPtr session, out IntPtr signature, out UIntPtr signatureLength, IntPtr payload, UIntPtr payloadLength, IntPtr context);
         [StructLayout(LayoutKind.Sequential)] internal struct Attributes { public uint Flags; public ulong Size; public uint Uid, Gid, Permissions, Atime, Mtime; }
         [DllImport(Dll, CallingConvention=CallingConvention.Cdecl)] static extern int curl_global_init(int flags);
         [DllImport(Dll, CallingConvention=CallingConvention.Cdecl)] internal static extern IntPtr curl_easy_init();
@@ -63,7 +64,8 @@ namespace FileCompass.NetworkTransport
         [DllImport(Dll, CallingConvention=CallingConvention.Cdecl)] internal static extern int libssh2_session_last_error(IntPtr session, out IntPtr text, out int length, int allocate);
         [DllImport(Dll, CallingConvention=CallingConvention.Cdecl)] internal static extern int libssh2_session_free(IntPtr session);
         [DllImport(Dll, CallingConvention=CallingConvention.Cdecl)] internal static extern int libssh2_userauth_password_ex(IntPtr session, byte[] name, uint nameLength, byte[] password, uint length, IntPtr change);
-        [DllImport(Dll, CallingConvention=CallingConvention.Cdecl)] internal static extern int libssh2_userauth_publickey_frommemory(IntPtr session, byte[] name, UIntPtr nameLength, IntPtr publicKey, UIntPtr publicLength, byte[] privateKey, UIntPtr privateLength, IntPtr passphrase);
+        [DllImport(Dll, CallingConvention=CallingConvention.Cdecl)] internal static extern int libssh2_userauth_publickey(IntPtr session, byte[] name, byte[] publicKey, UIntPtr publicLength, SignPublicKey sign, IntPtr context);
+        [DllImport(Dll, CallingConvention=CallingConvention.Cdecl)] internal static extern int libssh2_userauth_publickey_frommemory(IntPtr session, byte[] name, UIntPtr nameLength, IntPtr publicKey, UIntPtr publicLength, byte[] privateKey, UIntPtr privateLength, byte[] passphrase);
         [DllImport(Dll, CallingConvention=CallingConvention.Cdecl)] internal static extern int libssh2_userauth_keyboard_interactive_ex(IntPtr session, byte[] name, uint length, Keyboard callback);
         [DllImport(Dll, CallingConvention=CallingConvention.Cdecl)] internal static extern IntPtr libssh2_channel_open_ex(IntPtr session, byte[] type, uint typeLength, uint window, uint packet, IntPtr message, uint length);
         [DllImport(Dll, CallingConvention=CallingConvention.Cdecl)] internal static extern int libssh2_channel_process_startup(IntPtr channel, byte[] request, uint requestLength, byte[] message, uint length);

@@ -51,6 +51,7 @@
     <Reference Include="ICSharpCode.AvalonEdit"><HintPath>ui\ICSharpCode.AvalonEdit.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Markdig"><HintPath>ui\Markdig.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="YamlDotNet"><HintPath>ui\YamlDotNet.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Renci.SshNet"><HintPath>ui\Renci.SshNet.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="netstandard" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="Microsoft.VisualBasic" />

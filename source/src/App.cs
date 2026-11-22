@@ -502,6 +502,7 @@ namespace FileCompass
             if (args.Contains("--ftp-test")) return NetworkTests.Ftp(args[1], Int32.Parse(args[2]));
             if (args.Contains("--sftp-test")) return NetworkTests.Ftp(args[1], Int32.Parse(args[2]), true, args.Length > 3 ? Int32.Parse(args[3]) : 0);
             if (args.Contains("--ssh-test")) return SshTests.Run(args.Length > 1 ? args[1] : Path.GetTempPath());
+            if (args.Contains("--ssh-transfer-test")) return NativeNetworkTests.SshTransfer(args[1], Int32.Parse(args[2]), Int32.Parse(args[3]));
             if (args.Contains("--scp-test")) return NativeNetworkTests.Scp(args[1], Int32.Parse(args[2]));
 #endif
             try {

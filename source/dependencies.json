@@ -4,61 +4,12 @@
   "scope": "Pinned source distribution; optional vendor updates have independent versions and terms.",
   "binaries": [
     {
-      "file": "ui/Renci.SshNet.dll",
-      "sha256": "55c3ca42294adedd5c1a7abae2c596368fa2bb52601361d66dd4f442822b0469",
-      "component": "ssh-key-reader",
-      "license": "MIT",
-      "notices": [
-        "ui/licenses/ssh-keys/Renci.SshNet.txt"
-      ]
-    },
-    {
       "file": "ui/BouncyCastle.Cryptography.dll",
       "sha256": "4f96977e9c67334742c683410b3a361258219f0d3084a5e0bc10fba96cf23a0d",
       "component": "ssh-key-reader",
       "license": "MIT",
       "notices": [
         "ui/licenses/ssh-keys/BouncyCastle.Cryptography.txt"
-      ]
-    },
-    {
-      "file": "ui/Microsoft.Extensions.Logging.Abstractions.dll",
-      "sha256": "b4e0e778afdc76403792390b056f68de0ced742d16c5b0347d9cca6930f4761b",
-      "component": "ssh-key-reader",
-      "license": "MIT",
-      "notices": [
-        "ui/licenses/ssh-keys/Microsoft.Extensions.Logging.Abstractions-NOTICES.txt",
-        "ui/licenses/ssh-keys/Microsoft.Extensions.Logging.Abstractions.txt"
-      ]
-    },
-    {
-      "file": "ui/Microsoft.Extensions.DependencyInjection.Abstractions.dll",
-      "sha256": "19edd4f5e69a4589dc314909b5854a22f89c4b9ab040591771397b2cb1a17ba6",
-      "component": "ssh-key-reader",
-      "license": "MIT",
-      "notices": [
-        "ui/licenses/ssh-keys/Microsoft.Extensions.DependencyInjection.Abstractions-NOTICES.txt",
-        "ui/licenses/ssh-keys/Microsoft.Extensions.DependencyInjection.Abstractions.txt"
-      ]
-    },
-    {
-      "file": "ui/Microsoft.Bcl.AsyncInterfaces.dll",
-      "sha256": "80678203bd0203a6594f4e330b22543c0de5059382bb1c9334b7868b8f31b1bc",
-      "component": "ssh-key-reader",
-      "license": "MIT",
-      "notices": [
-        "ui/licenses/ssh-keys/Microsoft.Bcl.AsyncInterfaces-NOTICES.txt",
-        "ui/licenses/ssh-keys/Microsoft.Bcl.AsyncInterfaces.txt"
-      ]
-    },
-    {
-      "file": "ui/System.Formats.Asn1.dll",
-      "sha256": "379526b7f6d3d84dd75e9838847991231e9cae8bc510ba1fea906de9e8f9674c",
-      "component": "ssh-key-reader",
-      "license": "MIT",
-      "notices": [
-        "ui/licenses/ssh-keys/System.Formats.Asn1-NOTICES.txt",
-        "ui/licenses/ssh-keys/System.Formats.Asn1.txt"
       ]
     },
     {
@@ -136,12 +87,42 @@
       ]
     },
     {
+      "file": "ui/Microsoft.Bcl.AsyncInterfaces.dll",
+      "sha256": "80678203bd0203a6594f4e330b22543c0de5059382bb1c9334b7868b8f31b1bc",
+      "component": "ssh-key-reader",
+      "license": "MIT",
+      "notices": [
+        "ui/licenses/ssh-keys/Microsoft.Bcl.AsyncInterfaces-NOTICES.txt",
+        "ui/licenses/ssh-keys/Microsoft.Bcl.AsyncInterfaces.txt"
+      ]
+    },
+    {
       "file": "ui/Microsoft.Bcl.HashCode.dll",
       "sha256": "3a4e851ee5fc0f6182aa5a3d65dc56fcd6979b65334b5c3b92fbdc791457c0ab",
       "component": "microsoft",
       "license": "MIT",
       "notices": [
         "ui/licenses/MICROSOFT-LICENSE.txt"
+      ]
+    },
+    {
+      "file": "ui/Microsoft.Extensions.DependencyInjection.Abstractions.dll",
+      "sha256": "19edd4f5e69a4589dc314909b5854a22f89c4b9ab040591771397b2cb1a17ba6",
+      "component": "ssh-key-reader",
+      "license": "MIT",
+      "notices": [
+        "ui/licenses/ssh-keys/Microsoft.Extensions.DependencyInjection.Abstractions-NOTICES.txt",
+        "ui/licenses/ssh-keys/Microsoft.Extensions.DependencyInjection.Abstractions.txt"
+      ]
+    },
+    {
+      "file": "ui/Microsoft.Extensions.Logging.Abstractions.dll",
+      "sha256": "b4e0e778afdc76403792390b056f68de0ced742d16c5b0347d9cca6930f4761b",
+      "component": "ssh-key-reader",
+      "license": "MIT",
+      "notices": [
+        "ui/licenses/ssh-keys/Microsoft.Extensions.Logging.Abstractions-NOTICES.txt",
+        "ui/licenses/ssh-keys/Microsoft.Extensions.Logging.Abstractions.txt"
       ]
     },
     {
@@ -162,6 +143,15 @@
       "notices": [
         "preview/WebView2-LICENSE.txt",
         "preview/WebView2-NOTICE.txt"
+      ]
+    },
+    {
+      "file": "ui/Renci.SshNet.dll",
+      "sha256": "55c3ca42294adedd5c1a7abae2c596368fa2bb52601361d66dd4f442822b0469",
+      "component": "ssh-key-reader",
+      "license": "MIT",
+      "notices": [
+        "ui/licenses/ssh-keys/Renci.SshNet.txt"
       ]
     },
     {
@@ -189,6 +179,16 @@
       "license": "MIT and third-party terms",
       "notices": [
         "ui/licenses/DiscUtils"
+      ]
+    },
+    {
+      "file": "ui/System.Formats.Asn1.dll",
+      "sha256": "379526b7f6d3d84dd75e9838847991231e9cae8bc510ba1fea906de9e8f9674c",
+      "component": "ssh-key-reader",
+      "license": "MIT",
+      "notices": [
+        "ui/licenses/ssh-keys/System.Formats.Asn1-NOTICES.txt",
+        "ui/licenses/ssh-keys/System.Formats.Asn1.txt"
       ]
     },
     {
@@ -535,50 +535,6 @@
   ],
   "originalNotices": [
     {
-      "file": "ui/licenses/ssh-keys/BouncyCastle.Cryptography.txt",
-      "sha256": "be0592a6c76f398356fbf252a4fb43476fb3ca3c45331428c2f4f22c499e8311"
-    },
-    {
-      "file": "ui/licenses/ssh-keys/Microsoft.Bcl.AsyncInterfaces-NOTICES.txt",
-      "sha256": "19c19dcac9f3ee6302cfbc6745bb8e79f08efc4c933eb8dc5509bf14b88347ec"
-    },
-    {
-      "file": "ui/licenses/ssh-keys/Microsoft.Bcl.AsyncInterfaces.txt",
-      "sha256": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b"
-    },
-    {
-      "file": "ui/licenses/ssh-keys/Microsoft.Extensions.DependencyInjection.Abstractions-NOTICES.txt",
-      "sha256": "b60b2912da28eaa6518593c9e2efb5334ee062d3c42e80d8fdfa806b3dc52977"
-    },
-    {
-      "file": "ui/licenses/ssh-keys/Microsoft.Extensions.DependencyInjection.Abstractions.txt",
-      "sha256": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b"
-    },
-    {
-      "file": "ui/licenses/ssh-keys/Microsoft.Extensions.Logging.Abstractions-NOTICES.txt",
-      "sha256": "b60b2912da28eaa6518593c9e2efb5334ee062d3c42e80d8fdfa806b3dc52977"
-    },
-    {
-      "file": "ui/licenses/ssh-keys/Microsoft.Extensions.Logging.Abstractions.txt",
-      "sha256": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b"
-    },
-    {
-      "file": "ui/licenses/ssh-keys/Renci.SshNet.txt",
-      "sha256": "84c79a38515de2833a7c353395e04056c0cbd77545d450fe216d569e1570b78e"
-    },
-    {
-      "file": "ui/licenses/ssh-keys/SOURCES.txt",
-      "sha256": "6851496649bc3b00ac1848ab4b8dc16e9df5beb3e9d9b3483dc9dd45d03c19c8"
-    },
-    {
-      "file": "ui/licenses/ssh-keys/System.Formats.Asn1-NOTICES.txt",
-      "sha256": "6d15e10a101c6bfff2ab4429ed061bf76c456fc4b23ad6b03e0d0f8377148a21"
-    },
-    {
-      "file": "ui/licenses/ssh-keys/System.Formats.Asn1.txt",
-      "sha256": "cfc21f5e8bd655ae997eec916138b707b1d290b83272c02a95c9f821b8c87310"
-    },
-    {
       "file": "plugins/7zip/License.txt",
       "sha256": "519ac0a4bded9c18ea02e0afb71f663d8c47373bd9facd3ac96a79f51d77765d"
     },
@@ -813,6 +769,50 @@
     {
       "file": "ui/licenses/SharpSevenZip/SharpSevenZip.nuspec",
       "sha256": "af10c2afb7a93b41a8a3d43ec2889477b63656b852fe14f4f37cdccb1023dad6"
+    },
+    {
+      "file": "ui/licenses/ssh-keys/BouncyCastle.Cryptography.txt",
+      "sha256": "be0592a6c76f398356fbf252a4fb43476fb3ca3c45331428c2f4f22c499e8311"
+    },
+    {
+      "file": "ui/licenses/ssh-keys/Microsoft.Bcl.AsyncInterfaces-NOTICES.txt",
+      "sha256": "19c19dcac9f3ee6302cfbc6745bb8e79f08efc4c933eb8dc5509bf14b88347ec"
+    },
+    {
+      "file": "ui/licenses/ssh-keys/Microsoft.Bcl.AsyncInterfaces.txt",
+      "sha256": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b"
+    },
+    {
+      "file": "ui/licenses/ssh-keys/Microsoft.Extensions.DependencyInjection.Abstractions-NOTICES.txt",
+      "sha256": "b60b2912da28eaa6518593c9e2efb5334ee062d3c42e80d8fdfa806b3dc52977"
+    },
+    {
+      "file": "ui/licenses/ssh-keys/Microsoft.Extensions.DependencyInjection.Abstractions.txt",
+      "sha256": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b"
+    },
+    {
+      "file": "ui/licenses/ssh-keys/Microsoft.Extensions.Logging.Abstractions-NOTICES.txt",
+      "sha256": "b60b2912da28eaa6518593c9e2efb5334ee062d3c42e80d8fdfa806b3dc52977"
+    },
+    {
+      "file": "ui/licenses/ssh-keys/Microsoft.Extensions.Logging.Abstractions.txt",
+      "sha256": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b"
+    },
+    {
+      "file": "ui/licenses/ssh-keys/Renci.SshNet.txt",
+      "sha256": "84c79a38515de2833a7c353395e04056c0cbd77545d450fe216d569e1570b78e"
+    },
+    {
+      "file": "ui/licenses/ssh-keys/SOURCES.txt",
+      "sha256": "6851496649bc3b00ac1848ab4b8dc16e9df5beb3e9d9b3483dc9dd45d03c19c8"
+    },
+    {
+      "file": "ui/licenses/ssh-keys/System.Formats.Asn1-NOTICES.txt",
+      "sha256": "6d15e10a101c6bfff2ab4429ed061bf76c456fc4b23ad6b03e0d0f8377148a21"
+    },
+    {
+      "file": "ui/licenses/ssh-keys/System.Formats.Asn1.txt",
+      "sha256": "cfc21f5e8bd655ae997eec916138b707b1d290b83272c02a95c9f821b8c87310"
     },
     {
       "file": "ui/licenses/System.Buffers.nuspec",

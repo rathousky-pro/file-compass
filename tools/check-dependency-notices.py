@@ -38,6 +38,14 @@ def inventory():
         'yaml': ('MIT, including libyaml-derived code', ['ui/licenses/YamlDotNet/LICENSE.txt', 'ui/licenses/YamlDotNet/LICENSE-libyaml.txt']),
     }
     exact = {'ICSharpCode.AvalonEdit.dll':'avalonedit', 'Markdig.dll':'markdig', 'TagLibSharp.dll':'taglib', 'SharpSevenZip.dll':'sharpsevenzip', 'YamlDotNet.dll':'yaml'}
+    ssh_readers = {
+        'BouncyCastle.Cryptography.dll',
+        'Microsoft.Bcl.AsyncInterfaces.dll',
+        'Microsoft.Extensions.DependencyInjection.Abstractions.dll',
+        'Microsoft.Extensions.Logging.Abstractions.dll',
+        'Renci.SshNet.dll',
+        'System.Formats.Asn1.dll',
+    }
     entries = []
     for folder in ('ui', 'plugins', 'preview'):
         for path in sorted((SOURCE / folder).rglob('*')):
@@ -54,14 +62,22 @@ def inventory():
             elif name.startswith(('DiscUtils.', 'LTRData.', 'System.Collections.Immutable', 'System.Text.Encoding.CodePages', 'System.Threading.Tasks.Extensions')): group = 'discutils'
             elif name.startswith('UglyToad.'): group = 'pdfpig'
             elif name.startswith('Wpf.Ui'): group = 'wpfui'
+            elif name in ssh_readers: group = 'ssh-key-reader'
             elif name.startswith(('System.', 'Microsoft.Bcl.')): group = 'microsoft'
             else: group = exact.get(name)
-            assert group in groups, f'Unclassified runtime binary: {relative}'
-            license, notices = groups[group]
+            if group == 'ssh-key-reader':
+                license = 'MIT'
+                base = 'ui/licenses/ssh-keys/' + path.stem
+                notices = [base + '.txt']
+                if (SOURCE / (base + '-NOTICES.txt')).exists():
+                    notices.insert(0, base + '-NOTICES.txt')
+            else:
+                assert group in groups, f'Unclassified runtime binary: {relative}'
+                license, notices = groups[group]
             for notice in notices: assert (SOURCE / notice).exists(), f'Missing notice: {notice}'
             entries.append(dict(file=relative, sha256=digest(path), component=group, license=license, notices=notices))
     # Preserve every original legal text and package provenance record, not just a sample.
-    legal = set()
+    legal = set((SOURCE / 'ui/licenses/ssh-keys').glob('*.txt'))
     for _, notices in groups.values():
         for notice in notices:
             path = SOURCE / notice
